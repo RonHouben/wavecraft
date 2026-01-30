@@ -3,6 +3,7 @@
 pub mod au;
 pub mod bundle;
 pub mod clean;
+pub mod desktop;
 pub mod install;
 pub mod test;
 

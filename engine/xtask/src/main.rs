@@ -12,6 +12,7 @@
 //!
 //! - `bundle` - Build and bundle VST3/CLAP plugins
 //! - `test` - Run unit tests
+//! - `desktop` - Build and run the desktop POC
 //! - `au` - Build AU wrapper (macOS only)
 //! - `install` - Install plugins to system directories
 //! - `clean` - Clean build artifacts
@@ -71,6 +72,14 @@ enum Commands {
         all: bool,
     },
 
+    /// Build and run the desktop POC application
+    #[command(about = "Build and run the desktop POC")]
+    Desktop {
+        /// Also rebuild the React UI
+        #[arg(long)]
+        build_ui: bool,
+    },
+
     /// Build AU wrapper (macOS only)
     #[command(about = "Build AU wrapper (macOS only)")]
     Au,
@@ -126,6 +135,9 @@ fn main() -> Result<()> {
                 Some(package)
             };
             commands::test::run(packages, all, cli.verbose)
+        }
+        Some(Commands::Desktop { build_ui }) => {
+            commands::desktop::run(!cli.debug, build_ui, cli.verbose)
         }
         Some(Commands::Au) => commands::au::run(cli.dry_run, cli.verbose),
         Some(Commands::Install) => commands::install::run(cli.dry_run, cli.verbose),

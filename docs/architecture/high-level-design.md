@@ -2,6 +2,13 @@
 
 ⸻
 
+## Related Documents
+
+- [Coding Standards](./coding-standards.md) — Conventions for TypeScript, Rust, and React code
+- [Roadmap](../roadmap.md) — Project milestones and implementation plan
+
+⸻
+
 ## Assumptions (explicit)
 	•	Target hosts: major DAWs (Ableton required). Targets: Windows, macOS, Linux.
 	•	Audio engine / DSP will be implemented in Rust.
@@ -66,6 +73,7 @@ Key: the audio path never blocks on UI; the UI never directly runs audio code.
 	4.	Embedded WebView layer
 	•	Use a cross-platform Rust webview binding such as wry (used by Tauri) which wraps native webview engines (WebView2, WKWebView, WebKitGTK). This avoids shipping a full Chromium and keeps the binary smaller than Electron.  ￼
 	•	On Windows: WebView2 (Edge/Chromium); macOS: WKWebView; Linux: WebKitGTK or an appropriate system webview.
+	•	**Development Environment Note:** Primary development and testing is performed on macOS. Windows and Linux compatibility is theoretically supported via wry's cross-platform abstraction but is **not actively tested** in this project due to lack of development machines. Windows users should expect wry's WebView2 integration to work but may encounter platform-specific issues that require debugging. Community contributions for Windows/Linux testing are welcome.
 	5.	IPC / Bridge
 	•	Lightweight JSON-RPC or custom message format over the webview host-bridge (postMessage / host object). Expose a minimal API:
 	•	setParameter(id, value)
