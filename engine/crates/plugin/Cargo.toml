@@ -1,0 +1,21 @@
+[package]
+name = "plugin"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "VstKit audio plugin - nih-plug VST3/CLAP integration"
+
+[lib]
+crate-type = ["cdylib"]
+
+[features]
+default = []
+# Enable runtime allocation detection on audio thread (debug builds)
+assert_process_allocs = ["nih_plug/assert_process_allocs"]
+
+[dependencies]
+protocol.workspace = true
+dsp.workspace = true
+nih_plug.workspace = true
+nih_plug_egui.workspace = true

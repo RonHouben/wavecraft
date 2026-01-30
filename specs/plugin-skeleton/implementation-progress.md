@@ -1,7 +1,7 @@
 # Implementation Progress: Milestone 1 — Rust Plugin Skeleton with VST3 Exports
 
 > **Last Updated:** 30 January 2026  
-> **Status:** Not Started  
+> **Status:** In Progress  
 > **Plan:** [implementation-plan.md](implementation-plan.md)
 
 ---
@@ -10,99 +10,99 @@
 
 | Phase | Description | Progress |
 |-------|-------------|----------|
-| Phase 1 | Workspace & Build Infrastructure | 0/4 |
-| Phase 2 | Protocol Layer — Parameter Definitions | 0/2 |
-| Phase 3 | DSP Layer — Audio Processing | 0/4 |
-| Phase 4 | Plugin Layer — nih-plug Integration | 0/2 |
-| Phase 5 | Placeholder UI — egui Editor | 0/1 |
+| Phase 1 | Workspace & Build Infrastructure | 4/4 ✅ |
+| Phase 2 | Protocol Layer — Parameter Definitions | 2/2 ✅ |
+| Phase 3 | DSP Layer — Audio Processing | 4/4 ✅ |
+| Phase 4 | Plugin Layer — nih-plug Integration | 2/2 ✅ |
+| Phase 5 | Placeholder UI — egui Editor | 1/1 ✅ |
 | Phase 6 | Build Verification & Testing | 0/4 |
 | Phase 7 | Host Compatibility Testing | 0/4 |
-| **Total** | | **0/21** |
+| **Total** | | **13/21** |
 
 ---
 
 ## Phase 1: Workspace & Build Infrastructure
 
-- [ ] **Step 1:** Create engine workspace root
+- [x] **Step 1:** Create engine workspace root
   - File: `engine/Cargo.toml`
-  - Status: Not Started
-  - Notes: 
+  - Status: Complete
+  - Notes: Created workspace with resolver=2, workspace deps for nih-plug
 
-- [ ] **Step 2:** Create protocol crate structure
+- [x] **Step 2:** Create protocol crate structure
   - File: `engine/crates/protocol/Cargo.toml`
-  - Status: Not Started
-  - Notes: 
+  - Status: Complete
+  - Notes: Pure Rust crate with no external dependencies
 
-- [ ] **Step 3:** Create dsp crate structure
+- [x] **Step 3:** Create dsp crate structure
   - File: `engine/crates/dsp/Cargo.toml`
-  - Status: Not Started
-  - Notes: 
+  - Status: Complete
+  - Notes: Depends only on protocol crate
 
-- [ ] **Step 4:** Create plugin crate structure
+- [x] **Step 4:** Create plugin crate structure
   - File: `engine/crates/plugin/Cargo.toml`
-  - Status: Not Started
-  - Notes: 
+  - Status: Complete
+  - Notes: cdylib with nih-plug deps, assert_process_allocs feature 
 
 ---
 
 ## Phase 2: Protocol Layer — Parameter Definitions
 
-- [ ] **Step 5:** Implement ParamId enum
+- [x] **Step 5:** Implement ParamId enum
   - File: `engine/crates/protocol/src/lib.rs`
-  - Status: Not Started
-  - Notes: 
+  - Status: Complete
+  - Notes: Entry point with module declarations and re-exports
 
-- [ ] **Step 6:** Implement parameter specifications
+- [x] **Step 6:** Implement parameter specifications
   - File: `engine/crates/protocol/src/params.rs`
-  - Status: Not Started
-  - Notes: 
+  - Status: Complete
+  - Notes: ParamId enum, ParamSpec struct, PARAM_SPECS const, db_to_linear with tests
 
 ---
 
 ## Phase 3: DSP Layer — Audio Processing
 
-- [ ] **Step 7:** Create dsp crate entry point
+- [x] **Step 7:** Create dsp crate entry point
   - File: `engine/crates/dsp/src/lib.rs`
-  - Status: Not Started
-  - Notes: 
+  - Status: Complete
+  - Notes: Module declarations for processor and gain
 
-- [ ] **Step 8:** Implement gain utility functions
+- [x] **Step 8:** Implement gain utility functions
   - File: `engine/crates/dsp/src/gain.rs`
-  - Status: Not Started
-  - Notes: 
+  - Status: Complete
+  - Notes: Re-exports db_to_linear from protocol
 
-- [ ] **Step 9:** Implement Processor struct
+- [x] **Step 9:** Implement Processor struct
   - File: `engine/crates/dsp/src/processor.rs`
-  - Status: Not Started
-  - Notes: 
+  - Status: Complete
+  - Notes: Real-time safe process() method with stereo support
 
-- [ ] **Step 10:** Add unit tests for Processor
+- [x] **Step 10:** Add unit tests for Processor
   - File: `engine/crates/dsp/src/processor.rs`
-  - Status: Not Started
-  - Notes: 
+  - Status: Complete
+  - Notes: Tests for passthrough, gain application, attenuation, boost
 
 ---
 
 ## Phase 4: Plugin Layer — nih-plug Integration
 
-- [ ] **Step 11:** Create plugin crate entry point
+- [x] **Step 11:** Create plugin crate entry point
   - File: `engine/crates/plugin/src/lib.rs`
-  - Status: Not Started
-  - Notes: 
+  - Status: Complete
+  - Notes: VstKitPlugin with Plugin, Vst3Plugin, ClapPlugin traits
 
-- [ ] **Step 12:** Implement VstKitParams wrapper
+- [x] **Step 12:** Implement VstKitParams wrapper
   - File: `engine/crates/plugin/src/params.rs`
-  - Status: Not Started
-  - Notes: 
+  - Status: Complete
+  - Notes: FloatParam with smoothing, sources metadata from PARAM_SPECS
 
 ---
 
 ## Phase 5: Placeholder UI — egui Editor
 
-- [ ] **Step 13:** Implement PlaceholderEditor
+- [x] **Step 13:** Implement PlaceholderEditor
   - File: `engine/crates/plugin/src/editor.rs`
-  - Status: Not Started
-  - Notes: 
+  - Status: Complete
+  - Notes: 400x300 egui editor with gain slider and value display 
 
 ---
 
@@ -196,3 +196,4 @@ _Record any issues, blockers, or important decisions here._
 | Date | Change |
 |------|--------|
 | 30 Jan 2026 | Initial progress file created |
+| 30 Jan 2026 | Completed Phases 1-5: workspace, protocol, dsp, plugin, editor |
