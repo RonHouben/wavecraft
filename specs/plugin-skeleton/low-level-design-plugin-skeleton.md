@@ -298,6 +298,9 @@ impl ClapPlugin for VstKitPlugin {
     ];
 }
 
+// nih-plug export macros (VST3 and CLAP only)
+// Note: AU is NOT supported by nih-plug. Use clap-wrapper to convert CLAP → AU.
+// See: https://github.com/free-audio/clap-wrapper/
 nih_export_vst3!(VstKitPlugin);
 nih_export_clap!(VstKitPlugin);
 ```
@@ -577,10 +580,10 @@ assert_process_allocs = ["nih_plug/assert_process_allocs"]
 
 | Concern | Solution |
 |---------|----------|
-| Code signing | `codesign --deep --force --sign "Developer ID"` on `.vst3` bundle |
+| Code signing | `codesign --deep --force --sign "Developer ID"` on `.vst3` and `.clap` bundles |
 | Notarization | `xcrun notarytool submit` + `xcrun stapler staple` |
-| AU support | nih-plug does not export AU directly; requires separate wrapper or JUCE |
-| Bundle structure | `.vst3` is a directory bundle; ensure `Info.plist` is correct |
+| AU support | nih-plug does **NOT** export AU; use [clap-wrapper](https://github.com/free-audio/clap-wrapper/) to convert CLAP → AUv2 |
+| Bundle structure | `.vst3` and `.clap` are directory bundles; ensure `Info.plist` is correct |
 
 ### Windows
 
@@ -641,6 +644,7 @@ Additional integration tests can be placed in `tests/dsp/` for offline DSP corre
 
 | Test | Ableton Live | Logic Pro | Reaper |
 |------|--------------|-----------|--------|
+| Format | VST3 | AU (via clap-wrapper) | VST3/CLAP |
 | Plugin loads | ☐ | ☐ | ☐ |
 | Audio passthrough | ☐ | ☐ | ☐ |
 | Automation read | ☐ | ☐ | ☐ |
@@ -648,6 +652,8 @@ Additional integration tests can be placed in `tests/dsp/` for offline DSP corre
 | UI opens/closes | ☐ | ☐ | ☐ |
 | Session save/load | ☐ | ☐ | ☐ |
 | 64-sample buffer | ☐ | ☐ | ☐ |
+
+> **Note:** Logic Pro requires AU format, which is built using clap-wrapper from the CLAP plugin. Reaper can test both VST3 and CLAP directly from nih-plug.
 
 ### 7.3 Real-Time Safety Verification
 
@@ -672,6 +678,16 @@ After `cd engine && cargo xtask bundle plugin --release`:
 | macOS | `engine/target/bundled/VstKit.clap` | `~/Library/Audio/Plug-Ins/CLAP/` |
 | Windows | `engine/target/bundled/VstKit.vst3` | `C:\Program Files\Common Files\VST3\` |
 | Linux | `engine/target/bundled/VstKit.vst3` | `~/.vst3/` |
+
+**AU Plugin (macOS only, via clap-wrapper):**
+
+AU plugins are built separately using clap-wrapper (not by nih-plug):
+
+| Platform | Output | Install Path |
+|----------|--------|--------------|
+| macOS | `packaging/macos/au-wrapper/build/VstKit.component` | `~/Library/Audio/Plug-Ins/Components/` |
+
+See the [high-level design](../../docs/architecture/high-level-design.md) for clap-wrapper build instructions.
 
 Packaging scripts in `packaging/{macos,windows,linux}/` will handle signing, notarization, and installer creation.
 

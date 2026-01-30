@@ -4,6 +4,8 @@
 
 This plan implements the foundational Rust audio plugin skeleton using nih-plug, establishing the crate architecture, basic gain parameter, audio passthrough, and placeholder native UI. Upon completion, the plugin will load in Ableton Live (macOS & Windows) as VST3 and GarageBand (macOS) as AU with verified host automation support. The AU format also supports Logic Pro.
 
+> **Important:** nih-plug does NOT support AU export directly. AU plugins are created using [clap-wrapper](https://github.com/free-audio/clap-wrapper/) to convert the CLAP output to AUv2. This is the community-recommended approach.
+
 ## Requirements
 
 - Plugin loads in Ableton Live (macOS & Windows) as VST3 without crash
@@ -23,8 +25,9 @@ This plan implements the foundational Rust audio plugin skeleton using nih-plug,
 - Create `engine/crates/dsp/` — Pure audio processing (passthrough + gain)
 - Create `engine/crates/plugin/` — nih-plug integration, host glue, placeholder UI
 - Add `tests/dsp/` for offline DSP correctness tests
-- Configure AU export with 4-character codes (manufacturer: `'VstK'`, subtype: `'vsk1'`, type: `'aufx'`)
-- Create AU bundle (`.component`) alongside VST3 and CLAP bundles
+- Create `packaging/macos/au-wrapper/` — CMake project using clap-wrapper for AU conversion
+- Configure AU metadata with 4-character codes (manufacturer: `'VstK'`, subtype: `'vsk1'`, type: `'aufx'`)
+- AU bundle (`.component`) is built via clap-wrapper from the CLAP plugin (not by nih-plug)
 
 ---
 
@@ -63,7 +66,7 @@ This plan implements the foundational Rust audio plugin skeleton using nih-plug,
 
 #### 4. **Create plugin crate structure** (File: [engine/crates/plugin/Cargo.toml](engine/crates/plugin/Cargo.toml))
    - Action: Create Cargo.toml with cdylib crate-type and nih-plug dependencies
-   - Why: Plugin crate compiles to dynamic library for VST3/AU/CLAP export
+   - Why: Plugin crate compiles to dynamic library for VST3/CLAP export
    - Dependencies: Steps 2-3 (protocol and dsp crates exist)
    - Risk: Low
    - Details:
@@ -71,7 +74,7 @@ This plan implements the foundational Rust audio plugin skeleton using nih-plug,
      - Set crate-type = ["cdylib"]
      - Add dependencies: dsp, protocol, nih_plug, nih_plug_egui
      - Add assert_process_allocs feature for RT safety checking
-     - Enable nih_plug "au" feature for Audio Unit support (macOS)
+     - Note: nih-plug does NOT support AU; use clap-wrapper separately to convert CLAP → AUv2
      ```
 
 ---
@@ -146,9 +149,11 @@ This plan implements the foundational Rust audio plugin skeleton using nih-plug,
 
 ---
 
-### Phase 4: Plugin Layer — nih-plug Integration
+### Phase 4: Plugin Layer — nih-plug Integration (VST3/CLAP)
 
-**Goal:** Create the plugin struct with nih-plug traits and VST3/AU/CLAP exports.
+**Goal:** Create the plugin struct with nih-plug traits and VST3/CLAP exports.
+
+> **Note:** nih-plug does NOT support AU export. AU plugins are created separately using clap-wrapper. See Phase 6a for AU build steps.
 
 #### 11. **Create plugin crate entry point** (File: [engine/crates/plugin/src/lib.rs](engine/crates/plugin/src/lib.rs))
    - Action: Create lib.rs with VstKitPlugin struct and Plugin trait implementation
@@ -168,12 +173,8 @@ This plan implements the foundational Rust audio plugin skeleton using nih-plug,
        - process() reads gain atomically, applies gain in-place
      - Implement Vst3Plugin trait with unique VST3_CLASS_ID
      - Implement ClapPlugin trait with CLAP_ID
-     - Implement AuPlugin trait (macOS only) with:
-       - AU_MANUFACTURER_CODE = *b"VstK" (4-char manufacturer code)
-       - AU_SUBTYPE_CODE = *b"vsk1" (4-char plugin identifier)
-       - AU_TYPE_CODE = aufx (effect type)
      - Add nih_export_vst3! and nih_export_clap! macros
-     - Add nih_export_au! macro (macOS only, conditionally compiled)
+     - Note: AU export is NOT supported by nih-plug; see Phase 6a for clap-wrapper build
      ```
 
 #### 12. **Implement VstKitParams wrapper** (File: [engine/crates/plugin/src/params.rs](engine/crates/plugin/src/params.rs))
@@ -218,9 +219,9 @@ This plan implements the foundational Rust audio plugin skeleton using nih-plug,
 
 ---
 
-### Phase 6: Build Verification & Testing
+### Phase 6: Build Verification, AU Build & Testing
 
-**Goal:** Verify the plugin builds and tests pass on all target platforms.
+**Goal:** Verify the plugin builds and tests pass on all target platforms. Build AU via clap-wrapper.
 
 #### 14. **Verify workspace compilation** (Local)
    - Action: Run `cd engine && cargo build -p plugin` and fix any compilation errors
@@ -241,22 +242,43 @@ This plan implements the foundational Rust audio plugin skeleton using nih-plug,
    - Risk: Low
 
 #### 17. **Bundle plugin for distribution** (Local)
-   - Action: Run `cargo xtask bundle plugin --release` to create .vst3, .component (AU), and .clap bundles
+   - Action: Run `cargo xtask bundle plugin --release` to create .vst3 and .clap bundles
    - Why: Produces installable plugin packages for host testing
    - Dependencies: Step 16
    - Risk: Medium (bundler configuration)
    - Details:
      ```
      - VST3 bundle: VstKit.vst3
-     - AU bundle: VstKit.component (macOS only)
      - CLAP bundle: VstKit.clap
-     - AU bundle must contain valid Info.plist with AudioComponents array
+     - Note: AU bundle is NOT created by nih-plug; see Step 17b for clap-wrapper build
      ```
 
-#### 17a. **Validate AU plugin with auval** (Local, macOS only)
+#### 17a. **Build AU plugin via clap-wrapper** (Local, macOS only)
+   - Action: Use clap-wrapper to convert VstKit.clap to VstKit.component (AUv2)
+   - Why: nih-plug does not support AU export; clap-wrapper is the recommended approach
+   - Dependencies: Step 17 (CLAP bundle must exist)
+   - Risk: Medium (CMake configuration, clap-wrapper compatibility)
+   - Details:
+     ```
+     - Create packaging/macos/au-wrapper/ directory
+     - Add CMakeLists.txt with clap-wrapper configuration
+     - Clone clap-wrapper as submodule: https://github.com/free-audio/clap-wrapper/
+     - Configure AU metadata:
+       - MANUFACTURER_CODE: "VstK" (4-char)
+       - SUBTYPE_CODE: "vsk1" (4-char)
+       - INSTRUMENT_TYPE: "aufx" (effect)
+     - Build commands:
+       cd packaging/macos/au-wrapper
+       mkdir -p build && cd build
+       cmake ..
+       cmake --build .
+     - Output: VstKit.component in build directory
+     ```
+
+#### 17b. **Validate AU plugin with auval** (Local, macOS only)
    - Action: Run `auval -v aufx vsk1 VstK` to validate the Audio Unit
    - Why: AU plugins must pass validation before testing in GarageBand/Logic Pro
-   - Dependencies: Step 17
+   - Dependencies: Step 17a (AU bundle must exist)
    - Risk: Medium (AU validation may expose metadata or behavioral issues)
    - Details:
      ```
@@ -265,6 +287,7 @@ This plan implements the foundational Rust audio plugin skeleton using nih-plug,
      - Verifies audio processing callbacks
      - Tests state save/restore
      - Must pass with no errors before GarageBand testing
+     - If auval fails to detect plugin: cmake --build build --clean-first
      ```
 
 ---
@@ -274,9 +297,9 @@ This plan implements the foundational Rust audio plugin skeleton using nih-plug,
 **Goal:** Verify plugin loads and functions correctly in target DAWs (Ableton Live for VST3, Logic Pro for AU).
 
 #### 18. **Install plugin on macOS** (Manual)
-   - Action: Copy VstKit.vst3 to ~/Library/Audio/Plug-Ins/VST3/ and VstKit.component to ~/Library/Audio/Plug-Ins/Components/
-   - Why: Make plugin discoverable by DAWs (VST3 for Ableton, AU for GarageBand/Logic Pro)
-   - Dependencies: Step 17
+   - Action: Copy VstKit.vst3 to ~/Library/Audio/Plug-Ins/VST3/, VstKit.clap to ~/Library/Audio/Plug-Ins/CLAP/, and VstKit.component to ~/Library/Audio/Plug-Ins/Components/
+   - Why: Make plugin discoverable by DAWs (VST3 for Ableton, CLAP for Reaper/Bitwig, AU for GarageBand/Logic Pro)
+   - Dependencies: Step 17 (VST3/CLAP), Step 17a (AU)
    - Risk: Low
    - Notes: After installing AU, run `killall -9 AudioComponentRegistrar` to refresh macOS plugin cache
 
@@ -309,7 +332,7 @@ This plan implements the foundational Rust audio plugin skeleton using nih-plug,
 #### 20a. **Test in GarageBand (macOS, AU)** (Manual)
    - Action: Open GarageBand, scan plugins, verify VstKit appears as AU, load on track
    - Why: AU format required for Apple DAW compatibility (GarageBand used for testing; Logic Pro also supported)
-   - Dependencies: Step 18, Step 17a (auval must pass)
+   - Dependencies: Step 18, Step 17b (auval must pass)
    - Risk: Medium (GarageBand has stricter AU validation than some hosts)
    - Checklist:
      ```
@@ -463,6 +486,7 @@ This plan implements the foundational Rust audio plugin skeleton using nih-plug,
 | [engine/crates/plugin/src/lib.rs](engine/crates/plugin/src/lib.rs) | Plugin struct & nih-plug integration |
 | [engine/crates/plugin/src/params.rs](engine/crates/plugin/src/params.rs) | nih-plug params wrapper |
 | [engine/crates/plugin/src/editor.rs](engine/crates/plugin/src/editor.rs) | Placeholder egui editor |
+| [packaging/macos/au-wrapper/CMakeLists.txt](packaging/macos/au-wrapper/CMakeLists.txt) | clap-wrapper AU build config |
 
 ---
 
@@ -484,18 +508,30 @@ cargo build --release --features assert_process_allocs -p plugin
 # Run tests
 cargo test -p dsp -p protocol
 
-# Bundle for distribution (creates .vst3, .component, .clap)
+# Bundle VST3 and CLAP for distribution (nih-plug)
 cargo xtask bundle plugin --release
 
 # macOS VST3 installation
 cp -r target/bundled/VstKit.vst3 ~/Library/Audio/Plug-Ins/VST3/
 
-# macOS AU installation
-cp -r target/bundled/VstKit.component ~/Library/Audio/Plug-Ins/Components/
+# macOS CLAP installation
+cp -r target/bundled/VstKit.clap ~/Library/Audio/Plug-Ins/CLAP/
+
+# Build AU plugin via clap-wrapper (macOS only)
+# First, ensure clap-wrapper submodule is initialized:
+# cd packaging/macos/au-wrapper && git submodule add https://github.com/free-audio/clap-wrapper.git
+cd packaging/macos/au-wrapper
+mkdir -p build && cd build
+cmake ..
+cmake --build .
+cd ../../../..
+
+# macOS AU installation (from clap-wrapper output)
+cp -r packaging/macos/au-wrapper/build/VstKit.component ~/Library/Audio/Plug-Ins/Components/
 
 # Refresh macOS AU cache (required after AU updates)
 killall -9 AudioComponentRegistrar
 
-# Validate AU plugin (must pass before Logic Pro testing)
+# Validate AU plugin (must pass before Logic Pro/GarageBand testing)
 auval -v aufx vsk1 VstK
 ```
