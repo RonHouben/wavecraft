@@ -124,6 +124,7 @@ This document tracks implementation progress against the milestones defined in t
 | Format-specific feature parity verification | ⏳ | |
 | Cross-engine rendering consistency (WebKit vs Chromium) | ⏳ | |
 | Automated visual regression tests | ⏳ | |
+| Make React UI default (remove feature flag) | ⏳ | Remove `webview` feature flag; React UI should be the default editor. Investigate if old Rust GUI code (`nih-plug` native UI) can be fully removed. |
 
 ---
 
