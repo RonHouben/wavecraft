@@ -28,6 +28,34 @@ Communication between UI and audio uses lock-free parameter systems and ring buf
 - Ableton Live (primary)
 - Logic Pro, Reaper, and other VST3-compatible hosts
 
+## Project Structure
+
+```
+vstkit/
+├── engine/                       # Rust audio engine & plugin
+│   ├── Cargo.toml                # Workspace root
+│   └── crates/
+│       ├── dsp/                  # Pure DSP (no plugin deps)
+│       ├── plugin/               # nih-plug host integration
+│       ├── bridge/               # UI ↔ Audio IPC
+│       └── protocol/             # Shared contracts (param IDs, ranges)
+│
+├── ui/                           # React SPA (Vite + TypeScript)
+│   ├── src/
+│   └── dist/                     # Build output (embedded in plugin)
+│
+├── docs/                         # Architecture & specs
+├── scripts/                      # Build & CI helpers
+├── packaging/                    # Platform installers
+│   ├── macos/
+│   ├── windows/
+│   └── linux/
+│
+└── tests/
+    ├── integration/              # Host-in-the-loop tests
+    └── dsp/                      # Offline DSP correctness tests
+```
+
 ## Documentation
 
 - [High-Level Design](docs/architecture/high-level-design.md) — Architecture overview and implementation roadmap
