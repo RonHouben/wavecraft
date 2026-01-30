@@ -52,7 +52,7 @@ set(VSTKIT_INSTRUMENT_TYPE "aufx")    # aufx = effect, aumu = instrument
 
 # Path to the built CLAP plugin (relative to this CMakeLists.txt)
 # Adjust this path based on where cargo xtask bundle outputs the CLAP
-set(VSTKIT_CLAP_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../engine/target/bundled/VstKit.clap")
+set(VSTKIT_CLAP_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../engine/target/bundled/vstkit.clap")
 
 # Convert to absolute path
 get_filename_component(VSTKIT_CLAP_PATH_ABS "${VSTKIT_CLAP_PATH}" ABSOLUTE)

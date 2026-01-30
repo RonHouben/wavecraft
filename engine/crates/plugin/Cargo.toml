@@ -1,5 +1,5 @@
 [package]
-name = "plugin"
+name = "vstkit"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -7,6 +7,7 @@ authors.workspace = true
 description = "VstKit audio plugin - nih-plug VST3/CLAP integration"
 
 [lib]
+name = "vstkit"
 crate-type = ["cdylib"]
 
 [features]

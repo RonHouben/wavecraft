@@ -8,6 +8,26 @@
 
 ---
 
+## Build Script
+
+A reusable build script has been created at `scripts/build.sh`. Usage:
+
+```bash
+# Clean build and install all plugins
+./scripts/build.sh --clean --all
+
+# Quick rebuild and install
+./scripts/build.sh --install
+
+# Full rebuild with tests, AU, and install
+./scripts/build.sh --clean --test --au --install
+
+# See all options
+./scripts/build.sh --help
+```
+
+---
+
 ## Progress Overview
 
 | Phase | Description | Progress |
