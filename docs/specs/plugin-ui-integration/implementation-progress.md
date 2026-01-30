@@ -1,7 +1,7 @@
 # Implementation Progress: Plugin UI Integration
 
 **Feature:** plugin-ui-integration  
-**Status:** Not Started  
+**Status:** In Progress  
 **Last Updated:** 2026-01-30
 
 ---
@@ -10,8 +10,8 @@
 
 | Phase | Description | Status | Est. Days |
 |-------|-------------|--------|-----------|
-| Phase 1 | Metering Crate | ⬜ Not Started | 1-2 |
-| Phase 2 | Plugin Metering Integration | ⬜ Not Started | 1 |
+| Phase 1 | Metering Crate | ✅ Complete | 1-2 |
+| Phase 2 | Plugin Metering Integration | ✅ Complete | 1 |
 | Phase 3 | Editor Module Refactoring | ⬜ Not Started | 2-3 |
 | Phase 4 | WebView Editor (macOS) | ⬜ Not Started | 3-4 |
 | Phase 5 | Parameter Synchronization | ⬜ Not Started | 2-3 |
@@ -25,18 +25,22 @@
 
 ## Detailed Task Tracking
 
-### Phase 1: Metering Crate
+### Phase 1: Metering Crate ✅
 
-- [ ] **1.1** Create metering crate structure (Cargo.toml)
-- [ ] **1.2** Implement MeterFrame and channel creation
-- [ ] **1.3** Add metering crate to workspace
-- [ ] **1.4** Unit test meter ring buffer
+- [x] **1.1** Create metering crate structure (Cargo.toml)
+- [x] **1.2** Implement MeterFrame and channel creation
+- [x] **1.3** Add metering crate to workspace
+- [x] **1.4** Unit test meter ring buffer
 
-### Phase 2: Plugin Metering Integration
+**Notes:** All tests passing. SPSC ring buffer using rtrb provides lock-free, real-time safe metering.
 
-- [ ] **2.1** Add metering dependency to plugin crate
-- [ ] **2.2** Integrate MeterProducer into VstKitPlugin
-- [ ] **2.3** Push meter frames in process()
+### Phase 2: Plugin Metering Integration ✅
+
+- [x] **2.1** Add metering dependency to plugin crate
+- [x] **2.2** Integrate MeterProducer into VstKitPlugin
+- [x] **2.3** Push meter frames in process()
+
+**Notes:** Plugin now calculates peak/RMS for stereo buffer and pushes to ring buffer. MeterConsumer held for editor creation.
 
 ### Phase 3: Editor Module Refactoring
 
