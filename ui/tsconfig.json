@@ -22,8 +22,8 @@
     "noUncheckedIndexedAccess": true,
 
     /* Path aliases */
-    "baseUrl": ".",
     "paths": {
+      "*": ["./*"],
       "@vstkit/ipc": ["./src/lib/vstkit-ipc"]
     }
   },
