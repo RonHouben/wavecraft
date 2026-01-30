@@ -1,6 +1,7 @@
 # Rust build artifacts
 /engine/target/
 target/
+/packaging/macos/au-wrapper/build
 
 # Cargo lock for libraries (keep for binaries/plugins)
 # Cargo.lock
