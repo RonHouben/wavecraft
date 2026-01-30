@@ -1,7 +1,7 @@
 # WebView Desktop POC — Implementation Progress
 
 **Milestone:** 2 — WebView Desktop POC  
-**Status:** ⏳ Not Started  
+**Status:** 🏗️ In Progress  
 **Last Updated:** 2026-01-30
 
 ---
@@ -10,13 +10,13 @@
 
 | Phase | Status | Progress |
 |-------|--------|----------|
-| Phase 1: Protocol Layer | ⏳ Not Started | 0/3 |
-| Phase 2: Bridge Layer | ⏳ Not Started | 0/6 |
-| Phase 3: Desktop Application | ⏳ Not Started | 0/8 |
+| Phase 1: Protocol Layer | ✅ Complete | 3/3 |
+| Phase 2: Bridge Layer | ✅ Complete | 6/6 |
+| Phase 3: Desktop Application | ✅ Complete | 8/8 |
 | Phase 4: React UI | ⏳ Not Started | 0/11 |
 | Phase 5: Integration & Testing | ⏳ Not Started | 0/6 |
 | Phase 6: xtask & Documentation | ⏳ Not Started | 0/2 |
-| **Total** | ⏳ Not Started | **0/36** |
+| **Total** | 🏗️ In Progress | **17/36** |
 
 ---
 
@@ -24,9 +24,9 @@
 
 | Step | Task | Status | Notes |
 |------|------|--------|-------|
-| 1.1 | Add serde dependencies to protocol crate | ⏳ | |
-| 1.2 | Create IPC message contracts (`ipc.rs`) | ⏳ | |
-| 1.3 | Re-export IPC module from protocol lib | ⏳ | |
+| 1.1 | Add serde dependencies to protocol crate | ✅ | Added serde 1.0 with derive feature |
+| 1.2 | Create IPC message contracts (`ipc.rs`) | ✅ | JSON-RPC 2.0 compatible messages |
+| 1.3 | Re-export IPC module from protocol lib | ✅ | All key types exported |
 
 ---
 
@@ -34,12 +34,12 @@
 
 | Step | Task | Status | Notes |
 |------|------|--------|-------|
-| 2.1 | Create bridge crate structure | ⏳ | |
-| 2.2 | Define `ParameterHost` trait | ⏳ | |
-| 2.3 | Implement `IpcHandler` | ⏳ | |
-| 2.4 | Create bridge error types | ⏳ | |
-| 2.5 | Create bridge `lib.rs` | ⏳ | |
-| 2.6 | Write bridge unit tests | ⏳ | |
+| 2.1 | Create bridge crate structure | ✅ | Bridge crate with protocol and serde_json deps |
+| 2.2 | Define `ParameterHost` trait | ✅ | Abstract trait for parameter storage |
+| 2.3 | Implement `IpcHandler` | ✅ | JSON-RPC dispatcher with method routing |
+| 2.4 | Create bridge error types | ✅ | BridgeError with IpcError conversion |
+| 2.5 | Create bridge `lib.rs` | ✅ | Clean API surface with re-exports |
+| 2.6 | Write bridge unit tests | ✅ | 9 passing tests covering all methods |
 
 ---
 
@@ -47,7 +47,14 @@
 
 | Step | Task | Status | Notes |
 |------|------|--------|-------|
-| 3.1 | Create desktop crate structure | ⏳ | |
+| 3.1 | Create desktop crate structure | ✅ | Crate with wry, tao, include_dir deps |
+| 3.2 | Update workspace `Cargo.toml` | ✅ | Added desktop to workspace members |
+| 3.3 | Implement `AppState` | ✅ | Atomic parameter storage (cloneable) |
+| 3.4 | Create asset embedding module | ✅ | include_dir! for ui/dist/ assets |
+| 3.5 | Create IPC primitives JavaScript | ✅ | window.__VSTKIT_IPC__ injected |
+| 3.6 | Implement WebView setup | ✅ | wry 0.47 integration working |
+| 3.7 | Create main entry point | ✅ | --help and --list-assets flags |
+| 3.8 | Create desktop `lib.rs` | ✅ | Public exports for testing |
 | 3.2 | Update workspace `Cargo.toml` | ⏳ | |
 | 3.3 | Implement `AppState` | ⏳ | |
 | 3.4 | Create asset embedding module | ⏳ | |
