@@ -1,5 +1,21 @@
 #!/bin/bash
 # VstKit Build Script
+#
+# ⚠️  DEPRECATION NOTICE ⚠️
+# This script is deprecated and will be removed in a future release.
+# Please use the new Rust-based xtask build system instead:
+#
+#   cd engine && cargo xtask --help
+#
+# Migration guide:
+#   ./scripts/build.sh --clean       →  cargo xtask clean
+#   ./scripts/build.sh --release     →  cargo xtask bundle
+#   ./scripts/build.sh --debug       →  cargo xtask bundle --debug
+#   ./scripts/build.sh --install     →  cargo xtask install
+#   ./scripts/build.sh --test        →  cargo xtask test
+#   ./scripts/build.sh --au          →  cargo xtask au
+#   ./scripts/build.sh --all         →  cargo xtask all
+#
 # 
 # This script builds and optionally installs the VstKit audio plugin
 # for all supported formats: VST3, CLAP, and AU (macOS only).
@@ -23,6 +39,14 @@
 #   ./scripts/build.sh --debug               # Debug build only
 
 set -e
+
+# Print deprecation warning
+echo ""
+echo -e "\033[1;33m⚠️  DEPRECATION WARNING ⚠️\033[0m"
+echo -e "\033[1;33mThis script is deprecated. Please use:\033[0m"
+echo -e "  \033[0;36mcd engine && cargo xtask --help\033[0m"
+echo ""
+sleep 1
 
 # Colors for output
 RED='\033[0;31m'

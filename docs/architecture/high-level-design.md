@@ -172,15 +172,17 @@ target_add_auv2_wrapper(
 **3. Build Commands:**
 
 ```bash
-# First, build the CLAP plugin with nih-plug
+# Build everything (tests → bundle → AU → install)
 cd engine
-cargo xtask bundle plugin --release
+cargo xtask all
 
-# Then, convert to AU using clap-wrapper
-cd ../packaging/macos/au-wrapper
-mkdir -p build && cd build
-cmake ..
-cmake --build .
+# Or step-by-step:
+cargo xtask bundle --release    # Build VST3/CLAP
+cargo xtask au                  # Build AU wrapper (macOS)
+cargo xtask install             # Install to system directories
+
+# Preview what would happen without executing
+cargo xtask all --dry-run
 ```
 
 **4. Important Notes:**

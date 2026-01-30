@@ -30,16 +30,23 @@ pub fn create_editor(params: Arc<VstKitParams>) -> Option<Box<dyn Editor>> {
                     ui.heading("VstKit — Placeholder UI");
                     ui.add_space(20.0);
 
-                    // Gain slider
+                    // Gain slider - using proper drag interaction pattern
                     ui.label("Gain");
                     let mut gain_value = params.gain.value();
                     let slider = Slider::new(&mut gain_value, -24.0..=24.0)
                         .suffix(" dB")
                         .step_by(0.1);
 
-                    if ui.add(slider).changed() {
+                    let response = ui.add(slider);
+                    
+                    // Only notify host when user is actively dragging
+                    if response.drag_started() {
                         setter.begin_set_parameter(&params.gain);
+                    }
+                    if response.dragged() || response.changed() && response.has_focus() {
                         setter.set_parameter(&params.gain, gain_value);
+                    }
+                    if response.drag_stopped() {
                         setter.end_set_parameter(&params.gain);
                     }
 

@@ -273,4 +273,4 @@ _Record any issues, blockers, or important decisions here._
 | 30 Jan 2026 | AU testing to be performed in GarageBand (Logic Pro not available to developer) |
 | 30 Jan 2026 | **Clarification:** nih-plug does NOT support AU export. AU is built via clap-wrapper (CLAP → AUv2). Updated all docs. |
 | 30 Jan 2026 | Created clap-wrapper AU configuration: `packaging/macos/au-wrapper/CMakeLists.txt` and `README.md`. Blocked on CMake installation. |
-| 30 Jan 2026 | CMake installed. AU plugin built and validated successfully with auval. Subtype code auto-generated as `G0CJ`. |
+| 30 Jan 2026 | CMake installed. AU plugin built and validated successfully with auval. Subtype code auto-generated as `G0CJ`. || 30 Jan 2026 | **Build Infrastructure:** Added xtask crate for proper nih-plug bundling, renamed plugin crate to `vstkit`, created reusable `scripts/build.sh` script |
