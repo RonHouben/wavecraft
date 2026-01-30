@@ -3,6 +3,7 @@
 target/
 /packaging/macos/au-wrapper/build
 build
+ui/node_modules
 
 # Cargo lock for libraries (keep for binaries/plugins)
 # Cargo.lock
