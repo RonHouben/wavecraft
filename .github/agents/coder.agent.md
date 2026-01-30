@@ -50,7 +50,7 @@ engine/crates/
 └── bridge/     # UI ↔ Audio IPC
 ```
 
-When implementing a feature from the `specs/` directory, keep track of your progress in the file `specs/[feature_name]/implementation-progress.md`.
+When implementing a feature from the `docs/specs/` directory, keep track of your progress in the file `docs/specs/[feature_name]/implementation-progress.md`.
 
 ---
 
@@ -149,7 +149,7 @@ let gain = self.params.gain.value();
 
 ### Before Coding
 
-1. **Read the spec** — Check `specs/` for implementation plans
+1. **Read the spec** — Check `docs/specs/` for implementation plans
 2. **Understand boundaries** — Know which crate/layer you're working in
 3. **Check existing patterns** — Follow established conventions
 
