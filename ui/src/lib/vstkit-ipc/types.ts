@@ -114,7 +114,9 @@ export const NOTIFICATION_PARAMETER_CHANGED = 'parameterChanged';
 export interface VstKitIpcPrimitives {
   postMessage: (message: string) => void;
   setReceiveCallback: (callback: (message: string) => void) => void;
+  onParamUpdate?: (listener: (notification: unknown) => void) => () => void;
   _receive: (message: string) => void; // Internal, called by Rust
+  _onParamUpdate?: (message: unknown) => void; // Internal, called by Rust
 }
 
 declare global {

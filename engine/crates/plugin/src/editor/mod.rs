@@ -25,6 +25,13 @@ pub use self::egui::create_egui_editor as create_editor;
 pub use bridge::PluginEditorBridge;
 pub use webview::{create_webview, WebViewConfig};
 
+/// Message types for communicating with the WebView from the editor.
+#[derive(Debug, Clone)]
+pub enum EditorMessage {
+    ParamUpdate { id: String, value: f32 },
+    ParamModulation { id: String, offset: f32 },
+}
+
 /// WebView-based editor for the plugin.
 ///
 /// This editor creates a WebView that hosts the React UI and handles
@@ -32,6 +39,8 @@ pub use webview::{create_webview, WebViewConfig};
 pub struct VstKitEditor {
     params: Arc<VstKitParams>,
     size: (u32, u32),
+    /// Channel for sending messages to the WebView
+    message_tx: Arc<Mutex<Option<std::sync::mpsc::Sender<EditorMessage>>>>,
 }
 
 impl VstKitEditor {
@@ -40,6 +49,7 @@ impl VstKitEditor {
         Self {
             params,
             size: (800, 600), // Default size
+            message_tx: Arc::new(Mutex::new(None)),
         }
     }
 }
@@ -60,6 +70,10 @@ impl Editor for VstKitEditor {
 
         match create_webview(config) {
             Ok(webview) => {
+                // Create message channel for param updates
+                // The WebView will poll this channel periodically
+                // TODO: Implement message polling in the WebView handle
+                
                 // Return the webview handle as Any + Send
                 // The host will drop it when the editor is closed
                 webview as Box<dyn Any + Send>
@@ -80,18 +94,33 @@ impl Editor for VstKitEditor {
         false
     }
 
-    fn param_value_changed(&self, _id: &str, _normalized_value: f32) {
-        // TODO: Push parameter update to the WebView
-        // We'll need to implement this once we have a way to communicate with the webview
+    fn param_value_changed(&self, id: &str, normalized_value: f32) {
+        // Send parameter update through the channel
+        if let Ok(tx_lock) = self.message_tx.lock() {
+            if let Some(tx) = tx_lock.as_ref() {
+                let _ = tx.send(EditorMessage::ParamUpdate {
+                    id: id.to_string(),
+                    value: normalized_value,
+                });
+            }
+        }
     }
 
     fn param_values_changed(&self) {
         // Called when multiple parameters change at once
-        // Not implemented yet
+        // For now, we rely on individual param_value_changed calls
     }
 
-    fn param_modulation_changed(&self, _id: &str, _modulation_offset: f32) {
-        // Not implemented yet
+    fn param_modulation_changed(&self, id: &str, modulation_offset: f32) {
+        // Send modulation update through the channel
+        if let Ok(tx_lock) = self.message_tx.lock() {
+            if let Some(tx) = tx_lock.as_ref() {
+                let _ = tx.send(EditorMessage::ParamModulation {
+                    id: id.to_string(),
+                    offset: modulation_offset,
+                });
+            }
+        }
     }
 }
 

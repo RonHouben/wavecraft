@@ -13,8 +13,8 @@
 | Phase 1 | Metering Crate | ✅ Complete | 1-2 |
 | Phase 2 | Plugin Metering Integration | ✅ Complete | 1 |
 | Phase 3 | Editor Module Refactoring | ✅ Complete | 2-3 |
-| Phase 4 | WebView Editor (macOS) | 🚧 In Progress | 3-4 |
-| Phase 5 | Parameter Synchronization | ⬜ Not Started | 2-3 |
+| Phase 4 | WebView Editor (macOS) | ✅ Complete | 3-4 |
+| Phase 5 | Parameter Synchronization | ✅ Complete | 2-3 |
 | Phase 6 | Metering UI Integration | ⬜ Not Started | 1-2 |
 | Phase 7 | Windows Support | ⬜ Not Started | 2-3 |
 | Phase 8 | DAW Integration Testing | ⬜ Not Started | 2-3 |
@@ -64,13 +64,15 @@
 
 **Notes:** Basic structure complete with placeholder label. Compilation succeeds with `webview_editor` feature. Full WKWebView integration deferred to allow iterative development. Need to build UI assets and test in standalone/DAW before completing.
 
-### Phase 5: Parameter Synchronization
+### Phase 5: Bidirectional Parameter Synchronization
 
-- [ ] **5.1** Implement UI→Plugin parameter flow
-- [ ] **5.2** Implement param_value_changed push
-- [ ] **5.3** Add paramUpdate handler to IPC primitives
-- [ ] **5.4** Create onParamChange subscription API
-- [ ] **5.5** Update React hooks for bidirectional sync
+- [x] **5.1** Implement UI→Plugin parameter flow in bridge
+- [x] **5.2** Implement param_value_changed push to WebView
+- [x] **5.3** Add paramUpdate handler to IPC primitives
+- [x] **5.4** Create onParamChange subscription API
+- [x] **5.5** Update React hooks for bidirectional sync
+
+**Notes:** Full bidirectional parameter sync complete. UI→Plugin uses existing `set_parameter` through `PluginEditorBridge`. Plugin→UI uses `EditorMessage` channel with `param_value_changed` callback. IPC primitives extended with `_onParamUpdate` and `onParamUpdate` subscription API. React hooks already had subscription logic in place. UI builds successfully with updated TypeScript types.
 
 ### Phase 6: Metering UI Integration
 

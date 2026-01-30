@@ -38,10 +38,20 @@ export class IpcBridge {
       );
     }
 
-    // Set up receive callback
+    // Set up receive callback for responses
     this.primitives.setReceiveCallback((message: string) => {
       this.handleIncomingMessage(message);
     });
+    
+    // Set up parameter update listener for pushed updates from Rust
+    if (this.primitives.onParamUpdate) {
+      this.primitives.onParamUpdate((notification: unknown) => {
+        // Handle as a notification
+        if (isIpcNotification(notification)) {
+          this.handleNotification(notification);
+        }
+      });
+    }
   }
 
   /**
