@@ -30,7 +30,9 @@ impl Default for VstKitParams {
             )
             .with_unit(" dB")
             .with_step_size(gain_spec.step)
-            .with_smoother(SmoothingStyle::Logarithmic(50.0))
+            // Use linear smoothing for dB values - logarithmic smoothing can produce
+            // NaN/infinity when crossing zero or dealing with negative dB ranges
+            .with_smoother(SmoothingStyle::Linear(50.0))
             .with_value_to_string(formatters::v2s_f32_rounded(1)),
         }
     }

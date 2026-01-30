@@ -18,8 +18,8 @@
 | Phase 4 | Plugin Layer — nih-plug Integration (VST3/CLAP) | 2/2 ✅ |
 | Phase 5 | Placeholder UI — egui Editor | 1/1 ✅ |
 | Phase 6 | Build Verification, AU Build & Validation | 6/6 ✅ |
-| Phase 7 | Host Compatibility Testing (Ableton + GarageBand) | 1/6 |
-| **Total** | | **20/25** |
+| Phase 7 | Host Compatibility Testing (Ableton + GarageBand) | 2/6 |
+| **Total** | | **21/25** |
 
 ---
 
@@ -173,18 +173,19 @@
   - Status: Not Started
   - Notes: 
 
-- [ ] **Step 20a:** Test in GarageBand (macOS, AU)
-  - Status: Not Started
+- [x] **Step 20a:** Test in GarageBand (macOS, AU)
+  - Status: Complete ✅
   - Checklist:
-    - [ ] Plugin appears in GarageBand's plugin list with name "VstKit"
-    - [ ] Plugin loads on audio track without crash
-    - [ ] Audio passes through (connect audio source)
-    - [ ] Gain parameter visible in plugin interface
-    - [ ] Gain slider moves without artifacts
-    - [ ] UI opens without crash
-    - [ ] UI closes without crash
-    - [ ] No dropouts at 64-sample buffer size
-  - Notes: Requires Steps 17a (clap-wrapper AU build) and 17b (auval validation) to pass first. Testing in GarageBand as Logic Pro is not available; AU plugin should support both Logic Pro and GarageBand.
+    - [x] Plugin appears in GarageBand's plugin list with name "VstKit"
+    - [x] Plugin loads on audio track without crash
+    - [x] Audio passes through (connect audio source)
+    - [x] Gain parameter visible in plugin interface
+    - [x] Gain slider moves without artifacts
+    - [x] UI opens without crash
+    - [x] UI closes without crash
+    - [x] No dropouts at 64-sample buffer size
+  - Notes: Initial testing revealed bug with Logarithmic smoothing causing audio system crash. Fixed by changing to Linear smoothing. Testing in GarageBand as Logic Pro is not available; AU plugin should support both Logic Pro and GarageBand.
+  - **Bug Fixed:** Changed `SmoothingStyle::Logarithmic(50.0)` to `SmoothingStyle::Linear(50.0)` in params.rs
 
 - [ ] **Step 20b:** Test AU state persistence in GarageBand
   - Status: Not Started
