@@ -3,9 +3,9 @@
 use crate::error::BridgeError;
 use protocol::{
     GetAllParametersResult, GetMeterFrameResult, GetParameterParams, GetParameterResult,
-    IpcRequest, IpcResponse, MeterFrame, ParameterInfo, RequestId, SetParameterParams,
-    SetParameterResult, METHOD_GET_ALL_PARAMETERS, METHOD_GET_METER_FRAME, METHOD_GET_PARAMETER,
-    METHOD_SET_PARAMETER,
+    IpcRequest, IpcResponse, MeterFrame, ParameterInfo, RequestId, RequestResizeParams,
+    RequestResizeResult, SetParameterParams, SetParameterResult, METHOD_GET_ALL_PARAMETERS,
+    METHOD_GET_METER_FRAME, METHOD_GET_PARAMETER, METHOD_REQUEST_RESIZE, METHOD_SET_PARAMETER,
 };
 use serde::Serialize;
 
@@ -25,6 +25,12 @@ pub trait ParameterHost: Send + Sync {
 
     /// Get the latest meter frame for UI visualization
     fn get_meter_frame(&self) -> Option<MeterFrame>;
+
+    /// Request resize of the editor window
+    ///
+    /// Returns true if the host accepted the resize request.
+    /// The host is free to reject or adjust the size.
+    fn request_resize(&self, width: u32, height: u32) -> bool;
 }
 
 /// IPC message handler that dispatches requests to a ParameterHost
@@ -48,6 +54,7 @@ impl<H: ParameterHost> IpcHandler<H> {
             METHOD_SET_PARAMETER => self.handle_set_parameter(&request),
             METHOD_GET_ALL_PARAMETERS => self.handle_get_all_parameters(&request),
             METHOD_GET_METER_FRAME => self.handle_get_meter_frame(&request),
+            METHOD_REQUEST_RESIZE => self.handle_request_resize(&request),
             "ping" => self.handle_ping(&request),
             _ => Err(BridgeError::UnknownMethod(request.method.clone())),
         };
@@ -160,6 +167,26 @@ impl<H: ParameterHost> IpcHandler<H> {
         Ok(IpcResponse::success(request.id.clone(), result))
     }
 
+    fn handle_request_resize(&self, request: &IpcRequest) -> Result<IpcResponse, BridgeError> {
+        // Parse params
+        let params: RequestResizeParams = match &request.params {
+            Some(value) => serde_json::from_value(value.clone())?,
+            None => {
+                return Err(BridgeError::InvalidParams {
+                    method: METHOD_REQUEST_RESIZE.to_string(),
+                    reason: "Missing params".to_string(),
+                });
+            }
+        };
+
+        // Request resize from host
+        let accepted = self.host.request_resize(params.width, params.height);
+
+        let result = RequestResizeResult { accepted };
+
+        Ok(IpcResponse::success(request.id.clone(), result))
+    }
+
     fn handle_ping(&self, request: &IpcRequest) -> Result<IpcResponse, BridgeError> {
         // Simple ping/pong for testing connectivity
         #[derive(Serialize)]
@@ -231,6 +258,11 @@ mod tests {
         fn get_meter_frame(&self) -> Option<MeterFrame> {
             // Mock returns None
             None
+        }
+
+        fn request_resize(&self, _width: u32, _height: u32) -> bool {
+            // Mock always accepts resize requests
+            true
         }
     }
 

@@ -92,6 +92,7 @@ pub fn create_macos_webview(config: WebViewConfig) -> Result<Box<dyn WebViewHand
         config.params,
         config.context,
         config.meter_consumer,
+        config.editor_size,
     )));
 
     // Create WKWebView first (without configuration yet)

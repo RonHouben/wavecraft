@@ -107,6 +107,12 @@ impl ParameterHost for AppState {
         // Desktop POC doesn't have metering yet
         None
     }
+
+    fn request_resize(&self, _width: u32, _height: u32) -> bool {
+        // Desktop POC doesn't support dynamic resizing
+        // (The desktop app has fixed window size)
+        false
+    }
 }
 
 #[cfg(test)]

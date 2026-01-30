@@ -21,6 +21,8 @@ pub struct PluginEditorBridge {
     context: Arc<dyn GuiContext>,
     /// Shared meter consumer - same instance used across editor open/close cycles
     meter_consumer: Arc<Mutex<MeterConsumer>>,
+    /// Shared editor size - updated when resize is requested
+    editor_size: Arc<Mutex<(u32, u32)>>,
 }
 
 impl PluginEditorBridge {
@@ -29,11 +31,13 @@ impl PluginEditorBridge {
         params: Arc<VstKitParams>,
         context: Arc<dyn GuiContext>,
         meter_consumer: Arc<Mutex<MeterConsumer>>,
+        editor_size: Arc<Mutex<(u32, u32)>>,
     ) -> Self {
         Self {
             params,
             context,
             meter_consumer,
+            editor_size,
         }
     }
 }
@@ -88,6 +92,27 @@ impl ParameterHost for PluginEditorBridge {
             rms_r: frame.rms_r,
             timestamp: frame.timestamp,
         })
+    }
+
+    fn request_resize(&self, width: u32, height: u32) -> bool {
+        // Update the editor's size field
+        *self.editor_size.lock().unwrap() = (width, height);
+        
+        nih_log!("Resize requested: {}x{}", width, height);
+        
+        // Call GuiContext::request_resize() which notifies the host
+        // The host will call Editor::size() to get the new size
+        let accepted = self.context.request_resize();
+        
+        if accepted {
+            nih_log!("Resize accepted by host");
+        } else {
+            nih_log!("Resize rejected by host");
+            // Revert size if rejected
+            // (In practice, most hosts just accept whatever size is reported)
+        }
+        
+        accepted
     }
 }
 

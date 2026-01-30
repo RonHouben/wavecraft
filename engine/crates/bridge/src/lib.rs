@@ -14,6 +14,7 @@
 //!
 //! ```rust,no_run
 //! use bridge::{IpcHandler, ParameterHost, BridgeError, ParameterInfo};
+//! use protocol::MeterFrame;
 //!
 //! // Implement ParameterHost for your application state
 //! struct MyApp;
@@ -32,6 +33,11 @@
 //!     fn get_all_parameters(&self) -> Vec<ParameterInfo> {
 //!         // Implementation
 //!         vec![]
+//!     }
+//!
+//!     fn get_meter_frame(&self) -> Option<MeterFrame> {
+//!         // Implementation
+//!         None
 //!     }
 //! }
 //!

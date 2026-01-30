@@ -80,6 +80,7 @@ impl Editor for VstKitEditor {
             width: size.0,
             height: size.1,
             meter_consumer,
+            editor_size: self.size.clone(),
         };
 
         match create_webview(config) {

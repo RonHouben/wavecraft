@@ -5,9 +5,32 @@
 import { ParameterSlider } from './components/ParameterSlider';
 import { LatencyMonitor } from './components/LatencyMonitor';
 import { Meter } from './components/Meter';
+import { ResizeControls } from './components/ResizeControls';
 import './App.css';
+import { useEffect } from 'react';
+import { requestResize } from './lib/vstkit-ipc';
 
 function App() {
+  // Handle native window resize
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      
+      // Notify host of the new size
+      requestResize(width, height).catch((err) => {
+        console.error('Failed to notify host of resize:', err);
+      });
+    };
+
+    // Listen for window resize events
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
   return (
     <div className="app">
       <header className="app-header">
@@ -29,6 +52,11 @@ function App() {
         <section className="diagnostics">
           <h2>Diagnostics</h2>
           <LatencyMonitor />
+        </section>
+
+        <section className="resize-section">
+          <h2>Window Resize</h2>
+          <ResizeControls />
         </section>
       </main>
 

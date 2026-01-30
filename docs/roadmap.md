@@ -67,7 +67,7 @@ This document tracks implementation progress against the milestones defined in t
 
 ## Milestone 3: Plugin UI Integration (Week 4–8)
 
-**Status: 🚧 In Progress**
+**Status: ✅ Complete**
 
 | Task | Status | Notes |
 |------|--------|-------|
@@ -79,7 +79,7 @@ This document tracks implementation progress against the milestones defined in t
 | Implement meter visualization in React | ✅ | Peak/RMS meters with dB display |
 | Show clipping indicator in meter UI | ✅ | Red pulsing button, 2s hold, click-to-reset |
 | Test parameter automation roundtrip | ✅ | Tested in Ableton Live |
-| Plugin editor window resizing | ⏳ | Host-controlled, needs investigation |
+| Plugin editor window resizing | ✅ | IPC-based resize with host approval |
 
 ---
 
@@ -136,6 +136,7 @@ This document tracks implementation progress against the milestones defined in t
 | 2025-01-31 | **Milestone 3 in progress**: WKWebView integration complete, working in Ableton Live. Added resizing and TailwindCSS investigation to roadmap. |
 | 2026-01-31 | **Clipping indicator complete**: Pure UI implementation with peak detection, 2-second sticky hold, pulsing red button, and click-to-reset. |
 | 2026-01-30 | AU wrapper validated with auval, but shows generic view (clap-wrapper limitation). Added "AU custom UI" to roadmap. |
+| 2026-01-31 | **Plugin editor window resizing complete**: Implemented IPC-based resize system with `requestResize()` method. UI can request size changes via React hook, host approves/rejects. Tested with preset sizes (600x400 to 1280x960). |
 
 ---
 

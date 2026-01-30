@@ -48,6 +48,10 @@ export type {
   UseLatencyMonitorResult,
 } from './hooks';
 
+// Resize API
+export { requestResize, useRequestResize } from './resize';
+export type { RequestResizeParams, RequestResizeResult } from './resize';
+
 // Metering API
 export { getMeterFrame, linearToDb, dbToLinear } from './meters';
 export type { MeterFrame, GetMeterFrameResult } from './meters';

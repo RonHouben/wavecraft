@@ -38,6 +38,8 @@ pub struct WebViewConfig {
     pub height: u32,
     /// Shared meter consumer - cloned from the plugin
     pub meter_consumer: Arc<Mutex<MeterConsumer>>,
+    /// Shared editor size - updated on resize requests
+    pub editor_size: Arc<Mutex<(u32, u32)>>,
 }
 
 /// Create a platform-specific WebView.
@@ -69,8 +71,9 @@ pub fn create_ipc_handler(
     params: Arc<VstKitParams>,
     context: Arc<dyn GuiContext>,
     meter_consumer: Arc<Mutex<MeterConsumer>>,
+    editor_size: Arc<Mutex<(u32, u32)>>,
 ) -> IpcHandler<PluginEditorBridge> {
-    let bridge = PluginEditorBridge::new(params, context, meter_consumer);
+    let bridge = PluginEditorBridge::new(params, context, meter_consumer, editor_size);
     IpcHandler::new(bridge)
 }
 

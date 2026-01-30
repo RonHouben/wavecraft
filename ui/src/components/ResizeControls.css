@@ -1,0 +1,75 @@
+/* ResizeControls styles */
+
+.resize-controls {
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+}
+
+.resize-controls h3 {
+  margin: 0 0 15px 0;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.resize-presets {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.resize-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+  color: #333;
+}
+
+.resize-button:hover:not(:disabled) {
+  background: #f5f5f5;
+  border-color: #2196f3;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.resize-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.resize-button .size-label {
+  font-size: 11px;
+  color: #666;
+  margin-top: 4px;
+}
+
+.resize-status {
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.03);
+  color: #666;
+}
+
+.resize-status.success {
+  background: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+}
+
+.resize-status.error {
+  background: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+}

@@ -425,6 +425,69 @@ fn param_value_changed(&self, id: &str, normalized_value: f32) {
 
 ---
 
+### Phase 9: Window Resizing (Est. 1 day) ✅ COMPLETE
+
+#### 9.1 **Add resize IPC method to protocol** (File: engine/crates/protocol/src/ipc.rs)
+- Action: Add `RequestResizeParams` (width, height) and `RequestResizeResult` (accepted) types
+- Why: Enable UI to request window size changes
+- Dependencies: None
+- Risk: Low
+- Status: ✅ Complete (2026-01-31)
+
+**Types added:**
+```rust
+pub struct RequestResizeParams { pub width: u32, pub height: u32 }
+pub struct RequestResizeResult { pub accepted: bool }
+pub const METHOD_REQUEST_RESIZE: &str = "requestResize";
+```
+
+#### 9.2 **Extend ParameterHost trait with resize** (File: engine/crates/bridge/src/handler.rs)
+- Action: Add `request_resize(&self, width: u32, height: u32) -> bool` to trait
+- Why: Bridge layer needs to forward resize requests to host
+- Dependencies: Step 9.1
+- Risk: Low
+- Status: ✅ Complete (2026-01-31)
+
+#### 9.3 **Implement resize in plugin bridge** (File: engine/crates/plugin/src/editor/bridge.rs)
+- Action: Implement `request_resize` by updating `editor_size` Arc and calling `GuiContext::request_resize()`
+- Why: Connect IPC handler to nih-plug's resize mechanism
+- Dependencies: Step 9.2
+- Risk: Medium (host-dependent behavior)
+- Status: ✅ Complete (2026-01-31)
+
+**Implementation:**
+- Accept `editor_size: Arc<Mutex<(u32, u32)>>` in bridge constructor
+- Update size atomically when resize requested
+- Call `context.request_resize()` for host approval
+- Host calls `Editor::size()` to get new dimensions
+
+#### 9.4 **Add React resize utilities** (File: ui/src/lib/vstkit-ipc/resize.ts)
+- Action: Create `requestResize()` function and `useRequestResize()` hook
+- Why: Provide ergonomic API for UI components
+- Dependencies: Step 9.1
+- Risk: Low
+- Status: ✅ Complete (2026-01-31)
+
+```typescript
+export async function requestResize(width: number, height: number): Promise<boolean>
+export function useRequestResize(): (width: number, height: number) => Promise<boolean>
+```
+
+#### 9.5 **Create ResizeControls component** (File: ui/src/components/ResizeControls.tsx)
+- Action: Build UI component with preset size buttons (Small/Medium/Large/XL)
+- Why: Demonstrate and test resize functionality
+- Dependencies: Step 9.4
+- Risk: Low
+- Status: ✅ Complete (2026-01-31)
+
+**Preset sizes:**
+- Small: 600×400
+- Medium: 800×600 (default)
+- Large: 1024×768
+- Extra Large: 1280×960
+
+---
+
 ## Testing Strategy
 
 ### Unit Tests
@@ -471,7 +534,7 @@ fn param_value_changed(&self, id: &str, normalized_value: f32) {
 - **Risk**: Editor resize handling varies by host
   - Likelihood: Medium
   - Impact: Medium
-  - Mitigation: Start with fixed size; add resize support as follow-up.
+  - Mitigation: ✅ Implemented (2026-01-31) — IPC-based resize with host approval pattern. Hosts can reject invalid sizes.
 
 - **Risk**: WebView2 not installed on Windows
   - Likelihood: Medium
@@ -509,3 +572,4 @@ fn param_value_changed(&self, id: &str, normalized_value: f32) {
 | Date | Version | Author | Changes |
 |------|---------|--------|---------|
 | 2026-01-30 | 1.0 | Planner Agent | Initial implementation plan |
+| 2026-01-31 | 1.1 | Coder Agent | Added Phase 9: Window Resizing (complete) |

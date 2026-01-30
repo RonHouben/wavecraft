@@ -205,6 +205,8 @@ pub const METHOD_SET_PARAMETER: &str = "setParameter";
 pub const METHOD_GET_ALL_PARAMETERS: &str = "getAllParameters";
 /// Method: Get current meter frame (peak/RMS levels)
 pub const METHOD_GET_METER_FRAME: &str = "getMeterFrame";
+/// Method: Request resize of editor window
+pub const METHOD_REQUEST_RESIZE: &str = "requestResize";
 /// Notification: Parameter changed (push from Rust to UI)
 pub const NOTIFICATION_PARAMETER_CHANGED: &str = "parameterChanged";
 
@@ -396,4 +398,24 @@ pub struct MeterFrame {
 pub struct GetMeterFrameResult {
     /// Latest meter frame, or null if no data available
     pub frame: Option<MeterFrame>,
+}
+
+// ----------------------------------------------------------------------------
+// requestResize
+// ----------------------------------------------------------------------------
+
+/// Parameters for requestResize request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RequestResizeParams {
+    /// Desired width in logical pixels
+    pub width: u32,
+    /// Desired height in logical pixels
+    pub height: u32,
+}
+
+/// Result of requestResize request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RequestResizeResult {
+    /// Whether the host approved the resize
+    pub accepted: bool,
 }
