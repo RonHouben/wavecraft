@@ -8,12 +8,49 @@
   font-family: system-ui, -apple-system, sans-serif;
 }
 
+.meter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .meter-label {
   font-size: 12px;
   font-weight: 600;
   color: #999;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.meter-clip-indicator {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  background: #ff1744;
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: none;
+  cursor: pointer;
+  animation: clip-pulse 0.5s ease-in-out infinite alternate;
+  user-select: none;
+}
+
+.meter-clip-indicator:hover {
+  background: #d50000;
+}
+
+.meter-clip-indicator:active {
+  transform: scale(0.95);
+}
+
+@keyframes clip-pulse {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.7;
+  }
 }
 
 .meter-channel {
@@ -43,6 +80,11 @@
   border-radius: 4px;
   position: relative;
   overflow: hidden;
+  transition: box-shadow 0.1s ease-out;
+}
+
+.meter-bar-bg.clipped {
+  box-shadow: inset 0 0 8px rgba(255, 23, 68, 0.8);
 }
 
 .meter-bar-rms {
@@ -70,4 +112,10 @@
   font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
   color: #ccc;
   text-align: right;
+  transition: color 0.1s ease-out;
+}
+
+.meter-value.clipped {
+  color: #ff1744;
+  font-weight: 600;
 }

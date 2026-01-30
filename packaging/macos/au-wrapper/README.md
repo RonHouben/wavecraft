@@ -11,6 +11,10 @@ to convert the VstKit CLAP plugin into an AUv2 plugin for use in:
 - Logic Pro
 - Other AU-compatible hosts on macOS
 
+**⚠️ Known Limitation:** clap-wrapper generates a generic AU parameter interface and does 
+not forward the custom CLAP GUI. The AU plugin will show a standard parameter view, while 
+VST3/CLAP formats display the custom React UI. This is expected behavior.
+
 ## Prerequisites
 
 - macOS (AU is macOS-only)

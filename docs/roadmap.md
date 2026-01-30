@@ -77,7 +77,7 @@ This document tracks implementation progress against the milestones defined in t
 | Implement parameter bridge (UI ↔ host params) | ✅ | GuiContext integration |
 | Implement SPSC ring buffer for audio → UI metering | ✅ | rtrb-based MeterProducer/Consumer |
 | Implement meter visualization in React | ✅ | Peak/RMS meters with dB display |
-| Show clipping indicator in meter UI | ⏳ | Visual feedback when volume exceeds 0dB |
+| Show clipping indicator in meter UI | ✅ | Red pulsing button, 2s hold, click-to-reset |
 | Test parameter automation roundtrip | ✅ | Tested in Ableton Live |
 | Plugin editor window resizing | ⏳ | Host-controlled, needs investigation |
 
@@ -103,7 +103,8 @@ This document tracks implementation progress against the milestones defined in t
 | Cubase | ⏳ | |
 | FL Studio | ⏳ | |
 | **AU Validation** | | |
-| `auval` passes without errors | ⏳ | |
+| `auval` passes without errors | ✅ | Validated 2026-01-30 |
+| Investigate AU custom UI issue | ⏳ | clap-wrapper shows generic view; root cause TBD |
 | State save/restore (`.aupreset`) | ⏳ | |
 | AU cache invalidation workflow documented | ⏳ | |
 
@@ -133,6 +134,8 @@ This document tracks implementation progress against the milestones defined in t
 | 2026-01-30 | Initial roadmap created. Milestone 1 (Plugin Skeleton) marked complete. |
 | 2026-01-30 | **Milestone 2 complete**: WebView Desktop POC fully functional with <1ms IPC latency. Ready for plugin integration. |
 | 2025-01-31 | **Milestone 3 in progress**: WKWebView integration complete, working in Ableton Live. Added resizing and TailwindCSS investigation to roadmap. |
+| 2026-01-31 | **Clipping indicator complete**: Pure UI implementation with peak detection, 2-second sticky hold, pulsing red button, and click-to-reset. |
+| 2026-01-30 | AU wrapper validated with auval, but shows generic view (clap-wrapper limitation). Added "AU custom UI" to roadmap. |
 
 ---
 
@@ -141,8 +144,12 @@ This document tracks implementation progress against the milestones defined in t
 1. **Milestone 3**: Complete Windows WebView2 integration
    - Port WKWebView approach to WebView2 for Windows
    - Test cross-platform parameter behavior
-2. **Milestone 4**: DAW compatibility testing
+2. **Investigate AU Custom UI Issue**
+   - Understand why clap-wrapper shows generic parameter view
+   - Research CLAP GUI extension forwarding in clap-wrapper
+   - Document findings and potential solutions
+3. **Milestone 4**: DAW compatibility testing
    - Logic Pro AU validation
    - Multi-DAW testing matrix
-3. Investigate plugin editor resizing behavior across hosts
-4. Evaluate TailwindCSS for UI styling consistency
+4. Investigate plugin editor resizing behavior across hosts
+5. Evaluate TailwindCSS for UI styling consistency
