@@ -247,3 +247,6 @@ pub fn run_command_checked(cmd: &mut Command) -> Result<()> {
 pub fn command_exists(name: &str) -> bool {
     which::which(name).is_ok()
 }
+
+#[cfg(test)]
+mod tests;

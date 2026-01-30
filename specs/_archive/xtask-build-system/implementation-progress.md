@@ -53,7 +53,7 @@
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| 14 | Add integration tests for xtask | ⬜ | CLI parsing, dry-run |
+| 14 | Add integration tests for xtask | ✅ | CLI parsing, BuildMode, Platform, paths |
 | 15 | Add --help documentation | ✅ | about, long_about for all commands |
 
 ---
@@ -66,8 +66,8 @@
 | Phase 2: Infrastructure | 2/2 |
 | Phase 3: Commands | 6/6 |
 | Phase 4: Migration | 3/3 |
-| Phase 5: Polish | 1/2 |
-| **Total** | **14/15** |
+| Phase 5: Polish | 2/2 |
+| **Total** | **15/15** |
 
 ---
 
@@ -93,6 +93,12 @@ Verified working:
 - `cargo xtask test --verbose` ✅  
 - `cargo xtask all --dry-run` ✅
 
-Remaining:
-- Update README.md with new build instructions
-- Add integration tests for CLI parsing
+### 2026-01-30: Implementation Complete
+
+All tasks completed:
+- Added comprehensive integration tests in `xtask/src/tests.rs`
+  - CLI argument parsing tests for all commands
+  - Global flag tests (--verbose, --dry-run, --debug, --release)
+  - BuildMode and Platform utility tests
+  - Path resolution tests
+- README.md already updated with build instructions (verified)

@@ -17,28 +17,40 @@ pub fn run(mode: BuildMode, package: Option<&str>, verbose: bool) -> Result<()> 
 
     print_status(&format!("Building {} plugin...", package_name));
 
-    // Build the command: cargo xtask bundle <package> [--release]
-    // We shell out to cargo xtask bundle because nih_plug_xtask expects to be called as main()
-    let mut cmd = Command::new("cargo");
-    cmd.current_dir(&engine_dir);
-    cmd.arg("xtask");
-    cmd.arg("bundle");
-    cmd.arg(package_name);
+    // Build the command: cargo build --release -p <package>
+    let mut build_cmd = Command::new("cargo");
+    build_cmd.current_dir(&engine_dir);
+    build_cmd.arg("build");
+    build_cmd.arg("-p").arg(package_name);
 
     if let Some(flag) = mode.cargo_flag() {
-        cmd.arg(flag);
+        build_cmd.arg(flag);
     }
 
     if verbose {
-        println!("Running: cargo xtask bundle {} {:?}", package_name, mode.cargo_flag());
+        println!("Running: cargo build -p {} {:?}", package_name, mode.cargo_flag());
     }
 
-    let status = cmd
+    let build_status = build_cmd
         .status()
-        .context("Failed to run cargo xtask bundle")?;
+        .context("Failed to run cargo build")?;
 
-    if !status.success() {
-        anyhow::bail!("Bundle command failed with exit code: {:?}", status.code());
+    if !build_status.success() {
+        anyhow::bail!("Build command failed with exit code: {:?}", build_status.code());
+    }
+
+    print_status("Bundling plugins...");
+
+    // Use nih_plug_xtask's main function directly via the CLI wrapper
+    // We need to call it as a separate binary to avoid conflict with our xtask
+    let mut bundle_args = vec!["bundle".to_string(), package_name.to_string()];
+    if let Some(flag) = mode.cargo_flag() {
+        bundle_args.push(flag.to_string());
+    }
+
+    // Call nih_plug_xtask::main_with_args directly
+    if let Err(e) = nih_plug_xtask::main_with_args(package_name, bundle_args.into_iter()) {
+        anyhow::bail!("Bundle command failed: {}", e);
     }
 
     // Verify bundles were created
