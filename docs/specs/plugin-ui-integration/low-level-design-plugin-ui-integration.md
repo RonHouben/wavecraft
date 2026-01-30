@@ -475,49 +475,83 @@ fn calculate_meters(buffer: &Buffer) -> (f32, f32, f32, f32) {
 }
 ```
 
-### 5.3 UI Thread Polling
+### 5.3 IPC Handler for Meter Polling
 
-The editor polls the meter buffer and pushes updates to the WebView:
+The UI polls meters via IPC request. The bridge reads from the ring buffer:
 
 ```rust
-impl VstKitEditor {
-    /// Called periodically from UI thread (e.g., via timer or idle callback)
-    fn poll_meters(&mut self) {
-        if let Some(frame) = self.meter_consumer.read_latest() {
-            if let Some(webview) = &self.webview {
-                let update = serde_json::json!({
-                    "type": "meterFrame",
-                    "peakL": frame.peak_l,
-                    "peakR": frame.peak_r,
-                    "rmsL": frame.rms_l,
-                    "rmsR": frame.rms_r,
-                });
-                
-                let js = format!(
-                    "window.__VSTKIT_IPC__._onMeterFrame({});",
-                    serde_json::to_string(&update).unwrap()
-                );
-                
-                let _ = webview.evaluate_script(&js);
-            }
-        }
+// In PluginEditorBridge (or extend ParameterHost trait)
+impl PluginEditorBridge {
+    /// Handle getMeterFrame IPC request
+    pub fn get_meter_frame(&self) -> Option<MeterFrameResult> {
+        // Read latest from ring buffer (drains all queued frames, returns most recent)
+        self.meter_consumer.read_latest().map(|frame| MeterFrameResult {
+            peak_l: frame.peak_l,
+            peak_r: frame.peak_r,
+            rms_l: frame.rms_l,
+            rms_r: frame.rms_r,
+        })
+    }
+}
+
+// IPC handler addition (in bridge crate)
+const METHOD_GET_METER_FRAME: &str = "getMeterFrame";
+
+fn handle_get_meter_frame(&self, request: &IpcRequest) -> Result<IpcResponse, BridgeError> {
+    match self.host.get_meter_frame() {
+        Some(frame) => Ok(IpcResponse::success(request.id.clone(), frame)),
+        None => Ok(IpcResponse::success(request.id.clone(), MeterFrameResult::default())),
     }
 }
 ```
 
-### 5.4 React Meter Component
+**Key design choice**: The UI controls the polling rate via `requestAnimationFrame`. This:
+- Keeps the plugin simple (no timer management)
+- Naturally throttles to display refresh rate (~60Hz)
+- Stops polling automatically when UI is not visible
+
+### 5.4 React Meter Component (Polling-Based)
 
 ```typescript
 // ui/src/components/Meter.tsx
-import { useEffect, useState } from 'react';
-import { onMeterFrame, MeterFrame } from '../lib/vstkit-ipc';
+import { useEffect, useState, useRef } from 'react';
+import { getMeterFrame, MeterFrame } from '@vstkit/ipc';
 
 export function Meter() {
   const [meters, setMeters] = useState<MeterFrame | null>(null);
+  const rafRef = useRef<number>();
   
   useEffect(() => {
-    const unsubscribe = onMeterFrame(setMeters);
-    return unsubscribe;
+    let mounted = true;
+    
+    const poll = async () => {
+      if (!mounted) return;
+      
+      try {
+        const frame = await getMeterFrame();
+        if (frame && mounted) {
+          setMeters(frame);
+        }
+      } catch (e) {
+        // Ignore errors during polling
+      }
+      
+      // Schedule next poll at display refresh rate
+      if (mounted) {
+        rafRef.current = requestAnimationFrame(poll);
+      }
+    };
+    
+    // Start polling
+    rafRef.current = requestAnimationFrame(poll);
+    
+    // Cleanup: stop polling when unmounted
+    return () => {
+      mounted = false;
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
   }, []);
   
   if (!meters) return null;
@@ -536,6 +570,29 @@ export function Meter() {
 function linearToDb(linear: number): number {
   if (linear <= 0) return -Infinity;
   return 20 * Math.log10(linear);
+}
+```
+
+```typescript
+// ui/src/lib/vstkit-ipc/meters.ts
+
+export interface MeterFrame {
+  peakL: number;
+  peakR: number;
+  rmsL: number;
+  rmsR: number;
+}
+
+/**
+ * Request current meter values from the plugin.
+ * Called at ~60Hz via requestAnimationFrame.
+ */
+export async function getMeterFrame(): Promise<MeterFrame | null> {
+  const response = await window.__VSTKIT_IPC__.request('getMeterFrame', {});
+  if (response.result) {
+    return response.result as MeterFrame;
+  }
+  return null;
 }
 ```
 
@@ -695,9 +752,34 @@ ui/src/
 
 ## 8. IPC Protocol Extensions
 
-### 8.1 New Methods (Plugin → UI Push)
+### 8.1 New IPC Methods
 
-These are not request/response; they are pushed via `evaluate_script()`:
+#### Request/Response Methods (UI → Plugin)
+
+```typescript
+// getMeterFrame - UI polls at ~60Hz via requestAnimationFrame
+interface GetMeterFrameRequest {
+  jsonrpc: "2.0";
+  id: number;
+  method: "getMeterFrame";
+  params: {};
+}
+
+interface GetMeterFrameResponse {
+  jsonrpc: "2.0";
+  id: number;
+  result: {
+    peakL: number;  // Linear 0-1+ (can exceed 1.0 for clipping)
+    peakR: number;
+    rmsL: number;
+    rmsR: number;
+  };
+}
+```
+
+#### Push Notifications (Plugin → UI)
+
+Pushed via `evaluate_script()` when host automation changes parameters:
 
 ```typescript
 // Pushed when host automation changes a parameter
@@ -709,47 +791,39 @@ interface ParamUpdateNotification {
     value: number;  // Normalized 0-1
   };
 }
-
-// Pushed periodically with meter data
-interface MeterFrameNotification {
-  type: "meterFrame";
-  peakL: number;  // Linear 0-1+
-  peakR: number;
-  rmsL: number;
-  rmsR: number;
-}
 ```
 
-### 8.2 UI-Side Subscription API
+### 8.2 UI-Side API
 
 ```typescript
-// ui/src/lib/vstkit-ipc/meters.ts
+// ui/src/lib/vstkit-ipc/index.ts
 
-type MeterCallback = (frame: MeterFrame) => void;
+// Existing request/response pattern (from desktop POC)
+export async function getMeterFrame(): Promise<MeterFrame | null>;
+export async function getParameter(id: string): Promise<ParameterInfo>;
+export async function setParameter(id: string, value: number): Promise<void>;
+export async function getAllParameters(): Promise<ParameterInfo[]>;
+
+// New: subscription for host automation changes (push-based)
 type ParamCallback = (id: string, value: number) => void;
-
-// Global subscription registry
-const meterSubscribers: Set<MeterCallback> = new Set();
 const paramSubscribers: Map<string, Set<ParamCallback>> = new Map();
 
-// Called from injected IPC primitives
-window.__VSTKIT_IPC__._onMeterFrame = (frame: MeterFrame) => {
-  meterSubscribers.forEach(cb => cb(frame));
-};
-
+// Called from injected IPC primitives when host changes a parameter
 window.__VSTKIT_IPC__._onParamUpdate = (update: { id: string; value: number }) => {
   const subs = paramSubscribers.get(update.id);
   if (subs) {
     subs.forEach(cb => cb(update.id, update.value));
   }
+  // Also notify "all" subscribers
+  paramSubscribers.get('*')?.forEach(cb => cb(update.id, update.value));
 };
 
-// Public API
-export function onMeterFrame(callback: MeterCallback): () => void {
-  meterSubscribers.add(callback);
-  return () => meterSubscribers.delete(callback);
-}
-
+/**
+ * Subscribe to parameter changes from host automation.
+ * @param id Parameter ID, or '*' for all parameters
+ * @param callback Called when host changes the parameter
+ * @returns Unsubscribe function
+ */
 export function onParamChange(id: string, callback: ParamCallback): () => void {
   if (!paramSubscribers.has(id)) {
     paramSubscribers.set(id, new Set());
@@ -758,6 +832,16 @@ export function onParamChange(id: string, callback: ParamCallback): () => void {
   return () => paramSubscribers.get(id)?.delete(callback);
 }
 ```
+
+### 8.3 Method Summary
+
+| Method | Direction | Transport | Use Case |
+|--------|-----------|-----------|----------|
+| `getParameter` | UI → Plugin | Request/Response | Read current value |
+| `setParameter` | UI → Plugin | Request/Response | User changes knob |
+| `getAllParameters` | UI → Plugin | Request/Response | Initial UI sync |
+| `getMeterFrame` | UI → Plugin | Request/Response (polled) | Meter visualization |
+| `paramUpdate` | Plugin → UI | Push notification | Host automation |
 
 ---
 
@@ -848,20 +932,19 @@ rtrb = "0.3"  # SPSC ring buffer
 
 ---
 
-## 12. Open Questions
+## 12. Design Decisions (Resolved)
 
 1. **wry vs raw platform APIs**: Should we use wry for the plugin editor, or go directly to WKWebView/WebView2 APIs? 
-   - *Recommendation*: Try wry first; it worked for desktop POC. Fall back if issues arise.
+   - ✅ **Decision**: Use wry first (worked for desktop POC). Fall back to raw APIs only if issues arise.
 
 2. **Meter polling mechanism**: How to trigger periodic meter polls in the editor?
-   - *Options*: Timer thread, `requestAnimationFrame` in JS polling via IPC, idle callbacks
-   - *Recommendation*: Let React poll via `requestAnimationFrame` → IPC request
+   - ✅ **Decision**: React polls via `requestAnimationFrame` → IPC request (`getMeterFrame` method). This keeps polling logic in the UI and avoids push complexity.
 
 3. **Editor resize**: How to handle dynamic resize (user drags window)?
-   - *Recommendation*: Start with fixed size; add resize support as follow-up
+   - ✅ **Decision**: Fixed size initially. Resize support is a follow-up task (not in scope for Milestone 3).
 
 4. **Multiple editor instances**: Can the host open multiple editor windows?
-   - *Answer*: nih-plug handles this; each `spawn()` call creates independent editor
+   - ✅ **Decision**: Support single editor window only. nih-plug handles lifecycle; we don't need to track instance count.
 
 ---
 

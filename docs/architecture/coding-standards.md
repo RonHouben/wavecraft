@@ -154,6 +154,35 @@ src/
 
 **Note:** Class files should be named with PascalCase matching the class name.
 
+### Import Aliases
+
+**Rule:** Use configured path aliases instead of relative imports for shared libraries.
+
+The project defines the following import aliases (configured in `tsconfig.json` and `vite.config.ts`):
+
+| Alias | Path | Usage |
+|-------|------|-------|
+| `@vstkit/ipc` | `./src/lib/vstkit-ipc` | IPC client and types |
+
+**Do:**
+```typescript
+// ✅ Use alias for shared libraries
+import { getMeterFrame, MeterFrame } from '@vstkit/ipc';
+import { useParameter } from '@vstkit/ipc';
+```
+
+**Don't:**
+```typescript
+// ❌ Relative imports to shared libraries
+import { getMeterFrame } from '../lib/vstkit-ipc';
+import { useParameter } from '../../lib/vstkit-ipc';
+```
+
+**Rationale:**
+- Cleaner imports that don't change when files move
+- Immediately identifies imports as project-internal
+- Consistent import paths across the codebase
+
 ---
 
 ## Rust
