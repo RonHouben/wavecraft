@@ -10,8 +10,8 @@ authors = ["VstKit Team"]
 
 [workspace.dependencies]
 # nih-plug framework - pinned to specific commit for stability
-nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "6c87bcf" }
-nih_plug_egui = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "6c87bcf" }
+nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28b149ec4d62757d0b448809148a0c3ca6e09a95" }
+nih_plug_egui = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28b149ec4d62757d0b448809148a0c3ca6e09a95" }
 
 # Internal crates
 protocol = { path = "crates/protocol" }

@@ -28,7 +28,7 @@ impl Default for VstKitParams {
                     max: gain_spec.max,
                 },
             )
-            .with_unit(&format!(" {}", gain_spec.unit))
+            .with_unit(" dB")
             .with_step_size(gain_spec.step)
             .with_smoother(SmoothingStyle::Logarithmic(50.0))
             .with_value_to_string(formatters::v2s_f32_rounded(1)),

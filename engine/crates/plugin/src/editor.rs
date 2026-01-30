@@ -6,7 +6,7 @@
 use std::sync::Arc;
 
 use nih_plug::prelude::*;
-use nih_plug_egui::egui::{self, CentralPanel, Slider};
+use nih_plug_egui::egui::{CentralPanel, Slider};
 use nih_plug_egui::{create_egui_editor, EguiState};
 
 use crate::params::VstKitParams;
@@ -17,7 +17,7 @@ const EDITOR_WIDTH: u32 = 400;
 const EDITOR_HEIGHT: u32 = 300;
 
 /// Create the placeholder egui editor.
-pub fn create_editor(params: Arc<VstKitParams>) -> Box<dyn Editor> {
+pub fn create_editor(params: Arc<VstKitParams>) -> Option<Box<dyn Editor>> {
     let state = EguiState::from_size(EDITOR_WIDTH, EDITOR_HEIGHT);
 
     create_egui_editor(

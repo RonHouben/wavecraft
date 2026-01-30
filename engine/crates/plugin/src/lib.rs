@@ -53,7 +53,7 @@ impl Plugin for VstKitPlugin {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-        Some(create_editor(self.params.clone()))
+        create_editor(self.params.clone())
     }
 
     fn initialize(
@@ -72,10 +72,7 @@ impl Plugin for VstKitPlugin {
         _aux: &mut AuxiliaryBuffers,
         _context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
-        // Read parameter once per buffer (real-time safe)
-        let gain_db = self.params.gain.smoothed.next();
-
-        // Process audio in-place
+        // Process audio in-place with per-sample smoothing
         for mut channel_samples in buffer.iter_samples() {
             let gain_db = self.params.gain.smoothed.next();
             let gain_linear = protocol::db_to_linear(gain_db);
