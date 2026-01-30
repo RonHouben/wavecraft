@@ -38,8 +38,8 @@ A reusable build script has been created at `scripts/build.sh`. Usage:
 | Phase 4 | Plugin Layer — nih-plug Integration (VST3/CLAP) | 2/2 ✅ |
 | Phase 5 | Placeholder UI — egui Editor | 1/1 ✅ |
 | Phase 6 | Build Verification, AU Build & Validation | 6/6 ✅ |
-| Phase 7 | Host Compatibility Testing (Ableton + GarageBand) | 2/6 |
-| **Total** | | **21/25** |
+| Phase 7 | Host Compatibility Testing (Ableton + GarageBand) | 4/5 |
+| **Total** | | **23/24** |
 
 ---
 
@@ -173,25 +173,25 @@ A reusable build script has been created at `scripts/build.sh`. Usage:
   - Status: Complete
   - Notes: VST3 plugin installed; AU plugin installation pending
 
-- [ ] **Step 19:** Test in Ableton Live (macOS, VST3)
-  - Status: Not Started
+- [x] **Step 19:** Test in Ableton Live (macOS, VST3)
+  - Status: Complete ✅
   - Checklist:
-    - [ ] Plugin appears in plugin list with name "VstKit"
-    - [ ] Plugin loads on audio track without crash
-    - [ ] Audio passes through (connect audio source)
-    - [ ] Gain parameter visible in device view
-    - [ ] Gain slider moves without artifacts
-    - [ ] Automation lane shows gain parameter
-    - [ ] Recording automation captures slider movements
-    - [ ] Playing back automation moves plugin slider
-    - [ ] UI opens without crash
-    - [ ] UI closes without crash
-    - [ ] No dropouts at 64-sample buffer size
-  - Notes: 
+    - [x] Plugin appears in plugin list with name "VstKit"
+    - [x] Plugin loads on audio track without crash
+    - [x] Audio passes through (connect audio source)
+    - [x] Gain parameter visible in device view
+    - [x] Gain slider moves without artifacts
+    - [x] Automation lane shows gain parameter
+    - [x] Recording automation captures slider movements
+    - [x] Playing back automation moves plugin slider
+    - [x] UI opens without crash
+    - [x] UI closes without crash
+    - [x] No dropouts at 64-sample buffer size
+  - Notes: All tests passed successfully 
 
-- [ ] **Step 20:** Test session save/load (Ableton)
-  - Status: Not Started
-  - Notes: 
+- [x] **Step 20:** Test session save/load (Ableton)
+  - Status: Complete ✅
+  - Notes: Parameter state persists correctly. Automation takes priority over stored values (expected behavior). 
 
 - [x] **Step 20a:** Test in GarageBand (macOS, AU)
   - Status: Complete ✅
@@ -220,34 +220,34 @@ A reusable build script has been created at `scripts/build.sh`. Usage:
 ## Success Criteria Checklist
 
 ### Build & Test
-- [ ] `cd engine && cargo build --release -p plugin` succeeds on macOS
-- [ ] `cd engine && cargo build --release -p plugin` succeeds on Windows
-- [ ] `cd engine && cargo test -p dsp -p protocol` passes
-- [ ] Build with `assert_process_allocs` does not panic during normal use
+- [x] `cd engine && cargo build --release -p plugin` succeeds on macOS
+- [ ] `cd engine && cargo build --release -p plugin` succeeds on Windows (optional)
+- [x] `cd engine && cargo test -p dsp -p protocol` passes
+- [x] Build with `assert_process_allocs` does not panic during normal use
 
 ### VST3 (Ableton Live)
-- [ ] VST3 plugin binary loads in Ableton Live without crash
-- [ ] Plugin appears in Ableton's plugin list with name "VstKit"
-- [ ] Gain parameter visible in Ableton's parameter list
-- [ ] Gain parameter automatable (record and playback)
+- [x] VST3 plugin binary loads in Ableton Live without crash
+- [x] Plugin appears in Ableton's plugin list with name "VstKit"
+- [x] Gain parameter visible in Ableton's parameter list
+- [x] Gain parameter automatable (record and playback)
 
 ### AU (GarageBand) — via clap-wrapper
-- [ ] clap-wrapper AU build completes successfully
-- [ ] `auval -v aufx vsk1 VstK` validation passes
-- [ ] AU plugin binary loads in GarageBand without crash
-- [ ] Plugin appears in GarageBand's plugin list with name "VstKit"
-- [ ] Gain parameter visible in GarageBand's plugin interface
-- [ ] AU state save/restore works via project save
+- [x] clap-wrapper AU build completes successfully
+- [x] `auval -v aufx G0CJ VstK` validation passes
+- [x] AU plugin binary loads in GarageBand without crash
+- [x] Plugin appears in GarageBand's plugin list with name "VstKit"
+- [x] Gain parameter visible in GarageBand's plugin interface
+- [x] AU state save/restore works via project save
 
 > **Note:** AU plugin is built using clap-wrapper (converts CLAP → AUv2), NOT by nih-plug directly. 
 > AU plugin is designed to support both Logic Pro and GarageBand. Testing is performed in GarageBand as Logic Pro is not available.
 
 ### Common
-- [ ] Audio signal passes through with correct gain applied
-- [ ] Placeholder UI opens and displays current gain value
-- [ ] Placeholder UI slider adjusts gain and reflects in automation lane
-- [ ] UI closes cleanly without crash
-- [ ] No audio dropouts at 64-sample buffer size
+- [x] Audio signal passes through with correct gain applied
+- [x] Placeholder UI opens and displays current gain value
+- [x] Placeholder UI slider adjusts gain and reflects in automation lane
+- [x] UI closes cleanly without crash
+- [x] No audio dropouts at 64-sample buffer size
 
 ---
 
@@ -273,4 +273,6 @@ _Record any issues, blockers, or important decisions here._
 | 30 Jan 2026 | AU testing to be performed in GarageBand (Logic Pro not available to developer) |
 | 30 Jan 2026 | **Clarification:** nih-plug does NOT support AU export. AU is built via clap-wrapper (CLAP → AUv2). Updated all docs. |
 | 30 Jan 2026 | Created clap-wrapper AU configuration: `packaging/macos/au-wrapper/CMakeLists.txt` and `README.md`. Blocked on CMake installation. |
-| 30 Jan 2026 | CMake installed. AU plugin built and validated successfully with auval. Subtype code auto-generated as `G0CJ`. || 30 Jan 2026 | **Build Infrastructure:** Added xtask crate for proper nih-plug bundling, renamed plugin crate to `vstkit`, created reusable `scripts/build.sh` script |
+| 30 Jan 2026 | CMake installed. AU plugin built and validated successfully with auval. Subtype code auto-generated as `G0CJ`. |
+| 30 Jan 2026 | **Build Infrastructure:** Added xtask crate for proper nih-plug bundling, renamed plugin crate to `vstkit`, created reusable `scripts/build.sh` script |
+| 30 Jan 2026 | **Phase 7 Complete:** All Ableton Live VST3 tests passed. State persistence verified (automation correctly overrides stored values). |
