@@ -196,6 +196,33 @@ Code running on the audio thread must:
 - Include examples in doc comments where helpful
 - Keep comments up-to-date with code changes
 
+### Documentation References
+
+**Rule:** Always link to relevant documentation in the `docs/` folder.
+
+All project documentation (README, specs, design docs) must include links to related architecture documents. This ensures discoverability and keeps documentation interconnected.
+
+**Required links:**
+- [High-Level Design](./high-level-design.md) — Architecture overview, component design, data flows
+- [Coding Standards](./coding-standards.md) — Code conventions and patterns
+- [Roadmap](../roadmap.md) — Milestone tracking and progress
+
+**Do:**
+```markdown
+## Documentation
+
+- [High-Level Design](docs/architecture/high-level-design.md) — Architecture overview
+- [Coding Standards](docs/architecture/coding-standards.md) — Code conventions
+- [Roadmap](docs/roadmap.md) — Implementation progress
+```
+
+**Don't:**
+```markdown
+## Documentation
+
+See the docs folder for more information.
+```
+
 ### Error Handling
 
 - TypeScript: Use explicit error types, avoid `any`

@@ -58,7 +58,9 @@ vstkit/
 
 ## Documentation
 
-- [High-Level Design](docs/architecture/high-level-design.md) — Architecture overview and implementation roadmap
+- [High-Level Design](docs/architecture/high-level-design.md) — Architecture overview, component design, data flows, and implementation roadmap
+- [Coding Standards](docs/architecture/coding-standards.md) — TypeScript, Rust, and React conventions
+- [Roadmap](docs/roadmap.md) — Milestone tracking and implementation progress
 
 ## Building
 
