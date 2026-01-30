@@ -55,7 +55,7 @@ impl VstKitEditor {
         Self {
             params,
             meter_consumer,
-            size: Arc::new(Mutex::new((800, 600))), // Default size
+            size: Arc::new(Mutex::new((800, 800))), // Default size - increased to show all content
             message_tx: Arc::new(Mutex::new(None)),
             webview_handle: Arc::new(Mutex::new(None)),
         }
