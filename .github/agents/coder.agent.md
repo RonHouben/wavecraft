@@ -50,6 +50,8 @@ engine/crates/
 └── bridge/     # UI ↔ Audio IPC
 ```
 
+When implementing a feature from the `specs/` directory, keep track of your progress in the file `specs/[feature_name]/implementation-progress.md`.
+
 ---
 
 ## Coding Principles You Must Follow
