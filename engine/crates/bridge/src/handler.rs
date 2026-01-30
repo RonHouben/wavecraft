@@ -2,9 +2,10 @@
 
 use crate::error::BridgeError;
 use protocol::{
-    GetAllParametersResult, GetParameterParams, GetParameterResult, IpcRequest, IpcResponse,
-    ParameterInfo, RequestId, SetParameterParams, SetParameterResult, METHOD_GET_ALL_PARAMETERS,
-    METHOD_GET_PARAMETER, METHOD_SET_PARAMETER,
+    GetAllParametersResult, GetMeterFrameResult, GetParameterParams, GetParameterResult,
+    IpcRequest, IpcResponse, MeterFrame, ParameterInfo, RequestId, SetParameterParams,
+    SetParameterResult, METHOD_GET_ALL_PARAMETERS, METHOD_GET_METER_FRAME, METHOD_GET_PARAMETER,
+    METHOD_SET_PARAMETER,
 };
 use serde::Serialize;
 
@@ -21,6 +22,9 @@ pub trait ParameterHost: Send + Sync {
 
     /// Get all parameters with their current values and metadata
     fn get_all_parameters(&self) -> Vec<ParameterInfo>;
+
+    /// Get the latest meter frame for UI visualization
+    fn get_meter_frame(&self) -> Option<MeterFrame>;
 }
 
 /// IPC message handler that dispatches requests to a ParameterHost
@@ -43,6 +47,7 @@ impl<H: ParameterHost> IpcHandler<H> {
             METHOD_GET_PARAMETER => self.handle_get_parameter(&request),
             METHOD_SET_PARAMETER => self.handle_set_parameter(&request),
             METHOD_GET_ALL_PARAMETERS => self.handle_get_all_parameters(&request),
+            METHOD_GET_METER_FRAME => self.handle_get_meter_frame(&request),
             "ping" => self.handle_ping(&request),
             _ => Err(BridgeError::UnknownMethod(request.method.clone())),
         };
@@ -146,6 +151,15 @@ impl<H: ParameterHost> IpcHandler<H> {
         Ok(IpcResponse::success(request.id.clone(), result))
     }
 
+    fn handle_get_meter_frame(&self, request: &IpcRequest) -> Result<IpcResponse, BridgeError> {
+        // Get meter frame from host
+        let frame = self.host.get_meter_frame();
+
+        let result = GetMeterFrameResult { frame };
+
+        Ok(IpcResponse::success(request.id.clone(), result))
+    }
+
     fn handle_ping(&self, request: &IpcRequest) -> Result<IpcResponse, BridgeError> {
         // Simple ping/pong for testing connectivity
         #[derive(Serialize)]
@@ -212,6 +226,11 @@ mod tests {
 
         fn get_all_parameters(&self) -> Vec<ParameterInfo> {
             self.params.clone()
+        }
+
+        fn get_meter_frame(&self) -> Option<MeterFrame> {
+            // Mock returns None
+            None
         }
     }
 

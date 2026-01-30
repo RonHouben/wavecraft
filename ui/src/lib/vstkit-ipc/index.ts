@@ -47,3 +47,7 @@ export type {
   UseAllParametersResult,
   UseLatencyMonitorResult,
 } from './hooks';
+
+// Metering API
+export { getMeterFrame, linearToDb, dbToLinear } from './meters';
+export type { MeterFrame, GetMeterFrameResult } from './meters';

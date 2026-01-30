@@ -5,6 +5,7 @@
 import { ParameterSlider } from './components/ParameterSlider';
 import { ParameterToggle } from './components/ParameterToggle';
 import { LatencyMonitor } from './components/LatencyMonitor';
+import { Meter } from './components/Meter';
 import './App.css';
 
 function App() {
@@ -21,6 +22,11 @@ function App() {
           <ParameterSlider id="gain" />
           <ParameterSlider id="mix" />
           <ParameterToggle id="bypass" />
+        </section>
+
+        <section className="meters">
+          <h2>Meters</h2>
+          <Meter />
         </section>
 
         <section className="diagnostics">

@@ -66,6 +66,12 @@ impl ParameterHost for PluginEditorBridge {
         // For now, just return the gain parameter
         self.get_parameter("gain").into_iter().collect()
     }
+
+    fn get_meter_frame(&self) -> Option<protocol::MeterFrame> {
+        // TODO: Read from MeterConsumer once we wire it up
+        // For now, return None
+        None
+    }
 }
 
 #[cfg(test)]

@@ -15,7 +15,7 @@
 | Phase 3 | Editor Module Refactoring | ✅ Complete | 2-3 |
 | Phase 4 | WebView Editor (macOS) | ✅ Complete | 3-4 |
 | Phase 5 | Parameter Synchronization | ✅ Complete | 2-3 |
-| Phase 6 | Metering UI Integration | ⬜ Not Started | 1-2 |
+| Phase 6 | Metering UI Integration | ✅ Complete | 1-2 |
 | Phase 7 | Windows Support | ⬜ Not Started | 2-3 |
 | Phase 8 | DAW Integration Testing | ⬜ Not Started | 2-3 |
 
@@ -76,11 +76,13 @@
 
 ### Phase 6: Metering UI Integration
 
-- [ ] **6.1** Add getMeterFrame to IPC protocol
-- [ ] **6.2** Create meters TypeScript module
-- [ ] **6.3** Create Meter React component
-- [ ] **6.4** Add linear-to-dB conversion utilities
-- [ ] **6.5** Integrate Meter into App
+- [x] **6.1** Add getMeterFrame to IPC protocol
+- [x] **6.2** Create TypeScript meter polling API
+- [x] **6.3** Create Meter React component
+- [x] **6.4** Add linear-to-dB conversion utilities
+- [x] **6.5** Integrate Meter into App
+
+**Notes:** Complete metering UI integration. Added METHOD_GET_METER_FRAME to protocol with MeterFrame and GetMeterFrameResult types. Implemented get_meter_frame in ParameterHost trait (returns None for now, will be wired to MeterConsumer later). Created meters.ts with getMeterFrame(), linearToDb(), and dbToLinear() utilities. Built Meter component with stereo peak/RMS bars and dB readouts, polling at 30Hz. Integrated into App.tsx. UI builds successfully.
 
 ### Phase 7: Windows Support
 
