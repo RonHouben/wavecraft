@@ -1,7 +1,7 @@
 ---
 name: coder
 description: Senior software engineer implementing Rust audio plugins (nih-plug) with React UIs. Expert in real-time safe DSP code, VST3/CLAP integration, and cross-platform development.
-tools: ['search', 'todo', 'edit', 'read']
+tools: ['search', 'todo', 'edit', 'read', 'web', 'execute', 'agent']
 model: Claude Opus 4.5 (copilot)
 ---
 
