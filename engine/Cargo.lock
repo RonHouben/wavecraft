@@ -3753,12 +3753,20 @@ dependencies = [
 name = "vstkit"
 version = "0.1.0"
 dependencies = [
+ "block2",
  "bridge",
  "dsp",
+ "include_dir",
  "metering",
  "nih_plug",
  "nih_plug_egui",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
  "protocol",
+ "raw-window-handle 0.6.2",
+ "serde_json",
+ "wry",
 ]
 
 [[package]]

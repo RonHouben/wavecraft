@@ -12,8 +12,13 @@ use dsp::Processor;
 use metering::{create_meter_channel, MeterConsumer, MeterFrame, MeterProducer};
 use nih_plug::prelude::*;
 
-use crate::editor::create_editor;
 use crate::params::VstKitParams;
+
+#[cfg(feature = "webview_editor")]
+use crate::editor::create_webview_editor;
+
+#[cfg(not(feature = "webview_editor"))]
+use crate::editor::create_editor;
 
 /// Main plugin struct for VstKit.
 pub struct VstKitPlugin {
@@ -60,7 +65,15 @@ impl Plugin for VstKitPlugin {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-        create_editor(self.params.clone())
+        #[cfg(feature = "webview_editor")]
+        {
+            create_webview_editor(self.params.clone())
+        }
+        
+        #[cfg(not(feature = "webview_editor"))]
+        {
+            create_editor(self.params.clone())
+        }
     }
 
     fn initialize(
