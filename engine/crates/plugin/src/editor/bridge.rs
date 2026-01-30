@@ -3,9 +3,10 @@
 //! Implements the ParameterHost trait for use with the bridge crate,
 //! wrapping nih-plug's GuiContext for parameter automation.
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use bridge::{BridgeError, ParameterHost};
+use metering::MeterConsumer;
 use nih_plug::prelude::*;
 use protocol::{ParameterInfo, ParameterType};
 
@@ -18,12 +19,22 @@ use crate::params::VstKitParams;
 pub struct PluginEditorBridge {
     params: Arc<VstKitParams>,
     context: Arc<dyn GuiContext>,
+    /// Shared meter consumer - same instance used across editor open/close cycles
+    meter_consumer: Arc<Mutex<MeterConsumer>>,
 }
 
 impl PluginEditorBridge {
     /// Create a new bridge with the given parameters and context.
-    pub fn new(params: Arc<VstKitParams>, context: Arc<dyn GuiContext>) -> Self {
-        Self { params, context }
+    pub fn new(
+        params: Arc<VstKitParams>,
+        context: Arc<dyn GuiContext>,
+        meter_consumer: Arc<Mutex<MeterConsumer>>,
+    ) -> Self {
+        Self {
+            params,
+            context,
+            meter_consumer,
+        }
     }
 }
 
@@ -68,16 +79,20 @@ impl ParameterHost for PluginEditorBridge {
     }
 
     fn get_meter_frame(&self) -> Option<protocol::MeterFrame> {
-        // TODO: Read from MeterConsumer once we wire it up
-        // For now, return None
-        None
+        // Read latest meter frame from the shared consumer
+        let mut consumer = self.meter_consumer.lock().unwrap();
+        consumer.read_latest().map(|frame| protocol::MeterFrame {
+            peak_l: frame.peak_l,
+            peak_r: frame.peak_r,
+            rms_l: frame.rms_l,
+            rms_r: frame.rms_r,
+            timestamp: frame.timestamp,
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     // Note: Testing PluginEditorBridge requires a mock GuiContext,
     // which is complex. These tests are placeholders for future integration tests.
 

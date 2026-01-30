@@ -10,11 +10,7 @@ use include_dir::{include_dir, Dir};
 ///
 /// This directory is populated by running `npm run build` in the `ui/` folder.
 /// If the directory doesn't exist yet, we use an empty directory.
-#[cfg(not(debug_assertions))]
 static UI_ASSETS: Dir = include_dir!("$CARGO_MANIFEST_DIR/../../../ui/dist");
-
-#[cfg(debug_assertions)]
-static UI_ASSETS: Dir = include_dir!("$CARGO_MANIFEST_DIR");
 
 /// Get an embedded asset by path.
 ///

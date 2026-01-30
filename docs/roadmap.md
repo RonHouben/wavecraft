@@ -67,17 +67,19 @@ This document tracks implementation progress against the milestones defined in t
 
 ## Milestone 3: Plugin UI Integration (Week 4–8)
 
-**Status: ⏳ Not Started**
+**Status: 🚧 In Progress**
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Integrate webview into plugin GUI (nih-plug editor) | ⏳ | |
-| WKWebView integration (macOS) | ⏳ | |
-| WebView2 integration (Windows) | ⏳ | |
-| Implement parameter bridge (UI ↔ host params) | ⏳ | |
-| Implement SPSC ring buffer for audio → UI metering | ⏳ | |
-| Implement meter visualization in React | ⏳ | |
-| Test parameter automation roundtrip | ⏳ | |
+| Integrate webview into plugin GUI (nih-plug editor) | ✅ | WKWebView with Editor trait |
+| WKWebView integration (macOS) | ✅ | Custom URL scheme handler for assets |
+| WebView2 integration (Windows) | 🚧 | Placeholder implementation |
+| Implement parameter bridge (UI ↔ host params) | ✅ | GuiContext integration |
+| Implement SPSC ring buffer for audio → UI metering | ✅ | rtrb-based MeterProducer/Consumer |
+| Implement meter visualization in React | ✅ | Peak/RMS meters with dB display |
+| Show clipping indicator in meter UI | ⏳ | Visual feedback when volume exceeds 0dB |
+| Test parameter automation roundtrip | ✅ | Tested in Ableton Live |
+| Plugin editor window resizing | ⏳ | Host-controlled, needs investigation |
 
 ---
 
@@ -117,6 +119,7 @@ This document tracks implementation progress against the milestones defined in t
 | CPU stress testing | ⏳ | |
 | Memory usage optimization | ⏳ | |
 | UX polish | ⏳ | |
+| Investigate TailwindCSS for React UI | ⏳ | Evaluate utility-first CSS for plugin UI styling |
 | Format-specific feature parity verification | ⏳ | |
 | Cross-engine rendering consistency (WebKit vs Chromium) | ⏳ | |
 | Automated visual regression tests | ⏳ | |
@@ -129,14 +132,17 @@ This document tracks implementation progress against the milestones defined in t
 |------|--------|
 | 2026-01-30 | Initial roadmap created. Milestone 1 (Plugin Skeleton) marked complete. |
 | 2026-01-30 | **Milestone 2 complete**: WebView Desktop POC fully functional with <1ms IPC latency. Ready for plugin integration. |
+| 2025-01-31 | **Milestone 3 in progress**: WKWebView integration complete, working in Ableton Live. Added resizing and TailwindCSS investigation to roadmap. |
 
 ---
 
 ## Next Steps
 
-1. **Milestone 3**: Integrate WebView into nih-plug plugin editor
-   - Adapt desktop POC's WebView setup for nih-plug's editor trait
-   - Bridge nih-plug parameter system with existing IPC protocol
-   - Test in Ableton Live VST3 host
-2. Implement SPSC ring buffers for audio → UI metering
-3. Validate AU build in Logic Pro (Milestone 1 completion)
+1. **Milestone 3**: Complete Windows WebView2 integration
+   - Port WKWebView approach to WebView2 for Windows
+   - Test cross-platform parameter behavior
+2. **Milestone 4**: DAW compatibility testing
+   - Logic Pro AU validation
+   - Multi-DAW testing matrix
+3. Investigate plugin editor resizing behavior across hosts
+4. Evaluate TailwindCSS for UI styling consistency

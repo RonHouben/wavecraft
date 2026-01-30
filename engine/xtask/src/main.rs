@@ -58,6 +58,14 @@ enum Commands {
         /// Package name to bundle (default: vstkit)
         #[arg(short, long)]
         package: Option<String>,
+        
+        /// Features to enable (comma-separated)
+        #[arg(short, long)]
+        features: Option<String>,
+        
+        /// Install plugins after building
+        #[arg(short, long)]
+        install: bool,
     },
 
     /// Run unit tests for specified crates
@@ -125,8 +133,17 @@ fn main() -> Result<()> {
 
     // If no command specified, default to showing help or running bundle
     let result = match cli.command {
-        Some(Commands::Bundle { package }) => {
-            commands::bundle::run(mode, package.as_deref(), cli.verbose)
+        Some(Commands::Bundle { package, features, install }) => {
+            let features_vec: Vec<&str> = features
+                .as_deref()
+                .map(|f| f.split(',').collect())
+                .unwrap_or_default();
+            commands::bundle::run_with_features(mode, package.as_deref(), &features_vec, cli.verbose)?;
+            
+            if install {
+                commands::install::run(cli.dry_run, cli.verbose)?;
+            }
+            Ok(())
         }
         Some(Commands::Test { package, all }) => {
             let packages = if package.is_empty() {

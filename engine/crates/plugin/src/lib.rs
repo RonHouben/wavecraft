@@ -25,8 +25,9 @@ pub struct VstKitPlugin {
     params: Arc<VstKitParams>,
     processor: Processor,
     meter_producer: MeterProducer,
-    /// Held temporarily until editor is created, then moved to editor
-    meter_consumer: Option<MeterConsumer>,
+    /// Shared with the editor - wrapped in Arc<Mutex> so it can be accessed
+    /// across multiple editor open/close cycles.
+    meter_consumer: Arc<std::sync::Mutex<MeterConsumer>>,
 }
 
 impl Default for VstKitPlugin {
@@ -36,7 +37,7 @@ impl Default for VstKitPlugin {
             params: Arc::new(VstKitParams::default()),
             processor: Processor::new(44100.0),
             meter_producer,
-            meter_consumer: Some(meter_consumer),
+            meter_consumer: Arc::new(std::sync::Mutex::new(meter_consumer)),
         }
     }
 }
@@ -67,7 +68,7 @@ impl Plugin for VstKitPlugin {
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         #[cfg(feature = "webview_editor")]
         {
-            create_webview_editor(self.params.clone())
+            create_webview_editor(self.params.clone(), self.meter_consumer.clone())
         }
         
         #[cfg(not(feature = "webview_editor"))]

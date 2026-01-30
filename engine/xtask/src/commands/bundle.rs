@@ -12,8 +12,37 @@ use xtask::PLUGIN_NAME;
 ///
 /// This builds the plugin library and packages it into VST3 and CLAP bundles.
 pub fn run(mode: BuildMode, package: Option<&str>, verbose: bool) -> Result<()> {
+    run_with_features(mode, package, &[], verbose)
+}
+
+/// Run the bundle command with specific features.
+pub fn run_with_features(mode: BuildMode, package: Option<&str>, features: &[&str], verbose: bool) -> Result<()> {
     let package_name = package.unwrap_or(PLUGIN_NAME);
     let engine_dir = paths::engine_dir()?;
+
+    // If webview_editor feature is enabled, build the UI assets first
+    if features.contains(&"webview_editor") {
+        print_status("Building React UI assets...");
+        let ui_dir = engine_dir.parent()
+            .ok_or_else(|| anyhow::anyhow!("Could not find workspace root"))?
+            .join("ui");
+        
+        if !ui_dir.exists() {
+            anyhow::bail!("UI directory not found: {}", ui_dir.display());
+        }
+        
+        let npm_build = Command::new("npm")
+            .current_dir(&ui_dir)
+            .args(&["run", "build"])
+            .status()
+            .context("Failed to run npm build")?;
+        
+        if !npm_build.success() {
+            anyhow::bail!("UI build failed");
+        }
+        
+        print_success("React UI built successfully");
+    }
 
     print_status(&format!("Building {} plugin...", package_name));
 
@@ -26,9 +55,13 @@ pub fn run(mode: BuildMode, package: Option<&str>, verbose: bool) -> Result<()> 
     if let Some(flag) = mode.cargo_flag() {
         build_cmd.arg(flag);
     }
+    
+    if !features.is_empty() {
+        build_cmd.arg("--features").arg(features.join(","));
+    }
 
     if verbose {
-        println!("Running: cargo build -p {} {:?}", package_name, mode.cargo_flag());
+        println!("Running: cargo build -p {} {:?} --features {:?}", package_name, mode.cargo_flag(), features);
     }
 
     let build_status = build_cmd
@@ -41,14 +74,24 @@ pub fn run(mode: BuildMode, package: Option<&str>, verbose: bool) -> Result<()> 
 
     print_status("Bundling plugins...");
 
-    // Use nih_plug_xtask's main function directly via the CLI wrapper
-    // We need to call it as a separate binary to avoid conflict with our xtask
+    // Use nih_plug_xtask's bundler
+    // We need to pass features through to ensure the right binary is bundled
     let mut bundle_args = vec!["bundle".to_string(), package_name.to_string()];
     if let Some(flag) = mode.cargo_flag() {
         bundle_args.push(flag.to_string());
     }
+    
+    // Pass features to nih_plug_xtask so it rebuilds with the right features
+    if !features.is_empty() {
+        bundle_args.push("--features".to_string());
+        bundle_args.push(features.join(","));
+    }
 
-    // Call nih_plug_xtask::main_with_args directly
+    if verbose {
+        println!("Bundle args: {:?}", bundle_args);
+    }
+
+    // Call nih_plug_xtask::main_with_args with features
     if let Err(e) = nih_plug_xtask::main_with_args(package_name, bundle_args.into_iter()) {
         anyhow::bail!("Bundle command failed: {}", e);
     }

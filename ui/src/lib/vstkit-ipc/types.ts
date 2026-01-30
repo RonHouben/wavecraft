@@ -120,9 +120,7 @@ export interface VstKitIpcPrimitives {
 }
 
 declare global {
-  interface Window {
-    __VSTKIT_IPC__?: VstKitIpcPrimitives;
-  }
+  var __VSTKIT_IPC__: VstKitIpcPrimitives | undefined;
 }
 
 // ============================================================================

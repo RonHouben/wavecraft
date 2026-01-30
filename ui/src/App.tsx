@@ -3,7 +3,6 @@
  */
 
 import { ParameterSlider } from './components/ParameterSlider';
-import { ParameterToggle } from './components/ParameterToggle';
 import { LatencyMonitor } from './components/LatencyMonitor';
 import { Meter } from './components/Meter';
 import './App.css';
@@ -12,7 +11,7 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>VstKit Desktop POC</h1>
+        <h1>VstKit — Plugin UI</h1>
         <p>WebView ↔ Rust IPC Demo</p>
       </header>
 
@@ -20,8 +19,6 @@ function App() {
         <section className="parameters">
           <h2>Parameters</h2>
           <ParameterSlider id="gain" />
-          <ParameterSlider id="mix" />
-          <ParameterToggle id="bypass" />
         </section>
 
         <section className="meters">
@@ -36,7 +33,7 @@ function App() {
       </main>
 
       <footer className="app-footer">
-        <p>Built with React + TypeScript + Vite | Powered by wry WebView</p>
+        <p>VstKit Audio Plugin | React + WKWebView</p>
       </footer>
     </div>
   );

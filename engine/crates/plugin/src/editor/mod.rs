@@ -6,6 +6,7 @@
 use std::any::Any;
 use std::sync::{Arc, Mutex};
 
+use metering::MeterConsumer;
 use nih_plug::prelude::*;
 
 use crate::params::VstKitParams;
@@ -21,9 +22,10 @@ mod macos;
 #[cfg(target_os = "windows")]
 mod windows;
 
-pub use self::egui::create_egui_editor as create_editor;
-pub use bridge::PluginEditorBridge;
-pub use webview::{create_webview, WebViewConfig};
+pub use webview::{create_webview, WebViewConfig, WebViewHandle};
+
+// Re-export for lib.rs compatibility
+pub use egui::create_egui_editor as create_editor;
 
 /// Message types for communicating with the WebView from the editor.
 #[derive(Debug, Clone)]
@@ -38,18 +40,24 @@ pub enum EditorMessage {
 /// bidirectional parameter synchronization and metering.
 pub struct VstKitEditor {
     params: Arc<VstKitParams>,
-    size: (u32, u32),
+    /// Shared meter consumer - cloned to each bridge instance
+    meter_consumer: Arc<Mutex<MeterConsumer>>,
+    size: Arc<Mutex<(u32, u32)>>,
     /// Channel for sending messages to the WebView
     message_tx: Arc<Mutex<Option<std::sync::mpsc::Sender<EditorMessage>>>>,
+    /// Handle to the WebView for resize operations
+    webview_handle: Arc<Mutex<Option<Box<dyn WebViewHandle>>>>,
 }
 
 impl VstKitEditor {
     /// Create a new WebView editor.
-    pub fn new(params: Arc<VstKitParams>) -> Self {
+    pub fn new(params: Arc<VstKitParams>, meter_consumer: Arc<Mutex<MeterConsumer>>) -> Self {
         Self {
             params,
-            size: (800, 600), // Default size
+            meter_consumer,
+            size: Arc::new(Mutex::new((800, 600))), // Default size
             message_tx: Arc::new(Mutex::new(None)),
+            webview_handle: Arc::new(Mutex::new(None)),
         }
     }
 }
@@ -60,23 +68,27 @@ impl Editor for VstKitEditor {
         parent: ParentWindowHandle,
         context: Arc<dyn GuiContext>,
     ) -> Box<dyn Any + Send> {
+        // Clone the shared meter consumer for this editor instance
+        let meter_consumer = self.meter_consumer.clone();
+        
+        let size = *self.size.lock().unwrap();
+        
         let config = WebViewConfig {
             params: self.params.clone(),
             context,
             parent,
-            width: self.size.0,
-            height: self.size.1,
+            width: size.0,
+            height: size.1,
+            meter_consumer,
         };
 
         match create_webview(config) {
             Ok(webview) => {
-                // Create message channel for param updates
-                // The WebView will poll this channel periodically
-                // TODO: Implement message polling in the WebView handle
+                // Store the webview handle for resize operations
+                *self.webview_handle.lock().unwrap() = Some(webview);
                 
-                // Return the webview handle as Any + Send
-                // The host will drop it when the editor is closed
-                webview as Box<dyn Any + Send>
+                // Return a dummy value that the host will hold
+                Box::new(())
             }
             Err(e) => {
                 nih_error!("Failed to create WebView editor: {}", e);
@@ -86,7 +98,7 @@ impl Editor for VstKitEditor {
     }
 
     fn size(&self) -> (u32, u32) {
-        self.size
+        *self.size.lock().unwrap()
     }
 
     fn set_scale_factor(&self, _factor: f32) -> bool {
@@ -95,14 +107,35 @@ impl Editor for VstKitEditor {
     }
 
     fn param_value_changed(&self, id: &str, normalized_value: f32) {
-        // Send parameter update through the channel
-        if let Ok(tx_lock) = self.message_tx.lock() {
-            if let Some(tx) = tx_lock.as_ref() {
-                let _ = tx.send(EditorMessage::ParamUpdate {
-                    id: id.to_string(),
-                    value: normalized_value,
-                });
+        // Log for debugging automation updates
+        nih_log!("param_value_changed called: id={}, value={}", id, normalized_value);
+        
+        // Push parameter update to WebView via JavaScript evaluation
+        if let Ok(webview_lock) = self.webview_handle.lock() {
+            if let Some(webview) = webview_lock.as_ref() {
+                // Escape the id for safe JavaScript injection
+                let id_escaped = id.replace('\\', "\\\\").replace('\'', "\\'");
+                let js = format!(
+                    "if (globalThis.__VSTKIT_IPC__ && globalThis.__VSTKIT_IPC__._onParamUpdate) {{ \
+                        globalThis.__VSTKIT_IPC__._onParamUpdate({{ \
+                            jsonrpc: '2.0', \
+                            method: 'parameterChanged', \
+                            params: {{ id: '{}', value: {} }} \
+                        }}); \
+                    }}",
+                    id_escaped, normalized_value
+                );
+                
+                if let Err(e) = webview.evaluate_script(&js) {
+                    nih_error!("Failed to evaluate parameter update script: {}", e);
+                } else {
+                    nih_log!("Successfully pushed parameter update to UI");
+                }
+            } else {
+                nih_log!("WebView handle is None, cannot push update");
             }
+        } else {
+            nih_log!("Failed to lock webview_handle");
         }
     }
 
@@ -112,19 +145,27 @@ impl Editor for VstKitEditor {
     }
 
     fn param_modulation_changed(&self, id: &str, modulation_offset: f32) {
-        // Send modulation update through the channel
-        if let Ok(tx_lock) = self.message_tx.lock() {
-            if let Some(tx) = tx_lock.as_ref() {
-                let _ = tx.send(EditorMessage::ParamModulation {
-                    id: id.to_string(),
-                    offset: modulation_offset,
-                });
+        // Push modulation update to WebView via JavaScript evaluation
+        if let Ok(webview_lock) = self.webview_handle.lock() {
+            if let Some(webview) = webview_lock.as_ref() {
+                let id_escaped = id.replace('\\', "\\\\").replace('\'', "\\'");
+                let js = format!(
+                    "if (globalThis.__VSTKIT_IPC__ && globalThis.__VSTKIT_IPC__._onParamUpdate) {{ \
+                        globalThis.__VSTKIT_IPC__._onParamUpdate({{ \
+                            jsonrpc: '2.0', \
+                            method: 'paramModulation', \
+                            params: {{ id: '{}', offset: {} }} \
+                        }}); \
+                    }}",
+                    id_escaped, modulation_offset
+                );
+                let _ = webview.evaluate_script(&js);
             }
         }
     }
 }
 
 /// Create a WebView editor.
-pub fn create_webview_editor(params: Arc<VstKitParams>) -> Option<Box<dyn Editor>> {
-    Some(Box::new(VstKitEditor::new(params)))
+pub fn create_webview_editor(params: Arc<VstKitParams>, meter_consumer: Arc<Mutex<MeterConsumer>>) -> Option<Box<dyn Editor>> {
+    Some(Box::new(VstKitEditor::new(params, meter_consumer)))
 }

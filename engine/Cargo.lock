@@ -3763,6 +3763,7 @@ dependencies = [
  "objc2",
  "objc2-app-kit",
  "objc2-foundation",
+ "objc2-web-kit",
  "protocol",
  "raw-window-handle 0.6.2",
  "serde_json",

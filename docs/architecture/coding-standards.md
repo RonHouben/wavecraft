@@ -183,6 +183,52 @@ import { useParameter } from '../../lib/vstkit-ipc';
 - Immediately identifies imports as project-internal
 - Consistent import paths across the codebase
 
+### Global Object Access
+
+**Rule:** Use `globalThis` instead of `window` for accessing the global object.
+
+This applies to:
+- TypeScript/JavaScript source files
+- JavaScript strings embedded in Rust code (e.g., `evaluate_script` calls)
+
+**Do:**
+```typescript
+// ✅ Use globalThis in TypeScript/JavaScript
+globalThis.vstkit?.invoke('getParameter', { id });
+globalThis.addEventListener('message', handler);
+```
+
+```rust
+// ✅ Use globalThis in embedded JavaScript (Rust)
+let js = format!(
+    "if (globalThis.__VSTKIT_IPC__ && globalThis.__VSTKIT_IPC__._onParamUpdate) {{ \
+        globalThis.__VSTKIT_IPC__._onParamUpdate({{ id: '{}', value: {} }}); \
+    }}",
+    id, value
+);
+webview.evaluate_script(&js);
+```
+
+**Don't:**
+```typescript
+// ❌ Using window in TypeScript/JavaScript
+window.vstkit?.invoke('getParameter', { id });
+window.addEventListener('message', handler);
+```
+
+```rust
+// ❌ Using window in embedded JavaScript (Rust)
+let js = format!(
+    "if (window.__VSTKIT_IPC__) {{ window.__VSTKIT_IPC__._onParamUpdate(...); }}"
+);
+```
+
+**Rationale:**
+- `globalThis` is the standardized way to access the global object (ES2020+)
+- Works consistently across all JavaScript environments (browser, Node.js, Web Workers, etc.)
+- Plugin UI may run in different contexts where `window` is not available
+- Future-proofs code against environment changes
+
 ---
 
 ## Rust

@@ -4,9 +4,10 @@
 //! across different platforms (macOS, Windows, Linux).
 
 use std::any::Any;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use bridge::IpcHandler;
+use metering::MeterConsumer;
 use nih_plug::prelude::*;
 
 use crate::params::VstKitParams;
@@ -35,6 +36,8 @@ pub struct WebViewConfig {
     pub parent: ParentWindowHandle,
     pub width: u32,
     pub height: u32,
+    /// Shared meter consumer - cloned from the plugin
+    pub meter_consumer: Arc<Mutex<MeterConsumer>>,
 }
 
 /// Create a platform-specific WebView.
@@ -65,13 +68,14 @@ pub fn create_webview(config: WebViewConfig) -> Result<Box<dyn WebViewHandle>, S
 pub fn create_ipc_handler(
     params: Arc<VstKitParams>,
     context: Arc<dyn GuiContext>,
+    meter_consumer: Arc<Mutex<MeterConsumer>>,
 ) -> IpcHandler<PluginEditorBridge> {
-    let bridge = PluginEditorBridge::new(params, context);
+    let bridge = PluginEditorBridge::new(params, context, meter_consumer);
     IpcHandler::new(bridge)
 }
 
 /// IPC primitives JavaScript (injected before React loads).
 ///
-/// This is the same script used by the desktop crate, providing the
-/// low-level IPC communication layer.
-pub const IPC_PRIMITIVES_JS: &str = include_str!("../../../desktop/src/js/ipc-primitives.js");
+/// This is the plugin-specific version for WKWebView, which uses
+/// webkit.messageHandlers instead of wry's globalThis.ipc.
+pub const IPC_PRIMITIVES_JS: &str = include_str!("js/ipc-primitives-plugin.js");
