@@ -1,0 +1,28 @@
+[workspace]
+members = ["crates/*", "xtask"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+authors = ["VstKit Team"]
+
+[workspace.dependencies]
+# nih-plug framework - pinned to specific commit for stability
+nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28b149ec4d62757d0b448809148a0c3ca6e09a95" }
+nih_plug_egui = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28b149ec4d62757d0b448809148a0c3ca6e09a95" }
+
+# Internal crates
+protocol = { path = "crates/protocol" }
+dsp = { path = "crates/dsp" }
+
+[profile.release]
+lto = "thin"
+strip = true
+
+# Release build with debug symbols for profiling
+[profile.release-debug]
+inherits = "release"
+debug = true
+strip = false

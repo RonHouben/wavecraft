@@ -1,0 +1,22 @@
+# build artifacts
+/engine/target/
+target/
+/packaging/macos/au-wrapper/build
+build
+
+# Cargo lock for libraries (keep for binaries/plugins)
+# Cargo.lock
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Build outputs
+*.dylib
+*.so
+*.dll
+*.vst3
+*.component
