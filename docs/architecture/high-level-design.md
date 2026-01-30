@@ -6,7 +6,7 @@
 	•	Target hosts: major DAWs (Ableton required). Targets: Windows, macOS, Linux.
 	•	Audio engine / DSP will be implemented in Rust.
 	•	UI must be built in React (single-page app, built with Vite/webpack/etc) and embedded inside the plugin UI window (not a separate app).
-	•	Plugin formats to support: at minimum VST3 (and ideally CLAP/AU where applicable).
+	•	Plugin formats to support: VST3 (primary), AU (macOS, required for Logic Pro and GarageBand), CLAP (optional).
 	•	No Electron or Tauri; prefer a lightweight embedded webview or an equivalent approach.
 	•	You want a production-ready, cross-platform approach (not just a quick POC).
 
@@ -25,7 +25,7 @@ Build the audio/DSP core and host/plugin API surface in Rust (use a modern Rust 
 |                                                               |
 |  +-----------------+    +----------------------+              |
 |  | Audio / DSP     |<-->| Plugin API layer     |              |
-|  | (Rust, real-    |    | (VST3/CLAP glue)     |              |
+|  | (Rust, real-    |    | (VST3/AU/CLAP glue)  |              |
 |  |  time thread)   |    +----------------------+              |
 |  |                 |               ^                       |
 |  |  - param atoms  |               | parameter/automation |
@@ -51,10 +51,12 @@ Key: the audio path never blocks on UI; the UI never directly runs audio code.
 
 ## Main components (concrete)
 	1.	Plugin core (Rust)
-	•	Use nih-plug (Rust plugin framework) to handle VST3/CLAP exports and common plumbing.  ￼
+	•	Use nih-plug (Rust plugin framework) to handle VST3/AU/CLAP exports and common plumbing.  ￼
 	•	Implement process() on audio thread; maintain parameter state in atomic types (float atomics) for host automation.
 	2.	Plugin API layer
-	•	VST3 is supported via the VST SDK; ensure build tooling for VST3 and (if needed) AU/CLAP. Follow Steinberg VST3 dev docs for GUI/parameter mapping.  ￼
+	•	VST3 is supported via the VST SDK; AU via Core Audio's AudioUnit API (macOS only); CLAP as optional format.
+	•	nih-plug abstracts format differences; ensure build tooling produces all required bundles.
+	•	Follow Steinberg VST3 dev docs and Apple Audio Unit Hosting Guide for format-specific quirks.
 	3.	UI (React)
 	•	SPA built with Vite (or your preferred bundler). Produce static assets (index.html, bundle.js, CSS).
 	•	Use a small runtime footprint approach: tree-shake, code-split, avoid large libraries unless necessary.
@@ -73,7 +75,95 @@ Key: the audio path never blocks on UI; the UI never directly runs audio code.
 	•	Use a single-producer single-consumer lock-free ring buffer (SPSC) or atomic double buffer for data from audio → UI (metering, waveform snapshots). Use crates such as rtrb or other proven SPSC ring buffer crates to avoid allocations and locks on the audio thread.  ￼
 	7.	Build & Packaging
 	•	Rust build (Cargo) for core; CMake or a small shim for packaging VST3 (SDK). Bundle the React build output as plugin resources (embed as bytes or serve them via an in-process file server).
-	•	Code signing and notarization steps for macOS; installer options for Windows (MSI) and Linux (DEB/Flatpak/AppImage).
+	•	AU builds require macOS; produce `.component` bundles for `/Library/Audio/Plug-Ins/Components/`.
+	•	Code signing and notarization steps for macOS (required for both VST3 and AU); installer options for Windows (MSI) and Linux (DEB/Flatpak/AppImage).
+
+⸻
+
+## Audio Unit (AU) Architecture
+
+### Overview
+
+Audio Units are Apple's native plugin format, required for Logic Pro and GarageBand compatibility. AU plugins are macOS-only and have distinct architectural requirements from VST3.
+
+### AU-Specific Requirements
+
+1. **Bundle Structure**
+   - AU plugins are packaged as `.component` bundles
+   - Install location: `/Library/Audio/Plug-Ins/Components/` (system) or `~/Library/Audio/Plug-Ins/Components/` (user)
+   - Bundle must contain `Info.plist` with AU-specific keys (manufacturer code, subtype, type)
+
+2. **Four-Character Codes (4CC)**
+   - AU uses 4-character codes for identification:
+     - **Manufacturer code**: Unique 4-char identifier (e.g., `'VstK'`)
+     - **Subtype code**: Plugin-specific identifier (e.g., `'vsk1'`)
+     - **Type code**: `'aufx'` for effects, `'aumu'` for instruments, `'aumf'` for MIDI effects
+   - These must be registered with Apple for commercial distribution
+
+3. **Component Registration**
+   - macOS caches AU plugins; use `auval` to validate and `killall -9 AudioComponentRegistrar` to refresh cache during development
+   - Plugin must pass `auval -v aufx <subtype> <manufacturer>` validation
+
+### nih-plug AU Integration
+
+nih-plug provides AU support through the `nih_export_standalone!` or dedicated AU export macro:
+
+```rust
+// In plugin/src/lib.rs
+impl ClapPlugin for VstKitPlugin {
+    // ... CLAP config
+}
+
+// AU configuration (macOS only)
+#[cfg(target_os = "macos")]
+impl nih_plug::prelude::Vst3Plugin for VstKitPlugin {
+    // VST3 config shared
+}
+
+// Export macros
+nih_export_vst3!(VstKitPlugin);
+nih_export_clap!(VstKitPlugin);
+
+// AU export (requires nih_plug "au" feature)
+#[cfg(target_os = "macos")]
+nih_export_au!(VstKitPlugin);
+```
+
+### AU vs VST3 Behavioral Differences
+
+| Aspect | VST3 | AU |
+|--------|------|-----|
+| Parameter IDs | 32-bit integers | 32-bit integers (AudioUnitParameterID) |
+| Parameter ranges | Arbitrary float | Arbitrary float |
+| Preset format | `.vstpreset` | `.aupreset` (property list) |
+| State persistence | Binary blob via `IEditController` | Property list via `kAudioUnitProperty_ClassInfo` |
+| UI hosting | `IPlugView` interface | `AudioUnitCocoaView` protocol |
+| Sidechain | Explicit bus configuration | `kAudioUnitProperty_SupportedChannelLayoutTags` |
+| Latency reporting | `IComponent::getLatencySamples()` | `kAudioUnitProperty_Latency` |
+| Tail time | `IAudioProcessor::getTailSamples()` | `kAudioUnitProperty_TailTime` |
+
+### AU-Specific Constraints
+
+1. **Threading Model**
+   - AU hosts may call render from any thread (not guaranteed to be the same thread)
+   - Render callback must be fully reentrant
+   - UI updates must dispatch to main thread via GCD
+
+2. **Real-Time Thread Priority**
+   - AU render threads run at real-time priority
+   - Same real-time safety rules apply: no allocations, no locks, no syscalls
+
+3. **View Lifecycle**
+   - Cocoa views must handle `viewDidMoveToWindow` for cleanup
+   - WebView embedding requires careful management of `NSView` lifecycle
+   - Views may be created/destroyed multiple times during plugin lifetime
+
+### Logic Pro Specific Notes
+
+- Logic Pro has stricter AU validation than other hosts
+- Always test with `auval` before Logic Pro testing
+- Logic Pro 10.5+ requires notarized plugins on macOS 10.15+
+- Logic Pro caches plugin state aggressively; restart Logic after plugin updates
 
 ⸻
 
@@ -126,18 +216,27 @@ References about real-time constraints and ring buffers: best practices and Rust
 ⸻
 
 ## Testing matrix (must include Ableton)
-	•	Host compatibility: Ableton Live (Windows/macOS), Logic Pro (macOS/AU), Reaper (all), Cubase, FL Studio.
+	•	Host compatibility: Ableton Live (Windows/macOS), Logic Pro (macOS/AU required), Reaper (all), Cubase, FL Studio, GarageBand (macOS/AU).
+	•	AU validation: `auval -v aufx <subtype> <manufacturer>` must pass with no errors before Logic Pro testing.
 	•	Buffer/CPU tests: low buffer sizes (32/64) and high CPU stress to detect audio dropouts.
 	•	Automation tests: host automation read/write roundtrip verified.
 	•	UI tests: verify parameter updates from host appear in UI and UI changes are streamed back to host automation.
 	•	Platform checklists: WebView engine versions per OS (ensure WebView2 available on Windows; ensure WebKitGTK available on target Linux distros).
+	•	AU-specific tests:
+		- Plugin loads in AU Lab (Apple's test host)
+		- State save/restore works via `.aupreset`
+		- Bypass state is handled correctly
+		- Sidechain configuration (if applicable) works in Logic Pro
 
 ⸻
 
 ## Packaging & distribution notes
-	•	macOS: notarization and signing required; package VST3 and AU; embed React assets into plugin bundle (.vst3 package resources).
-	•	Windows: ensure WebView2 runtime installed or include evergreen bootstrap in installer; produce .dll VST3 and installer (MSI).
-	•	Linux: many host distros vary; recommend shipping CLAP/VST3 and provide AppImage/Flatpak for GUI testing.
+	•	macOS: notarization and signing required; package VST3 (`.vst3`), AU (`.component`), and optionally CLAP; embed React assets into plugin bundle resources.
+		- VST3: `/Library/Audio/Plug-Ins/VST3/VstKit.vst3`
+		- AU: `/Library/Audio/Plug-Ins/Components/VstKit.component`
+		- AU requires valid `Info.plist` with `AudioComponents` array
+	•	Windows: ensure WebView2 runtime installed or include evergreen bootstrap in installer; produce .dll VST3 and installer (MSI). AU not applicable.
+	•	Linux: many host distros vary; recommend shipping CLAP/VST3 and provide AppImage/Flatpak for GUI testing. AU not applicable.
 
 Docs for VST3 build process: Steinberg dev portal.  ￼
 
@@ -156,6 +255,12 @@ Docs for VST3 build process: Steinberg dev portal.  ￼
 	4.	Real-time safety mistakes
 	•	Risk: accidental allocations or locks in process() cause xruns.
 	•	Mitigation: code reviews, linters, try to run audio thread with sanitizers and stress tests; prefer proven patterns (preallocated buffers, atomics, SPSC ring buffers).  ￼
+	5.	AU validation failures
+	•	Risk: Plugin fails `auval` or behaves incorrectly in Logic Pro.
+	•	Mitigation: run `auval` in CI pipeline; test state save/restore; ensure parameter ranges and metadata are consistent between formats.
+	6.	AU cache invalidation during development
+	•	Risk: macOS caches AU plugins; changes not reflected in hosts.
+	•	Mitigation: Use `killall -9 AudioComponentRegistrar` and restart host after rebuilds; consider incrementing version during development.
 
 ⸻
 
@@ -191,11 +296,11 @@ Version each message payload so UI and plugin can be backward compatible.
 ⸻
 
 ## Roadmap (suggested milestones)
-	1.	Week 0–2: Rust plugin skeleton with VST3 exports (nih-plug); native placeholder UI. Confirm Ableton host load.  ￼
+	1.	Week 0–2: Rust plugin skeleton with VST3/AU exports (nih-plug); native placeholder UI. Confirm Ableton host load (VST3) and Logic Pro load (AU).  ￼
 	2.	Week 2–4: Desktop POC: React app embedded in a Rust desktop app via wry. Test IPC patterns.  ￼
 	3.	Week 4–8: Integrate webview into plugin GUI; implement param bridge and ring buffer metering.
-	4.	Week 8–12: Cross-platform hardening, signing, packaging, circular testing in Ableton and other DAWs.
-	5.	After: Performance tuning, UX polish, and support for AU/CLAP if needed.
+	4.	Week 8–12: Cross-platform hardening, signing, packaging (VST3 + AU + CLAP), circular testing in Ableton, Logic Pro, and other DAWs.
+	5.	After: Performance tuning, UX polish, format-specific feature parity verification.
 
 ⸻
 

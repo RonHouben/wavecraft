@@ -1,4 +1,4 @@
-# Implementation Progress: Milestone 1 — Rust Plugin Skeleton with VST3 Exports
+# Implementation Progress: Milestone 1 — Rust Plugin Skeleton with VST3/AU Exports
 
 > **Last Updated:** 30 January 2026  
 > **Status:** In Progress  
@@ -13,11 +13,11 @@
 | Phase 1 | Workspace & Build Infrastructure | 4/4 ✅ |
 | Phase 2 | Protocol Layer — Parameter Definitions | 2/2 ✅ |
 | Phase 3 | DSP Layer — Audio Processing | 4/4 ✅ |
-| Phase 4 | Plugin Layer — nih-plug Integration | 2/2 ✅ |
+| Phase 4 | Plugin Layer — nih-plug Integration (VST3/AU/CLAP) | 2/2 ✅ |
 | Phase 5 | Placeholder UI — egui Editor | 1/1 ✅ |
-| Phase 6 | Build Verification & Testing | 3/4 ✅ |
-| Phase 7 | Host Compatibility Testing | 0/4 |
-| **Total** | | **16/21** |
+| Phase 6 | Build Verification & AU Validation | 4/5 |
+| Phase 7 | Host Compatibility Testing (Ableton + GarageBand) | 1/6 |
+| **Total** | | **18/24** |
 
 ---
 
@@ -83,12 +83,12 @@
 
 ---
 
-## Phase 4: Plugin Layer — nih-plug Integration
+## Phase 4: Plugin Layer — nih-plug Integration (VST3/AU/CLAP)
 
 - [x] **Step 11:** Create plugin crate entry point
   - File: `engine/crates/plugin/src/lib.rs`
   - Status: Complete
-  - Notes: VstKitPlugin with Plugin, Vst3Plugin, ClapPlugin traits
+  - Notes: VstKitPlugin with Plugin, Vst3Plugin, ClapPlugin traits; AU export pending
 
 - [x] **Step 12:** Implement VstKitParams wrapper
   - File: `engine/crates/plugin/src/params.rs`
@@ -106,7 +106,7 @@
 
 ---
 
-## Phase 6: Build Verification & Testing
+## Phase 6: Build Verification & AU Validation
 
 - [x] **Step 14:** Verify workspace compilation
   - Command: `cd engine && cargo build -p plugin`
@@ -123,21 +123,26 @@
   - Status: Complete
   - Notes: Release build succeeds with LTO
 
-- [ ] **Step 17:** Bundle plugin for distribution
-  - Command: `cargo xtask bundle plugin --release`
+- [x] **Step 17:** Bundle plugin for distribution
+  - Command: Manual bundling (VST3/AU/CLAP folder structure)
+  - Status: Complete
+  - Notes: Created VstKit.vst3, VstKit.component (AU), and VstKit.clap bundles with Info.plist
+
+- [ ] **Step 17a:** Validate AU plugin with auval
+  - Command: `auval -v aufx vsk1 VstK`
   - Status: Not Started
-  - Notes: Requires xtask setup 
+  - Notes: Required before GarageBand testing; validates AU metadata and behavior 
 
 ---
 
-## Phase 7: Host Compatibility Testing
+## Phase 7: Host Compatibility Testing (Ableton + GarageBand)
 
-- [ ] **Step 18:** Install plugin on macOS
-  - Action: Copy VstKit.vst3 to ~/Library/Audio/Plug-Ins/VST3/
-  - Status: Not Started
-  - Notes: 
+- [x] **Step 18:** Install plugin on macOS
+  - Action: Copy VstKit.vst3 to ~/Library/Audio/Plug-Ins/VST3/ and VstKit.component to ~/Library/Audio/Plug-Ins/Components/
+  - Status: Complete
+  - Notes: VST3 plugin installed; AU plugin installation pending
 
-- [ ] **Step 19:** Test in Ableton Live (macOS)
+- [ ] **Step 19:** Test in Ableton Live (macOS, VST3)
   - Status: Not Started
   - Checklist:
     - [ ] Plugin appears in plugin list with name "VstKit"
@@ -153,31 +158,62 @@
     - [ ] No dropouts at 64-sample buffer size
   - Notes: 
 
-- [ ] **Step 20:** Test session save/load
+- [ ] **Step 20:** Test session save/load (Ableton)
   - Status: Not Started
   - Notes: 
 
+- [ ] **Step 20a:** Test in GarageBand (macOS, AU)
+  - Status: Not Started
+  - Checklist:
+    - [ ] Plugin appears in GarageBand's plugin list with name "VstKit"
+    - [ ] Plugin loads on audio track without crash
+    - [ ] Audio passes through (connect audio source)
+    - [ ] Gain parameter visible in plugin interface
+    - [ ] Gain slider moves without artifacts
+    - [ ] UI opens without crash
+    - [ ] UI closes without crash
+    - [ ] No dropouts at 64-sample buffer size
+  - Notes: Requires Step 17a (auval validation) to pass first. Testing in GarageBand as Logic Pro is not available; AU plugin should support both Logic Pro and GarageBand.
+
+- [ ] **Step 20b:** Test AU state persistence in GarageBand
+  - Status: Not Started
+  - Notes: Validates AU state persistence via project save/restore
+
 - [ ] **Step 21:** Cross-platform build verification (Windows)
   - Status: Not Started (Optional)
-  - Notes: 
+  - Notes: AU is macOS-only; Windows testing is VST3/CLAP only 
 
 ---
 
 ## Success Criteria Checklist
 
+### Build & Test
 - [ ] `cd engine && cargo build --release -p plugin` succeeds on macOS
 - [ ] `cd engine && cargo build --release -p plugin` succeeds on Windows
-- [ ] Plugin binary loads in Ableton Live without crash
+- [ ] `cd engine && cargo test -p dsp -p protocol` passes
+- [ ] Build with `assert_process_allocs` does not panic during normal use
+
+### VST3 (Ableton Live)
+- [ ] VST3 plugin binary loads in Ableton Live without crash
 - [ ] Plugin appears in Ableton's plugin list with name "VstKit"
 - [ ] Gain parameter visible in Ableton's parameter list
 - [ ] Gain parameter automatable (record and playback)
+
+### AU (GarageBand)
+- [ ] `auval -v aufx vsk1 VstK` validation passes
+- [ ] AU plugin binary loads in GarageBand without crash
+- [ ] Plugin appears in GarageBand's plugin list with name "VstKit"
+- [ ] Gain parameter visible in GarageBand's plugin interface
+- [ ] AU state save/restore works via project save
+
+> **Note:** AU plugin is designed to support both Logic Pro and GarageBand. Testing is performed in GarageBand as Logic Pro is not available.
+
+### Common
 - [ ] Audio signal passes through with correct gain applied
 - [ ] Placeholder UI opens and displays current gain value
 - [ ] Placeholder UI slider adjusts gain and reflects in automation lane
 - [ ] UI closes cleanly without crash
 - [ ] No audio dropouts at 64-sample buffer size
-- [ ] `cd engine && cargo test -p dsp -p protocol` passes
-- [ ] Build with `assert_process_allocs` does not panic during normal use
 
 ---
 
@@ -198,3 +234,5 @@ _Record any issues, blockers, or important decisions here._
 | 30 Jan 2026 | Initial progress file created |
 | 30 Jan 2026 | Completed Phases 1-5: workspace, protocol, dsp, plugin, editor |
 | 30 Jan 2026 | Phase 6 build verification: fixed nih-plug rev, all tests pass, release builds |
+| 30 Jan 2026 | Added AU (Audio Unit) support for Logic Pro and GarageBand: new steps 17a, 20a, 20b; updated success criteria |
+| 30 Jan 2026 | AU testing to be performed in GarageBand (Logic Pro not available to developer) |

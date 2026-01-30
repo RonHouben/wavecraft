@@ -1,18 +1,20 @@
-# Implementation Plan: Milestone 1 — Rust Plugin Skeleton with VST3 Exports
+# Implementation Plan: Milestone 1 — Rust Plugin Skeleton with VST3/AU Exports
 
 ## Overview
 
-This plan implements the foundational Rust audio plugin skeleton using nih-plug, establishing the crate architecture, basic gain parameter, audio passthrough, and placeholder native UI. Upon completion, the plugin will load in Ableton Live (macOS & Windows) with verified host automation support.
+This plan implements the foundational Rust audio plugin skeleton using nih-plug, establishing the crate architecture, basic gain parameter, audio passthrough, and placeholder native UI. Upon completion, the plugin will load in Ableton Live (macOS & Windows) as VST3 and GarageBand (macOS) as AU with verified host automation support. The AU format also supports Logic Pro.
 
 ## Requirements
 
-- Plugin loads in Ableton Live (macOS & Windows) without crash
+- Plugin loads in Ableton Live (macOS & Windows) as VST3 without crash
+- Plugin loads in GarageBand (macOS) as AU without crash (Logic Pro also supported)
 - Plugin appears in DAW plugin list with correct name/vendor metadata
 - Plugin exposes at least one automatable parameter (gain in dB)
 - Audio passthrough works with no dropouts at 64-sample buffer
 - Native placeholder UI (egui) opens and closes cleanly
 - Host automation writes to parameter and plugin reflects change
 - Real-time safe audio processing (no allocations on audio thread)
+- Plugin passes `auval` validation on macOS
 
 ## Architecture Changes
 
@@ -21,6 +23,8 @@ This plan implements the foundational Rust audio plugin skeleton using nih-plug,
 - Create `engine/crates/dsp/` — Pure audio processing (passthrough + gain)
 - Create `engine/crates/plugin/` — nih-plug integration, host glue, placeholder UI
 - Add `tests/dsp/` for offline DSP correctness tests
+- Configure AU export with 4-character codes (manufacturer: `'VstK'`, subtype: `'vsk1'`, type: `'aufx'`)
+- Create AU bundle (`.component`) alongside VST3 and CLAP bundles
 
 ---
 
@@ -59,7 +63,7 @@ This plan implements the foundational Rust audio plugin skeleton using nih-plug,
 
 #### 4. **Create plugin crate structure** (File: [engine/crates/plugin/Cargo.toml](engine/crates/plugin/Cargo.toml))
    - Action: Create Cargo.toml with cdylib crate-type and nih-plug dependencies
-   - Why: Plugin crate compiles to dynamic library for VST3/CLAP export
+   - Why: Plugin crate compiles to dynamic library for VST3/AU/CLAP export
    - Dependencies: Steps 2-3 (protocol and dsp crates exist)
    - Risk: Low
    - Details:
@@ -67,6 +71,7 @@ This plan implements the foundational Rust audio plugin skeleton using nih-plug,
      - Set crate-type = ["cdylib"]
      - Add dependencies: dsp, protocol, nih_plug, nih_plug_egui
      - Add assert_process_allocs feature for RT safety checking
+     - Enable nih_plug "au" feature for Audio Unit support (macOS)
      ```
 
 ---
@@ -143,7 +148,7 @@ This plan implements the foundational Rust audio plugin skeleton using nih-plug,
 
 ### Phase 4: Plugin Layer — nih-plug Integration
 
-**Goal:** Create the plugin struct with nih-plug traits and VST3/CLAP exports.
+**Goal:** Create the plugin struct with nih-plug traits and VST3/AU/CLAP exports.
 
 #### 11. **Create plugin crate entry point** (File: [engine/crates/plugin/src/lib.rs](engine/crates/plugin/src/lib.rs))
    - Action: Create lib.rs with VstKitPlugin struct and Plugin trait implementation
@@ -163,7 +168,12 @@ This plan implements the foundational Rust audio plugin skeleton using nih-plug,
        - process() reads gain atomically, applies gain in-place
      - Implement Vst3Plugin trait with unique VST3_CLASS_ID
      - Implement ClapPlugin trait with CLAP_ID
+     - Implement AuPlugin trait (macOS only) with:
+       - AU_MANUFACTURER_CODE = *b"VstK" (4-char manufacturer code)
+       - AU_SUBTYPE_CODE = *b"vsk1" (4-char plugin identifier)
+       - AU_TYPE_CODE = aufx (effect type)
      - Add nih_export_vst3! and nih_export_clap! macros
+     - Add nih_export_au! macro (macOS only, conditionally compiled)
      ```
 
 #### 12. **Implement VstKitParams wrapper** (File: [engine/crates/plugin/src/params.rs](engine/crates/plugin/src/params.rs))
@@ -231,22 +241,44 @@ This plan implements the foundational Rust audio plugin skeleton using nih-plug,
    - Risk: Low
 
 #### 17. **Bundle plugin for distribution** (Local)
-   - Action: Run `cargo xtask bundle plugin --release` to create .vst3 and .clap bundles
+   - Action: Run `cargo xtask bundle plugin --release` to create .vst3, .component (AU), and .clap bundles
    - Why: Produces installable plugin packages for host testing
    - Dependencies: Step 16
    - Risk: Medium (bundler configuration)
+   - Details:
+     ```
+     - VST3 bundle: VstKit.vst3
+     - AU bundle: VstKit.component (macOS only)
+     - CLAP bundle: VstKit.clap
+     - AU bundle must contain valid Info.plist with AudioComponents array
+     ```
+
+#### 17a. **Validate AU plugin with auval** (Local, macOS only)
+   - Action: Run `auval -v aufx vsk1 VstK` to validate the Audio Unit
+   - Why: AU plugins must pass validation before testing in GarageBand/Logic Pro
+   - Dependencies: Step 17
+   - Risk: Medium (AU validation may expose metadata or behavioral issues)
+   - Details:
+     ```
+     - Validates plugin loads correctly
+     - Checks parameter metadata consistency
+     - Verifies audio processing callbacks
+     - Tests state save/restore
+     - Must pass with no errors before GarageBand testing
+     ```
 
 ---
 
 ### Phase 7: Host Compatibility Testing
 
-**Goal:** Verify plugin loads and functions correctly in target DAWs.
+**Goal:** Verify plugin loads and functions correctly in target DAWs (Ableton Live for VST3, Logic Pro for AU).
 
 #### 18. **Install plugin on macOS** (Manual)
-   - Action: Copy VstKit.vst3 to ~/Library/Audio/Plug-Ins/VST3/
-   - Why: Make plugin discoverable by DAWs
+   - Action: Copy VstKit.vst3 to ~/Library/Audio/Plug-Ins/VST3/ and VstKit.component to ~/Library/Audio/Plug-Ins/Components/
+   - Why: Make plugin discoverable by DAWs (VST3 for Ableton, AU for GarageBand/Logic Pro)
    - Dependencies: Step 17
    - Risk: Low
+   - Notes: After installing AU, run `killall -9 AudioComponentRegistrar` to refresh macOS plugin cache
 
 #### 19. **Test in Ableton Live (macOS)** (Manual)
    - Action: Open Ableton Live, scan plugins, verify VstKit appears, load on track
@@ -274,11 +306,39 @@ This plan implements the foundational Rust audio plugin skeleton using nih-plug,
    - Dependencies: Step 19
    - Risk: Low
 
+#### 20a. **Test in GarageBand (macOS, AU)** (Manual)
+   - Action: Open GarageBand, scan plugins, verify VstKit appears as AU, load on track
+   - Why: AU format required for Apple DAW compatibility (GarageBand used for testing; Logic Pro also supported)
+   - Dependencies: Step 18, Step 17a (auval must pass)
+   - Risk: Medium (GarageBand has stricter AU validation than some hosts)
+   - Checklist:
+     ```
+     - [ ] Plugin appears in GarageBand's plugin list with name "VstKit"
+     - [ ] Plugin loads on audio track without crash
+     - [ ] Audio passes through (connect audio source)
+     - [ ] Gain parameter visible in plugin interface
+     - [ ] Gain slider moves without artifacts
+     - [ ] UI opens without crash
+     - [ ] UI closes without crash
+     - [ ] No dropouts at 64-sample buffer size
+     ```
+   - Notes: 
+     - GarageBand is used for testing as Logic Pro is not available to the developer
+     - AU plugin supports both Logic Pro and GarageBand
+     - Restart GarageBand after plugin updates to refresh plugin cache
+
+#### 20b. **Test AU state persistence in GarageBand** (Manual)
+   - Action: Set gain to non-default value, save GarageBand project, close, reopen, verify gain restored
+   - Why: Validates AU state persistence via project save/restore
+   - Dependencies: Step 20a
+   - Risk: Low
+
 #### 21. **Cross-platform build verification** (Optional - Windows)
    - Action: Build on Windows with MSVC toolchain, test in Ableton Live Windows
    - Why: Validates Windows compatibility
    - Dependencies: Step 17
    - Risk: Medium (platform-specific issues)
+   - Notes: AU is macOS-only; Windows testing is VST3/CLAP only
 
 ---
 
@@ -289,24 +349,34 @@ This plan implements the foundational Rust audio plugin skeleton using nih-plug,
 - [engine/crates/protocol/src/params.rs](engine/crates/protocol/src/params.rs) — db_to_linear conversion accuracy
 
 ### Integration Tests
-- Plugin loads in Ableton Live (manual)
+- Plugin loads in Ableton Live as VST3 (manual)
+- Plugin loads in Logic Pro as AU (manual)
 - Host automation roundtrip (manual)
-- Session save/load persistence (manual)
+- Session save/load persistence — VST3 and AU formats (manual)
+
+### AU Validation Tests
+- Run `auval -v aufx vsk1 VstK` before any Logic Pro testing
+- Validate state save/restore via `.aupreset` format
+- Test bypass state handling
 
 ### Real-Time Safety Tests
 - Build with `assert_process_allocs` feature and run in host to detect audio thread allocations
 
 ### Host Compatibility Matrix
 
-| Test | Ableton Live (macOS) | Ableton Live (Windows) | Logic Pro | Reaper |
-|------|---------------------|------------------------|-----------|--------|
-| Plugin loads | Required | Required | Nice to have | Nice to have |
-| Audio passthrough | Required | Required | Nice to have | Nice to have |
-| Automation read | Required | Required | Nice to have | Nice to have |
-| Automation write | Required | Required | Nice to have | Nice to have |
-| UI opens/closes | Required | Required | Nice to have | Nice to have |
-| Session save/load | Required | Required | Nice to have | Nice to have |
-| 64-sample buffer | Required | Required | Nice to have | Nice to have |
+| Test | Ableton Live (macOS) | Ableton Live (Windows) | GarageBand (macOS) | Reaper |
+|------|---------------------|------------------------|-------------------|--------|
+| Format | VST3 | VST3 | AU | VST3/AU/CLAP |
+| Plugin loads | Required | Required | Required | Nice to have |
+| Audio passthrough | Required | Required | Required | Nice to have |
+| Automation read | Required | Required | N/A* | Nice to have |
+| Automation write | Required | Required | N/A* | Nice to have |
+| UI opens/closes | Required | Required | Required | Nice to have |
+| Session save/load | Required | Required | Required | Nice to have |
+| 64-sample buffer | Required | Required | Required | Nice to have |
+| auval validation | N/A | N/A | Required | N/A |
+
+*GarageBand has limited automation support compared to Logic Pro. Basic parameter control is tested.
 
 ---
 
@@ -337,16 +407,35 @@ This plan implements the foundational Rust audio plugin skeleton using nih-plug,
   - Impact: Medium (delays Windows support)
   - Mitigation: Set up CI early with both macOS and Windows runners
 
+- **Risk:** AU validation fails (`auval` errors)
+  - Likelihood: Medium
+  - Impact: High (blocks Logic Pro compatibility)
+  - Mitigation: Run `auval` in CI pipeline; ensure parameter ranges and metadata are consistent between VST3 and AU; test state save/restore early
+
+- **Risk:** AU cache invalidation issues during development
+  - Likelihood: High
+  - Impact: Low (development friction only)
+  - Mitigation: Use `killall -9 AudioComponentRegistrar` after rebuilds; restart GarageBand after plugin updates; consider incrementing version during development
+
+- **Risk:** GarageBand/Logic Pro-specific behavioral differences
+  - Likelihood: Medium
+  - Impact: Medium (may require AU-specific code paths)
+  - Mitigation: Test in GarageBand early (Logic Pro not available); ensure Cocoa view lifecycle is handled correctly; verify state persistence via project save/restore
+
 ---
 
 ## Success Criteria
 
 - [ ] `cd engine && cargo build --release -p plugin` succeeds on macOS
 - [ ] `cd engine && cargo build --release -p plugin` succeeds on Windows
-- [ ] Plugin binary loads in Ableton Live without crash
-- [ ] Plugin appears in Ableton's plugin list with name "VstKit"
+- [ ] VST3 plugin binary loads in Ableton Live without crash
+- [ ] AU plugin binary loads in GarageBand without crash (Logic Pro also supported)
+- [ ] Plugin passes `auval -v aufx vsk1 VstK` validation
+- [ ] Plugin appears in Ableton's plugin list with name "VstKit" (VST3)
+- [ ] Plugin appears in GarageBand's plugin list with name "VstKit" (AU)
 - [ ] Gain parameter visible in Ableton's parameter list
-- [ ] Gain parameter automatable (record and playback)
+- [ ] Gain parameter visible in GarageBand's plugin interface
+- [ ] Gain parameter automatable (record and playback) in both hosts
 - [ ] Audio signal passes through with correct gain applied
 - [ ] Placeholder UI opens and displays current gain value
 - [ ] Placeholder UI slider adjusts gain and reflects in automation lane
@@ -354,6 +443,7 @@ This plan implements the foundational Rust audio plugin skeleton using nih-plug,
 - [ ] No audio dropouts at 64-sample buffer size
 - [ ] `cd engine && cargo test -p dsp -p protocol` passes
 - [ ] Build with `assert_process_allocs` does not panic during normal use
+- [ ] AU state save/restore works via project save (tested in GarageBand)
 
 ---
 
@@ -394,9 +484,18 @@ cargo build --release --features assert_process_allocs -p plugin
 # Run tests
 cargo test -p dsp -p protocol
 
-# Bundle for distribution
+# Bundle for distribution (creates .vst3, .component, .clap)
 cargo xtask bundle plugin --release
 
-# macOS installation
+# macOS VST3 installation
 cp -r target/bundled/VstKit.vst3 ~/Library/Audio/Plug-Ins/VST3/
+
+# macOS AU installation
+cp -r target/bundled/VstKit.component ~/Library/Audio/Plug-Ins/Components/
+
+# Refresh macOS AU cache (required after AU updates)
+killall -9 AudioComponentRegistrar
+
+# Validate AU plugin (must pass before Logic Pro testing)
+auval -v aufx vsk1 VstK
 ```

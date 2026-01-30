@@ -17,7 +17,7 @@
 
 ### Nice to Have
 - Parameter state persists across session save/load
-- Plugin loads in Logic Pro (AU) and Reaper (VST3/CLAP)
+- Plugin loads in GarageBand/Logic Pro (AU) and Reaper (VST3/CLAP)
 
 ### Out of Scope
 - WebView integration (Milestone 2+)
