@@ -4,7 +4,7 @@ A cross-platform audio effects plugin framework built with **Rust** and **React*
 
 ## Overview
 
-VSTKit is a custom audio effects plugin (VST3) designed to simulate guitar pedals. It combines a real-time safe Rust audio engine with a modern React-based UI, targeting professional DAW environments.
+VSTKit is a cross-platform audio effects plugin framework (VST3). It combines a real-time safe Rust audio engine with a modern React-based UI, targeting professional DAW environments.
 
 ## Architecture
 
