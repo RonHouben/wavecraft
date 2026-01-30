@@ -3753,6 +3753,7 @@ dependencies = [
 name = "vstkit"
 version = "0.1.0"
 dependencies = [
+ "bridge",
  "dsp",
  "metering",
  "nih_plug",

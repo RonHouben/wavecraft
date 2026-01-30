@@ -19,5 +19,6 @@ assert_process_allocs = ["nih_plug/assert_process_allocs"]
 protocol.workspace = true
 dsp.workspace = true
 metering.workspace = true
+bridge.workspace = true
 nih_plug.workspace = true
 nih_plug_egui.workspace = true
