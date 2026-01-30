@@ -2,6 +2,13 @@
 
 ⸻
 
+## Related Documents
+
+- [Coding Standards](./coding-standards.md) — Conventions for TypeScript, Rust, and React code
+- [Roadmap](../roadmap.md) — Project milestones and implementation plan
+
+⸻
+
 ## Assumptions (explicit)
 	•	Target hosts: major DAWs (Ableton required). Targets: Windows, macOS, Linux.
 	•	Audio engine / DSP will be implemented in Rust.
