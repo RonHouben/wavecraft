@@ -94,11 +94,11 @@ jobs:
           name: ui-dist
           path: ui/dist
 
-      - name: Cache cargo registry
+      - name: Cache cargo
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: engine
-          cache-targets: false
+          shared-key: engine-check
 
       - name: Type-check
         run: cargo check --workspace
