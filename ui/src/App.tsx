@@ -5,7 +5,7 @@
 import { ParameterSlider } from './components/ParameterSlider';
 import { LatencyMonitor } from './components/LatencyMonitor';
 import { Meter } from './components/Meter';
-import { ResizeControls } from './components/ResizeControls';
+import { ResizeHandle } from './components/ResizeHandle';
 import './App.css';
 import { useEffect } from 'react';
 import { requestResize } from './lib/vstkit-ipc';
@@ -53,16 +53,13 @@ function App() {
           <h2>Diagnostics</h2>
           <LatencyMonitor />
         </section>
-
-        <section className="resize-section">
-          <h2>Window Resize</h2>
-          <ResizeControls />
-        </section>
       </main>
 
       <footer className="app-footer">
         <p>VstKit Audio Plugin | React + WKWebView</p>
       </footer>
+
+      <ResizeHandle />
     </div>
   );
 }
