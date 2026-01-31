@@ -123,13 +123,9 @@ jobs:
           path: ui/dist
           retention-days: 1
 
-      - name: Upload compiled artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: engine-target
-          path: engine/target
-          include-hidden-files: true
-          retention-days: 1
+      # Note: Engine target artifacts are NOT shared between jobs.
+      # Rust-cache handles cross-run caching; within-run artifact sharing
+      # is fragile due to permission loss and Cargo fingerprint sensitivity.
 
   check-engine:
     name: Check Engine
@@ -155,29 +151,10 @@ jobs:
           name: ui-dist
           path: ui/dist
 
-      - name: Download compiled artifacts
-        uses: actions/download-artifact@v4
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
         with:
-          name: engine-target
-          path: engine/target
-
-      - name: Restore executable permissions
-        run: |
-          echo "=== Finding build scripts ==="
-          find engine/target/debug/build -name 'build-script-build' -type f | head -5
-          echo "=== Applying chmod ==="
-          find engine/target/debug/build -name 'build-script-build' -type f -exec chmod +x {} \;
-          echo "=== Verifying permissions ==="
-          ls -la engine/target/debug/build/proc-macro2-*/build-script-build 2>/dev/null || echo "No proc-macro2 build script found"
-
-      - name: Debug artifact structure
-        run: |
-          echo "=== Target directory structure ==="
-          ls -la engine/target/ || echo "No target dir"
-          ls -la engine/target/debug/ 2>/dev/null | head -20 || echo "No debug dir"
-          echo "=== Fingerprint count ==="
-          find engine/target -name ".fingerprint" -type d 2>/dev/null | head -5
-        continue-on-error: true
+          workspaces: engine
 
       - name: Check formatting
         run: cargo fmt --check
@@ -213,20 +190,10 @@ jobs:
           name: ui-dist
           path: ui/dist
 
-      - name: Download compiled artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: engine-target
-          path: engine/target
-
-      - name: Restore executable permissions
-        run: find engine/target/debug/build -name 'build-script-build' -type f -exec chmod +x {} \;
-
-      - name: Cache cargo registry
+      - name: Cache cargo
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: engine
-          cache-targets: false
 
       - name: Run tests
         run: cargo test --workspace
