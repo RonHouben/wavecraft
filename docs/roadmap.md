@@ -143,7 +143,7 @@ This document tracks implementation progress against the milestones defined in t
 
 | Task | Status | Notes |
 |------|--------|-------|
-| **Linting infrastructure** | ⏳ | ESLint + Prettier for UI, Clippy + fmt for Rust; `cargo xtask lint` commands; CI enforcement. See [user stories](specs/linting-infrastructure/user-stories.md) |
+| **Linting infrastructure** | 🚧 | Design complete — [user stories](specs/linting-infrastructure/user-stories.md) + [low-level design](specs/linting-infrastructure/low-level-design-linting-infrastructure.md). Ready for implementation (~2h). |
 | Performance profiling (low buffer sizes: 32/64 samples) | ⏳ | |
 | CPU stress testing | ⏳ | |
 | Memory usage optimization | ⏳ | |
@@ -162,6 +162,7 @@ This document tracks implementation progress against the milestones defined in t
 
 | Date | Update |
 |------|--------|
+| 2026-01-31 | **Linting infrastructure design complete**: User stories (7) and low-level design created. Covers ESLint + Prettier for UI, Clippy + fmt for Rust, `cargo xtask lint` commands, QA agent integration, and CI workflow. Ready for implementation. |
 | 2026-01-31 | Added **Linting infrastructure** to Milestone 5 — ESLint/Prettier for UI, Clippy/fmt for Rust, xtask commands, QA agent integration, CI enforcement. User stories in `docs/specs/linting-infrastructure/`. |
 | 2026-01-31 | **Milestone 4 implementation complete**: Code signing and notarization infrastructure implemented. Three new xtask commands (`sign`, `notarize`, `release`) with full CI/CD pipeline and documentation. Ready for manual testing with Apple Developer credentials. |
 | 2026-01-31 | Added "CI/CD pipeline (GitHub Actions)" to Milestone 5 — automated builds, tests, and release workflow. |

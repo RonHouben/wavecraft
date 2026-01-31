@@ -121,13 +121,13 @@ impl Editor for VstKitEditor {
         if let Ok(webview_lock) = self.webview_handle.lock() {
             if let Some(webview) = webview_lock.as_ref() {
                 // Escape the id for safe JavaScript injection
-                let id_escaped = id.replace('\\', "\\\\").replace('\'', "\\'");
+                let id_escaped = id.replace('\\', "\\\\").replace('"', "\\\"");
                 let js = format!(
                     "if (globalThis.__VSTKIT_IPC__ && globalThis.__VSTKIT_IPC__._onParamUpdate) {{ \
                         globalThis.__VSTKIT_IPC__._onParamUpdate({{ \
-                            jsonrpc: '2.0', \
-                            method: 'parameterChanged', \
-                            params: {{ id: '{}', value: {} }} \
+                            jsonrpc: \"2.0\", \
+                            method: \"parameterChanged\", \
+                            params: {{ id: \"{}\", value: {} }} \
                         }}); \
                     }}",
                     id_escaped, normalized_value
@@ -156,13 +156,13 @@ impl Editor for VstKitEditor {
         if let Ok(webview_lock) = self.webview_handle.lock()
             && let Some(webview) = webview_lock.as_ref()
         {
-            let id_escaped = id.replace('\\', "\\\\").replace('\'', "\\\'');
+            let id_escaped = id.replace('\\', "\\\\").replace('"', "\\\"");
             let js = format!(
                 "if (globalThis.__VSTKIT_IPC__ && globalThis.__VSTKIT_IPC__._onParamUpdate) {{ \
                     globalThis.__VSTKIT_IPC__._onParamUpdate({{ \
-                        jsonrpc: '2.0', \
-                        method: 'paramModulation', \
-                        params: {{ id: '{}', offset: {} }} \
+                        jsonrpc: \"2.0\", \
+                        method: \"paramModulation\", \
+                        params: {{ id: \"{}\", offset: {} }} \
                     }}); \
                 }}",
                 id_escaped, modulation_offset

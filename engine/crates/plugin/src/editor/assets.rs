@@ -38,8 +38,10 @@ pub fn get_asset(path: &str) -> Option<(&'static [u8], &'static str)> {
     Some((file.contents(), mime_type))
 }
 
-/// Infer MIME type from file extension.#[allow(dead_code)] // Used only when webview_editor feature is enabledfn mime_type_from_path(path: &str) -> &'static str {
-    let extension = path.split('.').last().unwrap_or("");
+/// Infer MIME type from file extension.
+#[allow(dead_code)] // Used only when webview_editor feature is enabled
+fn mime_type_from_path(path: &str) -> &'static str {
+    let extension = path.split('.').next_back().unwrap_or("");
 
     match extension {
         "html" => "text/html",
