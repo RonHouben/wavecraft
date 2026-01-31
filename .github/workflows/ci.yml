@@ -98,11 +98,22 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: engine
-          shared-key: "engine"
+          cache-targets: false
 
       - name: Type-check
         run: cargo check --workspace
         working-directory: engine
+
+      - name: Upload compiled artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: engine-target
+          path: |
+            engine/target/debug/deps
+            engine/target/debug/build
+            engine/target/debug/.fingerprint
+            engine/target/debug/incremental
+          retention-days: 1
 
   lint-engine:
     name: Lint Engine
@@ -122,32 +133,23 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.4
-        continue-on-error: true
-
-      - name: Configure sccache
-        run: |
-          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
-          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
-          # Test if sccache works, unset wrapper if it fails
-          if ! sccache --start-server 2>/dev/null; then
-            echo "sccache unavailable, falling back to normal compilation"
-            echo "RUSTC_WRAPPER=" >> $GITHUB_ENV
-          fi
-        continue-on-error: true
-
       - name: Download UI dist
         uses: actions/download-artifact@v4
         with:
           name: ui-dist
           path: ui/dist
 
+      - name: Download compiled artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: engine-target
+          path: engine/target/debug
+
       - name: Cache cargo registry
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: engine
-          shared-key: "engine"
+          cache-targets: false
 
       - name: Check formatting
         run: cargo fmt --check
@@ -199,32 +201,23 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.4
-        continue-on-error: true
-
-      - name: Configure sccache
-        run: |
-          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
-          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
-          # Test if sccache works, unset wrapper if it fails
-          if ! sccache --start-server 2>/dev/null; then
-            echo "sccache unavailable, falling back to normal compilation"
-            echo "RUSTC_WRAPPER=" >> $GITHUB_ENV
-          fi
-        continue-on-error: true
-
       - name: Download UI dist
         uses: actions/download-artifact@v4
         with:
           name: ui-dist
           path: ui/dist
 
+      - name: Download compiled artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: engine-target
+          path: engine/target/debug
+
       - name: Cache cargo registry
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: engine
-          shared-key: "engine"
+          cache-targets: false
 
       - name: Run tests
         run: cargo test --workspace
