@@ -13,6 +13,10 @@ pub fn run(verbose: bool) -> Result<()> {
 
     let ui_dir = paths::ui_dir()?;
 
+    if verbose {
+        println!("  UI directory: {}", ui_dir.display());
+    }
+
     // Check if node_modules exists
     let node_modules = ui_dir.join("node_modules");
     if !node_modules.exists() {
@@ -46,6 +50,16 @@ pub fn run(verbose: bool) -> Result<()> {
 
     if !status.success() {
         anyhow::bail!("npm build failed");
+    }
+
+    // Verify dist directory was created
+    let dist_dir = ui_dir.join("dist");
+    if !dist_dir.exists() {
+        anyhow::bail!("npm build succeeded but dist directory not found at {}", dist_dir.display());
+    }
+
+    if verbose {
+        println!("  Dist directory created: {}", dist_dir.display());
     }
 
     print_success("UI built successfully");
