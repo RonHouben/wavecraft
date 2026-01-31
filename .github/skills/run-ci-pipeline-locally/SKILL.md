@@ -19,13 +19,14 @@ VstKit provides a custom Docker image with all dependencies pre-installed. This 
 
 ```bash
 # Build the custom image (one-time setup)
-docker build --platform linux/amd64 -t vstkit-ci:latest .github/copilot/skills/run-gh-actions-locally/
+docker build --platform linux/amd64 -t vstkit-ci:latest .github/skills/run-ci-pipeline-locally/
 
 # Run a specific job
 act -j check-engine -W .github/workflows/ci.yml \
     --container-architecture linux/amd64 \
     -P ubuntu-latest=vstkit-ci:latest \
-    --pull=false
+    --pull=false \
+    --artifact-server-path /tmp/act-artifacts
 ```
 
 ### Available CI Jobs
@@ -46,7 +47,8 @@ act -j check-engine -W .github/workflows/ci.yml \
 act -W .github/workflows/ci.yml \
     --container-architecture linux/amd64 \
     -P ubuntu-latest=vstkit-ci:latest \
-    --pull=false
+    --pull=false \
+    --artifact-server-path /tmp/act-artifacts
 ```
 
 ## Building the Custom Image
@@ -60,7 +62,7 @@ The custom image includes:
 ```bash
 # Build for linux/amd64 (required for Apple Silicon Macs)
 docker build --platform linux/amd64 -t vstkit-ci:latest \
-    .github/copilot/skills/run-gh-actions-locally/
+    .github/skills/run-ci-pipeline-locally/
 
 # Verify the image
 docker images | grep vstkit-ci
@@ -121,8 +123,7 @@ act --secret-file .secrets
 | `-P ubuntu-latest=vstkit-ci:latest` | Use custom image with dependencies |
 | `--pull=false` | Use local image, don't pull from Docker Hub |
 | `-W .github/workflows/ci.yml` | Specify workflow file |
-| `-j <job-name>` | Run specific job |
-
+| `-j <job-name>` | Run specific job || `--artifact-server-path <dir>` | Enable local artifact upload/download |
 ## Limitations
 
 ### macOS Runners Cannot Be Emulated
@@ -137,6 +138,16 @@ GitHub's `macos-latest` runners cannot be simulated locally. The `build-plugin` 
 cargo xtask bundle --release
 cargo xtask sign --adhoc
 ```
+
+### Artifact Upload/Download
+
+By default, `actions/upload-artifact` and `actions/download-artifact` fail locally because they require GitHub's artifact server. Use the `--artifact-server-path` flag to enable a local artifact server:
+
+```bash
+act ... --artifact-server-path /tmp/act-artifacts
+```
+
+Artifacts will be stored in the specified directory and can be downloaded by subsequent jobs.
 
 ### Caching Differences
 
@@ -178,11 +189,12 @@ docker exec -it <container-id> bash
 | Job uses `macos-latest` | Skip job or test manually |
 | Missing Linux packages | Rebuild custom image |
 | Rust compilation slow | Expected on first run; use `--reuse` for subsequent |
+| `ACTIONS_RUNTIME_TOKEN` error | Add `--artifact-server-path /tmp/act-artifacts` |
 
 ## Updating the Custom Image
 
 If CI dependencies change (new apt packages, Rust version, etc.):
 
-1. Edit the Dockerfile at `assets/Dockerfile` (bundled with this skill)
-2. Rebuild: `docker build --platform linux/amd64 -t vstkit-ci:latest .github/copilot/skills/run-gh-actions-locally/assets/`
+1. Edit the Dockerfile at `.github/skills/run-ci-pipeline-locally/Dockerfile`
+2. Rebuild: `docker build --platform linux/amd64 -t vstkit-ci:latest .github/skills/run-ci-pipeline-locally/`
 3. Test: `act -j check-engine ... --pull=false`

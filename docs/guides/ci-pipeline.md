@@ -177,14 +177,17 @@ The CI pipeline can be tested locally using `act` and a custom Docker image with
 ```bash
 # Build the custom image (one-time)
 docker build --platform linux/amd64 -t vstkit-ci:latest \
-    .github/copilot/skills/run-gh-actions-locally/
+    .github/skills/run-ci-pipeline-locally/
 
 # Run a specific job
 act -j check-engine -W .github/workflows/ci.yml \
     --container-architecture linux/amd64 \
     -P ubuntu-latest=vstkit-ci:latest \
-    --pull=false
+    --pull=false \
+    --artifact-server-path /tmp/act-artifacts
 ```
+
+**Note:** The `--artifact-server-path` flag enables local artifact upload/download between jobs.
 
 ### What Can Be Tested Locally
 
@@ -197,7 +200,7 @@ act -j check-engine -W .github/workflows/ci.yml \
 | test-engine | ✅ Works |
 | build-plugin | ❌ Requires macOS |
 
-For detailed local testing instructions, see the [Run GH Actions Locally skill](/.github/copilot/skills/run-gh-actions-locally/SKILL.md).
+For detailed local testing instructions, see the [Run CI Pipeline Locally skill](/.github/skills/run-ci-pipeline-locally/SKILL.md).
 
 ## Related Documentation
 
