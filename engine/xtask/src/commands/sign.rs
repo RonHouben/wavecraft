@@ -167,6 +167,119 @@ pub fn run_adhoc() -> Result<()> {
     Ok(())
 }
 
+/// Verify and validate signatures on all bundles.
+pub fn run_verify(verbose: bool) -> Result<()> {
+    // Verify we're on macOS
+    if Platform::current() != Platform::MacOS {
+        anyhow::bail!("Code signing verification is only supported on macOS");
+    }
+
+    let bundled_dir = paths::bundled_dir()?;
+
+    let bundles = [
+        ("vstkit.vst3", "VST3"),
+        ("vstkit.clap", "CLAP"),
+        ("vstkit.component", "AU"),
+    ];
+
+    print_status("Verifying bundle signatures...");
+
+    let mut verified_count = 0;
+
+    for (bundle_name, format) in bundles {
+        let bundle_path = bundled_dir.join(bundle_name);
+        if bundle_path.exists() {
+            verify_signature(&bundle_path)?;
+            
+            if verbose {
+                inspect_signature(&bundle_path)?;
+            }
+            
+            // Validate expected properties
+            validate_signature_properties(&bundle_path, verbose)?;
+            
+            print_success(&format!("{} signature valid", format));
+            verified_count += 1;
+        }
+    }
+
+    if verified_count == 0 {
+        anyhow::bail!("No plugin bundles found to verify");
+    }
+
+    print_success(&format!("All {} signatures verified successfully", verified_count));
+    Ok(())
+}
+
+/// Inspect signature details (for verbose output).
+fn inspect_signature(bundle_path: &Path) -> Result<()> {
+    let output = Command::new("codesign")
+        .arg("-dv")
+        .arg("--verbose=4")
+        .arg(bundle_path)
+        .output()
+        .context("Failed to inspect signature")?;
+
+    // codesign outputs to stderr
+    if !output.stderr.is_empty() {
+        println!("\n{}", String::from_utf8_lossy(&output.stderr));
+    }
+
+    Ok(())
+}
+
+/// Validate that signature has expected properties.
+fn validate_signature_properties(bundle_path: &Path, verbose: bool) -> Result<()> {
+    // Get signature info
+    let output = Command::new("codesign")
+        .arg("-d")
+        .arg("--entitlements")
+        .arg(":-") // Output to stdout
+        .arg("--verbose=2")
+        .arg(bundle_path)
+        .output()
+        .context("Failed to get signature info")?;
+
+    let info = String::from_utf8_lossy(&output.stderr);
+
+    // Check for hardened runtime
+    if !info.contains("runtime") {
+        anyhow::bail!(
+            "Bundle {} is missing hardened runtime flag",
+            bundle_path.display()
+        );
+    }
+
+    // Parse and validate entitlements
+    let entitlements_output = String::from_utf8_lossy(&output.stdout);
+    
+    if !entitlements_output.is_empty() {
+        // Check for required JIT entitlement
+        if !entitlements_output.contains("com.apple.security.cs.allow-jit") {
+            anyhow::bail!(
+                "Bundle {} is missing required JIT entitlement (needed for WebView JavaScript)",
+                bundle_path.display()
+            );
+        }
+        
+        if verbose {
+            println!("✓ Hardened runtime enabled");
+            println!("✓ JIT entitlement present");
+            
+            if entitlements_output.contains("com.apple.security.cs.allow-unsigned-executable-memory") {
+                println!("✓ Unsigned executable memory allowed");
+            }
+            if entitlements_output.contains("com.apple.security.cs.disable-library-validation") {
+                println!("✓ Library validation disabled");
+            }
+        }
+    } else if verbose {
+        println!("⚠ No entitlements found (ad-hoc signature may not include entitlements)");
+    }
+
+    Ok(())
+}
+
 /// User-friendly error messages for common signing issues.
 fn diagnose_signing_error(code: i32) -> &'static str {
     match code {

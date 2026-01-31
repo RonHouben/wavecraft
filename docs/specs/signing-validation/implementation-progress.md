@@ -24,10 +24,10 @@
 ### Phase 1: Local Ad-Hoc Signing Validation ✅ IN SCOPE
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| 1.1 | Build plugin bundles with webview_editor | ⏳ Not Started | |
-| 1.2 | Run ad-hoc signing | ⏳ Not Started | |
-| 1.3 | Verify ad-hoc signatures | ⏳ Not Started | |
-| 1.4 | Inspect signature details | ⏳ Not Started | |
+| 1.1 | Build plugin bundles with webview_editor | ✅ Complete | Bundles built successfully |
+| 1.2 | Run ad-hoc signing | ⏳ Ready | Next: `cargo xtask sign --adhoc` |
+| 1.3 | Verify ad-hoc signatures | ⏳ Ready | New: `cargo xtask sign --verify` |
+| 1.4 | Inspect signature details | ⏳ Ready | Use `--verbose` flag |
 
 ### Phase 2: Ableton Live Compatibility Testing ✅ IN SCOPE
 | # | Task | Status | Notes |
@@ -58,10 +58,10 @@
 ### Phase 5a: Build-Only CI/CD ✅ IN SCOPE
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| 5a.1 | Create build-only workflow | ⏳ Not Started | `.github/workflows/ci.yml` |
-| 5a.2 | Trigger CI build | ⏳ Not Started | Push to main or PR |
-| 5a.3 | Download and verify artifacts | ⏳ Not Started | |
-| 5a.4 | Local ad-hoc sign CI artifacts | ⏳ Not Started | Proves CI artifacts can be signed |
+| 5a.1 | Create build-only workflow | ✅ Complete | Includes ad-hoc signing + verification |
+| 5a.2 | Trigger CI build | ⏳ Ready | Push to main or create PR |
+| 5a.3 | Download and verify artifacts | ⏳ Ready | Artifacts are now signed |
+| 5a.4 | Test CI artifacts locally | ⏳ Ready | Already signed in CI |
 
 ### Phase 5b: Signed Release CI/CD ⏸️ DEFERRED
 | # | Task | Status | Notes |
@@ -98,8 +98,9 @@
 - [ ] CI workflow file exists (`.github/workflows/ci.yml`)
 - [ ] Push/PR triggers workflow
 - [ ] Workflow completes successfully
-- [ ] Unsigned artifacts are downloadable
-- [ ] Downloaded artifacts can be signed locally
+- [ ] Ad-hoc signing step passes
+- [ ] Signature verification step passes (with assertions)
+- [ ] Signed artifacts are downloadable
 
 ### Phase 3: Developer ID Signing ⏸️ DEFERRED
 - [ ] `APPLE_SIGNING_IDENTITY` env var configured

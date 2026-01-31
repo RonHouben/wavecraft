@@ -134,6 +134,10 @@ enum Commands {
         /// Use ad-hoc signing (for local development)
         #[arg(long)]
         adhoc: bool,
+
+        /// Verify signatures only (no signing)
+        #[arg(long)]
+        verify: bool,
     },
 
     /// Notarize plugin bundles with Apple
@@ -213,8 +217,11 @@ fn main() -> Result<()> {
             identity,
             entitlements,
             adhoc,
+            verify,
         }) => {
-            if adhoc {
+            if verify {
+                commands::sign::run_verify(cli.verbose)
+            } else if adhoc {
                 commands::sign::run_adhoc()
             } else {
                 let config = if let Some(id) = identity {
