@@ -24,9 +24,6 @@ mod windows;
 
 pub use webview::{WebViewConfig, WebViewHandle, create_webview};
 
-// Re-export for lib.rs compatibility
-pub use egui::create_egui_editor as create_editor;
-
 /// Message types for communicating with the WebView from the editor.
 #[allow(dead_code)] // Used only when webview_editor feature is enabled
 #[derive(Debug, Clone)]
@@ -179,4 +176,12 @@ pub fn create_webview_editor(
     meter_consumer: Arc<Mutex<MeterConsumer>>,
 ) -> Option<Box<dyn Editor>> {
     Some(Box::new(VstKitEditor::new(params, meter_consumer)))
+}
+
+/// Create the fallback egui editor (when webview feature is disabled).
+pub fn create_editor(
+    params: Arc<VstKitParams>,
+    _meter_consumer: Arc<Mutex<MeterConsumer>>,
+) -> Option<Box<dyn Editor>> {
+    egui::create_egui_editor(params)
 }

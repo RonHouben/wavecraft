@@ -2,21 +2,21 @@
  * Main App component
  */
 
+import React, { useEffect } from 'react';
 import { ParameterSlider } from './components/ParameterSlider';
 import { LatencyMonitor } from './components/LatencyMonitor';
 import { Meter } from './components/Meter';
 import { ResizeHandle } from './components/ResizeHandle';
 import './App.css';
-import { useEffect } from 'react';
 import { requestResize } from './lib/vstkit-ipc';
 
-function App() {
+function App(): React.JSX.Element {
   // Handle native window resize
   useEffect(() => {
-    const handleResize = () => {
+    const handleResize = (): void => {
       const width = window.innerWidth;
       const height = window.innerHeight;
-      
+
       // Notify host of the new size
       requestResize(width, height).catch((err) => {
         console.error('Failed to notify host of resize:', err);
@@ -26,7 +26,7 @@ function App() {
     // Listen for window resize events
     window.addEventListener('resize', handleResize);
 
-    return () => {
+    return (): void => {
       window.removeEventListener('resize', handleResize);
     };
   }, []);

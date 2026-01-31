@@ -1,6 +1,6 @@
 /**
  * @vstkit/ipc - IPC library for VstKit WebView ↔ Rust communication
- * 
+ *
  * Public exports for application code.
  */
 
@@ -42,11 +42,7 @@ export { ParameterClient } from './ParameterClient';
 
 // React hooks (primary API)
 export { useParameter, useAllParameters, useLatencyMonitor } from './hooks';
-export type {
-  UseParameterResult,
-  UseAllParametersResult,
-  UseLatencyMonitorResult,
-} from './hooks';
+export type { UseParameterResult, UseAllParametersResult, UseLatencyMonitorResult } from './hooks';
 
 // Resize API
 export { requestResize, useRequestResize } from './resize';

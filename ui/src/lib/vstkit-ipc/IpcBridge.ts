@@ -1,16 +1,11 @@
 /**
  * IpcBridge - Low-level IPC communication layer
- * 
+ *
  * Wraps the injected primitives and provides a Promise-based API
  * for sending requests and receiving responses.
  */
 
-import type {
-  IpcRequest,
-  IpcResponse,
-  IpcNotification,
-  RequestId,
-} from './types';
+import type { IpcRequest, IpcResponse, IpcNotification, RequestId } from './types';
 import { isIpcResponse, isIpcNotification } from './types';
 
 type EventCallback<T> = (data: T) => void;
@@ -42,7 +37,7 @@ export class IpcBridge {
     this.primitives.setReceiveCallback((message: string) => {
       this.handleIncomingMessage(message);
     });
-    
+
     // Set up parameter update listener for pushed updates from Rust
     if (this.primitives.onParamUpdate) {
       this.primitives.onParamUpdate((notification: unknown) => {
@@ -93,16 +88,17 @@ export class IpcBridge {
 
     // Send request
     const requestJson = JSON.stringify(request);
-    this.primitives!.postMessage(requestJson);
+    if (!this.primitives) {
+      throw new Error('IpcBridge not initialized');
+    }
+    this.primitives.postMessage(requestJson);
 
     // Wait for response
     const response = await responsePromise;
 
     // Check for error
     if (response.error) {
-      throw new Error(
-        `IPC Error ${response.error.code}: ${response.error.message}`
-      );
+      throw new Error(`IPC Error ${response.error.code}: ${response.error.message}`);
     }
 
     return response.result as TResult;
@@ -116,7 +112,10 @@ export class IpcBridge {
       this.eventListeners.set(event, new Set());
     }
 
-    const listeners = this.eventListeners.get(event)!;
+    const listeners = this.eventListeners.get(event);
+    if (!listeners) {
+      throw new Error(`Event listener set not found for event: ${event}`);
+    }
     listeners.add(callback as EventCallback<unknown>);
 
     // Return unsubscribe function

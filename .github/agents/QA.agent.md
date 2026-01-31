@@ -1,7 +1,7 @@
 ---
 name: qa
 description: Quality Assurance agent focused on code quality and static code analysis.
-tools: ['search', 'read', 'execute']
+tools: ['search', 'read', 'execute', 'edit']
 model: Claude Sonnet 4.5 (copilot)
 infer: true
 handoffs:
@@ -9,17 +9,9 @@ handoffs:
     agent: coder
     prompt: Please fix the issues identified in the QA report. The QA-report.md contains all findings with severity, location, and recommendations. Focus on Critical and High severity items first.
     send: true
-  - label: Architectural decision
-    agent: architect
-    prompt: The QA review has identified architectural concerns that require your expertise. Please review the architectural issues flagged in the QA-report.md and provide guidance on the appropriate design approach before implementation proceeds.
-    send: true
   - label: Update architectural Docs
     agent: architect
     prompt: Review the implementation and update architectural documentation as needed
-    send: true
-  - label: Update roadmap
-    agent: po
-    prompt: Review the implementation and update the project roadmap as needed
     send: true
 ---
 
@@ -59,12 +51,13 @@ You are a **Senior Quality Assurance Specialist** with expertise in:
 **Always run at the start of every QA review**:
 
 ```bash
-# Format check (must pass)
-cargo fmt --check
-
-# Clippy with strict warnings (must pass)
-cargo clippy --workspace -- -D warnings
+# Run all linting checks (UI + Engine)
+cargo xtask lint
 ```
+
+This runs:
+- **Engine**: `cargo fmt --check` + `cargo clippy --workspace -- -D warnings`
+- **UI**: `npm run lint` + `npm run format:check`
 
 **Run conditionally for affected crate(s)**:
 
@@ -160,11 +153,16 @@ Create report at: `docs/feature-specs/{feature}/QA-report.md`
 
 ## Automated Check Results
 
-### cargo fmt --check
-{output or "✅ Passed"}
+### cargo xtask lint
+{✅ PASSED | ❌ FAILED}
 
-### cargo clippy --workspace -- -D warnings
-{output or "✅ Passed"}
+#### Engine (Rust)
+- `cargo fmt --check`: {✅ | ❌}
+- `cargo clippy -- -D warnings`: {✅ | ❌}
+
+#### UI (TypeScript)
+- ESLint: {✅ | ❌} (Errors: X, Warnings: X)
+- Prettier: {✅ | ❌}
 
 ### cargo test -p {crate}
 {output or "✅ Passed" or "N/A"}

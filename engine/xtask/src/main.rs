@@ -88,6 +88,10 @@ enum Commands {
         build_ui: bool,
     },
 
+    /// Build the React UI
+    #[command(about = "Build the React UI")]
+    BuildUi,
+
     /// Build AU wrapper (macOS only)
     #[command(about = "Build AU wrapper (macOS only)")]
     Au,
@@ -167,6 +171,22 @@ enum Commands {
         #[arg(long)]
         skip_notarize: bool,
     },
+
+    /// Run linters for UI and/or engine code
+    #[command(about = "Run linters for UI and/or engine code")]
+    Lint {
+        /// Run UI linting only (ESLint + Prettier)
+        #[arg(long)]
+        ui: bool,
+
+        /// Run engine linting only (Clippy + fmt)
+        #[arg(long)]
+        engine: bool,
+
+        /// Auto-fix issues where possible
+        #[arg(long)]
+        fix: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -213,6 +233,7 @@ fn main() -> Result<()> {
         Some(Commands::Desktop { build_ui }) => {
             commands::desktop::run(!cli.debug, build_ui, cli.verbose)
         }
+        Some(Commands::BuildUi) => commands::build_ui::run(cli.verbose),
         Some(Commands::Au) => commands::au::run(cli.dry_run, cli.verbose),
         Some(Commands::Install) => commands::install::run(cli.dry_run, cli.verbose),
         Some(Commands::Clean { installed, force }) => {
@@ -274,6 +295,19 @@ fn main() -> Result<()> {
         }
         Some(Commands::Release { skip_notarize }) => {
             commands::release::run(skip_notarize, cli.verbose)
+        }
+        Some(Commands::Lint { ui, engine, fix }) => {
+            let targets = if !ui && !engine {
+                // Neither specified = run both
+                commands::lint::LintTargets {
+                    ui: true,
+                    engine: true,
+                    fix,
+                }
+            } else {
+                commands::lint::LintTargets { ui, engine, fix }
+            };
+            commands::lint::run(targets, cli.verbose)
         }
         None => {
             // Default behavior: run nih_plug_xtask for backward compatibility

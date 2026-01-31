@@ -254,6 +254,7 @@ engine/xtask/src/
 └── commands/
     ├── mod.rs       # Command exports and run_all()
     ├── bundle.rs    # Build VST3/CLAP bundles
+    ├── lint.rs      # Unified linting (UI + Engine)
     ├── sign.rs      # macOS code signing
     ├── notarize.rs  # Apple notarization
     ├── release.rs   # Complete release workflow
@@ -293,6 +294,75 @@ Code running on the audio thread must:
 - Never make system calls that can block
 - Use atomic types for shared state
 - Use SPSC ring buffers for data transfer
+
+---
+
+## Linting & Formatting
+
+VstKit enforces consistent code quality through automated linting.
+
+### Running Linters
+
+```bash
+# Run all linters (UI + Engine)
+cargo xtask lint
+
+# Run with auto-fix
+cargo xtask lint --fix
+
+# Run only UI linting (ESLint + Prettier)
+cargo xtask lint --ui
+
+# Run only Engine linting (cargo fmt + clippy)
+cargo xtask lint --engine
+```
+
+### UI Linting (TypeScript/React)
+
+**Tools:**
+- **ESLint 9** — Static analysis with strict TypeScript and React rules
+- **Prettier** — Code formatting
+
+**Key Rules:**
+- `@typescript-eslint/no-explicit-any: error` — No `any` types
+- `@typescript-eslint/explicit-function-return-type: warn` — Explicit return types preferred
+- `react-hooks/rules-of-hooks: error` — Enforce hooks rules
+- `react-hooks/exhaustive-deps: error` — Complete dependency arrays
+
+**Configuration:**
+- ESLint: `ui/eslint.config.js` (flat config format)
+- Prettier: `ui/.prettierrc`
+
+**NPM Scripts:**
+```bash
+npm run lint        # ESLint check
+npm run lint:fix    # ESLint auto-fix
+npm run format      # Prettier format
+npm run format:check # Prettier check
+```
+
+### Engine Linting (Rust)
+
+**Tools:**
+- **cargo fmt** — Code formatting
+- **cargo clippy** — Lint analysis with `-D warnings` (warnings as errors)
+
+**Rules:**
+- All Clippy warnings are treated as errors
+- Standard Rust formatting via rustfmt
+
+**Manual Commands:**
+```bash
+cargo fmt --check   # Check formatting
+cargo fmt           # Auto-format
+cargo clippy --workspace -- -D warnings
+```
+
+### CI Integration
+
+Linting runs automatically on all PRs via `.github/workflows/lint.yml`:
+- Engine linting runs on `macos-latest`
+- UI linting runs on `ubuntu-latest`
 
 ---
 

@@ -3,6 +3,7 @@
 //! This module provides the platform-specific WebView integration for macOS,
 //! using WKWebView embedded in the host-provided NSView.
 
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use nih_plug::prelude::*;
@@ -30,7 +31,7 @@ use super::webview::{WebViewConfig, WebViewHandle};
 /// Holds the WKWebView and associated resources.
 #[allow(dead_code)] // Used only when webview_editor feature is enabled
 pub struct MacOSWebView {
-    webview: Arc<Mutex<Option<Retained<WKWebView>>>>,
+    webview: Rc<Mutex<Option<Retained<WKWebView>>>>,
     _handler: Arc<Mutex<IpcHandler<PluginEditorBridge>>>,
 }
 
@@ -135,7 +136,7 @@ pub fn create_macos_webview(config: WebViewConfig) -> Result<Box<dyn WebViewHand
     load_ui(&webview)?;
 
     Ok(Box::new(MacOSWebView {
-        webview: Arc::new(Mutex::new(Some(webview))),
+        webview: Rc::new(Mutex::new(Some(webview))),
         _handler: handler,
     }))
 }
@@ -152,7 +153,7 @@ fn create_webview_config(
 
     unsafe {
         config.setURLSchemeHandler_forURLScheme(
-            Some(&ProtocolObject::from_ref(&*scheme_handler)),
+            Some(ProtocolObject::from_ref(&*scheme_handler)),
             &scheme_name,
         );
     }
@@ -190,7 +191,7 @@ fn configure_webview(
     let handler_name = NSString::from_str("ipcHandler");
     unsafe {
         user_content_controller.addScriptMessageHandler_name(
-            &ProtocolObject::from_ref(&*message_handler),
+            ProtocolObject::from_ref(&*message_handler),
             &handler_name,
         );
     }

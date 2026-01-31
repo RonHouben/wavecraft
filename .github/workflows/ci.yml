@@ -40,8 +40,12 @@ jobs:
             ${{ runner.os }}-cargo-
       
       - name: Build UI
-        working-directory: ui
-        run: npm ci && npm run build
+        working-directory: engine
+        run: cargo xtask build-ui --verbose
+      
+      - name: Lint (UI + Engine)
+        working-directory: engine
+        run: cargo xtask lint
       
       - name: Build Plugin
         working-directory: engine

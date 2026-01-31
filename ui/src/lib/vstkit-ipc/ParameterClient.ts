@@ -1,6 +1,6 @@
 /**
  * ParameterClient - High-level typed API for parameter operations
- * 
+ *
  * Provides typed methods for interacting with plugin parameters.
  */
 
@@ -62,9 +62,7 @@ export class ParameterClient {
    * Get all parameters with their current values and metadata
    */
   public async getAllParameters(): Promise<ParameterInfo[]> {
-    const result = await this.bridge.invoke<GetAllParametersResult>(
-      METHOD_GET_ALL_PARAMETERS
-    );
+    const result = await this.bridge.invoke<GetAllParametersResult>(METHOD_GET_ALL_PARAMETERS);
     return result.parameters;
   }
 
@@ -84,13 +82,10 @@ export class ParameterClient {
    * @returns Unsubscribe function
    */
   public onParameterChanged(callback: ParameterChangeCallback): () => void {
-    return this.bridge.on<ParameterChangedNotification>(
-      NOTIFICATION_PARAMETER_CHANGED,
-      (data) => {
-        if (data && typeof data === 'object' && 'id' in data && 'value' in data) {
-          callback(data.id as string, data.value as number);
-        }
+    return this.bridge.on<ParameterChangedNotification>(NOTIFICATION_PARAMETER_CHANGED, (data) => {
+      if (data && typeof data === 'object' && 'id' in data && 'value' in data) {
+        callback(data.id as string, data.value as number);
       }
-    );
+    });
   }
 }

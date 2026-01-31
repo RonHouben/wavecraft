@@ -2,7 +2,7 @@
  * ResizeControls component - Demonstrates window resizing functionality
  */
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useRequestResize } from '../lib/vstkit-ipc';
 import './ResizeControls.css';
 
@@ -13,15 +13,15 @@ const PRESET_SIZES = [
   { name: 'Extra Large', width: 1280, height: 960 },
 ];
 
-export function ResizeControls() {
+export function ResizeControls(): React.JSX.Element {
   const requestResize = useRequestResize();
   const [status, setStatus] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleResize = async (width: number, height: number) => {
+  const handleResize = async (width: number, height: number): Promise<void> => {
     setIsLoading(true);
     setStatus(`Requesting ${width}x${height}...`);
-    
+
     try {
       const accepted = await requestResize(width, height);
       if (accepted) {
@@ -55,7 +55,9 @@ export function ResizeControls() {
         ))}
       </div>
       {status && (
-        <div className={`resize-status ${status.startsWith('✓') ? 'success' : status.startsWith('✗') ? 'error' : ''}`}>
+        <div
+          className={`resize-status ${status.startsWith('✓') ? 'success' : status.startsWith('✗') ? 'error' : ''}`}
+        >
           {status}
         </div>
       )}

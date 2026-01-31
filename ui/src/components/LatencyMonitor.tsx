@@ -2,10 +2,11 @@
  * LatencyMonitor - Displays IPC roundtrip latency metrics
  */
 
+import React from 'react';
 import { useLatencyMonitor } from '@vstkit/ipc';
 import './LatencyMonitor.css';
 
-export function LatencyMonitor() {
+export function LatencyMonitor(): React.JSX.Element {
   const { latency, avg, max, count } = useLatencyMonitor(1000);
 
   return (
@@ -14,9 +15,7 @@ export function LatencyMonitor() {
       <div className="metrics">
         <div className="metric">
           <span className="label">Current:</span>
-          <span className="value">
-            {latency !== null ? `${latency.toFixed(2)} ms` : '—'}
-          </span>
+          <span className="value">{latency !== null ? `${latency.toFixed(2)} ms` : '—'}</span>
         </div>
         <div className="metric">
           <span className="label">Average:</span>

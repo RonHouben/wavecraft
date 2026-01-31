@@ -5,7 +5,10 @@
   padding: 16px;
   background: rgba(0, 0, 0, 0.3);
   border-radius: 8px;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
 }
 
 .meter-header {

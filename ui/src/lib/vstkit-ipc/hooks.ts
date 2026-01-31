@@ -28,7 +28,7 @@ export function useParameter(id: string): UseParameterResult {
   useEffect(() => {
     let isMounted = true;
 
-    async function loadParameter() {
+    async function loadParameter(): Promise<void> {
       try {
         setIsLoading(true);
         setError(null);
@@ -57,7 +57,7 @@ export function useParameter(id: string): UseParameterResult {
 
     loadParameter();
 
-    return () => {
+    return (): void => {
       isMounted = false;
     };
   }, [id]);
@@ -128,9 +128,7 @@ export function useAllParameters(): UseAllParametersResult {
   // Subscribe to parameter changes
   useEffect(() => {
     const unsubscribe = client.onParameterChanged((id, value) => {
-      setParams((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, value } : p))
-      );
+      setParams((prev) => prev.map((p) => (p.id === id ? { ...p, value } : p)));
     });
 
     return unsubscribe;
@@ -157,7 +155,7 @@ export function useLatencyMonitor(intervalMs = 1000): UseLatencyMonitorResult {
   useEffect(() => {
     let isMounted = true;
 
-    async function measure() {
+    async function measure(): Promise<void> {
       try {
         const ms = await client.ping();
         if (isMounted) {
@@ -175,7 +173,7 @@ export function useLatencyMonitor(intervalMs = 1000): UseLatencyMonitorResult {
     // Periodic measurements
     const intervalId = setInterval(measure, intervalMs);
 
-    return () => {
+    return (): void => {
       isMounted = false;
       clearInterval(intervalId);
     };
