@@ -6,7 +6,7 @@ model: Claude Sonnet 4.5 (copilot)
 infer: true
 handoffs: 
   - label: Quality Assurance
-    agent: qa
+    agent: QA
     prompt: Do a thorough QA of the implemented feature
     send: true
 ---

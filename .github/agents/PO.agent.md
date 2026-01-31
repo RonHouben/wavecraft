@@ -3,15 +3,16 @@ name: PO
 description: Product Owner for VstKit — audio plugin framework. Expert in user needs, feature prioritization, roadmap management, and product vision for audio software.
 tools: ["read", "search", "web", "todo", "edit", "agent"]
 model: Claude Opus 4.5 (copilot)
+infer: true
 handoffs: 
   - label: Plan feature implementation
     agent: planner
     prompt: Create an implementation plan for this feature based on the requirements and acceptance criteria defined above.
-    send: false
+    send: true
   - label: Review architecture
     agent: architect
     prompt: Review the architectural implications and design considerations for this feature.
-    send: false
+    send: true
 ---
 
 # Product Owner Agent
