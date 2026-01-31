@@ -127,11 +127,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: engine-target
-          path: |
-            engine/target/debug/deps
-            engine/target/debug/build
-            engine/target/debug/.fingerprint
-            engine/target/debug/incremental
+          path: engine/target
           retention-days: 1
 
   check-engine:
@@ -162,7 +158,16 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: engine-target
-          path: engine/target/debug
+          path: engine/target
+
+      - name: Debug artifact structure
+        run: |
+          echo "=== Target directory structure ==="
+          ls -la engine/target/ || echo "No target dir"
+          ls -la engine/target/debug/ 2>/dev/null | head -20 || echo "No debug dir"
+          echo "=== Fingerprint count ==="
+          find engine/target -name ".fingerprint" -type d 2>/dev/null | head -5
+        continue-on-error: true
 
       - name: Check formatting
         run: cargo fmt --check
@@ -202,7 +207,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: engine-target
-          path: engine/target/debug
+          path: engine/target
 
       - name: Cache cargo registry
         uses: Swatinem/rust-cache@v2
