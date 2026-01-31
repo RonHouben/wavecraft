@@ -162,7 +162,7 @@ jobs:
           path: engine/target
 
       - name: Restore executable permissions
-        run: find engine/target/debug/build -name 'build-script-*' -type f -exec chmod +x {} \;
+        run: find engine/target/debug/build -name 'build-script-build' -type f -exec chmod +x {} \;
 
       - name: Debug artifact structure
         run: |
@@ -214,7 +214,7 @@ jobs:
           path: engine/target
 
       - name: Restore executable permissions
-        run: find engine/target/debug/build -name 'build-script-*' -type f -exec chmod +x {} \;
+        run: find engine/target/debug/build -name 'build-script-build' -type f -exec chmod +x {} \;
 
       - name: Cache cargo registry
         uses: Swatinem/rust-cache@v2
