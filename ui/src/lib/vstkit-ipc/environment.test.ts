@@ -18,16 +18,12 @@ describe('Environment Detection', () => {
     if (originalVstkit) {
       globalThis.__VSTKIT_IPC__ = originalVstkit;
     } else {
-      // @ts-expect-error - Intentionally deleting global property for test isolation.
-      // This simulates browser environment where IPC primitives are not injected.
-      delete globalThis.__VSTKIT_IPC__;
+      delete (globalThis as { __VSTKIT_IPC__?: unknown }).__VSTKIT_IPC__;
     }
   });
 
   it('should detect browser environment when IPC primitives are missing', (): void => {
-    // @ts-expect-error - Intentionally deleting global property for test isolation.
-    // This simulates browser environment where IPC primitives are not injected.
-    delete globalThis.__VSTKIT_IPC__;
+    delete (globalThis as { __VSTKIT_IPC__?: unknown }).__VSTKIT_IPC__;
 
     expect(isWebViewEnvironment()).toBe(false);
     expect(isBrowserEnvironment()).toBe(true);
@@ -37,8 +33,11 @@ describe('Environment Detection', () => {
     // Mock IPC primitives
     globalThis.__VSTKIT_IPC__ = {
       postMessage: (): void => {},
-      setReceiveCallback: (): void => {},
-      onParamUpdate: (): void => {},
+      setReceiveCallback: (_cb: (message: string) => void): void => {},
+      onParamUpdate: (_callback: (notification: unknown) => void): (() => void) => {
+        return () => {};
+      },
+      _receive: (): void => {},
     };
 
     expect(isWebViewEnvironment()).toBe(true);
