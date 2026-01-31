@@ -128,7 +128,8 @@
 
 | Issue | Phase | Severity | Status | Notes |
 |-------|-------|----------|--------|-------|
-| *None yet* | | | | |
+| #1 | 1 | Medium | Documented | Ad-hoc signatures may not include entitlements - WebView JIT may not work. Resolved with Developer ID signing. |
+| #2 | 1 | Low | Documented | 10 Rust warnings (unused code, naming) - cosmetic only, non-blocking |
 
 ---
 

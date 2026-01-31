@@ -5,6 +5,10 @@ tools: ['search', 'todo', 'edit', 'read', 'web', 'execute', 'agent']
 model: Claude Sonnet 4.5 (copilot)
 infer: true
 handoffs: 
+  - label: Test Implementation
+    agent: Tester
+    prompt: Create/update the test plan based on the implementation. Then perform manual testing of the implemented feature according to the test plan. Document any issues found.
+    send: true
   - label: Quality Assurance
     agent: QA
     prompt: Do a thorough QA of the implemented feature
