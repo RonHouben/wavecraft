@@ -73,47 +73,15 @@ Examples:
 
 ### Step 5: Create PR Description File
 
-Create the file at `/docs/feature-specs/${featureName}/PR-description.md` with auto-generated content:
+Create the file at `/docs/feature-specs/${featureName}/PR-description.md` using the template from [assets/PR-description-template.md](assets/PR-description-template.md).
 
-```markdown
-## Summary
-
-[Auto-generated summary based on commit messages and changed files]
-
-## Changes
-
-[Auto-generated list based on git diff --stat, grouped by area:]
-- **Engine/DSP**: [Rust changes in engine/crates/]
-- **UI**: [TypeScript/React changes in ui/src/]
-- **Build/Config**: [Changes to Cargo.toml, package.json, configs]
-- **Documentation**: [Changes to docs/]
-
-## Commits
-
-[List of commits from git log --oneline]
-
-## Related Documentation
-
-[Auto-linked if files exist:]
-- [Implementation Plan](./implementation-plan.md)
-- [Low-Level Design](./low-level-design-*.md)
-
-## Testing
-
-[Auto-generated based on changes:]
-- [ ] Build passes: `cargo xtask build`
-- [ ] Linting passes: `cargo xtask lint`
-- [ ] Tests pass: `cargo xtask test`
-- [If UI changes] Manual UI verification
-- [If DSP changes] Audio processing verification
-
-## Checklist
-
-- [ ] Code follows project coding standards
-- [ ] Tests added/updated as needed
-- [ ] Documentation updated
-- [ ] No linting errors (`cargo xtask lint`)
-```
+Fill in the auto-generated content for each section:
+- **Summary**: Based on commit messages and changed files
+- **Changes**: Grouped by area (Engine/DSP, UI, Build/Config, Documentation)
+- **Commits**: List from `git log --oneline`
+- **Related Documentation**: Auto-link existing feature-spec files
+- **Testing**: Based on types of changes made
+- **Checklist**: Standard quality checks
 
 ### Step 6: Create the Pull Request
 

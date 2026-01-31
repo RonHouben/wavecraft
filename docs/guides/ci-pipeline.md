@@ -168,6 +168,37 @@ on:
 - **Pull Requests:** Full pipeline except `build-plugin`
 - **Main branch:** Full pipeline including `build-plugin`
 
+## Local Testing
+
+The CI pipeline can be tested locally using `act` and a custom Docker image with all dependencies pre-installed.
+
+### Quick Start
+
+```bash
+# Build the custom image (one-time)
+docker build --platform linux/amd64 -t vstkit-ci:latest \
+    .github/copilot/skills/run-gh-actions-locally/
+
+# Run a specific job
+act -j check-engine -W .github/workflows/ci.yml \
+    --container-architecture linux/amd64 \
+    -P ubuntu-latest=vstkit-ci:latest \
+    --pull=false
+```
+
+### What Can Be Tested Locally
+
+| Job | Local Testing |
+|-----|---------------|
+| check-ui | ✅ Works |
+| test-ui | ✅ Works |
+| prepare-engine | ✅ Works |
+| check-engine | ✅ Works |
+| test-engine | ✅ Works |
+| build-plugin | ❌ Requires macOS |
+
+For detailed local testing instructions, see the [Run GH Actions Locally skill](/.github/copilot/skills/run-gh-actions-locally/SKILL.md).
+
 ## Related Documentation
 
 - [Coding Standards](../architecture/coding-standards.md) — Code conventions including linting rules
