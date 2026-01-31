@@ -115,6 +115,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: engine
+          shared-key: "engine"
 
       - name: Check formatting
         run: cargo fmt --check
@@ -191,6 +192,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: engine
+          shared-key: "engine"
 
       - name: Run tests
         run: cargo test --workspace
