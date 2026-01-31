@@ -12,11 +12,11 @@ concurrency:
 
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════
-  # STAGE 1: Fast Feedback (<2 minutes)
+  # STAGE 0: Prepare (install dependencies, build caches)
   # ═══════════════════════════════════════════════════════════════════════════
 
-  typecheck-ui:
-    name: TypeCheck UI
+  prepare-ui:
+    name: Prepare UI
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,13 +32,16 @@ jobs:
         run: npm ci
         working-directory: ui
 
-      - name: Type-check
-        run: npm run typecheck
-        working-directory: ui
-
       - name: Build UI
         run: npm run build
         working-directory: ui
+
+      - name: Upload node_modules
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-node-modules
+          path: ui/node_modules
+          retention-days: 1
 
       - name: Upload UI dist
         uses: actions/upload-artifact@v4
@@ -47,9 +50,14 @@ jobs:
           path: ui/dist
           retention-days: 1
 
-  lint-ui:
-    name: Lint UI
+  # ═══════════════════════════════════════════════════════════════════════════
+  # STAGE 1: Fast Feedback (<2 minutes)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  check-ui:
+    name: Check UI
     runs-on: ubuntu-latest
+    needs: [prepare-ui]
     steps:
       - uses: actions/checkout@v4
 
@@ -57,25 +65,51 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: ui/package-lock.json
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Download node_modules
+        uses: actions/download-artifact@v4
+        with:
+          name: ui-node-modules
+          path: ui/node_modules
+
+      - name: Prettier
+        run: npm run format:check
         working-directory: ui
 
       - name: ESLint
         run: npm run lint
         working-directory: ui
 
-      - name: Prettier
-        run: npm run format:check
+      - name: Type-check
+        run: npm run typecheck
         working-directory: ui
 
-  typecheck-engine:
-    name: TypeCheck Engine
+  test-ui:
+    name: Test UI
     runs-on: ubuntu-latest
-    needs: [typecheck-ui]
+    needs: [check-ui]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download node_modules
+        uses: actions/download-artifact@v4
+        with:
+          name: ui-node-modules
+          path: ui/node_modules
+
+      - name: Run tests
+        run: npm test
+        working-directory: ui
+
+  prepare-engine:
+    name: Prepare Engine
+    runs-on: ubuntu-latest
+    needs: [prepare-ui]
     steps:
       - uses: actions/checkout@v4
 
@@ -87,6 +121,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
 
       - name: Download UI dist
         uses: actions/download-artifact@v4
@@ -98,10 +134,9 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: engine
-          shared-key: engine-check
 
-      - name: Type-check
-        run: cargo check --workspace
+      - name: Build all targets
+        run: cargo build --workspace --all-targets
         working-directory: engine
 
       - name: Upload compiled artifacts
@@ -115,10 +150,10 @@ jobs:
             engine/target/debug/incremental
           retention-days: 1
 
-  lint-engine:
-    name: Lint Engine
+  check-engine:
+    name: Check Engine
     runs-on: ubuntu-latest
-    needs: [typecheck-engine]
+    needs: [prepare-engine]
     steps:
       - uses: actions/checkout@v4
 
@@ -145,12 +180,6 @@ jobs:
           name: engine-target
           path: engine/target/debug
 
-      - name: Cache cargo registry
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: engine
-          cache-targets: false
-
       - name: Check formatting
         run: cargo fmt --check
         working-directory: engine
@@ -163,32 +192,10 @@ jobs:
   # STAGE 2: Tests (runs after Stage 1 passes)
   # ═══════════════════════════════════════════════════════════════════════════
 
-  test-ui:
-    name: Test UI
-    runs-on: ubuntu-latest
-    needs: [typecheck-ui, lint-ui, typecheck-engine, lint-engine]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: ui/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-        working-directory: ui
-
-      - name: Run tests
-        run: npm test
-        working-directory: ui
-
   test-engine:
     name: Test Engine
     runs-on: ubuntu-latest
-    needs: [typecheck-ui, lint-ui, typecheck-engine, lint-engine]
+    needs: [check-engine]
     steps:
       - uses: actions/checkout@v4
 
