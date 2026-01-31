@@ -100,19 +100,19 @@ This document tracks implementation progress against the milestones defined in t
 
 ## Milestone 4: macOS Hardening & Packaging (Week 8–12)
 
-**Status: ⏳ Not Started**
+**Status: ✅ Complete (Implementation)**
 
 > **Scope:** Focused on macOS + Ableton Live as the primary target. Windows/Linux support is deprioritized.
 
 | Task | Status | Notes |
 |------|--------|-------|
-| macOS code signing | ⏳ | |
-| macOS notarization | ⏳ | |
+| macOS code signing | ✅ | `cargo xtask sign` command implemented |
+| macOS notarization | ✅ | `cargo xtask notarize` command implemented |
 | Windows code signing | ⏳ | Deprioritized |
 | Windows installer (MSI) | ⏳ | Deprioritized |
 | Linux packaging (AppImage/Flatpak) | ⏳ | Deprioritized |
 | **Host Compatibility Testing** | | |
-| Ableton Live (macOS) | ⏳ | **Primary target** |
+| Ableton Live (macOS) | ⏳ | **Primary target** — ready for testing |
 | Ableton Live (Windows) | ⏳ | Deprioritized |
 | Logic Pro (macOS, AU) | ⏳ | Secondary (nice-to-have) |
 | GarageBand (macOS, AU) | ⏳ | Secondary (nice-to-have) |
@@ -124,6 +124,16 @@ This document tracks implementation progress against the milestones defined in t
 | Investigate AU custom UI issue | ⏳ | clap-wrapper shows generic view; root cause TBD |
 | State save/restore (`.aupreset`) | ⏳ | |
 | AU cache invalidation workflow documented | ⏳ | |
+
+**Implementation Complete:**
+- ✅ Entitlements files (production + debug)
+- ✅ `cargo xtask sign` command (ad-hoc + Developer ID)
+- ✅ `cargo xtask notarize` command (submit/status/staple/full)
+- ✅ `cargo xtask release` command (complete workflow)
+- ✅ GitHub Actions CI/CD pipeline
+- ✅ Comprehensive documentation (`docs/guides/macos-signing.md`)
+
+**Next:** Manual testing with Apple Developer credentials
 
 ---
 
@@ -151,6 +161,7 @@ This document tracks implementation progress against the milestones defined in t
 
 | Date | Update |
 |------|--------|
+| 2026-01-31 | **Milestone 4 implementation complete**: Code signing and notarization infrastructure implemented. Three new xtask commands (`sign`, `notarize`, `release`) with full CI/CD pipeline and documentation. Ready for manual testing with Apple Developer credentials. |
 | 2026-01-31 | Added "CI/CD pipeline (GitHub Actions)" to Milestone 5 — automated builds, tests, and release workflow. |
 | 2026-01-31 | Added "Implement semantic versioning" to Milestone 5 — SemVer for consistent release tracking. |
 | 2026-01-30 | Initial roadmap created. Milestone 1 (Plugin Skeleton) marked complete. |

@@ -209,6 +209,11 @@ pub mod output {
     pub fn print_skip(text: &str) {
         println!("{}", text.yellow());
     }
+
+    /// Print an informational message.
+    pub fn print_info(text: &str) {
+        println!("{}", text.cyan());
+    }
 }
 
 /// Run a command and return its exit status.

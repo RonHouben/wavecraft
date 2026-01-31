@@ -372,7 +372,7 @@ mod cli_tests {
 
 #[cfg(test)]
 mod lib_tests {
-    use xtask::{BuildMode, Platform, PLUGIN_NAME};
+    use crate::{BuildMode, Platform, PLUGIN_NAME};
 
     // =========================================================================
     // BuildMode Tests
@@ -435,7 +435,7 @@ mod lib_tests {
 
 #[cfg(test)]
 mod path_tests {
-    use xtask::paths;
+    use crate::paths;
 
     #[test]
     fn test_project_root_exists() {
