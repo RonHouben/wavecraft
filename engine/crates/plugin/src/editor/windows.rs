@@ -8,23 +8,23 @@ use std::sync::{Arc, Mutex, Once};
 use bridge::IpcHandler;
 use nih_plug::prelude::*;
 use webview2_com::Microsoft::Web::WebView2::Win32::{
-    ICoreWebView2, ICoreWebView2Controller,
-    ICoreWebView2WebMessageReceivedEventArgs, COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL,
+    COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL, ICoreWebView2, ICoreWebView2Controller,
+    ICoreWebView2WebMessageReceivedEventArgs,
 };
 use webview2_com::{
     CreateCoreWebView2ControllerCompletedHandler, CreateCoreWebView2EnvironmentCompletedHandler,
     WebMessageReceivedEventHandler, WebResourceRequestedEventHandler,
 };
-use windows::core::{HSTRING, PCWSTR};
-use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, RECT, WPARAM, E_FAIL};
+use windows::Win32::Foundation::{E_FAIL, HWND, LPARAM, LRESULT, RECT, WPARAM};
 use windows::Win32::Graphics::Gdi::{BeginPaint, EndPaint, FillRect, HBRUSH, PAINTSTRUCT};
-use windows::Win32::System::Com::{CoInitializeEx, COINIT_APARTMENTTHREADED};
+use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, DispatchMessageW, GetClientRect, PeekMessageW,
-    RegisterClassExW, TranslateMessage, CS_HREDRAW, CS_VREDRAW, HMENU, MSG, PM_REMOVE,
-    WINDOW_EX_STYLE, WM_PAINT, WNDCLASSEXW, WS_CHILD, WS_VISIBLE,
+    CS_HREDRAW, CS_VREDRAW, CreateWindowExW, DefWindowProcW, DispatchMessageW, GetClientRect,
+    HMENU, MSG, PM_REMOVE, PeekMessageW, RegisterClassExW, TranslateMessage, WINDOW_EX_STYLE,
+    WM_PAINT, WNDCLASSEXW, WS_CHILD, WS_VISIBLE,
 };
+use windows::core::{HSTRING, PCWSTR};
 
 use super::assets;
 use super::bridge::PluginEditorBridge;
@@ -33,6 +33,7 @@ use super::webview::{WebViewConfig, WebViewHandle};
 /// Windows WebView handle.
 ///
 /// Holds the WebView2 controller and web view instances.
+#[allow(dead_code)] // Used only when webview_editor feature is enabled
 pub struct WindowsWebView {
     #[allow(dead_code)]
     hwnd: HWND,
@@ -89,12 +90,11 @@ impl WebViewHandle for WindowsWebView {
 }
 
 /// Create a Windows WebView editor.
+#[allow(dead_code)] // Used only when webview_editor feature is enabled
 pub fn create_windows_webview(config: WebViewConfig) -> Result<Box<dyn WebViewHandle>, String> {
     static COM_INIT: Once = Once::new();
-    COM_INIT.call_once(|| {
-        unsafe {
-            let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
-        }
+    COM_INIT.call_once(|| unsafe {
+        let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
     });
 
     check_webview2_runtime()?;
@@ -168,8 +168,8 @@ fn initialize_webview2(
             let webview_inner = webview_clone.clone();
             let handler_inner = handler_clone.clone();
 
-            let controller_handler = CreateCoreWebView2ControllerCompletedHandler::create(Box::new(
-                move |result, ctrl| {
+            let controller_handler = CreateCoreWebView2ControllerCompletedHandler::create(
+                Box::new(move |result, ctrl| {
                     if result.is_err() {
                         nih_error!("Failed to create WebView2 controller: {:?}", result);
                         return E_FAIL;
@@ -221,8 +221,8 @@ fn initialize_webview2(
 
                     nih_log!("WebView2 initialized successfully");
                     windows::core::HRESULT(0)
-                },
-            ));
+                }),
+            );
 
             unsafe {
                 let _ = environment.CreateCoreWebView2Controller(hwnd, &controller_handler);
@@ -316,8 +316,8 @@ fn setup_web_message_handler(
 fn setup_url_scheme_handler(webview: &ICoreWebView2) {
     let filter = HSTRING::from("vstkit://*");
 
-    let request_handler = WebResourceRequestedEventHandler::create(Box::new(
-        move |_webview, args| {
+    let request_handler =
+        WebResourceRequestedEventHandler::create(Box::new(move |_webview, args| {
             if let Some(args) = args {
                 unsafe {
                     let request = match args.Request() {
@@ -352,12 +352,12 @@ fn setup_url_scheme_handler(webview: &ICoreWebView2) {
                 }
             }
             windows::core::HRESULT(0)
-        },
-    ));
+        }));
 
     unsafe {
         let mut token = windows::Win32::System::WinRT::EventRegistrationToken::default();
-        let _ = webview.AddWebResourceRequestedFilter(&filter, COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
+        let _ =
+            webview.AddWebResourceRequestedFilter(&filter, COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
         let _ = webview.add_WebResourceRequested(&request_handler, &mut token);
     }
 }
@@ -397,11 +397,9 @@ fn check_webview2_runtime() -> Result<(), String> {
                 nih_log!("WebView2 runtime found: {}", ver);
                 Ok(())
             } else {
-                Err(
-                    "WebView2 runtime not installed. Please install it from:\n\
+                Err("WebView2 runtime not installed. Please install it from:\n\
                      https://developer.microsoft.com/microsoft-edge/webview2/"
-                        .to_string(),
-                )
+                    .to_string())
             }
         }
         Err(e) => Err(format!(

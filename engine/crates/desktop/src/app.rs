@@ -5,8 +5,8 @@
 
 use atomic_float::AtomicF32;
 use bridge::{BridgeError, ParameterHost, ParameterInfo, ParameterType};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Application state with simulated plugin parameters
 #[derive(Clone)]
@@ -21,9 +21,9 @@ impl AppState {
     /// Create new application state with default values
     pub fn new() -> Self {
         Self {
-            gain: Arc::new(AtomicF32::new(0.7)),  // Default gain: 0.7 normalized (-2.6 dB)
+            gain: Arc::new(AtomicF32::new(0.7)), // Default gain: 0.7 normalized (-2.6 dB)
             bypass: Arc::new(AtomicBool::new(false)),
-            mix: Arc::new(AtomicF32::new(1.0)),   // Default mix: 100% wet
+            mix: Arc::new(AtomicF32::new(1.0)), // Default mix: 100% wet
         }
     }
 }
@@ -122,13 +122,13 @@ mod tests {
     #[test]
     fn test_default_values() {
         let state = AppState::new();
-        
+
         let gain = state.get_parameter("gain").unwrap();
         assert_eq!(gain.value, 0.7);
-        
+
         let bypass = state.get_parameter("bypass").unwrap();
         assert_eq!(bypass.value, 0.0);
-        
+
         let mix = state.get_parameter("mix").unwrap();
         assert_eq!(mix.value, 1.0);
     }
@@ -136,7 +136,7 @@ mod tests {
     #[test]
     fn test_set_parameter() {
         let state = AppState::new();
-        
+
         state.set_parameter("gain", 0.5).unwrap();
         let gain = state.get_parameter("gain").unwrap();
         assert_eq!(gain.value, 0.5);
@@ -145,7 +145,7 @@ mod tests {
     #[test]
     fn test_set_parameter_out_of_range() {
         let state = AppState::new();
-        
+
         let result = state.set_parameter("gain", 1.5);
         assert!(result.is_err());
     }
@@ -153,7 +153,7 @@ mod tests {
     #[test]
     fn test_get_all_parameters() {
         let state = AppState::new();
-        
+
         let params = state.get_all_parameters();
         assert_eq!(params.len(), 3);
     }
@@ -161,7 +161,7 @@ mod tests {
     #[test]
     fn test_unknown_parameter() {
         let state = AppState::new();
-        
+
         assert!(state.get_parameter("unknown").is_none());
         assert!(state.set_parameter("unknown", 0.5).is_err());
     }

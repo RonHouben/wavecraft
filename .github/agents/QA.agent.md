@@ -1,8 +1,8 @@
 ---
-name: QA 
+name: qa
 description: Quality Assurance agent focused on code quality and static code analysis.
 tools: ['search', 'read', 'execute']
-model: Claude Opus 4.5 (copilot)
+model: Claude Sonnet 4.5 (copilot)
 infer: true
 handoffs:
   - label: Fix findings
@@ -12,6 +12,14 @@ handoffs:
   - label: Architectural decision
     agent: architect
     prompt: The QA review has identified architectural concerns that require your expertise. Please review the architectural issues flagged in the QA-report.md and provide guidance on the appropriate design approach before implementation proceeds.
+    send: true
+  - label: Update architectural Docs
+    agent: architect
+    prompt: Review the implementation and update architectural documentation as needed
+    send: true
+  - label: Update roadmap
+    agent: po
+    prompt: Review the implementation and update the project roadmap as needed
     send: true
 ---
 
@@ -130,7 +138,7 @@ Verify boundaries per `high-level-design.md`:
 
 ## QA Report Structure
 
-Create report at: `docs/specs/{feature}/QA-report.md`
+Create report at: `docs/feature-specs/{feature}/QA-report.md`
 
 ```markdown
 # QA Report: {Feature Name}
@@ -217,6 +225,6 @@ Hand off to `architect` when findings include:
 3. **Run targeted tests**: Execute `cargo test -p {crate}` for affected crates
 4. **Manual analysis**: Review code against checklists above
 5. **Classify findings**: Assign severity and category to each issue
-6. **Create report**: Write `QA-report.md` in `docs/specs/{feature}/`
+6. **Create report**: Write `QA-report.md` in `docs/feature-specs/{feature}/`
 7. **Determine handoff**: Decide if issues go to coder or architect
 8. **Hand off**: Use appropriate handoff with context

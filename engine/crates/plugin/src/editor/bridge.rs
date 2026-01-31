@@ -16,6 +16,7 @@ use crate::params::VstKitParams;
 ///
 /// This struct implements ParameterHost to allow the IPC handler to
 /// interact with nih-plug's parameter system through GuiContext.
+#[allow(dead_code)] // Used only when webview_editor feature is enabled
 pub struct PluginEditorBridge {
     params: Arc<VstKitParams>,
     context: Arc<dyn GuiContext>,
@@ -97,13 +98,13 @@ impl ParameterHost for PluginEditorBridge {
     fn request_resize(&self, width: u32, height: u32) -> bool {
         // Update the editor's size field
         *self.editor_size.lock().unwrap() = (width, height);
-        
+
         nih_log!("Resize requested: {}x{}", width, height);
-        
+
         // Call GuiContext::request_resize() which notifies the host
         // The host will call Editor::size() to get the new size
         let accepted = self.context.request_resize();
-        
+
         if accepted {
             nih_log!("Resize accepted by host");
         } else {
@@ -111,7 +112,7 @@ impl ParameterHost for PluginEditorBridge {
             // Revert size if rejected
             // (In practice, most hosts just accept whatever size is reported)
         }
-        
+
         accepted
     }
 }

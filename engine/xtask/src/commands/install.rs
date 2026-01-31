@@ -4,11 +4,11 @@ use anyhow::{Context, Result};
 use std::fs;
 use std::process::Command;
 
-use xtask::output::*;
-use xtask::paths;
-use xtask::Platform;
 use xtask::PLUGIN_DISPLAY_NAME;
 use xtask::PLUGIN_NAME;
+use xtask::Platform;
+use xtask::output::*;
+use xtask::paths;
 
 /// Run the install command.
 ///
@@ -32,7 +32,11 @@ pub fn run(dry_run: bool, verbose: bool) -> Result<()> {
             );
         } else {
             install_bundle(&vst3_src, &vst3_dest_dir, &vst3_dest, verbose)?;
-            print_success_item(&format!("Installed {}.vst3 to {}", PLUGIN_NAME, vst3_dest_dir.display()));
+            print_success_item(&format!(
+                "Installed {}.vst3 to {}",
+                PLUGIN_NAME,
+                vst3_dest_dir.display()
+            ));
         }
     } else if verbose {
         println!("VST3 bundle not found at {}", vst3_src.display());
@@ -52,7 +56,11 @@ pub fn run(dry_run: bool, verbose: bool) -> Result<()> {
             );
         } else {
             install_bundle(&clap_src, &clap_dest_dir, &clap_dest, verbose)?;
-            print_success_item(&format!("Installed {}.clap to {}", PLUGIN_NAME, clap_dest_dir.display()));
+            print_success_item(&format!(
+                "Installed {}.clap to {}",
+                PLUGIN_NAME,
+                clap_dest_dir.display()
+            ));
         }
     } else if verbose {
         println!("CLAP bundle not found at {}", clap_src.display());

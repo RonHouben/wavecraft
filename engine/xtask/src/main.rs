@@ -23,7 +23,7 @@ use clap::{Parser, Subcommand};
 
 mod commands;
 
-use xtask::{output, BuildMode};
+use xtask::{BuildMode, output};
 
 /// VstKit build system - Build, test, and install audio plugins.
 #[derive(Parser)]
@@ -58,11 +58,11 @@ enum Commands {
         /// Package name to bundle (default: vstkit)
         #[arg(short, long)]
         package: Option<String>,
-        
+
         /// Features to enable (comma-separated)
         #[arg(short, long)]
         features: Option<String>,
-        
+
         /// Install plugins after building
         #[arg(short, long)]
         install: bool,
@@ -119,6 +119,54 @@ enum Commands {
         #[arg(long)]
         skip_au: bool,
     },
+
+    /// Sign plugin bundles for macOS distribution
+    #[command(about = "Sign plugin bundles for macOS distribution")]
+    Sign {
+        /// Signing identity (overrides APPLE_SIGNING_IDENTITY)
+        #[arg(long)]
+        identity: Option<String>,
+
+        /// Path to entitlements.plist
+        #[arg(long)]
+        entitlements: Option<String>,
+
+        /// Use ad-hoc signing (for local development)
+        #[arg(long)]
+        adhoc: bool,
+
+        /// Verify signatures only (no signing)
+        #[arg(long)]
+        verify: bool,
+    },
+
+    /// Notarize plugin bundles with Apple
+    #[command(about = "Notarize plugin bundles with Apple")]
+    Notarize {
+        /// Submit bundles for notarization
+        #[arg(long)]
+        submit: bool,
+
+        /// Check notarization status
+        #[arg(long)]
+        status: bool,
+
+        /// Staple ticket to bundles
+        #[arg(long)]
+        staple: bool,
+
+        /// Full workflow (submit, wait, staple)
+        #[arg(long)]
+        full: bool,
+    },
+
+    /// Build, sign, and notarize for release
+    #[command(about = "Build, sign, and notarize for release")]
+    Release {
+        /// Skip notarization (sign only)
+        #[arg(long)]
+        skip_notarize: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -133,13 +181,22 @@ fn main() -> Result<()> {
 
     // If no command specified, default to showing help or running bundle
     let result = match cli.command {
-        Some(Commands::Bundle { package, features, install }) => {
+        Some(Commands::Bundle {
+            package,
+            features,
+            install,
+        }) => {
             let features_vec: Vec<&str> = features
                 .as_deref()
                 .map(|f| f.split(',').collect())
                 .unwrap_or_default();
-            commands::bundle::run_with_features(mode, package.as_deref(), &features_vec, cli.verbose)?;
-            
+            commands::bundle::run_with_features(
+                mode,
+                package.as_deref(),
+                &features_vec,
+                cli.verbose,
+            )?;
+
             if install {
                 commands::install::run(cli.dry_run, cli.verbose)?;
             }
@@ -165,6 +222,59 @@ fn main() -> Result<()> {
             skip_tests,
             skip_au,
         }) => commands::run_all(mode, skip_tests, skip_au, cli.dry_run, cli.verbose),
+        Some(Commands::Sign {
+            identity,
+            entitlements,
+            adhoc,
+            verify,
+        }) => {
+            if verify {
+                commands::sign::run_verify(cli.verbose)
+            } else if adhoc {
+                commands::sign::run_adhoc()
+            } else {
+                let config = if let Some(id) = identity {
+                    commands::sign::SigningConfig {
+                        identity: id,
+                        entitlements,
+                        verbose: cli.verbose,
+                    }
+                } else {
+                    let mut config = commands::sign::SigningConfig::from_env()?;
+                    config.verbose = cli.verbose;
+                    if entitlements.is_some() {
+                        config.entitlements = entitlements;
+                    }
+                    config
+                };
+                commands::sign::run(config)
+            }
+        }
+        Some(Commands::Notarize {
+            submit,
+            status,
+            staple,
+            full,
+        }) => {
+            let action = if submit {
+                commands::notarize::NotarizeAction::Submit
+            } else if status {
+                commands::notarize::NotarizeAction::Status
+            } else if staple {
+                commands::notarize::NotarizeAction::Staple
+            } else if full {
+                commands::notarize::NotarizeAction::Full
+            } else {
+                anyhow::bail!("Must specify one of: --submit, --status, --staple, or --full");
+            };
+
+            let mut config = commands::notarize::NotarizeConfig::from_env()?;
+            config.verbose = cli.verbose;
+            commands::notarize::run(action, config)
+        }
+        Some(Commands::Release { skip_notarize }) => {
+            commands::release::run(skip_notarize, cli.verbose)
+        }
         None => {
             // Default behavior: run nih_plug_xtask for backward compatibility
             // This handles `cargo xtask bundle vstkit --release` style invocations

@@ -59,6 +59,6 @@ pub use handler::{IpcHandler, ParameterHost};
 // Re-export protocol types used in bridge API
 pub use protocol::{
     GetAllParametersResult, GetParameterParams, GetParameterResult, IpcError, IpcNotification,
-    IpcRequest, IpcResponse, ParameterChangedNotification, ParameterInfo, ParameterType,
-    RequestId, SetParameterParams, SetParameterResult,
+    IpcRequest, IpcResponse, ParameterChangedNotification, ParameterInfo, ParameterType, RequestId,
+    SetParameterParams, SetParameterResult,
 };

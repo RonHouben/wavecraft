@@ -3,9 +3,9 @@
 use crate::error::BridgeError;
 use protocol::{
     GetAllParametersResult, GetMeterFrameResult, GetParameterParams, GetParameterResult,
-    IpcRequest, IpcResponse, MeterFrame, ParameterInfo, RequestId, RequestResizeParams,
-    RequestResizeResult, SetParameterParams, SetParameterResult, METHOD_GET_ALL_PARAMETERS,
-    METHOD_GET_METER_FRAME, METHOD_GET_PARAMETER, METHOD_REQUEST_RESIZE, METHOD_SET_PARAMETER,
+    IpcRequest, IpcResponse, METHOD_GET_ALL_PARAMETERS, METHOD_GET_METER_FRAME,
+    METHOD_GET_PARAMETER, METHOD_REQUEST_RESIZE, METHOD_SET_PARAMETER, MeterFrame, ParameterInfo,
+    RequestId, RequestResizeParams, RequestResizeResult, SetParameterParams, SetParameterResult,
 };
 use serde::Serialize;
 
@@ -74,10 +74,8 @@ impl<H: ParameterHost> IpcHandler<H> {
             Ok(req) => req,
             Err(_e) => {
                 // Can't extract ID from malformed request, use null
-                let response = IpcResponse::error(
-                    RequestId::Number(0),
-                    protocol::IpcError::parse_error(),
-                );
+                let response =
+                    IpcResponse::error(RequestId::Number(0), protocol::IpcError::parse_error());
                 return serde_json::to_string(&response).unwrap();
             }
         };
@@ -194,7 +192,10 @@ impl<H: ParameterHost> IpcHandler<H> {
             pong: bool,
         }
 
-        Ok(IpcResponse::success(request.id.clone(), PingResult { pong: true }))
+        Ok(IpcResponse::success(
+            request.id.clone(),
+            PingResult { pong: true },
+        ))
     }
 }
 
@@ -281,8 +282,7 @@ mod tests {
         assert!(response.result.is_some());
         assert!(response.error.is_none());
 
-        let result: GetParameterResult =
-            serde_json::from_value(response.result.unwrap()).unwrap();
+        let result: GetParameterResult = serde_json::from_value(response.result.unwrap()).unwrap();
         assert_eq!(result.id, "gain");
         assert_eq!(result.value, 0.5);
     }

@@ -1,12 +1,12 @@
 //! AU command - Build AU wrapper using CMake (macOS only).
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use std::process::Command;
 
+use xtask::Platform;
 use xtask::command_exists;
 use xtask::output::*;
 use xtask::paths;
-use xtask::Platform;
 
 /// Run the AU build command.
 ///

@@ -4,12 +4,13 @@
 //! into the plugin binary using `include_dir!`. Assets are served via a
 //! custom protocol handler in the WebView.
 
-use include_dir::{include_dir, Dir};
+use include_dir::{Dir, include_dir};
 
 /// Embedded UI assets from `ui/dist/`
 ///
 /// This directory is populated by running `npm run build` in the `ui/` folder.
 /// If the directory doesn't exist yet, we use an empty directory.
+#[allow(dead_code)] // Used only when webview_editor feature is enabled
 static UI_ASSETS: Dir = include_dir!("$CARGO_MANIFEST_DIR/../../../ui/dist");
 
 /// Get an embedded asset by path.
@@ -20,6 +21,7 @@ static UI_ASSETS: Dir = include_dir!("$CARGO_MANIFEST_DIR/../../../ui/dist");
 /// # Returns
 /// * `Some((bytes, mime_type))` if asset exists
 /// * `None` if asset not found
+#[allow(dead_code)] // Used only when webview_editor feature is enabled
 pub fn get_asset(path: &str) -> Option<(&'static [u8], &'static str)> {
     // Normalize path (remove leading slash)
     let path = path.trim_start_matches('/');
@@ -37,8 +39,9 @@ pub fn get_asset(path: &str) -> Option<(&'static [u8], &'static str)> {
 }
 
 /// Infer MIME type from file extension.
+#[allow(dead_code)] // Used only when webview_editor feature is enabled
 fn mime_type_from_path(path: &str) -> &'static str {
-    let extension = path.split('.').last().unwrap_or("");
+    let extension = path.split('.').next_back().unwrap_or("");
 
     match extension {
         "html" => "text/html",
@@ -66,6 +69,9 @@ mod tests {
         assert_eq!(mime_type_from_path("style.css"), "text/css");
         assert_eq!(mime_type_from_path("app.js"), "application/javascript");
         assert_eq!(mime_type_from_path("data.json"), "application/json");
-        assert_eq!(mime_type_from_path("unknown.xyz"), "application/octet-stream");
+        assert_eq!(
+            mime_type_from_path("unknown.xyz"),
+            "application/octet-stream"
+        );
     }
 }

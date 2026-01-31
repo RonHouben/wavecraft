@@ -4,7 +4,7 @@
 //! into the Rust binary using `include_dir!`. Assets are served via a
 //! custom protocol handler in the WebView.
 
-use include_dir::{include_dir, Dir};
+use include_dir::{Dir, include_dir};
 
 /// Embedded UI assets from `ui/dist/`
 ///
@@ -38,7 +38,7 @@ pub fn get_asset(path: &str) -> Option<(&'static [u8], &'static str)> {
 
 /// Infer MIME type from file extension
 fn mime_type_from_path(path: &str) -> &'static str {
-    let extension = path.split('.').last().unwrap_or("");
+    let extension = path.split('.').next_back().unwrap_or("");
 
     match extension {
         "html" => "text/html",
@@ -84,7 +84,10 @@ mod tests {
         assert_eq!(mime_type_from_path("style.css"), "text/css");
         assert_eq!(mime_type_from_path("app.js"), "application/javascript");
         assert_eq!(mime_type_from_path("data.json"), "application/json");
-        assert_eq!(mime_type_from_path("unknown.xyz"), "application/octet-stream");
+        assert_eq!(
+            mime_type_from_path("unknown.xyz"),
+            "application/octet-stream"
+        );
     }
 
     #[test]
@@ -103,12 +106,12 @@ mod tests {
     #[test]
     #[ignore] // Only run when ui/dist exists
     fn test_get_index_html() {
-        let (content, mime_type) = get_asset("index.html")
-            .expect("index.html should exist after React build");
-        
+        let (content, mime_type) =
+            get_asset("index.html").expect("index.html should exist after React build");
+
         assert_eq!(mime_type, "text/html");
         assert!(!content.is_empty());
-        
+
         // Verify it's valid HTML
         let html = std::str::from_utf8(content).unwrap();
         assert!(html.contains("<!DOCTYPE html") || html.contains("<!doctype html"));

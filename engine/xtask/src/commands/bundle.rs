@@ -3,10 +3,10 @@
 use anyhow::{Context, Result};
 use std::process::Command;
 
-use xtask::output::*;
-use xtask::paths;
 use xtask::BuildMode;
 use xtask::PLUGIN_NAME;
+use xtask::output::*;
+use xtask::paths;
 
 /// Run the bundle command.
 ///
@@ -16,31 +16,37 @@ pub fn run(mode: BuildMode, package: Option<&str>, verbose: bool) -> Result<()> 
 }
 
 /// Run the bundle command with specific features.
-pub fn run_with_features(mode: BuildMode, package: Option<&str>, features: &[&str], verbose: bool) -> Result<()> {
+pub fn run_with_features(
+    mode: BuildMode,
+    package: Option<&str>,
+    features: &[&str],
+    verbose: bool,
+) -> Result<()> {
     let package_name = package.unwrap_or(PLUGIN_NAME);
     let engine_dir = paths::engine_dir()?;
 
     // If webview_editor feature is enabled, build the UI assets first
     if features.contains(&"webview_editor") {
         print_status("Building React UI assets...");
-        let ui_dir = engine_dir.parent()
+        let ui_dir = engine_dir
+            .parent()
             .ok_or_else(|| anyhow::anyhow!("Could not find workspace root"))?
             .join("ui");
-        
+
         if !ui_dir.exists() {
             anyhow::bail!("UI directory not found: {}", ui_dir.display());
         }
-        
+
         let npm_build = Command::new("npm")
             .current_dir(&ui_dir)
-            .args(&["run", "build"])
+            .args(["run", "build"])
             .status()
             .context("Failed to run npm build")?;
-        
+
         if !npm_build.success() {
             anyhow::bail!("UI build failed");
         }
-        
+
         print_success("React UI built successfully");
     }
 
@@ -55,21 +61,27 @@ pub fn run_with_features(mode: BuildMode, package: Option<&str>, features: &[&st
     if let Some(flag) = mode.cargo_flag() {
         build_cmd.arg(flag);
     }
-    
+
     if !features.is_empty() {
         build_cmd.arg("--features").arg(features.join(","));
     }
 
     if verbose {
-        println!("Running: cargo build -p {} {:?} --features {:?}", package_name, mode.cargo_flag(), features);
+        println!(
+            "Running: cargo build -p {} {:?} --features {:?}",
+            package_name,
+            mode.cargo_flag(),
+            features
+        );
     }
 
-    let build_status = build_cmd
-        .status()
-        .context("Failed to run cargo build")?;
+    let build_status = build_cmd.status().context("Failed to run cargo build")?;
 
     if !build_status.success() {
-        anyhow::bail!("Build command failed with exit code: {:?}", build_status.code());
+        anyhow::bail!(
+            "Build command failed with exit code: {:?}",
+            build_status.code()
+        );
     }
 
     print_status("Bundling plugins...");
@@ -80,7 +92,7 @@ pub fn run_with_features(mode: BuildMode, package: Option<&str>, features: &[&st
     if let Some(flag) = mode.cargo_flag() {
         bundle_args.push(flag.to_string());
     }
-    
+
     // Pass features to nih_plug_xtask so it rebuilds with the right features
     if !features.is_empty() {
         bundle_args.push("--features".to_string());
@@ -92,7 +104,7 @@ pub fn run_with_features(mode: BuildMode, package: Option<&str>, features: &[&st
     }
 
     // Call nih_plug_xtask::main_with_args with features
-    if let Err(e) = nih_plug_xtask::main_with_args(package_name, bundle_args.into_iter()) {
+    if let Err(e) = nih_plug_xtask::main_with_args(package_name, bundle_args) {
         anyhow::bail!("Bundle command failed: {}", e);
     }
 

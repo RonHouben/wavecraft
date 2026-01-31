@@ -1,0 +1,70 @@
+name: CI Build
+
+# TEMPORARILY DISABLED on PRs — Pipeline under redesign (2026-01-31)
+# See docs/roadmap.md for status. Will be re-enabled after architecture review.
+on:
+  push:
+    branches: [main]
+  # pull_request:
+  #   branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ui/package-lock.json
+      
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            engine/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      
+      - name: Build UI
+        working-directory: ui
+        run: npm ci && npm run build
+      
+      - name: Build Plugin
+        working-directory: engine
+        run: cargo xtask bundle --features webview_editor
+      
+      - name: Ad-Hoc Sign Plugin (macOS)
+        working-directory: engine
+        run: cargo xtask sign --adhoc
+      
+      - name: Verify Signatures
+        working-directory: engine
+        run: cargo xtask sign --verify --verbose
+      
+      - name: Upload VST3 Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vstkit-vst3-adhoc-signed
+          path: engine/target/bundled/vstkit.vst3
+          retention-days: 30
+      
+      - name: Upload CLAP Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vstkit-clap-adhoc-signed
+          path: engine/target/bundled/vstkit.clap
+          retention-days: 30

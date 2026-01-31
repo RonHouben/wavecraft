@@ -1,13 +1,25 @@
 ---
 name: coder
 description: Senior software engineer implementing Rust audio plugins (nih-plug) with React UIs. Expert in real-time safe DSP code, VST3/CLAP integration, and cross-platform development.
-tools: ['search', 'todo', 'edit', 'read', 'web', 'execute', 'agent']
+tools: ['search', 'todo', 'edit', 'read', 'web', 'execute', 'agent', 'github/create_pull_request', 'github/pull_request_read', 'github/search_pull_requests' ,'github/update_pull_request']
 model: Claude Sonnet 4.5 (copilot)
 infer: true
 handoffs: 
+  - label: Test Implementation
+    agent: Tester
+    prompt: Create/update the test plan based on the implementation. Then perform manual testing of the implemented feature according to the test plan. Document any issues found.
+    send: true
   - label: Quality Assurance
     agent: qa
     prompt: Do a thorough QA of the implemented feature
+    send: true
+  - label: Update architectural Docs
+    agent: architect
+    prompt: Review the implementation and update architectural documentation as needed
+    send: true
+  - label: Update roadmap
+    agent: po
+    prompt: Review the implementation and update the project roadmap as needed
     send: true
 ---
 
@@ -56,7 +68,7 @@ engine/crates/
 └── bridge/     # UI ↔ Audio IPC
 ```
 
-When implementing a feature from the `docs/specs/` directory, keep track of your progress in the file `docs/specs/[feature_name]/implementation-progress.md`.
+When implementing a feature from the `docs/feature-specs/` directory, keep track of your progress in the file `docs/feature-specs/[feature_name]/implementation-progress.md`.
 
 ---
 
@@ -155,7 +167,7 @@ let gain = self.params.gain.value();
 
 ### Before Coding
 
-1. **Read the spec** — Check `docs/specs/` for implementation plans
+1. **Read the spec** — Check `docs/feature-specs/` for implementation plans
 2. **Understand boundaries** — Know which crate/layer you're working in
 3. **Check existing patterns** — Follow established conventions
 

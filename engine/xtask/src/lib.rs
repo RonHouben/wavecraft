@@ -124,7 +124,10 @@ pub mod paths {
 
     /// Returns the AU wrapper source directory.
     pub fn au_wrapper_dir() -> Result<PathBuf> {
-        Ok(project_root()?.join("packaging").join("macos").join("au-wrapper"))
+        Ok(project_root()?
+            .join("packaging")
+            .join("macos")
+            .join("au-wrapper"))
     }
 
     /// Returns the platform-specific VST3 installation directory.
@@ -134,9 +137,7 @@ pub mod paths {
                 let home = dirs::home_dir().context("Could not determine home directory")?;
                 Ok(home.join("Library/Audio/Plug-Ins/VST3"))
             }
-            Platform::Windows => {
-                Ok(PathBuf::from(r"C:\Program Files\Common Files\VST3"))
-            }
+            Platform::Windows => Ok(PathBuf::from(r"C:\Program Files\Common Files\VST3")),
             Platform::Linux => {
                 let home = dirs::home_dir().context("Could not determine home directory")?;
                 Ok(home.join(".vst3"))
@@ -151,9 +152,7 @@ pub mod paths {
                 let home = dirs::home_dir().context("Could not determine home directory")?;
                 Ok(home.join("Library/Audio/Plug-Ins/CLAP"))
             }
-            Platform::Windows => {
-                Ok(PathBuf::from(r"C:\Program Files\Common Files\CLAP"))
-            }
+            Platform::Windows => Ok(PathBuf::from(r"C:\Program Files\Common Files\CLAP")),
             Platform::Linux => {
                 let home = dirs::home_dir().context("Could not determine home directory")?;
                 Ok(home.join(".clap"))
@@ -209,6 +208,11 @@ pub mod output {
     pub fn print_skip(text: &str) {
         println!("{}", text.yellow());
     }
+
+    /// Print an informational message.
+    pub fn print_info(text: &str) {
+        println!("{}", text.cyan());
+    }
 }
 
 /// Run a command and return its exit status.
@@ -216,7 +220,7 @@ pub mod output {
 /// This streams output to stdout/stderr in real-time.
 pub fn run_command(cmd: &mut Command) -> Result<ExitStatus> {
     let program = cmd.get_program().to_string_lossy().to_string();
-    
+
     let status = cmd
         .stdin(Stdio::null())
         .status()

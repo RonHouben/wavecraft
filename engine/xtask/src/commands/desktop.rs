@@ -23,23 +23,22 @@ pub fn run(release: bool, build_ui: bool, verbose: bool) -> Result<()> {
     // Step 2: Build desktop application
     print_status("Building desktop application...");
     let profile = if release { "release" } else { "debug" };
-    
+
     let mut cmd = Command::new("cargo");
-    cmd.arg("build")
-        .arg("-p")
-        .arg("desktop");
-    
+    cmd.arg("build").arg("-p").arg("desktop");
+
     if release {
         cmd.arg("--release");
     }
 
     if verbose {
-        println!("  Running: cargo build -p desktop{}", if release { " --release" } else { "" });
+        println!(
+            "  Running: cargo build -p desktop{}",
+            if release { " --release" } else { "" }
+        );
     }
 
-    let status = cmd
-        .status()
-        .context("Failed to execute cargo build")?;
+    let status = cmd.status().context("Failed to execute cargo build")?;
 
     if !status.success() {
         anyhow::bail!("Desktop build failed");
@@ -49,15 +48,15 @@ pub fn run(release: bool, build_ui: bool, verbose: bool) -> Result<()> {
 
     // Step 3: Run the application
     print_status("Launching desktop application...");
-    
+
     let binary_path = format!("target/{}/desktop", profile);
-    
+
     if verbose {
         println!("  Running: {}", binary_path);
     }
 
     let mut cmd = Command::new(&binary_path);
-    
+
     let status = cmd
         .status()
         .context("Failed to launch desktop application")?;
@@ -81,7 +80,7 @@ fn build_react_ui(verbose: bool) -> Result<()> {
     let node_modules = ui_dir.join("node_modules");
     if !node_modules.exists() {
         print_status("Installing npm dependencies...");
-        
+
         let status = Command::new("npm")
             .arg("install")
             .current_dir(ui_dir)
