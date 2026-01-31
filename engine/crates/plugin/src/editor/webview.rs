@@ -49,15 +49,15 @@ pub struct WebViewConfig {
 /// This function dispatches to the appropriate platform implementation
 /// based on compile-time target OS.
 #[allow(dead_code)] // Used only when webview_editor feature is enabled
-pub fn create_webview(config: WebViewConfig) -> Result<Box<dyn WebViewHandle>, String> {
+pub fn create_webview(_config: WebViewConfig) -> Result<Box<dyn WebViewHandle>, String> {
     #[cfg(target_os = "macos")]
     {
-        super::macos::create_macos_webview(config)
+        super::macos::create_macos_webview(_config)
     }
 
     #[cfg(target_os = "windows")]
     {
-        super::windows::create_windows_webview(config)
+        super::windows::create_windows_webview(_config)
     }
 
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
@@ -85,4 +85,5 @@ pub fn create_ipc_handler(
 ///
 /// This is the plugin-specific version for WKWebView, which uses
 /// webkit.messageHandlers instead of wry's globalThis.ipc.
+#[allow(dead_code)] // Used conditionally per platform
 pub const IPC_PRIMITIVES_JS: &str = include_str!("js/ipc-primitives-plugin.js");
