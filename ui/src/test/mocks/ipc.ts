@@ -6,8 +6,12 @@
  */
 
 import { useState, useCallback } from 'react';
-import type { ParameterInfo, MeterFrame } from '../../lib/vstkit-ipc/types';
-import type { UseParameterResult, UseAllParametersResult } from '../../lib/vstkit-ipc/hooks';
+import type {
+  ParameterInfo,
+  MeterFrame,
+  UseParameterResult,
+  UseAllParametersResult,
+} from '@vstkit/ipc';
 
 // Re-export types
 export type {
@@ -16,7 +20,7 @@ export type {
   MeterFrame,
   UseParameterResult,
   UseAllParametersResult,
-} from '../../lib/vstkit-ipc';
+} from '@vstkit/ipc';
 
 // ============================================================================
 // Mock State
