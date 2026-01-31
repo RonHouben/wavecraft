@@ -92,7 +92,7 @@ export function Meter(): React.JSX.Element {
   };
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg bg-black/30 p-4 font-sans">
+    <div className="flex flex-col gap-2 rounded-lg border border-plugin-border bg-plugin-surface p-4 font-sans">
       <div className="flex items-center justify-between gap-2">
         <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Levels</div>
         {(clippedL || clippedR) && (
@@ -107,7 +107,7 @@ export function Meter(): React.JSX.Element {
         )}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 rounded bg-plugin-dark p-2">
         <div className="w-4 text-center text-[11px] font-semibold text-gray-300">L</div>
         <div className="relative h-6 flex-1">
           <div
@@ -134,7 +134,7 @@ export function Meter(): React.JSX.Element {
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 rounded bg-plugin-dark p-2">
         <div className="w-4 text-center text-[11px] font-semibold text-gray-300">R</div>
         <div className="relative h-6 flex-1">
           <div

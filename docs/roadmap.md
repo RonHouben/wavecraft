@@ -7,14 +7,14 @@ This document tracks implementation progress against the milestones defined in t
 ## Progress Overview
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           🚧 M5                      │
-│  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish                     │
-│                                                         ▲                        │
-│                                                       YOU ARE HERE               │
-│                                                                                  │
-│  Progress: [████████████████████████████████████████████████████░░░░░░░░] 85%    │
-└──────────────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────────────┐
+│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           🚧 M5           ⏳ M6              │
+│  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ─────── Browser Testing     │
+│                                                         ▲                                │
+│                                                       YOU ARE HERE                       │
+│                                                                                          │
+│  Progress: [████████████████████████████████████████████████████░░░░░░░░░░░░░░░░] 70%    │
+└───────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -149,6 +149,7 @@ This document tracks implementation progress against the milestones defined in t
 |------|--------|-------|
 | **Linting infrastructure** | ✅ | ESLint + Prettier (UI), Clippy + fmt (Engine), `cargo xtask lint` command, CI workflow. Completed 2026-01-31. |
 | **Implement TailwindCSS for React UI** | ⏳ | Industry standard for React; excellent flexibility, documentation, and LLM tooling support. Replace current CSS with utility-first approach. |
+| **UI unit testing framework** | ⏳ | Vitest + React Testing Library for component testing. Enable test-driven development for React UI. |
 | Performance profiling (low buffer sizes: 32/64 samples) | ⏳ | |
 | CPU stress testing | ⏳ | |
 | Memory usage optimization | ⏳ | |
@@ -162,10 +163,36 @@ This document tracks implementation progress against the milestones defined in t
 
 ---
 
+## Milestone 6: Browser-Based UI Testing Infrastructure
+
+**Status: ⏳ Not Started**
+
+> **Goal:** Enable Playwright-based visual testing with real engine communication by creating a WebSocket IPC bridge that works in browsers (not just WKWebView).
+
+**Problem Statement:**
+Currently, the UI can only communicate with the Rust engine when running inside the desktop app (WKWebView). This makes automated visual testing impossible because Playwright can only control browsers, not embedded WKWebViews.
+
+**Benefits:**
+- **Playwright testing with real engine data** — Automated visual testing with actual parameter sync, meter data, etc.
+- **Remote debugging** — Debug UI issues while connected to a running engine
+- **Development workflow** — Hot reload with `npm run dev` while still having engine communication
+
+| Task | Status | Notes |
+|------|--------|-------|
+| WebSocket IPC bridge design | ⏳ | Architecture for browser ↔ engine communication |
+| WebSocket server in desktop app | ⏳ | Desktop app runs WebSocket server alongside UI |
+| UI IPC layer abstraction (WKWebView vs WebSocket) | ⏳ | Auto-detect environment, same protocol, different transport |
+| Playwright MCP integration for visual testing | ⏳ | Automated visual regression testing |
+| Mock data layer for offline/isolated testing | ⏳ | Enable UI testing without engine running |
+
+---
+
 ## Changelog
 
 | Date | Update |
 |------|--------|
+| 2026-01-31 | **Added Milestone 6: Browser-Based UI Testing Infrastructure**: WebSocket IPC bridge to enable Playwright testing with real engine communication. Addresses limitation that UI can only talk to engine inside WKWebView. Enables automated visual testing, remote debugging, and hot-reload development with engine connectivity. |
+| 2026-01-31 | **Added UI unit testing framework to Milestone 5**: Vitest + React Testing Library for component testing. Enables test-driven development and regression prevention for React UI components. |
 | 2026-01-31 | **Linting infrastructure complete**: Full implementation of unified linting system. ESLint 9 + Prettier for UI (TypeScript/React), Clippy + fmt for Engine (Rust). New `cargo xtask lint` command with `--ui`, `--engine`, `--fix` flags. CI workflow in `.github/workflows/lint.yml`. All 12 test scenarios passing. QA approved. Archived to `_archive/linting-infrastructure/`. |
 | 2026-01-31 | **Added TailwindCSS implementation to Milestone 5**: Upgraded from "investigate" to full implementation item. Rationale: industry standard for React, excellent flexibility, strong documentation and LLM tooling support. |
 | 2026-01-31 | **Archived signing-validation feature**: All in-scope phases complete (ad-hoc signing, Ableton Live testing, CI/CD). Docs moved to `_archive/signing-validation/`. Developer ID + notarization deferred until Apple Developer account available. |
@@ -195,7 +222,10 @@ This document tracks implementation progress against the milestones defined in t
    - TailwindCSS implementation for React UI
    - CI/CD pipeline architecture review (currently paused)
    - Performance profiling at low buffer sizes
-2. **Investigate AU Custom UI Issue** (nice-to-have)
+2. **Milestone 6**: Browser-Based UI Testing Infrastructure (upcoming)
+   - WebSocket IPC bridge design
+   - Enable Playwright visual testing with real engine data
+3. **Investigate AU Custom UI Issue** (nice-to-have)
    - Understand why clap-wrapper shows generic parameter view
    - Research CLAP GUI extension forwarding in clap-wrapper
 
