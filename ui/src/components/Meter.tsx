@@ -111,7 +111,7 @@ export function Meter(): React.JSX.Element {
         <div className="w-4 text-center text-[11px] font-semibold text-gray-300">L</div>
         <div className="relative h-6 flex-1">
           <div
-            className={`relative h-full w-full overflow-hidden rounded bg-[#222] transition-shadow duration-100 ${
+            className={`relative h-full w-full overflow-hidden rounded bg-[#333] transition-shadow duration-100 ${
               clippedL ? 'shadow-[inset_0_0_8px_rgba(255,23,68,0.8)]' : ''
             }`}
           >
@@ -138,7 +138,7 @@ export function Meter(): React.JSX.Element {
         <div className="w-4 text-center text-[11px] font-semibold text-gray-300">R</div>
         <div className="relative h-6 flex-1">
           <div
-            className={`relative h-full w-full overflow-hidden rounded bg-[#222] transition-shadow duration-100 ${
+            className={`relative h-full w-full overflow-hidden rounded bg-[#333] transition-shadow duration-100 ${
               clippedR ? 'shadow-[inset_0_0_8px_rgba(255,23,68,0.8)]' : ''
             }`}
           >
