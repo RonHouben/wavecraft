@@ -10,7 +10,7 @@ handoffs:
     prompt: Create/update the test plan based on the implementation. Then perform manual testing of the implemented feature according to the test plan. Document any issues found.
     send: true
   - label: Quality Assurance
-    agent: QA
+    agent: qa
     prompt: Do a thorough QA of the implemented feature
     send: true
   - label: Update architectural Docs
@@ -18,7 +18,7 @@ handoffs:
     prompt: Review the implementation and update architectural documentation as needed
     send: true
   - label: Update roadmap
-    agent: PO
+    agent: po
     prompt: Review the implementation and update the project roadmap as needed
     send: true
 ---

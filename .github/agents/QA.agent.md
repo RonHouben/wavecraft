@@ -1,5 +1,5 @@
 ---
-name: QA 
+name: qa
 description: Quality Assurance agent focused on code quality and static code analysis.
 tools: ['search', 'read', 'execute']
 model: Claude Opus 4.5 (copilot)
@@ -18,7 +18,7 @@ handoffs:
     prompt: Review the implementation and update architectural documentation as needed
     send: true
   - label: Update roadmap
-    agent: PO
+    agent: po
     prompt: Review the implementation and update the project roadmap as needed
     send: true
 ---

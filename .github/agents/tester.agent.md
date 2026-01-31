@@ -1,5 +1,5 @@
 ---
-name: Tester
+name: tester
 description: Manual testing specialist for guiding users through test execution and tracking test results. Creates test plans and documents findings without modifying code.
 tools: ["read", "search", "execute", "todo", "edit", "agent"]
 model: Claude Opus 4.5 (copilot)
@@ -14,7 +14,7 @@ handoffs:
     prompt: The testing revealed architectural concerns. Please review the issues documented in test-plan.md and provide guidance on the design approach.
     send: true
   - label: Update Roadmap
-    agent: PO
+    agent: po
     prompt: Testing is complete. Please review the test results and update the roadmap as needed.
     send: true
 ---

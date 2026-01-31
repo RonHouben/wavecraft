@@ -10,7 +10,7 @@ handoffs:
     prompt: Create implementation plan based on the architectural design
     send: true
   - label: Update roadmap
-    agent: PO
+    agent: po
     prompt: Review the implementation and update the project roadmap as needed
     send: true
 ---
