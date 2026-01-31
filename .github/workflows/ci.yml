@@ -1,84 +1,205 @@
-name: CI Build
+name: CI
 
-# TEMPORARILY DISABLED — UI test infrastructure added, but full CI pipeline needs redesign
-# See docs/roadmap.md for status. Will be re-enabled after architecture review.
 on:
   push:
     branches: [main]
-  # pull_request:
-  #   branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
-    runs-on: macos-latest
-    
+  # ═══════════════════════════════════════════════════════════════════════════
+  # STAGE 1: Fast Feedback (<2 minutes)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  typecheck-ui:
+    name: TypeCheck UI
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      
-      - name: Install Node.js
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: ui/package-lock.json
-      
-      - name: Cache Cargo dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            engine/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-      
-      - name: Install UI dependencies
-        working-directory: ui
+
+      - name: Install dependencies
         run: npm ci
-      
-      - name: Run UI tests
         working-directory: ui
-        run: npm test
-      
-      - name: Run Engine tests
-        working-directory: engine
-        run: cargo test --workspace
-      
+
+      - name: Type-check
+        run: npm run typecheck
+        working-directory: ui
+
       - name: Build UI
+        run: npm run build
+        working-directory: ui
+
+      - name: Upload UI dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-dist
+          path: ui/dist
+          retention-days: 1
+
+  lint-ui:
+    name: Lint UI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ui
+
+      - name: ESLint
+        run: npm run lint
+        working-directory: ui
+
+      - name: Prettier
+        run: npm run format:check
+        working-directory: ui
+
+  lint-engine:
+    name: Lint Engine
+    runs-on: ubuntu-latest
+    needs: [typecheck-ui]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Download UI dist
+        uses: actions/download-artifact@v4
+        with:
+          name: ui-dist
+          path: ui/dist
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: engine
+
+      - name: Check formatting
+        run: cargo fmt --check
         working-directory: engine
-        run: cargo xtask build-ui --verbose
-      
-      - name: Lint (UI + Engine)
+
+      - name: Clippy
+        run: cargo clippy --workspace -- -D warnings
         working-directory: engine
-        run: cargo xtask lint
-      
-      - name: Build Plugin
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # STAGE 2: Tests (runs after Stage 1 passes)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  test-ui:
+    name: Test UI
+    runs-on: ubuntu-latest
+    needs: [typecheck-ui, lint-ui, lint-engine]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ui
+
+      - name: Run tests
+        run: npm test
+        working-directory: ui
+
+  test-engine:
+    name: Test Engine
+    runs-on: ubuntu-latest
+    needs: [typecheck-ui, lint-ui, lint-engine]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Download UI dist
+        uses: actions/download-artifact@v4
+        with:
+          name: ui-dist
+          path: ui/dist
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: engine
+
+      - name: Run tests
+        run: cargo test --workspace
         working-directory: engine
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # STAGE 3: Build (main branch only, after tests pass)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  build-plugin:
+    name: Build Plugin
+    runs-on: macos-latest
+    needs: [test-ui, test-engine]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Download UI dist
+        uses: actions/download-artifact@v4
+        with:
+          name: ui-dist
+          path: ui/dist
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: engine
+
+      - name: Build plugin bundles
         run: cargo xtask bundle --features webview_editor
-      
-      - name: Ad-Hoc Sign Plugin (macOS)
         working-directory: engine
+
+      - name: Ad-hoc sign (macOS)
         run: cargo xtask sign --adhoc
-      
-      - name: Verify Signatures
         working-directory: engine
+
+      - name: Verify signatures
         run: cargo xtask sign --verify --verbose
-      
-      - name: Upload VST3 Artifact
+        working-directory: engine
+
+      - name: Upload VST3
         uses: actions/upload-artifact@v4
         with:
           name: vstkit-vst3-adhoc-signed
           path: engine/target/bundled/vstkit.vst3
           retention-days: 30
-      
-      - name: Upload CLAP Artifact
+
+      - name: Upload CLAP
         uses: actions/upload-artifact@v4
         with:
           name: vstkit-clap-adhoc-signed
