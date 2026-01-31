@@ -4,6 +4,9 @@
  * Public exports for application code.
  */
 
+// Environment detection
+export { isWebViewEnvironment, isBrowserEnvironment } from './environment';
+
 // Types
 export type {
   IpcRequest,

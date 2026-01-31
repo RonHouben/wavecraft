@@ -3,17 +3,21 @@
  *
  * Wraps the injected primitives and provides a Promise-based API
  * for sending requests and receiving responses.
+ *
+ * **Lazy Initialization**: The bridge is initialized on first use,
+ * allowing the module to load in browser environments without crashing.
  */
 
 import type { IpcRequest, IpcResponse, IpcNotification, RequestId } from './types';
 import { isIpcResponse, isIpcNotification } from './types';
+import { isWebViewEnvironment, isBrowserEnvironment } from './environment';
 
 type EventCallback<T> = (data: T) => void;
 
 export class IpcBridge {
   private static instance: IpcBridge | null = null;
   private nextId = 1;
-  private pendingRequests = new Map<
+  private readonly pendingRequests = new Map<
     RequestId,
     {
       resolve: (response: IpcResponse) => void;
@@ -21,16 +25,33 @@ export class IpcBridge {
       timeoutId: ReturnType<typeof setTimeout>;
     }
   >();
-  private eventListeners = new Map<string, Set<EventCallback<unknown>>>();
-  private primitives: typeof globalThis.__VSTKIT_IPC__;
+  private readonly eventListeners = new Map<string, Set<EventCallback<unknown>>>();
+  private primitives: typeof globalThis.__VSTKIT_IPC__ | null = null;
+  private isInitialized = false;
 
   private constructor() {
+    // Don't initialize here - lazy init on first use
+  }
+
+  /**
+   * Initialize the IPC bridge (lazy)
+   * Only called when first method is invoked
+   */
+  private initialize(): void {
+    if (this.isInitialized) {
+      return;
+    }
+
+    if (!isWebViewEnvironment()) {
+      // Browser mode: fail silently, don't throw
+      this.isInitialized = false;
+      return;
+    }
+
     this.primitives = globalThis.__VSTKIT_IPC__;
 
     if (!this.primitives) {
-      throw new Error(
-        'IPC primitives not available. Make sure the app is running in VstKit WebView.'
-      );
+      throw new Error('IPC primitives unexpectedly missing after environment check');
     }
 
     // Set up receive callback for responses
@@ -47,15 +68,15 @@ export class IpcBridge {
         }
       });
     }
+
+    this.isInitialized = true;
   }
 
   /**
    * Get singleton instance
    */
   public static getInstance(): IpcBridge {
-    if (!IpcBridge.instance) {
-      IpcBridge.instance = new IpcBridge();
-    }
+    IpcBridge.instance ??= new IpcBridge();
     return IpcBridge.instance;
   }
 
@@ -67,6 +88,14 @@ export class IpcBridge {
     params?: unknown,
     timeoutMs = 5000
   ): Promise<TResult> {
+    // Lazy initialization on first use
+    this.initialize();
+
+    // Browser mode: return mock data
+    if (isBrowserEnvironment()) {
+      return this.getMockResponse<TResult>(method);
+    }
+
     const id = this.nextId++;
     const request: IpcRequest = {
       jsonrpc: '2.0',
@@ -108,6 +137,14 @@ export class IpcBridge {
    * Subscribe to notification events
    */
   public on<T>(event: string, callback: EventCallback<T>): () => void {
+    // Lazy initialization on first use
+    this.initialize();
+
+    // Browser mode: return no-op cleanup
+    if (isBrowserEnvironment()) {
+      return () => {};
+    }
+
     if (!this.eventListeners.has(event)) {
       this.eventListeners.set(event, new Set());
     }
@@ -122,6 +159,41 @@ export class IpcBridge {
     return () => {
       listeners.delete(callback as EventCallback<unknown>);
     };
+  }
+
+  /**
+   * Return mock response for browser mode
+   */
+  private getMockResponse<TResult>(method: string): Promise<TResult> {
+    // Mock responses based on method
+    if (method === 'getParameter') {
+      return Promise.resolve({
+        value: 0,
+        default: 0,
+        min: 0,
+        max: 1,
+        name: 'Mock Parameter',
+      } as TResult);
+    }
+
+    if (method === 'getMeterFrame') {
+      return Promise.resolve({
+        frame: {
+          peak_l: 0,
+          peak_r: 0,
+          rms_l: 0,
+          rms_r: 0,
+          timestamp: Date.now(),
+        },
+      } as TResult);
+    }
+
+    if (method === 'requestResize') {
+      return Promise.resolve({ accepted: true } as TResult);
+    }
+
+    // Default: return empty object
+    return Promise.resolve({} as TResult);
   }
 
   /**
