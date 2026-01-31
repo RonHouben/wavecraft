@@ -55,7 +55,10 @@ pub fn run(verbose: bool) -> Result<()> {
     // Verify dist directory was created
     let dist_dir = ui_dir.join("dist");
     if !dist_dir.exists() {
-        anyhow::bail!("npm build succeeded but dist directory not found at {}", dist_dir.display());
+        anyhow::bail!(
+            "npm build succeeded but dist directory not found at {}",
+            dist_dir.display()
+        );
     }
 
     if verbose {
