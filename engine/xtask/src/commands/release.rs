@@ -3,8 +3,8 @@
 use anyhow::Result;
 
 use super::{bundle, notarize, sign};
-use xtask::output::*;
 use xtask::BuildMode;
+use xtask::output::*;
 
 /// Run the release command.
 pub fn run(skip_notarize: bool, verbose: bool) -> Result<()> {

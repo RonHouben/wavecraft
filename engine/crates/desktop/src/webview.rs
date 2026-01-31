@@ -53,11 +53,11 @@ pub fn run_app(state: Arc<AppState>) -> Result<(), Box<dyn std::error::Error>> {
         .with_ipc_handler(move |request: wry::http::Request<String>| {
             let message = request.body();
             let response = handler.handle_json(message);
-            
+
             // Log for debugging
             eprintln!("[IPC] Request: {}", message);
             eprintln!("[IPC] Response: {}", response);
-            
+
             // Send response through channel to be delivered in event loop
             let _ = response_tx.send(response);
         })
@@ -79,10 +79,13 @@ pub fn run_app(state: Arc<AppState>) -> Result<(), Box<dyn std::error::Error>> {
                 .replace('\'', "\\'")
                 .replace('\n', "\\n")
                 .replace('\r', "\\r");
-            
+
             // Call the internal _receive method that the primitives expose
-            let js_code = format!("globalThis.__VSTKIT_IPC__._receive('{}');", escaped_response);
-            
+            let js_code = format!(
+                "globalThis.__VSTKIT_IPC__._receive('{}');",
+                escaped_response
+            );
+
             if let Err(e) = webview.evaluate_script(&js_code) {
                 eprintln!("[IPC] Failed to send response to UI: {}", e);
             }
@@ -101,9 +104,11 @@ pub fn run_app(state: Arc<AppState>) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// Handle requests for embedded assets via custom protocol
-fn handle_asset_request(request: wry::http::Request<Vec<u8>>) -> wry::http::Response<Cow<'static, [u8]>> {
+fn handle_asset_request(
+    request: wry::http::Request<Vec<u8>>,
+) -> wry::http::Response<Cow<'static, [u8]>> {
     let path = request.uri().path();
-    
+
     match assets::get_asset(path) {
         Some((content, mime_type)) => wry::http::Response::builder()
             .status(200)

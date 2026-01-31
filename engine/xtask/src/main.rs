@@ -23,7 +23,7 @@ use clap::{Parser, Subcommand};
 
 mod commands;
 
-use xtask::{output, BuildMode};
+use xtask::{BuildMode, output};
 
 /// VstKit build system - Build, test, and install audio plugins.
 #[derive(Parser)]
@@ -58,11 +58,11 @@ enum Commands {
         /// Package name to bundle (default: vstkit)
         #[arg(short, long)]
         package: Option<String>,
-        
+
         /// Features to enable (comma-separated)
         #[arg(short, long)]
         features: Option<String>,
-        
+
         /// Install plugins after building
         #[arg(short, long)]
         install: bool,
@@ -181,13 +181,22 @@ fn main() -> Result<()> {
 
     // If no command specified, default to showing help or running bundle
     let result = match cli.command {
-        Some(Commands::Bundle { package, features, install }) => {
+        Some(Commands::Bundle {
+            package,
+            features,
+            install,
+        }) => {
             let features_vec: Vec<&str> = features
                 .as_deref()
                 .map(|f| f.split(',').collect())
                 .unwrap_or_default();
-            commands::bundle::run_with_features(mode, package.as_deref(), &features_vec, cli.verbose)?;
-            
+            commands::bundle::run_with_features(
+                mode,
+                package.as_deref(),
+                &features_vec,
+                cli.verbose,
+            )?;
+
             if install {
                 commands::install::run(cli.dry_run, cli.verbose)?;
             }

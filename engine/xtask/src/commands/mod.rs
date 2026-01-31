@@ -21,8 +21,8 @@ pub fn run_all(
     dry_run: bool,
     verbose: bool,
 ) -> Result<()> {
-    use xtask::output::*;
     use xtask::Platform;
+    use xtask::output::*;
 
     print_header("VstKit Full Build Pipeline");
 
@@ -44,8 +44,10 @@ pub fn run_all(
     // Step 2: Bundle plugins
     print_status("Step 2/4: Building and bundling plugins...");
     if dry_run {
-        println!("  [dry-run] Would run: cargo xtask bundle vstkit {}", 
-            mode.cargo_flag().unwrap_or(""));
+        println!(
+            "  [dry-run] Would run: cargo xtask bundle vstkit {}",
+            mode.cargo_flag().unwrap_or("")
+        );
     } else {
         bundle::run(mode, None, verbose)?;
     }

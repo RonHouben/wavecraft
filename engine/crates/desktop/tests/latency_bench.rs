@@ -2,7 +2,7 @@
 
 use bridge::{IpcHandler, ParameterHost};
 use desktop::AppState;
-use protocol::{IpcRequest, RequestId, METHOD_GET_PARAMETER};
+use protocol::{IpcRequest, METHOD_GET_PARAMETER, RequestId};
 use std::time::Instant;
 
 #[test]

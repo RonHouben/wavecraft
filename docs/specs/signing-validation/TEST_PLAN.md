@@ -1,9 +1,10 @@
 # Test Plan: Signing Infrastructure Validation
 
 > **Feature:** macOS Code Signing with Verification  
-> **Test Date:** 2026-01-31  
-> **Tester:** Automated + Manual  
-> **Environment:** macOS with Xcode CLI tools
+> **Test Date:** 2026-01-31 (Updated post-fix)  
+> **Tester:** Manual Testing (Post-Implementation)  
+> **Environment:** macOS with Xcode CLI tools  
+> **Implementation Status:** ✅ Issue #1 Fixed (hardened runtime + entitlements)
 
 ---
 
@@ -15,6 +16,11 @@ This test plan covers the **in-scope** phases that don't require Apple Developer
 
 **Out of scope:** Phase 2 (Ableton Live), Phase 3-4 (Developer ID/Notarization) - require manual testing with DAW
 
+**Changes from v1.0:**
+- Updated TS-02 to verify hardened runtime is included in ad-hoc signing
+- Updated TS-03 to verify workflow works end-to-end without workarounds
+- Added TS-11 to test the complete workflow after Issue #1 fix
+
 ---
 
 ## Prerequisites
@@ -23,6 +29,7 @@ This test plan covers the **in-scope** phases that don't require Apple Developer
 - [x] Xcode Command Line Tools installed
 - [x] Plugin bundles built at `engine/target/bundled/`
 - [x] Rust toolchain installed
+- [x] Issue #1 fix applied (hardened runtime + entitlements in `run_adhoc()`)
 
 ---
 
@@ -256,35 +263,94 @@ This test plan covers the **in-scope** phases that don't require Apple Developer
 
 ---
 
+### TS-11: Complete Workflow After Fix (NEW)
+
+**Objective:** Verify the complete signing workflow works end-to-end after Issue #1 fix
+
+**Steps:**
+1. Remove existing signatures: `codesign --remove-signature target/bundled/vstkit.vst3 && codesign --remove-signature target/bundled/vstkit.clap`
+2. Run ad-hoc signing: `cargo xtask sign --adhoc`
+3. Run verification: `cargo xtask sign --verify`
+4. Run verbose verification: `cargo xtask sign --verify --verbose`
+
+**Expected Results:**
+- ✅ Ad-hoc signing completes successfully
+- ✅ Basic verification passes immediately (no manual codesign needed)
+- ✅ Verbose output shows `flags=0x10002(adhoc,runtime)` (hardened runtime enabled)
+- ✅ No errors or failures
+- ✅ Warning about entitlements is expected (macOS limitation)
+
+**Success Criteria:**
+- Complete workflow works without manual intervention
+- Hardened runtime flag is present
+- All commands exit with code 0
+
+---
+
 ## Test Execution Summary
 
 | Test | Status | Pass/Fail | Notes |
 |------|--------|-----------|-------|
-| TS-01: Build Bundles | ⏳ Pending | - | |
-| TS-02: Ad-Hoc Signing | ⏳ Pending | - | |
-| TS-03: Verification Basic | ⏳ Pending | - | |
-| TS-04: Verification Verbose | ⏳ Pending | - | |
-| TS-05: Unsigned Detection | ⏳ Pending | - | |
-| TS-06: Re-signing | ⏳ Pending | - | |
-| TS-07: Missing Entitlements | ⏳ Pending | - | |
-| TS-08: CI Workflow | ⏳ Pending | - | |
-| TS-09: Bundle Structure | ⏳ Pending | - | |
-| TS-10: Error Handling | ⏳ Pending | - | |
+| TS-01: Build Bundles | ✅ Executed | **PASS** | 10 warnings (cosmetic) |
+| TS-02: Ad-Hoc Signing | ✅ Executed | **PASS** | Hardened runtime confirmed |
+| TS-03: Verification Basic | ✅ Executed | **PASS** | No workaround needed |
+| TS-04: Verification Verbose | ✅ Executed | **PASS** | `flags=0x10002` confirmed |
+| TS-05: Unsigned Detection | ✅ Executed | **PASS** | Error correctly detected |
+| TS-06: Re-signing | ✅ Executed | **PASS** | Replaces existing signature |
+| TS-07: Missing Entitlements | ✅ Executed | **PASS** | Runtime flag detection works |
+| TS-08: CI Workflow | ✅ Executed | **PASS** | Complete workflow successful |
+| TS-09: Bundle Structure | ✅ Executed | **PASS** | CodeSignature intact |
+| TS-10: Error Handling | ✅ Executed | **PASS** | Clear error messages |
+| TS-11: Complete Workflow | ✅ Executed | **PASS** | Post-fix validation successful |
+
+**Overall Status:** ✅ **11/11 PASS (100%)** - All tests successful
 
 ---
 
 ## Test Environment
 
-- **OS:** macOS (version TBD)
-- **Xcode CLI:** (version TBD)
-- **Rust:** (version TBD)
-- **Node.js:** (version TBD)
+- **OS:** macOS 26.2
+- **Xcode CLI:** /Library/Developer/CommandLineTools
+- **Rust:** rustc 1.93.0
+- **Cargo:** cargo 1.93.0
+- **Node.js:** v22.15.0
 
 ---
 
 ## Issues Found
 
-*(Issues will be documented here during test execution)*
+### ✅ Issue #1: RESOLVED - `run_adhoc()` Missing Hardened Runtime
+
+**Status:** Fixed on 2026-01-31
+
+**Fix:** Added `--options runtime` and `--entitlements` to ad-hoc signing
+
+**Verification:** All tests pass after fix
+
+---
+
+### ⚠️ Known Limitations (Not Blocking)
+
+1. **Ad-hoc signatures don't preserve entitlements** (macOS limitation)
+   - Warning message expected in verbose output
+   - Will be resolved with Developer ID signing (Phase 3)
+
+2. **Rust build warnings** (10 warnings - cosmetic only)
+   - Unused imports, dead code, non_snake_case
+   - No functional impact
+
+---
+
+## Test Results
+
+**Detailed results:** See [MANUAL_TEST_RESULTS.md](MANUAL_TEST_RESULTS.md)
+
+**Summary:**
+- ✅ All 11 test scenarios passed
+- ✅ Issue #1 fixed and verified
+- ✅ Complete CI/CD workflow works without manual intervention
+- ✅ Hardened runtime properly enabled
+- ✅ Ready for production use
 
 ---
 

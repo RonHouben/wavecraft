@@ -9,7 +9,7 @@ mod params;
 use std::sync::Arc;
 
 use dsp::Processor;
-use metering::{create_meter_channel, MeterConsumer, MeterFrame, MeterProducer};
+use metering::{MeterConsumer, MeterFrame, MeterProducer, create_meter_channel};
 use nih_plug::prelude::*;
 
 use crate::params::VstKitParams;
@@ -70,7 +70,7 @@ impl Plugin for VstKitPlugin {
         {
             create_webview_editor(self.params.clone(), self.meter_consumer.clone())
         }
-        
+
         #[cfg(not(feature = "webview_editor"))]
         {
             create_editor(self.params.clone())

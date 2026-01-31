@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use nih_plug::prelude::*;
 use nih_plug_egui::egui::{CentralPanel, Slider};
-use nih_plug_egui::{create_egui_editor as nih_create_egui_editor, EguiState};
+use nih_plug_egui::{EguiState, create_egui_editor as nih_create_egui_editor};
 
 use crate::params::VstKitParams;
 

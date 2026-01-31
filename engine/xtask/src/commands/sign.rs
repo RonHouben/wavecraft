@@ -4,9 +4,9 @@ use anyhow::{Context, Result};
 use std::path::Path;
 use std::process::Command;
 
+use xtask::Platform;
 use xtask::output::*;
 use xtask::paths;
-use xtask::Platform;
 
 /// Configuration for code signing.
 pub struct SigningConfig {
@@ -89,7 +89,9 @@ fn sign_bundle(bundle_path: &Path, config: &SigningConfig) -> Result<()> {
         cmd.arg("--entitlements").arg(entitlements);
     } else {
         // Use default entitlements
-        let default_entitlements = paths::engine_dir()?.join("signing").join("entitlements.plist");
+        let default_entitlements = paths::engine_dir()?
+            .join("signing")
+            .join("entitlements.plist");
         if default_entitlements.exists() {
             cmd.arg("--entitlements").arg(&default_entitlements);
         }
@@ -126,7 +128,10 @@ fn verify_signature(bundle_path: &Path) -> Result<()> {
         .context("Failed to run codesign --verify")?;
 
     if !status.success() {
-        anyhow::bail!("Signature verification failed for {}", bundle_path.display());
+        anyhow::bail!(
+            "Signature verification failed for {}",
+            bundle_path.display()
+        );
     }
 
     Ok(())
@@ -140,6 +145,9 @@ pub fn run_adhoc() -> Result<()> {
     }
 
     let bundled_dir = paths::bundled_dir()?;
+    let entitlements = paths::engine_dir()?
+        .join("signing")
+        .join("entitlements.plist");
 
     let bundles = ["vstkit.vst3", "vstkit.clap", "vstkit.component"];
 
@@ -151,6 +159,10 @@ pub fn run_adhoc() -> Result<()> {
             let status = Command::new("codesign")
                 .arg("--deep")
                 .arg("--force")
+                .arg("--options")
+                .arg("runtime") // Enable hardened runtime
+                .arg("--entitlements")
+                .arg(&entitlements) // Add entitlements for WebView JIT
                 .arg("--sign")
                 .arg("-") // Ad-hoc signature
                 .arg(&bundle_path)
@@ -190,14 +202,14 @@ pub fn run_verify(verbose: bool) -> Result<()> {
         let bundle_path = bundled_dir.join(bundle_name);
         if bundle_path.exists() {
             verify_signature(&bundle_path)?;
-            
+
             if verbose {
                 inspect_signature(&bundle_path)?;
             }
-            
+
             // Validate expected properties
             validate_signature_properties(&bundle_path, verbose)?;
-            
+
             print_success(&format!("{} signature valid", format));
             verified_count += 1;
         }
@@ -207,7 +219,10 @@ pub fn run_verify(verbose: bool) -> Result<()> {
         anyhow::bail!("No plugin bundles found to verify");
     }
 
-    print_success(&format!("All {} signatures verified successfully", verified_count));
+    print_success(&format!(
+        "All {} signatures verified successfully",
+        verified_count
+    ));
     Ok(())
 }
 
@@ -252,7 +267,7 @@ fn validate_signature_properties(bundle_path: &Path, verbose: bool) -> Result<()
 
     // Parse and validate entitlements
     let entitlements_output = String::from_utf8_lossy(&output.stdout);
-    
+
     if !entitlements_output.is_empty() {
         // Check for required JIT entitlement
         if !entitlements_output.contains("com.apple.security.cs.allow-jit") {
@@ -261,12 +276,14 @@ fn validate_signature_properties(bundle_path: &Path, verbose: bool) -> Result<()
                 bundle_path.display()
             );
         }
-        
+
         if verbose {
             println!("✓ Hardened runtime enabled");
             println!("✓ JIT entitlement present");
-            
-            if entitlements_output.contains("com.apple.security.cs.allow-unsigned-executable-memory") {
+
+            if entitlements_output
+                .contains("com.apple.security.cs.allow-unsigned-executable-memory")
+            {
                 println!("✓ Unsigned executable memory allowed");
             }
             if entitlements_output.contains("com.apple.security.cs.disable-library-validation") {
@@ -283,8 +300,10 @@ fn validate_signature_properties(bundle_path: &Path, verbose: bool) -> Result<()
 /// User-friendly error messages for common signing issues.
 fn diagnose_signing_error(code: i32) -> &'static str {
     match code {
-        1 => "Invalid identity or certificate not found. \
-              Run 'security find-identity -v -p codesigning' to list available identities.",
+        1 => {
+            "Invalid identity or certificate not found. \
+              Run 'security find-identity -v -p codesigning' to list available identities."
+        }
         3 => "Bundle is malformed or has invalid structure.",
         _ => "Unknown error. Run with --verbose for details.",
     }
@@ -296,15 +315,26 @@ mod tests {
 
     #[test]
     fn test_signing_config_from_env() {
-        std::env::set_var("APPLE_SIGNING_IDENTITY", "Test Identity");
+        // SAFETY: This is a test that runs in isolation. Environment variable
+        // modification is acceptable in single-threaded test contexts.
+        unsafe {
+            std::env::set_var("APPLE_SIGNING_IDENTITY", "Test Identity");
+        }
         let config = SigningConfig::from_env().unwrap();
         assert_eq!(config.identity, "Test Identity");
-        std::env::remove_var("APPLE_SIGNING_IDENTITY");
+        // SAFETY: Cleanup after test
+        unsafe {
+            std::env::remove_var("APPLE_SIGNING_IDENTITY");
+        }
     }
 
     #[test]
     fn test_signing_config_missing_env() {
-        std::env::remove_var("APPLE_SIGNING_IDENTITY");
+        // SAFETY: This is a test that runs in isolation. Environment variable
+        // modification is acceptable in single-threaded test contexts.
+        unsafe {
+            std::env::remove_var("APPLE_SIGNING_IDENTITY");
+        }
         let result = SigningConfig::from_env();
         assert!(result.is_err());
     }

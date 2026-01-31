@@ -88,10 +88,7 @@ impl MeterConsumer {
 /// Recommended: 32-128 frames (enough for 60 Hz UI @ 512-sample audio blocks).
 pub fn create_meter_channel(capacity: usize) -> (MeterProducer, MeterConsumer) {
     let (producer, consumer) = rtrb::RingBuffer::new(capacity);
-    (
-        MeterProducer { producer },
-        MeterConsumer { consumer },
-    )
+    (MeterProducer { producer }, MeterConsumer { consumer })
 }
 
 #[cfg(test)]
@@ -125,16 +122,25 @@ mod tests {
         let (mut producer, mut consumer) = create_meter_channel(2);
 
         // Fill buffer
-        producer.push(MeterFrame { peak_l: 1.0, ..Default::default() });
-        producer.push(MeterFrame { peak_l: 2.0, ..Default::default() });
-        
+        producer.push(MeterFrame {
+            peak_l: 1.0,
+            ..Default::default()
+        });
+        producer.push(MeterFrame {
+            peak_l: 2.0,
+            ..Default::default()
+        });
+
         // Overflow silently drops (ring buffer behavior)
-        producer.push(MeterFrame { peak_l: 3.0, ..Default::default() });
+        producer.push(MeterFrame {
+            peak_l: 3.0,
+            ..Default::default()
+        });
 
         // First two frames should still be readable
         assert_eq!(consumer.pop().unwrap().peak_l, 1.0);
         assert_eq!(consumer.pop().unwrap().peak_l, 2.0);
-        
+
         // Third frame was dropped
         assert!(consumer.pop().is_none());
     }
@@ -145,7 +151,10 @@ mod tests {
 
         // Push multiple frames
         for i in 0..5 {
-            producer.push(MeterFrame { peak_l: i as f32, ..Default::default() });
+            producer.push(MeterFrame {
+                peak_l: i as f32,
+                ..Default::default()
+            });
         }
 
         // read_latest should return only the newest frame
@@ -168,12 +177,12 @@ mod tests {
         let (mut producer, mut consumer) = create_meter_channel(4);
 
         assert_eq!(consumer.available_read(), 0);
-        
+
         producer.push(MeterFrame::default());
         producer.push(MeterFrame::default());
-        
+
         assert_eq!(consumer.available_read(), 2);
-        
+
         consumer.pop();
         assert_eq!(consumer.available_read(), 1);
     }

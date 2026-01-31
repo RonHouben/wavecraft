@@ -4,11 +4,11 @@ use anyhow::{Context, Result};
 use std::fs;
 use std::process::Command;
 
-use xtask::output::*;
-use xtask::paths;
-use xtask::Platform;
 use xtask::PLUGIN_DISPLAY_NAME;
 use xtask::PLUGIN_NAME;
+use xtask::Platform;
+use xtask::output::*;
+use xtask::paths;
 
 /// Run the clean command.
 ///

@@ -6,16 +6,15 @@
 pub mod ipc;
 pub mod params;
 
-pub use params::{db_to_linear, ParamId, ParamSpec, PARAM_SPECS};
+pub use params::{PARAM_SPECS, ParamId, ParamSpec, db_to_linear};
 
 // Re-export key IPC types for convenience
 pub use ipc::{
-    GetAllParametersResult, GetMeterFrameResult, GetParameterParams, GetParameterResult,
-    IpcError, IpcNotification, IpcRequest, IpcResponse, MeterFrame,
-    ParameterChangedNotification, ParameterInfo, ParameterType, RequestId,
-    RequestResizeParams, RequestResizeResult, SetParameterParams, SetParameterResult,
     ERROR_INTERNAL, ERROR_INVALID_PARAMS, ERROR_INVALID_REQUEST, ERROR_METHOD_NOT_FOUND,
-    ERROR_PARAM_NOT_FOUND, ERROR_PARAM_OUT_OF_RANGE, ERROR_PARSE, METHOD_GET_ALL_PARAMETERS,
-    METHOD_GET_METER_FRAME, METHOD_GET_PARAMETER, METHOD_REQUEST_RESIZE, METHOD_SET_PARAMETER,
-    NOTIFICATION_PARAMETER_CHANGED,
+    ERROR_PARAM_NOT_FOUND, ERROR_PARAM_OUT_OF_RANGE, ERROR_PARSE, GetAllParametersResult,
+    GetMeterFrameResult, GetParameterParams, GetParameterResult, IpcError, IpcNotification,
+    IpcRequest, IpcResponse, METHOD_GET_ALL_PARAMETERS, METHOD_GET_METER_FRAME,
+    METHOD_GET_PARAMETER, METHOD_REQUEST_RESIZE, METHOD_SET_PARAMETER, MeterFrame,
+    NOTIFICATION_PARAMETER_CHANGED, ParameterChangedNotification, ParameterInfo, ParameterType,
+    RequestId, RequestResizeParams, RequestResizeResult, SetParameterParams, SetParameterResult,
 };

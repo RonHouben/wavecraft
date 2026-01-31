@@ -240,6 +240,39 @@ Follow the existing crate structure:
 - `dsp` — Pure DSP code (no framework dependencies)
 - `plugin` — nih-plug integration
 - `bridge` — IPC handling
+- `desktop` — Standalone desktop app for testing
+- `metering` — SPSC ring buffer for audio → UI metering
+
+### xtask Commands
+
+The `xtask` crate provides build system commands. Each command is a module under `commands/`:
+
+```
+engine/xtask/src/
+├── lib.rs           # Shared utilities (paths, platform, output)
+├── main.rs          # CLI definition (clap)
+└── commands/
+    ├── mod.rs       # Command exports and run_all()
+    ├── bundle.rs    # Build VST3/CLAP bundles
+    ├── sign.rs      # macOS code signing
+    ├── notarize.rs  # Apple notarization
+    ├── release.rs   # Complete release workflow
+    └── ...
+```
+
+**Command conventions:**
+- Each command module exposes a `run()` function as entry point
+- Use `anyhow::Result` for error propagation
+- Use `xtask::output::*` helpers for colored terminal output
+- Platform checks: `if Platform::current() != Platform::MacOS { bail!(...) }`
+- Configuration from environment: `Config::from_env()` pattern
+- Unit tests in `#[cfg(test)] mod tests { }` at bottom of file
+
+**Adding a new command:**
+1. Create `commands/mycommand.rs` with `pub fn run(...) -> Result<()>`
+2. Register in `commands/mod.rs`: `pub mod mycommand;`
+3. Add CLI variant in `main.rs`: `enum Commands { MyCommand { ... } }`
+4. Wire up in `main()` match: `Some(Commands::MyCommand { .. }) => commands::mycommand::run(...)`
 
 ### Naming Conventions
 

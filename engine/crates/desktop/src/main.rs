@@ -11,7 +11,7 @@ use app::AppState;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Parse CLI arguments
     let args: Vec<String> = std::env::args().collect();
-    
+
     if args.contains(&"--help".to_string()) || args.contains(&"-h".to_string()) {
         println!("VstKit Desktop POC");
         println!();

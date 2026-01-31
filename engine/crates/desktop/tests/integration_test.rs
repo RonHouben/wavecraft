@@ -2,18 +2,16 @@
 
 use bridge::{IpcHandler, ParameterHost};
 use desktop::AppState;
-use protocol::{IpcRequest, RequestId, METHOD_GET_ALL_PARAMETERS, METHOD_GET_PARAMETER, METHOD_SET_PARAMETER};
+use protocol::{
+    IpcRequest, METHOD_GET_ALL_PARAMETERS, METHOD_GET_PARAMETER, METHOD_SET_PARAMETER, RequestId,
+};
 
 #[test]
 fn test_get_all_parameters_integration() {
     let state = AppState::new();
     let handler = IpcHandler::new(state);
 
-    let request = IpcRequest::new(
-        RequestId::Number(1),
-        METHOD_GET_ALL_PARAMETERS,
-        None,
-    );
+    let request = IpcRequest::new(RequestId::Number(1), METHOD_GET_ALL_PARAMETERS, None);
 
     let response = handler.handle_request(request);
 

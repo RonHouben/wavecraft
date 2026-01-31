@@ -6,9 +6,9 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
+use xtask::Platform;
 use xtask::output::*;
 use xtask::paths;
-use xtask::Platform;
 
 /// Notarization request state (persisted to disk).
 #[derive(Debug, Serialize, Deserialize)]
@@ -36,8 +36,7 @@ impl NotarizeConfig {
     /// Load configuration from environment.
     pub fn from_env() -> Result<Self> {
         Ok(Self {
-            apple_id: std::env::var("APPLE_ID")
-                .context("APPLE_ID environment variable not set")?,
+            apple_id: std::env::var("APPLE_ID").context("APPLE_ID environment variable not set")?,
             team_id: std::env::var("APPLE_TEAM_ID")
                 .context("APPLE_TEAM_ID environment variable not set")?,
             password: std::env::var("APPLE_APP_PASSWORD")
@@ -104,8 +103,8 @@ fn submit(config: &NotarizeConfig) -> Result<()> {
     }
 
     // Parse response to get request ID
-    let response: serde_json::Value = serde_json::from_slice(&output.stdout)
-        .context("Failed to parse notarytool response")?;
+    let response: serde_json::Value =
+        serde_json::from_slice(&output.stdout).context("Failed to parse notarytool response")?;
 
     let request_id = response["id"]
         .as_str()
@@ -126,7 +125,10 @@ fn submit(config: &NotarizeConfig) -> Result<()> {
     fs::write(&request_file, serde_json::to_string_pretty(&request)?)
         .context("Failed to write request file")?;
 
-    print_success(&format!("Submission successful! Request ID: {}", request_id));
+    print_success(&format!(
+        "Submission successful! Request ID: {}",
+        request_id
+    ));
     print_info(&format!("Request saved to: {}", request_file.display()));
     print_info("Run 'cargo xtask notarize --status' to check progress");
     print_info("Run 'cargo xtask notarize --staple' when complete");
@@ -141,7 +143,10 @@ fn submit(config: &NotarizeConfig) -> Result<()> {
 fn status(config: &NotarizeConfig) -> Result<()> {
     let request = load_request()?;
 
-    print_status(&format!("Checking status for request {}...", request.request_id));
+    print_status(&format!(
+        "Checking status for request {}...",
+        request.request_id
+    ));
 
     let output = Command::new("xcrun")
         .arg("notarytool")
@@ -158,8 +163,8 @@ fn status(config: &NotarizeConfig) -> Result<()> {
         .output()
         .context("Failed to run notarytool info")?;
 
-    let response: serde_json::Value = serde_json::from_slice(&output.stdout)
-        .context("Failed to parse notarytool response")?;
+    let response: serde_json::Value =
+        serde_json::from_slice(&output.stdout).context("Failed to parse notarytool response")?;
 
     let status = response["status"].as_str().unwrap_or("unknown");
 
@@ -302,9 +307,8 @@ fn load_request() -> Result<NotarizationRequest> {
     let engine_dir = paths::engine_dir()?;
     let request_file = engine_dir.join(REQUEST_FILE);
 
-    let content = fs::read_to_string(&request_file).context(
-        "No pending notarization request. Run 'cargo xtask notarize --submit' first",
-    )?;
+    let content = fs::read_to_string(&request_file)
+        .context("No pending notarization request. Run 'cargo xtask notarize --submit' first")?;
 
     serde_json::from_str(&content).context("Failed to parse request file")
 }
@@ -372,17 +376,24 @@ mod tests {
 
     #[test]
     fn test_notarize_config_from_env() {
-        std::env::set_var("APPLE_ID", "test@example.com");
-        std::env::set_var("APPLE_TEAM_ID", "ABC123XYZ");
-        std::env::set_var("APPLE_APP_PASSWORD", "test-password");
+        // SAFETY: This is a test that runs in isolation. Environment variable
+        // modification is acceptable in single-threaded test contexts.
+        unsafe {
+            std::env::set_var("APPLE_ID", "test@example.com");
+            std::env::set_var("APPLE_TEAM_ID", "ABC123XYZ");
+            std::env::set_var("APPLE_APP_PASSWORD", "test-password");
+        }
 
         let config = NotarizeConfig::from_env().unwrap();
         assert_eq!(config.apple_id, "test@example.com");
         assert_eq!(config.team_id, "ABC123XYZ");
         assert_eq!(config.password, "test-password");
 
-        std::env::remove_var("APPLE_ID");
-        std::env::remove_var("APPLE_TEAM_ID");
-        std::env::remove_var("APPLE_APP_PASSWORD");
+        // SAFETY: Cleanup after test
+        unsafe {
+            std::env::remove_var("APPLE_ID");
+            std::env::remove_var("APPLE_TEAM_ID");
+            std::env::remove_var("APPLE_APP_PASSWORD");
+        }
     }
 }

@@ -216,7 +216,11 @@ pub const NOTIFICATION_PARAMETER_CHANGED: &str = "parameterChanged";
 
 impl IpcRequest {
     /// Create a new request
-    pub fn new(id: RequestId, method: impl Into<String>, params: Option<serde_json::Value>) -> Self {
+    pub fn new(
+        id: RequestId,
+        method: impl Into<String>,
+        params: Option<serde_json::Value>,
+    ) -> Self {
         Self {
             jsonrpc: "2.0".to_string(),
             id,
@@ -285,17 +289,26 @@ impl IpcError {
 
     /// Invalid request error
     pub fn invalid_request(reason: impl Into<String>) -> Self {
-        Self::new(ERROR_INVALID_REQUEST, format!("Invalid request: {}", reason.into()))
+        Self::new(
+            ERROR_INVALID_REQUEST,
+            format!("Invalid request: {}", reason.into()),
+        )
     }
 
     /// Method not found error
     pub fn method_not_found(method: impl AsRef<str>) -> Self {
-        Self::new(ERROR_METHOD_NOT_FOUND, format!("Method not found: {}", method.as_ref()))
+        Self::new(
+            ERROR_METHOD_NOT_FOUND,
+            format!("Method not found: {}", method.as_ref()),
+        )
     }
 
     /// Invalid params error
     pub fn invalid_params(reason: impl Into<String>) -> Self {
-        Self::new(ERROR_INVALID_PARAMS, format!("Invalid params: {}", reason.into()))
+        Self::new(
+            ERROR_INVALID_PARAMS,
+            format!("Invalid params: {}", reason.into()),
+        )
     }
 
     /// Internal error
@@ -305,12 +318,18 @@ impl IpcError {
 
     /// Parameter not found error
     pub fn param_not_found(id: impl AsRef<str>) -> Self {
-        Self::new(ERROR_PARAM_NOT_FOUND, format!("Parameter not found: {}", id.as_ref()))
+        Self::new(
+            ERROR_PARAM_NOT_FOUND,
+            format!("Parameter not found: {}", id.as_ref()),
+        )
     }
 
     /// Parameter out of range error
     pub fn param_out_of_range(id: impl AsRef<str>, value: f32) -> Self {
-        Self::new(ERROR_PARAM_OUT_OF_RANGE, format!("Parameter '{}' value {} out of range", id.as_ref(), value))
+        Self::new(
+            ERROR_PARAM_OUT_OF_RANGE,
+            format!("Parameter '{}' value {} out of range", id.as_ref(), value),
+        )
     }
 }
 
@@ -325,7 +344,7 @@ mod tests {
             METHOD_GET_PARAMETER,
             Some(serde_json::json!({"id": "gain"})),
         );
-        
+
         let json = serde_json::to_string(&req).unwrap();
         assert!(json.contains("\"jsonrpc\":\"2.0\""));
         assert!(json.contains("\"method\":\"getParameter\""));
@@ -335,9 +354,12 @@ mod tests {
     fn test_response_serialization() {
         let resp = IpcResponse::success(
             RequestId::Number(1),
-            GetParameterResult { id: "gain".to_string(), value: 0.5 },
+            GetParameterResult {
+                id: "gain".to_string(),
+                value: 0.5,
+            },
         );
-        
+
         let json = serde_json::to_string(&resp).unwrap();
         assert!(json.contains("\"jsonrpc\":\"2.0\""));
         assert!(json.contains("\"result\""));
@@ -350,7 +372,7 @@ mod tests {
             RequestId::String("test".to_string()),
             IpcError::method_not_found("unknownMethod"),
         );
-        
+
         let json = serde_json::to_string(&resp).unwrap();
         assert!(json.contains("\"error\""));
         assert!(!json.contains("\"result\""));
@@ -360,9 +382,12 @@ mod tests {
     fn test_notification_serialization() {
         let notif = IpcNotification::new(
             NOTIFICATION_PARAMETER_CHANGED,
-            ParameterChangedNotification { id: "gain".to_string(), value: 0.8 },
+            ParameterChangedNotification {
+                id: "gain".to_string(),
+                value: 0.8,
+            },
         );
-        
+
         let json = serde_json::to_string(&notif).unwrap();
         println!("Notification JSON: {}", json);
         assert!(json.contains("\"jsonrpc\":\"2.0\""));

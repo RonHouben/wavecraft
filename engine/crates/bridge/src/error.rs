@@ -40,9 +40,7 @@ impl BridgeError {
                 protocol::IpcError::param_out_of_range(id, *value)
             }
             BridgeError::UnknownMethod(method) => protocol::IpcError::method_not_found(method),
-            BridgeError::InvalidParams { reason, .. } => {
-                protocol::IpcError::invalid_params(reason)
-            }
+            BridgeError::InvalidParams { reason, .. } => protocol::IpcError::invalid_params(reason),
             BridgeError::Internal(reason) => protocol::IpcError::internal_error(reason),
         }
     }

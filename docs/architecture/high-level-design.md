@@ -193,6 +193,33 @@ VstKit plugins require specific entitlements for the hardened runtime due to WKW
 
 See [macOS Signing Guide](../guides/macos-signing.md) for complete setup instructions.
 
+### CI/CD Pipelines
+
+VstKit uses GitHub Actions for continuous integration and release automation.
+
+**CI Build** (`.github/workflows/ci.yml`):
+- Triggers on push/PR to `main`
+- Builds UI and plugin with `webview_editor` feature
+- Ad-hoc signs bundles for artifact verification
+- Uploads signed VST3/CLAP artifacts (30-day retention)
+
+**Release Build** (`.github/workflows/release.yml`):
+- Triggers on version tags (`v*`) or manual dispatch
+- Imports Developer ID certificate from secrets
+- Signs with hardened runtime and entitlements
+- Submits for Apple notarization and staples tickets
+- Uploads production-ready artifacts
+
+**Required Secrets for Release:**
+| Secret | Description |
+|--------|-------------|
+| `APPLE_CERTIFICATE_P12` | Base64-encoded .p12 certificate |
+| `APPLE_CERTIFICATE_PASSWORD` | Password for .p12 file |
+| `APPLE_SIGNING_IDENTITY` | Full signing identity string |
+| `APPLE_ID` | Apple ID email for notarization |
+| `APPLE_TEAM_ID` | 10-character team identifier |
+| `APPLE_APP_PASSWORD` | App-specific password for notarytool |
+
 ⸻
 
 ## Audio Unit (AU) Architecture

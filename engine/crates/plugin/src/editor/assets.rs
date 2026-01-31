@@ -4,7 +4,7 @@
 //! into the plugin binary using `include_dir!`. Assets are served via a
 //! custom protocol handler in the WebView.
 
-use include_dir::{include_dir, Dir};
+use include_dir::{Dir, include_dir};
 
 /// Embedded UI assets from `ui/dist/`
 ///
@@ -66,6 +66,9 @@ mod tests {
         assert_eq!(mime_type_from_path("style.css"), "text/css");
         assert_eq!(mime_type_from_path("app.js"), "application/javascript");
         assert_eq!(mime_type_from_path("data.json"), "application/json");
-        assert_eq!(mime_type_from_path("unknown.xyz"), "application/octet-stream");
+        assert_eq!(
+            mime_type_from_path("unknown.xyz"),
+            "application/octet-stream"
+        );
     }
 }

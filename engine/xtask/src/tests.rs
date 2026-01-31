@@ -337,8 +337,8 @@ mod cli_tests {
 
     #[test]
     fn test_all_command_full_options() {
-        let cli = parse_args(&["all", "--skip-tests", "--skip-au", "--dry-run", "--verbose"])
-            .unwrap();
+        let cli =
+            parse_args(&["all", "--skip-tests", "--skip-au", "--dry-run", "--verbose"]).unwrap();
         assert!(cli.dry_run);
         assert!(cli.verbose);
         match cli.command {
@@ -372,7 +372,7 @@ mod cli_tests {
 
 #[cfg(test)]
 mod lib_tests {
-    use crate::{BuildMode, Platform, PLUGIN_NAME};
+    use crate::{BuildMode, PLUGIN_NAME, Platform};
 
     // =========================================================================
     // BuildMode Tests

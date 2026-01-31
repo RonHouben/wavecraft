@@ -8,11 +8,10 @@ use std::sync::{Arc, Mutex};
 use nih_plug::prelude::*;
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, ProtocolObject};
-use objc2::{declare_class, msg_send, msg_send_id, mutability, ClassType, DeclaredClass};
+use objc2::{ClassType, DeclaredClass, declare_class, msg_send, msg_send_id, mutability};
 use objc2_app_kit::NSView;
 use objc2_foundation::{
-    MainThreadMarker, NSData, NSObject, NSObjectProtocol, NSString, NSURL,
-    NSURLResponse,
+    MainThreadMarker, NSData, NSObject, NSObjectProtocol, NSString, NSURL, NSURLResponse,
 };
 use objc2_web_kit::{
     WKScriptMessage, WKScriptMessageHandler, WKURLSchemeHandler, WKURLSchemeTask,
@@ -27,7 +26,7 @@ use super::bridge::PluginEditorBridge;
 use super::webview::{WebViewConfig, WebViewHandle};
 
 /// macOS WebView handle.
-/// 
+///
 /// Holds the WKWebView and associated resources.
 pub struct MacOSWebView {
     webview: Arc<Mutex<Option<Retained<WKWebView>>>>,
@@ -108,20 +107,15 @@ pub fn create_macos_webview(config: WebViewConfig) -> Result<Box<dyn WebViewHand
     let webview_config = create_webview_config(mtm)?;
 
     // Create the webview
-    let webview = unsafe {
-        WKWebView::initWithFrame_configuration(
-            mtm.alloc(),
-            frame,
-            &webview_config,
-        )
-    };
-    
+    let webview =
+        unsafe { WKWebView::initWithFrame_configuration(mtm.alloc(), frame, &webview_config) };
+
     // Enable autoresizing so the webview resizes with the parent
     #[allow(non_upper_case_globals)]
     const NSViewWidthSizable: u64 = 1 << 1;
     #[allow(non_upper_case_globals)]
     const NSViewHeightSizable: u64 = 1 << 4;
-    
+
     unsafe {
         let autoresizing_mask = NSViewWidthSizable | NSViewHeightSizable;
         let _: () = msg_send![&webview, setAutoresizingMask: autoresizing_mask];
@@ -145,13 +139,15 @@ pub fn create_macos_webview(config: WebViewConfig) -> Result<Box<dyn WebViewHand
 }
 
 /// Create WKWebView configuration with URL scheme handler.
-fn create_webview_config(mtm: MainThreadMarker) -> Result<Retained<WKWebViewConfiguration>, String> {
+fn create_webview_config(
+    mtm: MainThreadMarker,
+) -> Result<Retained<WKWebViewConfiguration>, String> {
     let config = unsafe { WKWebViewConfiguration::new() };
 
     // Register custom URL scheme handler for vstkit://
     let scheme_handler = AssetSchemeHandler::new(mtm);
     let scheme_name = NSString::from_str("vstkit");
-    
+
     unsafe {
         config.setURLSchemeHandler_forURLScheme(
             Some(&ProtocolObject::from_ref(&*scheme_handler)),
@@ -188,7 +184,7 @@ fn configure_webview(
 
     // Create and add IPC message handler
     let message_handler = IpcMessageHandler::new(handler, webview, mtm);
-    
+
     let handler_name = NSString::from_str("ipcHandler");
     unsafe {
         user_content_controller.addScriptMessageHandler_name(
@@ -206,7 +202,7 @@ fn load_ui(webview: &WKWebView) -> Result<(), String> {
     if let Some((html_bytes, _mime)) = assets::get_asset("index.html") {
         let html_string = String::from_utf8_lossy(html_bytes);
         let ns_html = NSString::from_str(&html_string);
-        
+
         // Create base URL for resolving relative paths
         let base_url_string = NSString::from_str("vstkit://localhost/");
         let base_url = unsafe { NSURL::URLWithString(&base_url_string) }
@@ -215,7 +211,7 @@ fn load_ui(webview: &WKWebView) -> Result<(), String> {
         unsafe {
             let _: () = msg_send![webview, loadHTMLString:&*ns_html baseURL:&*base_url];
         }
-        
+
         Ok(())
     } else {
         // Fallback: Load a minimal HTML page
@@ -243,7 +239,7 @@ fn load_ui(webview: &WKWebView) -> Result<(), String> {
 </body>
 </html>
         "#;
-        
+
         let ns_html = NSString::from_str(fallback_html);
         let base_url_string = NSString::from_str("about:blank");
         let base_url = unsafe { NSURL::URLWithString(&base_url_string) }
@@ -252,7 +248,7 @@ fn load_ui(webview: &WKWebView) -> Result<(), String> {
         unsafe {
             let _: () = msg_send![webview, loadHTMLString:&*ns_html baseURL:&*base_url];
         }
-        
+
         Ok(())
     }
 }
@@ -306,11 +302,11 @@ declare_class!(
             message: &WKScriptMessage,
         ) {
             let ivars = self.ivars();
-            
+
             // Get message body as string
             // SAFETY: WKScriptMessage::body() is safe to call within this message handler context
             let body = unsafe { message.body() };
-            
+
             // The body is an NSObject - try to convert it to a string
             let body_str: String = unsafe {
                 let desc: Retained<NSString> = msg_send_id![&*body, description];
@@ -333,10 +329,10 @@ declare_class!(
                 .replace('\'', "\\'")
                 .replace('\n', "\\n")
                 .replace('\r', "\\r");
-            
+
             let js_code = format!("globalThis.__VSTKIT_IPC__._receive('{}');", escaped_response);
             let js_string = NSString::from_str(&js_code);
-            
+
             // Get webview from weak reference
             if let Some(wv) = ivars.webview.load() {
                 unsafe {
@@ -392,7 +388,7 @@ declare_class!(
             // Get the request URL
             let request = unsafe { task.request() };
             let url = unsafe { request.URL() };
-            
+
             if let Some(url) = url {
                 let url_string = unsafe { url.absoluteString() };
                 let path = if let Some(ns_str) = url_string {
@@ -400,22 +396,22 @@ declare_class!(
                 } else {
                     return; // No URL string, nothing to do
                 };
-                
+
                 nih_trace!("[Asset Handler] Request: {}", path);
-                
+
                 // Remove the vstkit://localhost/ prefix
                 let asset_path = path
                     .strip_prefix("vstkit://localhost/")
                     .unwrap_or(&path);
-                
+
                 // Try to load the asset
                 if let Some((bytes, mime_type)) = assets::get_asset(asset_path) {
                     nih_trace!("[Asset Handler] Found asset: {} ({} bytes, {})", asset_path, bytes.len(), mime_type);
-                    
+
                     // Create NSData from bytes
                     // SAFETY: NSData::with_bytes is safe to call
                     let data = NSData::with_bytes(bytes);
-                    
+
                     // Create response
                     let response = unsafe {
                         let mime_string = NSString::from_str(mime_type);
@@ -428,7 +424,7 @@ declare_class!(
                         ];
                         url_response
                     };
-                    
+
                     // Send response and data
                     unsafe {
                         task.didReceiveResponse(&response);
@@ -437,7 +433,7 @@ declare_class!(
                     }
                 } else {
                     nih_error!("[Asset Handler] Asset not found: {}", asset_path);
-                    
+
                     // Send 404 error
                     let error = unsafe {
                         let error_domain = NSString::from_str("VstKitErrorDomain");
@@ -450,7 +446,7 @@ declare_class!(
                         ];
                         error
                     };
-                    
+
                     unsafe {
                         let _: () = msg_send![task, didFailWithError: &*error];
                     }
@@ -478,5 +474,3 @@ impl AssetSchemeHandler {
         }
     }
 }
-
-

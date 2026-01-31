@@ -41,13 +41,14 @@ pub fn run(packages: Option<Vec<String>>, test_all: bool, verbose: bool) -> Resu
             cmd.arg("-p").arg(*pkg);
         }
         if verbose {
-            println!("Running: cargo test -p {}", DEFAULT_TEST_CRATES.join(" -p "));
+            println!(
+                "Running: cargo test -p {}",
+                DEFAULT_TEST_CRATES.join(" -p ")
+            );
         }
     }
 
-    let status = cmd
-        .status()
-        .context("Failed to run cargo test")?;
+    let status = cmd.status().context("Failed to run cargo test")?;
 
     if !status.success() {
         anyhow::bail!("Tests failed with exit code: {:?}", status.code());

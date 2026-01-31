@@ -22,7 +22,7 @@ mod macos;
 #[cfg(target_os = "windows")]
 mod windows;
 
-pub use webview::{create_webview, WebViewConfig, WebViewHandle};
+pub use webview::{WebViewConfig, WebViewHandle, create_webview};
 
 // Re-export for lib.rs compatibility
 pub use egui::create_egui_editor as create_editor;
@@ -70,9 +70,9 @@ impl Editor for VstKitEditor {
     ) -> Box<dyn Any + Send> {
         // Clone the shared meter consumer for this editor instance
         let meter_consumer = self.meter_consumer.clone();
-        
+
         let size = *self.size.lock().unwrap();
-        
+
         let config = WebViewConfig {
             params: self.params.clone(),
             context,
@@ -87,7 +87,7 @@ impl Editor for VstKitEditor {
             Ok(webview) => {
                 // Store the webview handle for resize operations
                 *self.webview_handle.lock().unwrap() = Some(webview);
-                
+
                 // Return a dummy value that the host will hold
                 Box::new(())
             }
@@ -109,8 +109,12 @@ impl Editor for VstKitEditor {
 
     fn param_value_changed(&self, id: &str, normalized_value: f32) {
         // Log for debugging automation updates
-        nih_log!("param_value_changed called: id={}, value={}", id, normalized_value);
-        
+        nih_log!(
+            "param_value_changed called: id={}, value={}",
+            id,
+            normalized_value
+        );
+
         // Push parameter update to WebView via JavaScript evaluation
         if let Ok(webview_lock) = self.webview_handle.lock() {
             if let Some(webview) = webview_lock.as_ref() {
@@ -126,7 +130,7 @@ impl Editor for VstKitEditor {
                     }}",
                     id_escaped, normalized_value
                 );
-                
+
                 if let Err(e) = webview.evaluate_script(&js) {
                     nih_error!("Failed to evaluate parameter update script: {}", e);
                 } else {
@@ -167,6 +171,9 @@ impl Editor for VstKitEditor {
 }
 
 /// Create a WebView editor.
-pub fn create_webview_editor(params: Arc<VstKitParams>, meter_consumer: Arc<Mutex<MeterConsumer>>) -> Option<Box<dyn Editor>> {
+pub fn create_webview_editor(
+    params: Arc<VstKitParams>,
+    meter_consumer: Arc<Mutex<MeterConsumer>>,
+) -> Option<Box<dyn Editor>> {
     Some(Box::new(VstKitEditor::new(params, meter_consumer)))
 }
