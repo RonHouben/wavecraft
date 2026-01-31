@@ -69,8 +69,9 @@ Key: the audio path never blocks on UI; the UI never directly runs audio code.
 	•	Ensure build tooling produces all required bundles (VST3/CLAP from Cargo, AU from CMake/clap-wrapper).
 	•	Follow Steinberg VST3 dev docs, CLAP spec, and Apple Audio Unit Hosting Guide for format-specific quirks.
 	3.	UI (React)
-	•	SPA built with Vite (or your preferred bundler). Produce static assets (index.html, bundle.js, CSS).
-	•	Use a small runtime footprint approach: tree-shake, code-split, avoid large libraries unless necessary.
+	•	SPA built with Vite + TypeScript + TailwindCSS. Produce static assets (index.html, bundle.js, CSS).
+	•	**Styling:** TailwindCSS utility-first approach with custom theme tokens. No component-level CSS files. See [Coding Standards](./coding-standards.md#css--styling-tailwindcss) for details.
+	•	Use a small runtime footprint approach: tree-shake, code-split, avoid large libraries unless necessary. CSS bundle target: <10KB gzipped (achieved: ~3.7KB).
 	4.	Embedded WebView layer
 	•	Use a cross-platform Rust webview binding such as wry (used by Tauri) which wraps native webview engines (WebView2, WKWebView, WebKitGTK). This avoids shipping a full Chromium and keeps the binary smaller than Electron.  ￼
 	•	On Windows: WebView2 (Edge/Chromium); macOS: WKWebView; Linux: WebKitGTK or an appropriate system webview.
@@ -503,7 +504,7 @@ Docs for VST3 build process: Steinberg dev portal.  ￼
 	•	Build: Cargo + CMake (for AU wrapper) + xtask (custom build commands).
 	•	Signing: `codesign` (macOS) via `cargo xtask sign`.
 	•	Notarization: `notarytool` (macOS) via `cargo xtask notarize`.
-	•	React tooling: Vite + TypeScript, bundle to static assets.
+	•	React tooling: Vite + TypeScript + TailwindCSS, bundle to static assets.
 
 ⸻
 

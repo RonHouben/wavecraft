@@ -7,7 +7,6 @@
 
 import React, { useCallback, useRef, useState } from 'react';
 import { useRequestResize } from '../lib/vstkit-ipc';
-import './ResizeHandle.css';
 
 export function ResizeHandle(): React.JSX.Element {
   const requestResize = useRequestResize();
@@ -54,7 +53,9 @@ export function ResizeHandle(): React.JSX.Element {
 
   return (
     <button
-      className={`resize-handle ${isDragging ? 'dragging' : ''}`}
+      className={`group fixed bottom-0 right-0 z-[9999] flex h-6 w-6 cursor-nwse-resize select-none items-center justify-center border-none bg-transparent p-0 transition-colors duration-150 ${
+        isDragging ? 'bg-white/10' : 'hover:bg-white/5'
+      }`}
       onMouseDown={handleMouseDown}
       aria-label="Resize window"
       type="button"
@@ -65,7 +66,9 @@ export function ResizeHandle(): React.JSX.Element {
         viewBox="0 0 16 16"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="resize-grip-icon"
+        className={`transition-colors duration-150 ${
+          isDragging ? 'text-white/80' : 'text-white/30 group-hover:text-white/60'
+        }`}
       >
         {/* Diagonal grip lines */}
         <line
