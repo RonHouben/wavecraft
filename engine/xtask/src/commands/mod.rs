@@ -1,6 +1,7 @@
 //! Command implementations for the xtask build system.
 
 pub mod au;
+pub mod build_ui;
 pub mod bundle;
 pub mod clean;
 pub mod desktop;
