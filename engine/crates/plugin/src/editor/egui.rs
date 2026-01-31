@@ -11,14 +11,10 @@ use nih_plug_egui::{EguiState, create_egui_editor as nih_create_egui_editor};
 
 use crate::params::VstKitParams;
 
-/// Default editor width in pixels.
-const EDITOR_WIDTH: u32 = 400;
-/// Default editor height in pixels.
-const EDITOR_HEIGHT: u32 = 300;
-
 /// Create the placeholder egui editor.
+#[allow(dead_code)] // Placeholder for alternative UI backend
 pub fn create_egui_editor(params: Arc<VstKitParams>) -> Option<Box<dyn Editor>> {
-    let state = EguiState::from_size(EDITOR_WIDTH, EDITOR_HEIGHT);
+    let state = EguiState::from_size(400, 300);
 
     nih_create_egui_editor(
         state,

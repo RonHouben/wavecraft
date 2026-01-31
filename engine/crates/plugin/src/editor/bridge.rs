@@ -125,6 +125,5 @@ mod tests {
     #[test]
     fn test_placeholder() {
         // TODO: Add tests once we have a mock GuiContext
-        assert!(true);
     }
 }

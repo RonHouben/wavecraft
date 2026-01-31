@@ -78,7 +78,7 @@ impl Plugin for VstKitPlugin {
 
         #[cfg(not(feature = "webview_editor"))]
         {
-            create_editor(self.params.clone())
+            create_editor(self.params.clone(), self.meter_consumer.clone())
         }
     }
 
