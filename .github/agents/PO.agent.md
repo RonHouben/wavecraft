@@ -163,6 +163,7 @@ Use this format:
 ```
 
 #### Where to save user stories
+- Before starting creating the user stories, make sure that you are checked out to the correct feature branch in git. If the branch does not exist, create a new branch named after the feature you are working on.
 - Write them down in a markdown file in location `/docs/feature-specs/{feature-name}/user-stories.md`
 
 ---
