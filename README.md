@@ -4,29 +4,32 @@ A cross-platform audio effects plugin framework built with **Rust** and **React*
 
 ## Overview
 
-VSTKit is a cross-platform audio effects plugin framework (VST3). It combines a real-time safe Rust audio engine with a modern React-based UI, targeting professional DAW environments.
+VSTKit is an audio effects plugin framework (VST3) for **macOS + Ableton Live**. It combines a real-time safe Rust audio engine with a modern React-based UI.
+
+> **Note:** Windows and Linux support is deprioritized. The architecture supports cross-platform via wry, but current development focuses exclusively on macOS + Ableton Live.
 
 ## Architecture
 
 | Layer | Technology | Purpose |
 |-------|------------|---------|
 | **Audio/DSP** | Rust (nih-plug) | Real-time audio processing |
-| **Plugin API** | VST3 (CLAP/AU optional) | DAW integration |
+| **Plugin API** | VST3 (primary), CLAP, AU (via clap-wrapper) | DAW integration |
 | **UI** | React (Vite) | User interface |
-| **UI Embedding** | wry (WebView2/WKWebView) | Cross-platform webview |
+| **UI Embedding** | wry (WKWebView on macOS) | WebView embedding |
 
 Communication between UI and audio uses lock-free parameter systems and ring buffers to maintain real-time safety.
 
 ## Platforms
 
-- macOS (WKWebView)
-- Windows (WebView2)
-- Linux (WebKitGTK)
+- **macOS (WKWebView)** — Primary, actively developed
+- Windows (WebView2) — Deprioritized
+- Linux (WebKitGTK) — Deprioritized
 
 ## Target DAWs
 
-- Ableton Live (primary)
-- Logic Pro, Reaper, and other VST3-compatible hosts
+- **Ableton Live (macOS)** — Primary target
+- Logic Pro (macOS, AU) — Secondary, nice-to-have
+- Other DAWs — Deprioritized
 
 ## Project Structure
 

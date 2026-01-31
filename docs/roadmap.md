@@ -73,7 +73,7 @@ This document tracks implementation progress against the milestones defined in t
 |------|--------|-------|
 | Integrate webview into plugin GUI (nih-plug editor) | ✅ | WKWebView with Editor trait |
 | WKWebView integration (macOS) | ✅ | Custom URL scheme handler for assets |
-| WebView2 integration (Windows) | 🚧 | Placeholder implementation |
+| WebView2 integration (Windows) | ⏳ | Deprioritized — macOS + Ableton is primary target |
 | Implement parameter bridge (UI ↔ host params) | ✅ | GuiContext integration |
 | Implement SPSC ring buffer for audio → UI metering | ✅ | rtrb-based MeterProducer/Consumer |
 | Implement meter visualization in React | ✅ | Peak/RMS meters with dB display |
@@ -83,25 +83,27 @@ This document tracks implementation progress against the milestones defined in t
 
 ---
 
-## Milestone 4: Cross-Platform Hardening & Packaging (Week 8–12)
+## Milestone 4: macOS Hardening & Packaging (Week 8–12)
 
 **Status: ⏳ Not Started**
+
+> **Scope:** Focused on macOS + Ableton Live as the primary target. Windows/Linux support is deprioritized.
 
 | Task | Status | Notes |
 |------|--------|-------|
 | macOS code signing | ⏳ | |
 | macOS notarization | ⏳ | |
-| Windows code signing | ⏳ | |
-| Windows installer (MSI) | ⏳ | |
-| Linux packaging (AppImage/Flatpak) | ⏳ | |
+| Windows code signing | ⏳ | Deprioritized |
+| Windows installer (MSI) | ⏳ | Deprioritized |
+| Linux packaging (AppImage/Flatpak) | ⏳ | Deprioritized |
 | **Host Compatibility Testing** | | |
-| Ableton Live (macOS) | ⏳ | |
-| Ableton Live (Windows) | ⏳ | |
-| Logic Pro (macOS, AU) | ⏳ | |
-| GarageBand (macOS, AU) | ⏳ | |
-| Reaper (all platforms) | ⏳ | |
-| Cubase | ⏳ | |
-| FL Studio | ⏳ | |
+| Ableton Live (macOS) | ⏳ | **Primary target** |
+| Ableton Live (Windows) | ⏳ | Deprioritized |
+| Logic Pro (macOS, AU) | ⏳ | Secondary (nice-to-have) |
+| GarageBand (macOS, AU) | ⏳ | Secondary (nice-to-have) |
+| Reaper (all platforms) | ⏳ | Deprioritized |
+| Cubase | ⏳ | Deprioritized |
+| FL Studio | ⏳ | Deprioritized |
 | **AU Validation** | | |
 | `auval` passes without errors | ✅ | Validated 2026-01-30 |
 | Investigate AU custom UI issue | ⏳ | clap-wrapper shows generic view; root cause TBD |
@@ -143,15 +145,20 @@ This document tracks implementation progress against the milestones defined in t
 
 ## Next Steps
 
-1. **Milestone 3**: Complete Windows WebView2 integration
-   - Port WKWebView approach to WebView2 for Windows
-   - Test cross-platform parameter behavior
-2. **Investigate AU Custom UI Issue**
+> **Focus:** macOS + Ableton Live is the primary target. Windows/Linux and other DAWs are deprioritized.
+
+1. **Milestone 4**: macOS packaging & Ableton Live compatibility
+   - macOS code signing and notarization
+   - Thorough Ableton Live (macOS) testing
+2. **Investigate AU Custom UI Issue** (nice-to-have)
    - Understand why clap-wrapper shows generic parameter view
    - Research CLAP GUI extension forwarding in clap-wrapper
    - Document findings and potential solutions
-3. **Milestone 4**: DAW compatibility testing
-   - Logic Pro AU validation
-   - Multi-DAW testing matrix
-4. Investigate plugin editor resizing behavior across hosts
+3. **Secondary**: Logic Pro AU validation (if time permits)
+4. Investigate plugin editor resizing behavior in Ableton Live
 5. Evaluate TailwindCSS for UI styling consistency
+
+### Deprioritized (Future Consideration)
+- Windows WebView2 integration
+- Linux support
+- Non-Ableton DAW compatibility (Reaper, Cubase, FL Studio)
