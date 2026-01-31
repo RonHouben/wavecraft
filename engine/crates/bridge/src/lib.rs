@@ -39,6 +39,11 @@
 //!         // Implementation
 //!         None
 //!     }
+//!
+//!     fn request_resize(&self, _width: u32, _height: u32) -> bool {
+//!         // Implementation
+//!         false
+//!     }
 //! }
 //!
 //! // Create handler
