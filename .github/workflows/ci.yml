@@ -109,8 +109,8 @@ jobs:
         with:
           workspaces: engine
 
-      - name: Build all targets
-        run: cargo build --workspace --all-targets
+      - name: Build with clippy (compile for lint compatibility)
+        run: cargo clippy --workspace --all-targets --no-deps
         working-directory: engine
 
       - name: Upload UI dist
