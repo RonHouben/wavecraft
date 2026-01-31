@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
+import path from 'node:path';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -11,6 +11,9 @@ export default defineConfig({
       '@vstkit/ipc': path.resolve(__dirname, './src/lib/vstkit-ipc'),
       '@vstkit/ipc/meters': path.resolve(__dirname, './src/lib/vstkit-ipc/meters'),
     },
+  },
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.VITE_APP_VERSION || 'dev'),
   },
   build: {
     outDir: 'dist',

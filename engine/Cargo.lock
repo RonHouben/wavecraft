@@ -4591,6 +4591,7 @@ dependencies = [
  "nih_plug_xtask",
  "serde",
  "serde_json",
+ "toml 0.8.2",
  "which",
 ]
 
