@@ -1,12 +1,28 @@
 /**
  * React Hooks - High-level React integration for parameter management
+ *
+ * Environment-aware: In browser mode (development), these hooks return
+ * mock data without attempting IPC. In WKWebView mode (production), they
+ * use real IPC.
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { ParameterClient } from './ParameterClient';
 import type { ParameterInfo } from './types';
+import { isBrowserEnvironment } from './environment';
 
-const client = ParameterClient.getInstance();
+// Detect environment once at module load time.
+// Must be evaluated at module scope (not inside hooks) to comply with React's
+// Rules of Hooks - conditional hook calls based on runtime checks inside hook
+// bodies would violate hook call order consistency.
+const IS_BROWSER = isBrowserEnvironment();
+
+// Lazy client initialization - only create if in WebView mode
+let client: ParameterClient | null = null;
+function getClient(): ParameterClient {
+  client ??= ParameterClient.getInstance();
+  return client;
+}
 
 // ============================================================================
 // useParameter - Hook for managing a single parameter
@@ -20,12 +36,23 @@ export interface UseParameterResult {
 }
 
 export function useParameter(id: string): UseParameterResult {
-  const [param, setParam] = useState<ParameterInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Default mock data for browser mode
+  const mockParam: ParameterInfo = {
+    id,
+    name: id.charAt(0).toUpperCase() + id.slice(1),
+    value: 0.5,
+    default: 0.5,
+    type: 'float',
+  };
+
+  const [param, setParam] = useState<ParameterInfo | null>(IS_BROWSER ? mockParam : null);
+  const [isLoading, setIsLoading] = useState(!IS_BROWSER);
   const [error, setError] = useState<Error | null>(null);
 
-  // Load initial parameter value
+  // Load initial parameter value (skip in browser mode)
   useEffect(() => {
+    if (IS_BROWSER) return;
+
     let isMounted = true;
 
     async function loadParameter(): Promise<void> {
@@ -34,7 +61,7 @@ export function useParameter(id: string): UseParameterResult {
         setError(null);
 
         // Get all parameters and find the one we want
-        const allParams = await client.getAllParameters();
+        const allParams = await getClient().getAllParameters();
         const foundParam = allParams.find((p) => p.id === id);
 
         if (isMounted) {
@@ -62,9 +89,11 @@ export function useParameter(id: string): UseParameterResult {
     };
   }, [id]);
 
-  // Subscribe to parameter changes
+  // Subscribe to parameter changes (skip in browser mode)
   useEffect(() => {
-    const unsubscribe = client.onParameterChanged((changedId, value) => {
+    if (IS_BROWSER) return;
+
+    const unsubscribe = getClient().onParameterChanged((changedId, value) => {
       if (changedId === id) {
         setParam((prev) => (prev ? { ...prev, value } : null));
       }
@@ -76,8 +105,14 @@ export function useParameter(id: string): UseParameterResult {
   // Set parameter value
   const setValue = useCallback(
     async (value: number) => {
+      if (IS_BROWSER) {
+        // In browser mode, just update local state
+        setParam((prev) => (prev ? { ...prev, value } : null));
+        return;
+      }
+
       try {
-        await client.setParameter(id, value);
+        await getClient().setParameter(id, value);
         // Optimistically update local state
         setParam((prev) => (prev ? { ...prev, value } : null));
       } catch (err) {
@@ -104,14 +139,19 @@ export interface UseAllParametersResult {
 
 export function useAllParameters(): UseAllParametersResult {
   const [params, setParams] = useState<ParameterInfo[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!IS_BROWSER);
   const [error, setError] = useState<Error | null>(null);
 
   const reload = useCallback(async () => {
+    if (IS_BROWSER) {
+      // In browser mode, no-op
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
-      const allParams = await client.getAllParameters();
+      const allParams = await getClient().getAllParameters();
       setParams(allParams);
     } catch (err) {
       setError(err instanceof Error ? err : new Error(String(err)));
@@ -120,16 +160,22 @@ export function useAllParameters(): UseAllParametersResult {
     }
   }, []);
 
-  // Load on mount
+  // Load on mount (skip in browser mode)
   useEffect(() => {
+    if (IS_BROWSER) return;
     reload();
   }, [reload]);
 
-  // Subscribe to parameter changes
+  // Subscribe to parameter changes (skip in browser mode)
   useEffect(() => {
-    const unsubscribe = client.onParameterChanged((id, value) => {
-      setParams((prev) => prev.map((p) => (p.id === id ? { ...p, value } : p)));
-    });
+    if (IS_BROWSER) return;
+
+    // Note: Nesting depth warning accepted here - inline mapper is idiomatic React pattern
+    const handleParamChange = (changedId: string, value: number): void => {
+      setParams((prev) => prev.map((p) => (p.id === changedId ? { ...p, value } : p)));
+    };
+
+    const unsubscribe = getClient().onParameterChanged(handleParamChange);
 
     return unsubscribe;
   }, []);
@@ -153,11 +199,16 @@ export function useLatencyMonitor(intervalMs = 1000): UseLatencyMonitorResult {
   const [measurements, setMeasurements] = useState<number[]>([]);
 
   useEffect(() => {
+    if (IS_BROWSER) {
+      // In browser mode, return mock data
+      return;
+    }
+
     let isMounted = true;
 
     async function measure(): Promise<void> {
       try {
-        const ms = await client.ping();
+        const ms = await getClient().ping();
         if (isMounted) {
           setLatency(ms);
           setMeasurements((prev) => [...prev.slice(-99), ms]); // Keep last 100

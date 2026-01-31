@@ -24,6 +24,7 @@ export default [
       },
       globals: {
         ...globals.browser,
+        __APP_VERSION__: 'readonly',
       },
     },
     plugins: {

@@ -68,7 +68,7 @@ mod cli_tests {
 
     #[test]
     fn test_no_args_parses() {
-        let cli = parse_args(&[]).unwrap();
+        let cli = parse_args(&[]).expect("Failed to parse empty args - should never fail");
         assert!(cli.command.is_none());
         assert!(!cli.verbose);
         assert!(!cli.dry_run);
@@ -78,32 +78,32 @@ mod cli_tests {
 
     #[test]
     fn test_global_verbose_flag() {
-        let cli = parse_args(&["--verbose"]).unwrap();
+        let cli = parse_args(&["--verbose"]).expect("Failed to parse --verbose flag");
         assert!(cli.verbose);
     }
 
     #[test]
     fn test_global_verbose_short_flag() {
-        let cli = parse_args(&["-v"]).unwrap();
+        let cli = parse_args(&["-v"]).expect("Failed to parse -v flag");
         assert!(cli.verbose);
     }
 
     #[test]
     fn test_global_dry_run_flag() {
-        let cli = parse_args(&["--dry-run"]).unwrap();
+        let cli = parse_args(&["--dry-run"]).expect("Failed to parse --dry-run flag");
         assert!(cli.dry_run);
     }
 
     #[test]
     fn test_global_debug_flag() {
-        let cli = parse_args(&["--debug"]).unwrap();
+        let cli = parse_args(&["--debug"]).expect("Failed to parse --debug flag");
         assert!(cli.debug);
         assert!(!cli.release);
     }
 
     #[test]
     fn test_global_release_flag() {
-        let cli = parse_args(&["--release"]).unwrap();
+        let cli = parse_args(&["--release"]).expect("Failed to parse --release flag");
         assert!(cli.release);
         assert!(!cli.debug);
     }
@@ -120,7 +120,7 @@ mod cli_tests {
 
     #[test]
     fn test_bundle_command_default() {
-        let cli = parse_args(&["bundle"]).unwrap();
+        let cli = parse_args(&["bundle"]).expect("Failed to parse bundle command");
         match cli.command {
             Some(TestCommands::Bundle { package }) => {
                 assert!(package.is_none());
@@ -131,7 +131,8 @@ mod cli_tests {
 
     #[test]
     fn test_bundle_command_with_package() {
-        let cli = parse_args(&["bundle", "--package", "my-plugin"]).unwrap();
+        let cli = parse_args(&["bundle", "--package", "my-plugin"])
+            .expect("Failed to parse bundle --package");
         match cli.command {
             Some(TestCommands::Bundle { package }) => {
                 assert_eq!(package.as_deref(), Some("my-plugin"));
@@ -142,7 +143,7 @@ mod cli_tests {
 
     #[test]
     fn test_bundle_command_with_short_package() {
-        let cli = parse_args(&["bundle", "-p", "my-plugin"]).unwrap();
+        let cli = parse_args(&["bundle", "-p", "my-plugin"]).expect("Failed to parse bundle -p");
         match cli.command {
             Some(TestCommands::Bundle { package }) => {
                 assert_eq!(package.as_deref(), Some("my-plugin"));
@@ -153,7 +154,7 @@ mod cli_tests {
 
     #[test]
     fn test_bundle_with_debug_mode() {
-        let cli = parse_args(&["bundle", "--debug"]).unwrap();
+        let cli = parse_args(&["bundle", "--debug"]).expect("Failed to parse bundle --debug");
         assert!(cli.debug);
         match cli.command {
             Some(TestCommands::Bundle { .. }) => {}
@@ -167,7 +168,7 @@ mod cli_tests {
 
     #[test]
     fn test_test_command_default() {
-        let cli = parse_args(&["test"]).unwrap();
+        let cli = parse_args(&["test"]).expect("Failed to parse test command");
         match cli.command {
             Some(TestCommands::Test { package, all }) => {
                 assert!(package.is_empty());
@@ -179,7 +180,7 @@ mod cli_tests {
 
     #[test]
     fn test_test_command_with_all() {
-        let cli = parse_args(&["test", "--all"]).unwrap();
+        let cli = parse_args(&["test", "--all"]).expect("Failed to parse test --all");
         match cli.command {
             Some(TestCommands::Test { all, .. }) => {
                 assert!(all);
@@ -190,7 +191,8 @@ mod cli_tests {
 
     #[test]
     fn test_test_command_with_packages() {
-        let cli = parse_args(&["test", "-p", "dsp", "-p", "protocol"]).unwrap();
+        let cli = parse_args(&["test", "-p", "dsp", "-p", "protocol"])
+            .expect("Failed to parse test -p flags");
         match cli.command {
             Some(TestCommands::Test { package, .. }) => {
                 assert_eq!(package, vec!["dsp", "protocol"]);
@@ -201,7 +203,7 @@ mod cli_tests {
 
     #[test]
     fn test_test_command_verbose() {
-        let cli = parse_args(&["test", "--verbose"]).unwrap();
+        let cli = parse_args(&["test", "--verbose"]).expect("Failed to parse test --verbose");
         assert!(cli.verbose);
         assert!(matches!(cli.command, Some(TestCommands::Test { .. })));
     }
@@ -212,13 +214,13 @@ mod cli_tests {
 
     #[test]
     fn test_au_command() {
-        let cli = parse_args(&["au"]).unwrap();
+        let cli = parse_args(&["au"]).expect("Failed to parse au command");
         assert!(matches!(cli.command, Some(TestCommands::Au)));
     }
 
     #[test]
     fn test_au_command_with_dry_run() {
-        let cli = parse_args(&["au", "--dry-run"]).unwrap();
+        let cli = parse_args(&["au", "--dry-run"]).expect("Failed to parse au --dry-run");
         assert!(cli.dry_run);
         assert!(matches!(cli.command, Some(TestCommands::Au)));
     }
@@ -229,13 +231,13 @@ mod cli_tests {
 
     #[test]
     fn test_install_command() {
-        let cli = parse_args(&["install"]).unwrap();
+        let cli = parse_args(&["install"]).expect("Failed to parse install command");
         assert!(matches!(cli.command, Some(TestCommands::Install)));
     }
 
     #[test]
     fn test_install_command_with_dry_run() {
-        let cli = parse_args(&["install", "--dry-run"]).unwrap();
+        let cli = parse_args(&["install", "--dry-run"]).expect("Failed to parse install --dry-run");
         assert!(cli.dry_run);
         assert!(matches!(cli.command, Some(TestCommands::Install)));
     }
@@ -246,7 +248,7 @@ mod cli_tests {
 
     #[test]
     fn test_clean_command_default() {
-        let cli = parse_args(&["clean"]).unwrap();
+        let cli = parse_args(&["clean"]).expect("Failed to parse clean command");
         match cli.command {
             Some(TestCommands::Clean { installed, force }) => {
                 assert!(!installed);
@@ -258,7 +260,7 @@ mod cli_tests {
 
     #[test]
     fn test_clean_command_with_installed() {
-        let cli = parse_args(&["clean", "--installed"]).unwrap();
+        let cli = parse_args(&["clean", "--installed"]).expect("Failed to parse clean --installed");
         match cli.command {
             Some(TestCommands::Clean { installed, force }) => {
                 assert!(installed);
@@ -270,7 +272,8 @@ mod cli_tests {
 
     #[test]
     fn test_clean_command_with_installed_and_force() {
-        let cli = parse_args(&["clean", "--installed", "--force"]).unwrap();
+        let cli = parse_args(&["clean", "--installed", "--force"])
+            .expect("Failed to parse clean --installed --force");
         match cli.command {
             Some(TestCommands::Clean { installed, force }) => {
                 assert!(installed);
@@ -282,7 +285,7 @@ mod cli_tests {
 
     #[test]
     fn test_clean_command_with_dry_run() {
-        let cli = parse_args(&["clean", "--dry-run"]).unwrap();
+        let cli = parse_args(&["clean", "--dry-run"]).expect("Failed to parse clean --dry-run");
         assert!(cli.dry_run);
         assert!(matches!(cli.command, Some(TestCommands::Clean { .. })));
     }
@@ -293,7 +296,7 @@ mod cli_tests {
 
     #[test]
     fn test_all_command_default() {
-        let cli = parse_args(&["all"]).unwrap();
+        let cli = parse_args(&["all"]).expect("Failed to parse all command");
         match cli.command {
             Some(TestCommands::All {
                 skip_tests,
@@ -308,7 +311,7 @@ mod cli_tests {
 
     #[test]
     fn test_all_command_skip_tests() {
-        let cli = parse_args(&["all", "--skip-tests"]).unwrap();
+        let cli = parse_args(&["all", "--skip-tests"]).expect("Failed to parse all --skip-tests");
         match cli.command {
             Some(TestCommands::All { skip_tests, .. }) => {
                 assert!(skip_tests);
@@ -319,7 +322,7 @@ mod cli_tests {
 
     #[test]
     fn test_all_command_skip_au() {
-        let cli = parse_args(&["all", "--skip-au"]).unwrap();
+        let cli = parse_args(&["all", "--skip-au"]).expect("Failed to parse all --skip-au");
         match cli.command {
             Some(TestCommands::All { skip_au, .. }) => {
                 assert!(skip_au);
@@ -330,15 +333,15 @@ mod cli_tests {
 
     #[test]
     fn test_all_command_with_dry_run() {
-        let cli = parse_args(&["all", "--dry-run"]).unwrap();
+        let cli = parse_args(&["all", "--dry-run"]).expect("Failed to parse all --dry-run");
         assert!(cli.dry_run);
         assert!(matches!(cli.command, Some(TestCommands::All { .. })));
     }
 
     #[test]
     fn test_all_command_full_options() {
-        let cli =
-            parse_args(&["all", "--skip-tests", "--skip-au", "--dry-run", "--verbose"]).unwrap();
+        let cli = parse_args(&["all", "--skip-tests", "--skip-au", "--dry-run", "--verbose"])
+            .expect("Failed to parse all with full options");
         assert!(cli.dry_run);
         assert!(cli.verbose);
         match cli.command {

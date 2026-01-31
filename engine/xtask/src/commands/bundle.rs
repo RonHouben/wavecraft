@@ -37,8 +37,17 @@ pub fn run_with_features(
             anyhow::bail!("UI directory not found: {}", ui_dir.display());
         }
 
+        // Read version from workspace Cargo.toml
+        let version =
+            xtask::read_workspace_version().context("Failed to read workspace version")?;
+
+        if verbose {
+            println!("  Plugin version: {}", version);
+        }
+
         let npm_build = Command::new("npm")
             .current_dir(&ui_dir)
+            .env("VITE_APP_VERSION", &version)
             .args(["run", "build"])
             .status()
             .context("Failed to run npm build")?;

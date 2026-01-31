@@ -73,6 +73,37 @@ impl Platform {
 pub const PLUGIN_NAME: &str = "vstkit";
 pub const PLUGIN_DISPLAY_NAME: &str = "VstKit";
 
+/// Read version from workspace Cargo.toml.
+///
+/// Extracts the version string from the `[workspace.package]` section.
+///
+/// # Returns
+///
+/// The SemVer version string (e.g., "0.1.0")
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The workspace Cargo.toml cannot be read
+/// - The TOML is malformed
+/// - The `workspace.package.version` key is missing
+pub fn read_workspace_version() -> Result<String> {
+    let workspace_toml = paths::engine_dir()?.join("Cargo.toml");
+    let content =
+        std::fs::read_to_string(&workspace_toml).context("Failed to read workspace Cargo.toml")?;
+
+    let toml: toml::Value = content.parse().context("Failed to parse Cargo.toml")?;
+
+    let version = toml
+        .get("workspace")
+        .and_then(|w| w.get("package"))
+        .and_then(|p| p.get("version"))
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow::anyhow!("Version not found in workspace Cargo.toml"))?;
+
+    Ok(version.to_string())
+}
+
 /// Path utilities for the project.
 pub mod paths {
     use super::*;

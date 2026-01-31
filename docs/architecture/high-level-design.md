@@ -93,6 +93,112 @@ Key: the audio path never blocks on UI; the UI never directly runs audio code.
 
 ⸻
 
+## Versioning
+
+VstKit uses semantic versioning (SemVer) with a single source of truth in `engine/Cargo.toml`. The version automatically propagates to plugin metadata and the UI at build time.
+
+### Version Flow
+
+```
+┌────────────────────┐
+│ engine/Cargo.toml  │  [workspace.package]
+│ version = "1.0.0"  │  version = "1.0.0"
+└─────────┬──────────┘
+          │
+          ├──────────────────────────────────────┐
+          │                                      │
+          ▼                                      ▼
+┌─────────────────────┐               ┌─────────────────────┐
+│ Plugin Binary       │               │ cargo xtask bundle  │
+│ (Rust compile)      │               │ reads Cargo.toml    │
+│                     │               │ exports to Vite env │
+│ env!("CARGO_PKG_    │               └──────────┬──────────┘
+│      VERSION")      │                          │
+│         │           │                          ▼
+│         ▼           │               ┌─────────────────────┐
+│  nih-plug Plugin    │               │ Vite Build          │
+│  VERSION constant   │               │ __APP_VERSION__     │
+│  → VST3/CLAP        │               │ compile-time const  │
+│    metadata         │               └──────────┬──────────┘
+└─────────────────────┘                          │
+                                                 ▼
+                                      ┌─────────────────────┐
+                                      │ React UI            │
+                                      │ VersionBadge        │
+                                      │ displays version    │
+                                      └─────────────────────┘
+```
+
+### Key Design Decisions
+
+1. **Build-time injection** — Version is embedded at compile time, not fetched via IPC at runtime. This ensures zero runtime cost and no startup latency.
+
+2. **Vite `define` block** — The `__APP_VERSION__` constant is injected via Vite's `define` configuration, which performs compile-time string replacement.
+
+3. **Development fallback** — When building without xtask (e.g., `npm run dev`), the version falls back to `'dev'`.
+
+4. **No manual sync** — Changing the version in `Cargo.toml` automatically updates all consumers on next build.
+
+⸻
+
+## Browser Development Mode
+
+VstKit supports running the UI in a standard browser for rapid development iteration, without requiring the full plugin environment.
+
+### Dual-Mode Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         ENVIRONMENT DETECTION                           │
+└─────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────┐         ┌─────────────────┐
+  │ Browser Mode    │         │ WKWebView Mode  │
+  │ (npm run dev)   │         │ (Plugin in DAW) │
+  └────────┬────────┘         └────────┬────────┘
+           │                           │
+           ▼                           ▼
+  ┌─────────────────┐         ┌─────────────────┐
+  │ IS_BROWSER=true │         │ IS_BROWSER=false│
+  │                 │         │                 │
+  │ • Mock data     │         │ • Real IPC      │
+  │ • Local state   │         │ • Rust backend  │
+  │ • No crashes    │         │ • Host params   │
+  └─────────────────┘         └─────────────────┘
+```
+
+### How It Works
+
+1. **Environment Detection** (`environment.ts`):
+   ```typescript
+   export function isWebViewEnvironment(): boolean {
+     return globalThis.__VSTKIT_IPC__ !== undefined;
+   }
+   ```
+
+2. **Module-Level Constant** (`hooks.ts`):
+   ```typescript
+   // Evaluated once at module load, before any hooks run
+   const IS_BROWSER = isBrowserEnvironment();
+   ```
+
+3. **Conditional Hook Behavior**:
+   - **Browser mode**: Hooks return mock data immediately, skip IPC calls
+   - **WKWebView mode**: Hooks use real IPC to communicate with Rust backend
+
+### Why Module-Level Detection?
+
+The `IS_BROWSER` constant is evaluated at module scope (not inside hooks) to comply with React's Rules of Hooks. Conditional hook calls based on runtime checks inside hook bodies would violate hook call order consistency.
+
+### Benefits
+
+- **Rapid iteration**: UI developers can work without building the full plugin
+- **No crashes**: Missing IPC primitives don't cause errors in browser
+- **Same codebase**: No separate "mock mode" build or configuration
+- **Sensible defaults**: Mock data provides reasonable starting values for UI development
+
+⸻
+
 ## Build System & Tooling
 
 VstKit uses a Rust-based build system (`xtask`) that provides a unified interface for building, testing, signing, and distributing plugins.

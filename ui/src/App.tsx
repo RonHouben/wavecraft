@@ -7,6 +7,7 @@ import { ParameterSlider } from './components/ParameterSlider';
 import { LatencyMonitor } from './components/LatencyMonitor';
 import { Meter } from './components/Meter';
 import { ResizeHandle } from './components/ResizeHandle';
+import { VersionBadge } from './components/VersionBadge';
 import { requestResize } from './lib/vstkit-ipc';
 
 function App(): React.JSX.Element {
@@ -63,7 +64,9 @@ function App(): React.JSX.Element {
       </main>
 
       <footer className="border-t border-plugin-border bg-plugin-surface p-4 text-center text-sm text-gray-400">
-        <p>VstKit Audio Plugin | React + WKWebView</p>
+        <p>
+          VstKit Audio Plugin <VersionBadge /> | React + WKWebView
+        </p>
       </footer>
 
       <ResizeHandle />

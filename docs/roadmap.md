@@ -8,12 +8,12 @@ This document tracks implementation progress against the milestones defined in t
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           🚧 M5           ⏳ M6              ⭐       │
+│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           🚧 M5           🚧 M6              ⭐       │
 │  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ─────── Browser Testing ─── Complete │
 │                                                         ▲                                         │
 │                                                       YOU ARE HERE                                │
 │                                                                                                   │
-│  Progress: [████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░] 70%    │
+│  Progress: [██████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░░] 75%    │
 └────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -158,14 +158,15 @@ This document tracks implementation progress against the milestones defined in t
 | Cross-engine rendering consistency (WebKit vs Chromium) | ⏳ | |
 | Automated visual regression tests | ⏳ | |
 | Make React UI default (remove feature flag) | ⏳ | Remove `webview` feature flag; React UI should be the default editor. Investigate if old Rust GUI code (`nih-plug` native UI) can be fully removed. |
-| Implement semantic versioning | ⏳ | SemVer for plugin releases; version in Cargo.toml, plugin metadata (VST3/CLAP/AU), **and visible in UI** so users can verify they're running the latest version |
+| **Semantic versioning** | ✅ | Version extracted from `engine/Cargo.toml` (single source of truth), injected at build time via Vite `define`. VersionBadge component displays version in UI. **Bonus:** Browser dev mode with environment detection and lazy IPC init (partial M6). Completed 2026-01-31. |
 | CI/CD pipeline (GitHub Actions) | ✅ | Redesigned staged pipeline with 6 jobs across 3 stages. Ubuntu for lint/test (cost optimization), macos for build. Branch protection configured. Completed 2026-01-31. |
+| CI pipeline cache optimization | ⏳ | Test Engine job rebuilds instead of using cache from Check Engine (different profiles: check vs test). Consider adding `cargo test --no-run` to prepare-engine job or combining check + test jobs. |
 
 ---
 
 ## Milestone 6: Browser-Based UI Testing Infrastructure
 
-**Status: ⏳ Not Started**
+**Status: 🚧 Partially Complete**
 
 > **Goal:** Enable Playwright-based visual testing with real engine communication by creating a WebSocket IPC bridge that works in browsers (not just WKWebView).
 
@@ -183,7 +184,7 @@ Currently, the UI can only communicate with the Rust engine when running inside 
 | WebSocket server in desktop app | ⏳ | Desktop app runs WebSocket server alongside UI |
 | UI IPC layer abstraction (WKWebView vs WebSocket) | ⏳ | Auto-detect environment, same protocol, different transport |
 | Playwright MCP integration for visual testing | ⏳ | Automated visual regression testing |
-| Mock data layer for offline/isolated testing | ⏳ | Enable UI testing without engine running |
+| **Mock data layer for offline/isolated testing** | ✅ | **Early delivery via semantic versioning**: Environment detection (`isBrowserEnvironment()`), lazy IPC init, mock data for browser dev mode. UI runs in browsers without IPC errors. Completed 2026-01-31. |
 
 ---
 
@@ -191,6 +192,7 @@ Currently, the UI can only communicate with the Rust engine when running inside 
 
 | Date | Update |
 |------|--------|
+| 2026-01-31 | **Semantic versioning complete**: Version extracted from `engine/Cargo.toml` (single source of truth), injected at build time via Vite `define`, displayed in UI via `VersionBadge` component. 8/8 manual tests + 35/35 unit tests passing. **Bonus delivery:** Browser development mode with environment detection and lazy IPC initialization — unblocks browser-based UI testing (partial Milestone 6). QA approved. Archived to `_archive/semantic-versioning/`. |
 | 2026-01-31 | **CI/CD pipeline redesign complete**: New staged pipeline with 6 specialized jobs (typecheck-ui, lint-ui, lint-engine, test-ui, test-engine, build-plugin). Stage 1 (fast feedback) on ubuntu, Stage 2 (tests) on ubuntu, Stage 3 (build) on macos (main only). Concurrency control, artifact sharing, branch protection. PR time <5 min, cost optimized (~90% ubuntu runners). Archived to `_archive/ci-cd-pipeline-redesign/`. |
 | 2026-01-31 | **UI unit testing framework complete**: Vitest + React Testing Library with IPC mock module. 25 passing tests covering ParameterSlider, Meter, and audio-math utilities. Unified `cargo xtask test` command with `--ui` and `--engine` flags. CI workflow ready (PR trigger disabled pending pipeline redesign). QA approved. Archived to `_archive/ui-unit-testing/`. |
 | 2026-01-31 | **TailwindCSS implementation complete**: Migrated all 7 component CSS files to Tailwind utilities. Custom theme with semantic tokens (plugin-dark, plugin-surface, accent, meter colors). Bundle size 3.74KB gzipped (63% under 10KB target). QA approved. Architectural docs updated. Archived to `_archive/tailwindcss/`. |
@@ -225,10 +227,11 @@ Currently, the UI can only communicate with the Rust engine when running inside 
    - ✅ ~~TailwindCSS implementation for React UI~~ (completed 2026-01-31)
    - ✅ ~~UI unit testing framework~~ (completed 2026-01-31)
    - ✅ ~~CI/CD pipeline redesign~~ (completed 2026-01-31)
+   - ✅ ~~Semantic versioning~~ (completed 2026-01-31)
    - **Next up:** Performance profiling at low buffer sizes (32/64 samples)
-   - Semantic versioning implementation
-2. **Milestone 6**: Browser-Based UI Testing Infrastructure (upcoming)
-   - WebSocket IPC bridge design
+2. **Milestone 6**: Browser-Based UI Testing Infrastructure (🚧 partially started)
+   - ✅ ~~Mock data layer / browser compatibility~~ (delivered early via semantic versioning)
+   - **Next up:** WebSocket IPC bridge design
    - Enable Playwright visual testing with real engine data
 3. **Investigate AU Custom UI Issue** (nice-to-have)
    - Understand why clap-wrapper shows generic parameter view
