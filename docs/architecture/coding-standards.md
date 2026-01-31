@@ -122,6 +122,81 @@ export function useParameter(id: string) {
 }
 ```
 
+### Environment-Aware Hooks
+
+**Rule:** Hooks that depend on runtime environment must detect environment at module scope.
+
+When hooks need different behavior based on runtime environment (e.g., browser vs WKWebView), the environment check must be evaluated once at module load time, not inside the hook body.
+
+**Rationale:**
+- React's Rules of Hooks require consistent hook call order across renders
+- Conditional hook behavior inside the hook body can violate this rule
+- Module-scope evaluation ensures the condition is stable
+
+**Do:**
+```typescript
+// ✅ Environment detection at module scope
+import { isBrowserEnvironment } from './environment';
+
+// Evaluated once when module loads
+const IS_BROWSER = isBrowserEnvironment();
+
+export function useParameter(id: string) {
+  // IS_BROWSER is stable - same value for all renders
+  const [param, setParam] = useState(IS_BROWSER ? mockData : null);
+  
+  useEffect(() => {
+    if (IS_BROWSER) return; // Safe: IS_BROWSER never changes
+    // ... fetch real data
+  }, [id]);
+}
+```
+
+**Don't:**
+```typescript
+// ❌ Environment detection inside hook
+export function useParameter(id: string) {
+  // BAD: Called on every render, could theoretically change
+  if (isBrowserEnvironment()) {
+    return { param: mockData };  // Violates Rules of Hooks!
+  }
+  // ... rest of hook
+}
+```
+
+### Build-Time Constants
+
+**Rule:** Use Vite's `define` block for compile-time constants that come from the build system.
+
+Values that need to be injected at build time (e.g., version from Cargo.toml) should use Vite's `define` configuration rather than environment variables.
+
+**Configuration (`vite.config.ts`):**
+```typescript
+export default defineConfig({
+  define: {
+    // Compile-time replacement, falls back to 'dev' for standalone npm run dev
+    '__APP_VERSION__': JSON.stringify(process.env.VITE_APP_VERSION || 'dev'),
+  },
+});
+```
+
+**Type Declaration (`vite-env.d.ts`):**
+```typescript
+declare const __APP_VERSION__: string;
+```
+
+**Usage:**
+```typescript
+// ✅ Use the constant directly - it's replaced at build time
+<span>v{__APP_VERSION__}</span>
+```
+
+**Why `define` over `.env` files:**
+- Build system (xtask) can inject values via environment variables
+- `define` creates compile-time replacement (zero runtime cost)
+- No risk of `.env` files drifting from source of truth
+- Clear TypeScript typing via declaration file
+
 ### Naming Conventions
 
 | Type | Convention | Example |
@@ -143,12 +218,14 @@ src/
 │   └── vstkit-ipc/
 │       ├── index.ts          # Public exports
 │       ├── types.ts          # Type definitions
+│       ├── environment.ts    # Environment detection (browser vs WKWebView)
 │       ├── IpcBridge.ts      # Class: low-level bridge
 │       ├── ParameterClient.ts # Class: high-level API
 │       └── hooks.ts          # React hooks (functional)
 ├── components/
 │   ├── ParameterSlider.tsx   # Functional component
 │   ├── ParameterSlider.test.tsx # Co-located test
+│   ├── VersionBadge.tsx      # Version display component
 │   └── LatencyMonitor.tsx    # Functional component
 ├── test/
 │   ├── setup.ts              # Global test setup
