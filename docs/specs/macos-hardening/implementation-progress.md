@@ -142,13 +142,23 @@
 
 ### Next Steps
 
-1. **Verify build** — Run `cargo build` to ensure all code compiles
-2. **Test ad-hoc signing** — Run `cargo xtask sign --adhoc` on local machine
-3. **Set up Apple Developer credentials** — Follow `docs/guides/macos-signing.md`
-4. **Test full signing** — Run `cargo xtask sign` with Developer ID
-5. **Test notarization** — Run `cargo xtask notarize --full`
-6. **Configure CI/CD secrets** — Add required secrets to GitHub repository
-7. **Trigger release build** — Push a tag to test the full pipeline
+1. **Test ad-hoc signing** — Run `cargo xtask sign --adhoc` on local machine
+2. **Obtain Apple Developer credentials** — Follow `docs/guides/macos-signing.md`
+3. **Test full signing** — Run `cargo xtask sign` with Developer ID
+4. **Test notarization** — Run `cargo xtask notarize --full`
+5. **Configure CI/CD secrets** — Add required secrets to GitHub repository
+6. **Trigger release build** — Push a tag to test the full pipeline
+7. **Test in Ableton Live** — Verify signed plugin loads without warnings
+
+### Architectural Documentation Updated
+
+The following docs were updated to reflect the new build system:
+
+| Document | Updates |
+|----------|---------|
+| `docs/architecture/high-level-design.md` | Added "Build System & Tooling" section; updated packaging notes, risks, roadmap |
+| `docs/roadmap.md` | Milestone 4 marked as implementation complete |
+| `docs/guides/macos-signing.md` | Created comprehensive signing guide |
 
 ---
 

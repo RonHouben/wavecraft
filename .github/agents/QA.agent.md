@@ -13,6 +13,14 @@ handoffs:
     agent: architect
     prompt: The QA review has identified architectural concerns that require your expertise. Please review the architectural issues flagged in the QA-report.md and provide guidance on the appropriate design approach before implementation proceeds.
     send: true
+  - label: Update architectural Docs
+    agent: architect
+    prompt: Review the implementation and update architectural documentation as needed
+    send: true
+  - label: Update roadmap
+    agent: PO
+    prompt: Review the implementation and update the project roadmap as needed
+    send: true
 ---
 
 # Senior Quality Assurance Agent

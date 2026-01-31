@@ -6,6 +6,7 @@
 
 - [Coding Standards](./coding-standards.md) — Conventions for TypeScript, Rust, and React code
 - [Roadmap](../roadmap.md) — Project milestones and implementation plan
+- [macOS Signing Guide](../guides/macos-signing.md) — Code signing and notarization setup
 
 ⸻
 
@@ -87,7 +88,110 @@ Key: the audio path never blocks on UI; the UI never directly runs audio code.
 	7.	Build & Packaging
 	•	Rust build (Cargo) for core; CMake or a small shim for packaging VST3 (SDK). Bundle the React build output as plugin resources (embed as bytes or serve them via an in-process file server).
 	•	AU builds require macOS; produce `.component` bundles for `/Library/Audio/Plug-Ins/Components/`.
-	•	Code signing and notarization steps for macOS (required for both VST3 and AU); installer options for Windows (MSI) and Linux (DEB/Flatpak/AppImage).
+	•	Code signing and notarization for macOS via `cargo xtask sign` and `cargo xtask notarize`. See [Build System & Tooling](#build-system--tooling) section for details.
+
+⸻
+
+## Build System & Tooling
+
+VstKit uses a Rust-based build system (`xtask`) that provides a unified interface for building, testing, signing, and distributing plugins.
+
+### Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `cargo xtask bundle` | Build and bundle VST3/CLAP plugins |
+| `cargo xtask test` | Run unit tests |
+| `cargo xtask desktop` | Build and run the desktop POC |
+| `cargo xtask au` | Build AU wrapper (macOS only) |
+| `cargo xtask install` | Install plugins to system directories |
+| `cargo xtask clean` | Clean build artifacts |
+| `cargo xtask all` | Run full build pipeline (test → bundle → au → install) |
+| `cargo xtask sign` | Sign plugin bundles for macOS distribution |
+| `cargo xtask notarize` | Notarize plugin bundles with Apple |
+| `cargo xtask release` | Complete release workflow (build → sign → notarize) |
+
+### Development Workflow
+
+```bash
+# Fast iteration (debug build, no signing)
+cargo xtask bundle --debug --features webview_editor
+
+# Full build with React UI
+cargo xtask bundle --features webview_editor
+
+# Build and install for DAW testing
+cargo xtask bundle --features webview_editor && cargo xtask install
+
+# Build with AU wrapper (macOS)
+cargo xtask all
+```
+
+### Release Workflow
+
+```bash
+# Full release build (requires Apple Developer certificate)
+cargo xtask release
+
+# Or step-by-step:
+cargo xtask bundle --release --features webview_editor
+cargo xtask sign
+cargo xtask notarize --full
+```
+
+### Code Signing (macOS)
+
+VstKit plugins require code signing for distribution. The build system provides two signing modes:
+
+**Ad-Hoc Signing** (local development):
+```bash
+cargo xtask sign --adhoc
+```
+- No Apple Developer account required
+- Plugins work on your local machine only
+- Cannot be notarized or distributed
+
+**Developer ID Signing** (distribution):
+```bash
+export APPLE_SIGNING_IDENTITY="Developer ID Application: Your Name (TEAM_ID)"
+cargo xtask sign
+```
+- Requires Apple Developer Program membership ($99/year)
+- Enables notarization and distribution
+- Required for plugins to load without Gatekeeper warnings
+
+### Notarization (macOS)
+
+Apple notarization is required for distributed plugins to load on macOS Catalina+.
+
+**Two-Step Workflow** (CI/CD friendly):
+```bash
+cargo xtask notarize --submit   # Submit and get request ID
+# ... wait 5-30 minutes ...
+cargo xtask notarize --status   # Check progress
+cargo xtask notarize --staple   # Attach ticket when approved
+```
+
+**Blocking Workflow** (local development):
+```bash
+cargo xtask notarize --full     # Submit, wait, and staple
+```
+
+### Entitlements
+
+VstKit plugins require specific entitlements for the hardened runtime due to WKWebView's JavaScript JIT:
+
+```xml
+<!-- engine/signing/entitlements.plist -->
+<key>com.apple.security.cs.allow-jit</key>
+<true/>
+<key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+<true/>
+<key>com.apple.security.cs.disable-library-validation</key>
+<true/>
+```
+
+See [macOS Signing Guide](../guides/macos-signing.md) for complete setup instructions.
 
 ⸻
 
@@ -329,8 +433,11 @@ References about real-time constraints and ring buffers: best practices and Rust
 		- CLAP: `/Library/Audio/Plug-Ins/CLAP/VstKit.clap`
 		- AU: `/Library/Audio/Plug-Ins/Components/VstKit.component` (built via clap-wrapper from CLAP)
 		- AU requires valid `Info.plist` with `AudioComponents` array (clap-wrapper generates this)
-	•	Windows: ensure WebView2 runtime installed or include evergreen bootstrap in installer; produce .dll VST3 and installer (MSI). AU not applicable.
-	•	Linux: many host distros vary; recommend shipping CLAP/VST3 and provide AppImage/Flatpak for GUI testing. AU not applicable.
+		- **Signing**: `cargo xtask sign` (or `--adhoc` for local dev)
+		- **Notarization**: `cargo xtask notarize --full` (requires Apple Developer account)
+		- **Release workflow**: `cargo xtask release` (bundle → sign → notarize)
+	•	Windows: ensure WebView2 runtime installed or include evergreen bootstrap in installer; produce .dll VST3 and installer (MSI). AU not applicable. Signing is deprioritized.
+	•	Linux: many host distros vary; recommend shipping CLAP/VST3 and provide AppImage/Flatpak for GUI testing. AU not applicable. Deprioritized.
 
 Docs for VST3 build process: Steinberg dev portal.  ￼
 
@@ -355,6 +462,9 @@ Docs for VST3 build process: Steinberg dev portal.  ￼
 	6.	AU cache invalidation during development
 	•	Risk: macOS caches AU plugins; changes not reflected in hosts.
 	•	Mitigation: Use `killall -9 AudioComponentRegistrar` and restart host after rebuilds; consider incrementing version during development.
+	7.	Code signing and notarization failures
+	•	Risk: Plugin fails to load due to Gatekeeper or hardened runtime issues.
+	•	Mitigation: Use proper entitlements for WKWebView JIT (`allow-jit`, `allow-unsigned-executable-memory`); test on fresh macOS installs; use `cargo xtask sign --adhoc` during development to catch entitlement issues early.
 
 ⸻
 
@@ -362,7 +472,9 @@ Docs for VST3 build process: Steinberg dev portal.  ￼
 	•	Audio / plugin: nih-plug (Rust).  ￼
 	•	Platform webview: wry (Rust) / system WebView2 / WKWebView / WebKitGTK.  ￼
 	•	Real-time buffers: rtrb or direct_ring_buffer crates (SPSC).  ￼
-	•	Build: Cargo + CMake (for VST3 SDK integration).  ￼
+	•	Build: Cargo + CMake (for AU wrapper) + xtask (custom build commands).
+	•	Signing: `codesign` (macOS) via `cargo xtask sign`.
+	•	Notarization: `notarytool` (macOS) via `cargo xtask notarize`.
 	•	React tooling: Vite + TypeScript, bundle to static assets.
 
 ⸻
@@ -389,12 +501,9 @@ Version each message payload so UI and plugin can be backward compatible.
 
 ⸻
 
-## Roadmap (suggested milestones)
-	1.	Week 0–2: Rust plugin skeleton with VST3/CLAP exports (nih-plug); native placeholder UI. Confirm Ableton host load (VST3). Set up clap-wrapper build for AU and confirm Logic Pro/GarageBand load.  ￼
-	2.	Week 2–4: Desktop POC: React app embedded in a Rust desktop app via wry. Test IPC patterns.  ￼
-	3.	Week 4–8: Integrate webview into plugin GUI; implement param bridge and ring buffer metering.
-	4.	Week 8–12: Cross-platform hardening, signing, packaging (VST3 + CLAP from nih-plug, AU from clap-wrapper), circular testing in Ableton, Logic Pro, and other DAWs.
-	5.	After: Performance tuning, UX polish, format-specific feature parity verification.
+## Roadmap
+
+See [Roadmap](../roadmap.md) for detailed milestones and implementation progress.
 
 ⸻
 

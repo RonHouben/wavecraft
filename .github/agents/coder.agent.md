@@ -9,6 +9,14 @@ handoffs:
     agent: QA
     prompt: Do a thorough QA of the implemented feature
     send: true
+  - label: Update architectural Docs
+    agent: architect
+    prompt: Review the implementation and update architectural documentation as needed
+    send: true
+  - label: Update roadmap
+    agent: PO
+    prompt: Review the implementation and update the project roadmap as needed
+    send: true
 ---
 
 # Coder Agent

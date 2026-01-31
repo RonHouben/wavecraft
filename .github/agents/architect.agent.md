@@ -9,6 +9,10 @@ handoffs:
     agent: planner
     prompt: Create implementation plan based on the architectural design
     send: true
+  - label: Update roadmap
+    agent: PO
+    prompt: Review the implementation and update the project roadmap as needed
+    send: true
 ---
 
 # Architect Agent
