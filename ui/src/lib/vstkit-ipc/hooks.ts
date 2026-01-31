@@ -11,7 +11,10 @@ import { ParameterClient } from './ParameterClient';
 import type { ParameterInfo } from './types';
 import { isBrowserEnvironment } from './environment';
 
-// Detect environment once at module load time
+// Detect environment once at module load time.
+// Must be evaluated at module scope (not inside hooks) to comply with React's
+// Rules of Hooks - conditional hook calls based on runtime checks inside hook
+// bodies would violate hook call order consistency.
 const IS_BROWSER = isBrowserEnvironment();
 
 // Lazy client initialization - only create if in WebView mode

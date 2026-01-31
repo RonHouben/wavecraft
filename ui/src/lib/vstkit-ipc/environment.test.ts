@@ -18,13 +18,15 @@ describe('Environment Detection', () => {
     if (originalVstkit) {
       globalThis.__VSTKIT_IPC__ = originalVstkit;
     } else {
-      // @ts-expect-error - deleting test property
+      // @ts-expect-error - Intentionally deleting global property for test isolation.
+      // This simulates browser environment where IPC primitives are not injected.
       delete globalThis.__VSTKIT_IPC__;
     }
   });
 
   it('should detect browser environment when IPC primitives are missing', (): void => {
-    // @ts-expect-error - deleting test property
+    // @ts-expect-error - Intentionally deleting global property for test isolation.
+    // This simulates browser environment where IPC primitives are not injected.
     delete globalThis.__VSTKIT_IPC__;
 
     expect(isWebViewEnvironment()).toBe(false);

@@ -38,9 +38,18 @@ describe('IpcBridge Browser Mode', () => {
   });
 
   it('should return mock meter frame in browser mode', async (): Promise<void> => {
+    interface MeterFrameResponse {
+      frame: {
+        peak_l: number;
+        peak_r: number;
+        rms_l: number;
+        rms_r: number;
+        timestamp: number;
+      };
+    }
+
     const bridge = IpcBridge.getInstance();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = (await bridge.invoke('getMeterFrame')) as any;
+    const result = await bridge.invoke<MeterFrameResponse>('getMeterFrame');
 
     expect(result).toHaveProperty('frame');
     expect(result.frame).toHaveProperty('peak_l', 0);

@@ -75,7 +75,18 @@ pub const PLUGIN_DISPLAY_NAME: &str = "VstKit";
 
 /// Read version from workspace Cargo.toml.
 ///
-/// Extracts the version from the `[workspace.package]` section.
+/// Extracts the version string from the `[workspace.package]` section.
+///
+/// # Returns
+///
+/// The SemVer version string (e.g., "0.1.0")
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The workspace Cargo.toml cannot be read
+/// - The TOML is malformed
+/// - The `workspace.package.version` key is missing
 pub fn read_workspace_version() -> Result<String> {
     let workspace_toml = paths::engine_dir()?.join("Cargo.toml");
     let content =
