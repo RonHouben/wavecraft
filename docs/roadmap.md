@@ -148,7 +148,7 @@ This document tracks implementation progress against the milestones defined in t
 | Task | Status | Notes |
 |------|--------|-------|
 | **Linting infrastructure** | ✅ | ESLint + Prettier (UI), Clippy + fmt (Engine), `cargo xtask lint` command, CI workflow. Completed 2026-01-31. |
-| **Implement TailwindCSS for React UI** | ⏳ | Industry standard for React; excellent flexibility, documentation, and LLM tooling support. Replace current CSS with utility-first approach. |
+| **TailwindCSS for React UI** | ✅ | Utility-first CSS replacing component CSS files. Custom theme with semantic tokens. 3.74KB gzipped (under 10KB target). Completed 2026-01-31. |
 | **UI unit testing framework** | ⏳ | Vitest + React Testing Library for component testing. Enable test-driven development for React UI. |
 | Performance profiling (low buffer sizes: 32/64 samples) | ⏳ | |
 | CPU stress testing | ⏳ | |
@@ -191,6 +191,7 @@ Currently, the UI can only communicate with the Rust engine when running inside 
 
 | Date | Update |
 |------|--------|
+| 2026-01-31 | **TailwindCSS implementation complete**: Migrated all 7 component CSS files to Tailwind utilities. Custom theme with semantic tokens (plugin-dark, plugin-surface, accent, meter colors). Bundle size 3.74KB gzipped (63% under 10KB target). QA approved. Architectural docs updated. Archived to `_archive/tailwindcss/`. |
 | 2026-01-31 | **Added Milestone 6: Browser-Based UI Testing Infrastructure**: WebSocket IPC bridge to enable Playwright testing with real engine communication. Addresses limitation that UI can only talk to engine inside WKWebView. Enables automated visual testing, remote debugging, and hot-reload development with engine connectivity. |
 | 2026-01-31 | **Added UI unit testing framework to Milestone 5**: Vitest + React Testing Library for component testing. Enables test-driven development and regression prevention for React UI components. |
 | 2026-01-31 | **Linting infrastructure complete**: Full implementation of unified linting system. ESLint 9 + Prettier for UI (TypeScript/React), Clippy + fmt for Engine (Rust). New `cargo xtask lint` command with `--ui`, `--engine`, `--fix` flags. CI workflow in `.github/workflows/lint.yml`. All 12 test scenarios passing. QA approved. Archived to `_archive/linting-infrastructure/`. |
@@ -219,7 +220,8 @@ Currently, the UI can only communicate with the Rust engine when running inside 
 
 1. **Milestone 5**: Polish & Optimization
    - ✅ ~~Linting infrastructure implementation~~ (completed 2026-01-31)
-   - TailwindCSS implementation for React UI
+   - ✅ ~~TailwindCSS implementation for React UI~~ (completed 2026-01-31)
+   - **Next up: UI unit testing framework** (Vitest + React Testing Library)
    - CI/CD pipeline architecture review (currently paused)
    - Performance profiling at low buffer sizes
 2. **Milestone 6**: Browser-Based UI Testing Infrastructure (upcoming)
