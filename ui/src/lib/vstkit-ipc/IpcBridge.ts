@@ -27,10 +27,10 @@ export class IpcBridge {
     }
   >();
   private eventListeners = new Map<string, Set<EventCallback<unknown>>>();
-  private primitives: typeof window.__VSTKIT_IPC__;
+  private primitives: typeof globalThis.__VSTKIT_IPC__;
 
   private constructor() {
-    this.primitives = window.__VSTKIT_IPC__;
+    this.primitives = globalThis.__VSTKIT_IPC__;
 
     if (!this.primitives) {
       throw new Error(
@@ -38,10 +38,20 @@ export class IpcBridge {
       );
     }
 
-    // Set up receive callback
+    // Set up receive callback for responses
     this.primitives.setReceiveCallback((message: string) => {
       this.handleIncomingMessage(message);
     });
+    
+    // Set up parameter update listener for pushed updates from Rust
+    if (this.primitives.onParamUpdate) {
+      this.primitives.onParamUpdate((notification: unknown) => {
+        // Handle as a notification
+        if (isIpcNotification(notification)) {
+          this.handleNotification(notification);
+        }
+      });
+    }
   }
 
   /**

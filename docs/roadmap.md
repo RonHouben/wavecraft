@@ -67,41 +67,46 @@ This document tracks implementation progress against the milestones defined in t
 
 ## Milestone 3: Plugin UI Integration (Week 4–8)
 
-**Status: ⏳ Not Started**
+**Status: ✅ Complete**
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Integrate webview into plugin GUI (nih-plug editor) | ⏳ | |
-| WKWebView integration (macOS) | ⏳ | |
-| WebView2 integration (Windows) | ⏳ | |
-| Implement parameter bridge (UI ↔ host params) | ⏳ | |
-| Implement SPSC ring buffer for audio → UI metering | ⏳ | |
-| Implement meter visualization in React | ⏳ | |
-| Test parameter automation roundtrip | ⏳ | |
+| Integrate webview into plugin GUI (nih-plug editor) | ✅ | WKWebView with Editor trait |
+| WKWebView integration (macOS) | ✅ | Custom URL scheme handler for assets |
+| WebView2 integration (Windows) | ⏳ | Deprioritized — macOS + Ableton is primary target |
+| Implement parameter bridge (UI ↔ host params) | ✅ | GuiContext integration |
+| Implement SPSC ring buffer for audio → UI metering | ✅ | rtrb-based MeterProducer/Consumer |
+| Implement meter visualization in React | ✅ | Peak/RMS meters with dB display |
+| Show clipping indicator in meter UI | ✅ | Red pulsing button, 2s hold, click-to-reset |
+| Test parameter automation roundtrip | ✅ | Tested in Ableton Live |
+| Plugin editor window resizing | ✅ | IPC-based resize with host approval |
 
 ---
 
-## Milestone 4: Cross-Platform Hardening & Packaging (Week 8–12)
+## Milestone 4: macOS Hardening & Packaging (Week 8–12)
 
 **Status: ⏳ Not Started**
+
+> **Scope:** Focused on macOS + Ableton Live as the primary target. Windows/Linux support is deprioritized.
 
 | Task | Status | Notes |
 |------|--------|-------|
 | macOS code signing | ⏳ | |
 | macOS notarization | ⏳ | |
-| Windows code signing | ⏳ | |
-| Windows installer (MSI) | ⏳ | |
-| Linux packaging (AppImage/Flatpak) | ⏳ | |
+| Windows code signing | ⏳ | Deprioritized |
+| Windows installer (MSI) | ⏳ | Deprioritized |
+| Linux packaging (AppImage/Flatpak) | ⏳ | Deprioritized |
 | **Host Compatibility Testing** | | |
-| Ableton Live (macOS) | ⏳ | |
-| Ableton Live (Windows) | ⏳ | |
-| Logic Pro (macOS, AU) | ⏳ | |
-| GarageBand (macOS, AU) | ⏳ | |
-| Reaper (all platforms) | ⏳ | |
-| Cubase | ⏳ | |
-| FL Studio | ⏳ | |
+| Ableton Live (macOS) | ⏳ | **Primary target** |
+| Ableton Live (Windows) | ⏳ | Deprioritized |
+| Logic Pro (macOS, AU) | ⏳ | Secondary (nice-to-have) |
+| GarageBand (macOS, AU) | ⏳ | Secondary (nice-to-have) |
+| Reaper (all platforms) | ⏳ | Deprioritized |
+| Cubase | ⏳ | Deprioritized |
+| FL Studio | ⏳ | Deprioritized |
 | **AU Validation** | | |
-| `auval` passes without errors | ⏳ | |
+| `auval` passes without errors | ✅ | Validated 2026-01-30 |
+| Investigate AU custom UI issue | ⏳ | clap-wrapper shows generic view; root cause TBD |
 | State save/restore (`.aupreset`) | ⏳ | |
 | AU cache invalidation workflow documented | ⏳ | |
 
@@ -117,9 +122,11 @@ This document tracks implementation progress against the milestones defined in t
 | CPU stress testing | ⏳ | |
 | Memory usage optimization | ⏳ | |
 | UX polish | ⏳ | |
+| Investigate TailwindCSS for React UI | ⏳ | Evaluate utility-first CSS for plugin UI styling |
 | Format-specific feature parity verification | ⏳ | |
 | Cross-engine rendering consistency (WebKit vs Chromium) | ⏳ | |
 | Automated visual regression tests | ⏳ | |
+| Make React UI default (remove feature flag) | ⏳ | Remove `webview` feature flag; React UI should be the default editor. Investigate if old Rust GUI code (`nih-plug` native UI) can be fully removed. |
 
 ---
 
@@ -129,14 +136,29 @@ This document tracks implementation progress against the milestones defined in t
 |------|--------|
 | 2026-01-30 | Initial roadmap created. Milestone 1 (Plugin Skeleton) marked complete. |
 | 2026-01-30 | **Milestone 2 complete**: WebView Desktop POC fully functional with <1ms IPC latency. Ready for plugin integration. |
+| 2025-01-31 | **Milestone 3 in progress**: WKWebView integration complete, working in Ableton Live. Added resizing and TailwindCSS investigation to roadmap. |
+| 2026-01-31 | **Clipping indicator complete**: Pure UI implementation with peak detection, 2-second sticky hold, pulsing red button, and click-to-reset. |
+| 2026-01-30 | AU wrapper validated with auval, but shows generic view (clap-wrapper limitation). Added "AU custom UI" to roadmap. |
+| 2026-01-31 | **Plugin editor window resizing complete**: Implemented IPC-based resize system with `requestResize()` method. UI can request size changes via React hook, host approves/rejects. Tested with preset sizes (600x400 to 1280x960). |
 
 ---
 
 ## Next Steps
 
-1. **Milestone 3**: Integrate WebView into nih-plug plugin editor
-   - Adapt desktop POC's WebView setup for nih-plug's editor trait
-   - Bridge nih-plug parameter system with existing IPC protocol
-   - Test in Ableton Live VST3 host
-2. Implement SPSC ring buffers for audio → UI metering
-3. Validate AU build in Logic Pro (Milestone 1 completion)
+> **Focus:** macOS + Ableton Live is the primary target. Windows/Linux and other DAWs are deprioritized.
+
+1. **Milestone 4**: macOS packaging & Ableton Live compatibility
+   - macOS code signing and notarization
+   - Thorough Ableton Live (macOS) testing
+2. **Investigate AU Custom UI Issue** (nice-to-have)
+   - Understand why clap-wrapper shows generic parameter view
+   - Research CLAP GUI extension forwarding in clap-wrapper
+   - Document findings and potential solutions
+3. **Secondary**: Logic Pro AU validation (if time permits)
+4. Investigate plugin editor resizing behavior in Ableton Live
+5. Evaluate TailwindCSS for UI styling consistency
+
+### Deprioritized (Future Consideration)
+- Windows WebView2 integration
+- Linux support
+- Non-Ableton DAW compatibility (Reaper, Cubase, FL Studio)

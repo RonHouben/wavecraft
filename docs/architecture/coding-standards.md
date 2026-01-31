@@ -154,6 +154,81 @@ src/
 
 **Note:** Class files should be named with PascalCase matching the class name.
 
+### Import Aliases
+
+**Rule:** Use configured path aliases instead of relative imports for shared libraries.
+
+The project defines the following import aliases (configured in `tsconfig.json` and `vite.config.ts`):
+
+| Alias | Path | Usage |
+|-------|------|-------|
+| `@vstkit/ipc` | `./src/lib/vstkit-ipc` | IPC client and types |
+
+**Do:**
+```typescript
+// ✅ Use alias for shared libraries
+import { getMeterFrame, MeterFrame } from '@vstkit/ipc';
+import { useParameter } from '@vstkit/ipc';
+```
+
+**Don't:**
+```typescript
+// ❌ Relative imports to shared libraries
+import { getMeterFrame } from '../lib/vstkit-ipc';
+import { useParameter } from '../../lib/vstkit-ipc';
+```
+
+**Rationale:**
+- Cleaner imports that don't change when files move
+- Immediately identifies imports as project-internal
+- Consistent import paths across the codebase
+
+### Global Object Access
+
+**Rule:** Use `globalThis` instead of `window` for accessing the global object.
+
+This applies to:
+- TypeScript/JavaScript source files
+- JavaScript strings embedded in Rust code (e.g., `evaluate_script` calls)
+
+**Do:**
+```typescript
+// ✅ Use globalThis in TypeScript/JavaScript
+globalThis.vstkit?.invoke('getParameter', { id });
+globalThis.addEventListener('message', handler);
+```
+
+```rust
+// ✅ Use globalThis in embedded JavaScript (Rust)
+let js = format!(
+    "if (globalThis.__VSTKIT_IPC__ && globalThis.__VSTKIT_IPC__._onParamUpdate) {{ \
+        globalThis.__VSTKIT_IPC__._onParamUpdate({{ id: '{}', value: {} }}); \
+    }}",
+    id, value
+);
+webview.evaluate_script(&js);
+```
+
+**Don't:**
+```typescript
+// ❌ Using window in TypeScript/JavaScript
+window.vstkit?.invoke('getParameter', { id });
+window.addEventListener('message', handler);
+```
+
+```rust
+// ❌ Using window in embedded JavaScript (Rust)
+let js = format!(
+    "if (window.__VSTKIT_IPC__) {{ window.__VSTKIT_IPC__._onParamUpdate(...); }}"
+);
+```
+
+**Rationale:**
+- `globalThis` is the standardized way to access the global object (ES2020+)
+- Works consistently across all JavaScript environments (browser, Node.js, Web Workers, etc.)
+- Plugin UI may run in different contexts where `window` is not available
+- Future-proofs code against environment changes
+
 ---
 
 ## Rust
@@ -195,6 +270,33 @@ Code running on the audio thread must:
 - Use `///` doc comments for public APIs
 - Include examples in doc comments where helpful
 - Keep comments up-to-date with code changes
+
+### Documentation References
+
+**Rule:** Always link to relevant documentation in the `docs/` folder.
+
+All project documentation (README, specs, design docs) must include links to related architecture documents. This ensures discoverability and keeps documentation interconnected.
+
+**Required links:**
+- [High-Level Design](./high-level-design.md) — Architecture overview, component design, data flows
+- [Coding Standards](./coding-standards.md) — Code conventions and patterns
+- [Roadmap](../roadmap.md) — Milestone tracking and progress
+
+**Do:**
+```markdown
+## Documentation
+
+- [High-Level Design](docs/architecture/high-level-design.md) — Architecture overview
+- [Coding Standards](docs/architecture/coding-standards.md) — Code conventions
+- [Roadmap](docs/roadmap.md) — Implementation progress
+```
+
+**Don't:**
+```markdown
+## Documentation
+
+See the docs folder for more information.
+```
 
 ### Error Handling
 

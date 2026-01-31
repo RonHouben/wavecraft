@@ -203,6 +203,10 @@ pub const METHOD_GET_PARAMETER: &str = "getParameter";
 pub const METHOD_SET_PARAMETER: &str = "setParameter";
 /// Method: Get all parameters with metadata
 pub const METHOD_GET_ALL_PARAMETERS: &str = "getAllParameters";
+/// Method: Get current meter frame (peak/RMS levels)
+pub const METHOD_GET_METER_FRAME: &str = "getMeterFrame";
+/// Method: Request resize of editor window
+pub const METHOD_REQUEST_RESIZE: &str = "requestResize";
 /// Notification: Parameter changed (push from Rust to UI)
 pub const NOTIFICATION_PARAMETER_CHANGED: &str = "parameterChanged";
 
@@ -366,4 +370,52 @@ mod tests {
         // The ParameterChangedNotification has an "id" field, which is OK
         // We're checking that the notification itself doesn't have a request id
     }
+}
+
+// ============================================================================
+// Metering Types
+// ============================================================================
+
+/// Meter frame data for UI visualization.
+///
+/// All values are in linear scale (not dB).
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct MeterFrame {
+    /// Left channel peak (linear, 0.0 to 1.0+)
+    pub peak_l: f32,
+    /// Right channel peak (linear, 0.0 to 1.0+)
+    pub peak_r: f32,
+    /// Left channel RMS (linear, 0.0 to 1.0+)
+    pub rms_l: f32,
+    /// Right channel RMS (linear, 0.0 to 1.0+)
+    pub rms_r: f32,
+    /// Sample timestamp (monotonic)
+    pub timestamp: u64,
+}
+
+/// Result for getMeterFrame method
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetMeterFrameResult {
+    /// Latest meter frame, or null if no data available
+    pub frame: Option<MeterFrame>,
+}
+
+// ----------------------------------------------------------------------------
+// requestResize
+// ----------------------------------------------------------------------------
+
+/// Parameters for requestResize request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RequestResizeParams {
+    /// Desired width in logical pixels
+    pub width: u32,
+    /// Desired height in logical pixels
+    pub height: u32,
+}
+
+/// Result of requestResize request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RequestResizeResult {
+    /// Whether the host approved the resize
+    pub accepted: bool,
 }

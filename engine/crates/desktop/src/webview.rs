@@ -81,7 +81,7 @@ pub fn run_app(state: Arc<AppState>) -> Result<(), Box<dyn std::error::Error>> {
                 .replace('\r', "\\r");
             
             // Call the internal _receive method that the primitives expose
-            let js_code = format!("window.__VSTKIT_IPC__._receive('{}');", escaped_response);
+            let js_code = format!("globalThis.__VSTKIT_IPC__._receive('{}');", escaped_response);
             
             if let Err(e) = webview.evaluate_script(&js_code) {
                 eprintln!("[IPC] Failed to send response to UI: {}", e);

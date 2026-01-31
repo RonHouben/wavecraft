@@ -18,6 +18,7 @@ protocol = { path = "crates/protocol" }
 dsp = { path = "crates/dsp" }
 bridge = { path = "crates/bridge" }
 desktop = { path = "crates/desktop" }
+metering = { path = "crates/metering" }
 
 [profile.release]
 lto = "thin"

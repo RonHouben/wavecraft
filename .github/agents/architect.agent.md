@@ -3,6 +3,11 @@ name: architect
 description: Software architect for a Rust-based audio plugin (VST3/AU) with React UI. Focused on real-time safety, clean architecture, DSP boundaries, and long-term maintainability.
 tools: ['search', 'todo', 'edit', 'read', 'web', 'agent', 'execute']
 model: Claude Opus 4.5 (copilot)
+handoffs: 
+  - label: Create implementation plan
+    agent: planner
+    prompt: Create implementation plan based on the architectural design
+    send: false
 ---
 
 # Architect Agent
@@ -26,7 +31,7 @@ You are not a code generator first. You are a *design authority*.
 
 ## Low Level Designs
 Suggest a feature-name to user.
-When asked to create low level designs, you should write them to `specs${feature-name}/low-level-design-${feature-name}.md` files.
+When asked to create low level designs, you should write them to `docs/specs/${feature-name}/low-level-design-${feature-name}.md` files.
 
 ---
 

@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use nih_plug::prelude::*;
 use nih_plug_egui::egui::{CentralPanel, Slider};
-use nih_plug_egui::{create_egui_editor, EguiState};
+use nih_plug_egui::{create_egui_editor as nih_create_egui_editor, EguiState};
 
 use crate::params::VstKitParams;
 
@@ -17,10 +17,10 @@ const EDITOR_WIDTH: u32 = 400;
 const EDITOR_HEIGHT: u32 = 300;
 
 /// Create the placeholder egui editor.
-pub fn create_editor(params: Arc<VstKitParams>) -> Option<Box<dyn Editor>> {
+pub fn create_egui_editor(params: Arc<VstKitParams>) -> Option<Box<dyn Editor>> {
     let state = EguiState::from_size(EDITOR_WIDTH, EDITOR_HEIGHT);
 
-    create_egui_editor(
+    nih_create_egui_editor(
         state,
         (),
         |_, _| {},
@@ -38,7 +38,7 @@ pub fn create_editor(params: Arc<VstKitParams>) -> Option<Box<dyn Editor>> {
                         .step_by(0.1);
 
                     let response = ui.add(slider);
-                    
+
                     // Only notify host when user is actively dragging
                     if response.drag_started() {
                         setter.begin_set_parameter(&params.gain);

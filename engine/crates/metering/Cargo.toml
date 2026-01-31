@@ -1,0 +1,10 @@
+[package]
+name = "metering"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+# Lock-free SPSC ring buffer for real-time audio→UI metering
+rtrb = "0.3"

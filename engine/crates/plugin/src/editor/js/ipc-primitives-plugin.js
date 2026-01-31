@@ -1,11 +1,6 @@
-// IPC Primitives - Injected by Rust into WebView
+// IPC Primitives for Plugin WebView - Injected by Rust into WKWebView
 //
-// This script provides the minimal low-level interface between the WebView
-// and Rust. It exposes a frozen `window.__VSTKIT_IPC__` object with methods
-// to send messages to Rust and receive messages from Rust.
-//
-// DO NOT MODIFY THIS FILE without understanding the security implications.
-// This code runs with full WebView privileges.
+// This is adapted for WKWebView's webkit.messageHandlers API instead of wry's globalThis.ipc
 
 (function () {
   'use strict';
@@ -17,7 +12,7 @@
   // Listeners for pushed parameter updates from Rust
   const paramUpdateListeners = [];
 
-  // Internal receive handler called by Rust via wry's IPC
+  // Internal receive handler called by Rust via WKWebView script evaluation
   function _receive(message) {
     if (receiveCallback) {
       receiveCallback(message);
@@ -58,11 +53,11 @@
       if (typeof message !== 'string') {
         throw new TypeError('postMessage requires a string argument');
       }
-      // wry's IPC bridge: globalThis.ipc.postMessage sends to Rust
-      if (globalThis.ipc && globalThis.ipc.postMessage) {
-        globalThis.ipc.postMessage(message);
+      // WKWebView's IPC bridge: webkit.messageHandlers.ipcHandler.postMessage
+      if (globalThis.webkit && globalThis.webkit.messageHandlers && globalThis.webkit.messageHandlers.ipcHandler) {
+        globalThis.webkit.messageHandlers.ipcHandler.postMessage(message);
       } else {
-        console.error('[VSTKIT_IPC] globalThis.ipc.postMessage not available');
+        console.error('[VSTKIT_IPC] globalThis.webkit.messageHandlers.ipcHandler not available');
       }
     },
 
@@ -79,50 +74,30 @@
 
       // Flush queued messages
       while (messageQueue.length > 0) {
-        const message = messageQueue.shift();
-        callback(message);
+        const msg = messageQueue.shift();
+        callback(msg);
       }
     },
-    
+
     /**
-     * Register a listener for parameter updates pushed from Rust
-     * @param {function(object): void} listener - Called with parameter update notification
-     * @returns {function(): void} Unsubscribe function
+     * Subscribe to parameter update notifications
+     * @param {function(object): void} listener - Called with parsed JSON-RPC notification
      */
     onParamUpdate: function (listener) {
       if (typeof listener !== 'function') {
         throw new TypeError('onParamUpdate requires a function argument');
       }
-      
       paramUpdateListeners.push(listener);
-      
-      // Return unsubscribe function
-      return function () {
-        const index = paramUpdateListeners.indexOf(listener);
-        if (index !== -1) {
-          paramUpdateListeners.splice(index, 1);
-        }
-      };
     },
 
-    /**
-     * Internal receive handler (called by Rust)
-     * @private
-     */
+    // Internal methods (exposed for Rust to call)
     _receive: _receive,
-    
-    /**
-     * Internal parameter update handler (called by Rust)
-     * @private
-     */
     _onParamUpdate: _onParamUpdate,
   };
 
-  // Freeze API to prevent tampering
+  // Freeze and expose
   Object.freeze(api);
-
-  // Expose on window
   window.__VSTKIT_IPC__ = api;
 
-  console.log('[VSTKIT_IPC] Primitives loaded');
+  console.log('[VSTKIT_IPC] Plugin IPC primitives loaded (WKWebView mode)');
 })();

@@ -2037,6 +2037,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "metering"
+version = "0.1.0"
+dependencies = [
+ "rtrb",
+]
+
+[[package]]
 name = "midi-consts"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3013,6 +3020,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "rtrb"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad8388ea1a9e0ea807e442e8263a699e7edcb320ecbcd21b4fa8ff859acce3ba"
+
+[[package]]
 name = "rustc-demangle"
 version = "0.1.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3740,10 +3753,23 @@ dependencies = [
 name = "vstkit"
 version = "0.1.0"
 dependencies = [
+ "block2",
+ "bridge",
  "dsp",
+ "include_dir",
+ "metering",
  "nih_plug",
  "nih_plug_egui",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
+ "objc2-web-kit",
  "protocol",
+ "raw-window-handle 0.6.2",
+ "serde_json",
+ "webview2-com",
+ "windows 0.58.0",
+ "wry",
 ]
 
 [[package]]
