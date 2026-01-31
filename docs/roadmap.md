@@ -4,6 +4,21 @@ This document tracks implementation progress against the milestones defined in t
 
 ---
 
+## Progress Overview
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│  ✅ M1        ✅ M2        ✅ M3        ⏳ M4           ⏳ M5                      │
+│  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish                     │
+│                            ▲                                                     │
+│                          YOU ARE HERE                                            │
+│                                                                                  │
+│  Progress: [████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░] 60%    │
+└──────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## Status Legend
 
 | Symbol | Meaning |
