@@ -12,39 +12,7 @@ concurrency:
 
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════
-  # STAGE 0: Prepare (build artifacts needed by other jobs)
-  # ═══════════════════════════════════════════════════════════════════════════
-
-  prepare-ui:
-    name: Prepare UI
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: ui/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-        working-directory: ui
-
-      - name: Build UI
-        run: npm run build
-        working-directory: ui
-
-      - name: Upload UI dist
-        uses: actions/upload-artifact@v4
-        with:
-          name: ui-dist
-          path: ui/dist
-          retention-days: 1
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # STAGE 1: Fast Feedback (<2 minutes)
+  # UI Pipeline (runs independently)
   # ═══════════════════════════════════════════════════════════════════════════
 
   check-ui:
@@ -98,13 +66,33 @@ jobs:
         run: npm test
         working-directory: ui
 
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Engine Pipeline (builds UI dist for embedding)
+  # ═══════════════════════════════════════════════════════════════════════════
+
   prepare-engine:
     name: Prepare Engine
     runs-on: ubuntu-latest
-    needs: [prepare-ui]
     steps:
       - uses: actions/checkout@v4
 
+      # Build UI dist (needed for Rust to embed in plugin)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install UI dependencies
+        run: npm ci
+        working-directory: ui
+
+      - name: Build UI dist
+        run: npm run build
+        working-directory: ui
+
+      # Build Engine
       - name: Install Linux dependencies (cached)
         uses: awalsh128/cache-apt-pkgs-action@latest
         with:
@@ -116,12 +104,6 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      - name: Download UI dist
-        uses: actions/download-artifact@v4
-        with:
-          name: ui-dist
-          path: ui/dist
-
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
         with:
@@ -130,6 +112,13 @@ jobs:
       - name: Build all targets
         run: cargo build --workspace --all-targets
         working-directory: engine
+
+      - name: Upload UI dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-dist
+          path: ui/dist
+          retention-days: 1
 
       - name: Upload compiled artifacts
         uses: actions/upload-artifact@v4
