@@ -109,6 +109,9 @@ jobs:
         with:
           workspaces: engine
 
+      # Use clippy instead of cargo build to compile with clippy's metadata.
+      # This ensures check-engine's clippy run uses cached artifacts instead of
+      # recompiling everything. --no-deps skips linting dependencies (faster).
       - name: Build with clippy (compile for lint compatibility)
         run: cargo clippy --workspace --all-targets --no-deps
         working-directory: engine
@@ -166,7 +169,7 @@ jobs:
         working-directory: engine
 
       - name: Clippy
-        run: cargo clippy --workspace -- -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
         working-directory: engine
 
   # ═══════════════════════════════════════════════════════════════════════════
