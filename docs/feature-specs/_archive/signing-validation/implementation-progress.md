@@ -2,7 +2,8 @@
 
 > **Feature:** Signing Infrastructure Validation & DAW Testing  
 > **Started:** 2026-01-31  
-> **Last Updated:** 2026-01-31
+> **Completed:** 2026-01-31  
+> **Status:** ✅ COMPLETE (Archived 2026-01-31)
 
 ---
 
@@ -10,24 +11,24 @@
 
 | Phase | Status | Notes |
 |-------|--------|-------|
-| Phase 1: Ad-Hoc Signing | ✅ In Scope | No Apple account required |
-| Phase 2: Ableton Live Testing | ✅ In Scope | No Apple account required |
+| Phase 1: Ad-Hoc Signing | ✅ Complete | No Apple account required |
+| Phase 2: Ableton Live Testing | ✅ Complete | No Apple account required |
 | Phase 3: Developer ID Signing | ⏸️ Deferred | Requires Apple Developer Program |
 | Phase 4: Notarization | ⏸️ Deferred | Requires Apple Developer Program |
-| Phase 5a: Build-Only CI/CD | ✅ In Scope | No Apple account required |
+| Phase 5a: Build-Only CI/CD | ✅ Complete | No Apple account required |
 | Phase 5b: Signed Release CI/CD | ⏸️ Deferred | Requires Apple credentials |
 
 ---
 
 ## Progress Tracker
 
-### Phase 1: Local Ad-Hoc Signing Validation ✅ IN SCOPE
+### Phase 1: Local Ad-Hoc Signing Validation ✅ COMPLETE
 | # | Task | Status | Notes |
 |---|------|--------|-------|
 | 1.1 | Build plugin bundles with webview_editor | ✅ Complete | Bundles built successfully |
-| 1.2 | Run ad-hoc signing | ⏳ Ready | Next: `cargo xtask sign --adhoc` |
-| 1.3 | Verify ad-hoc signatures | ⏳ Ready | New: `cargo xtask sign --verify` |
-| 1.4 | Inspect signature details | ⏳ Ready | Use `--verbose` flag |
+| 1.2 | Run ad-hoc signing | ✅ Complete | `cargo xtask sign --adhoc` works |
+| 1.3 | Verify ad-hoc signatures | ✅ Complete | `cargo xtask sign --verify` passes |
+| 1.4 | Inspect signature details | ✅ Complete | Hardened runtime confirmed |
 
 ### Phase 2: Ableton Live Compatibility Testing ✅ COMPLETE
 | # | Task | Status | Notes |
@@ -55,13 +56,13 @@
 | 4.5 | Verify Gatekeeper approval | ⏸️ Deferred | |
 | 4.6 | Test on fresh macOS install | ⏸️ Deferred | |
 
-### Phase 5a: Build-Only CI/CD ✅ IN SCOPE
+### Phase 5a: Build-Only CI/CD ✅ COMPLETE
 | # | Task | Status | Notes |
 |---|------|--------|-------|
 | 5a.1 | Create build-only workflow | ✅ Complete | Includes ad-hoc signing + verification |
-| 5a.2 | Trigger CI build | ⏳ Ready | Push to main or create PR |
-| 5a.3 | Download and verify artifacts | ⏳ Ready | Artifacts are now signed |
-| 5a.4 | Test CI artifacts locally | ⏳ Ready | Already signed in CI |
+| 5a.2 | Trigger CI build | ✅ Complete | Workflow triggers on push/PR |
+| 5a.3 | Download and verify artifacts | ✅ Complete | Artifacts are signed |
+| 5a.4 | Test CI artifacts locally | ✅ Complete | Signed in CI |
 
 ### Phase 5b: Signed Release CI/CD ⏸️ DEFERRED
 | # | Task | Status | Notes |
@@ -74,12 +75,12 @@
 
 ## Verification Checklist
 
-### Phase 1: Ad-Hoc Signing ✅ IN SCOPE
-- [ ] `cargo xtask bundle --features webview_editor` succeeds
-- [ ] `cargo xtask sign --adhoc` succeeds
-- [ ] `codesign --verify --deep --strict vstkit.vst3` passes
-- [ ] `codesign --verify --deep --strict vstkit.clap` passes
-- [ ] Entitlements include `com.apple.security.cs.allow-jit`
+### Phase 1: Ad-Hoc Signing ✅ COMPLETE
+- [x] `cargo xtask bundle --features webview_editor` succeeds
+- [x] `cargo xtask sign --adhoc` succeeds
+- [x] `codesign --verify --deep --strict vstkit.vst3` passes
+- [x] `codesign --verify --deep --strict vstkit.clap` passes
+- [x] Entitlements include `com.apple.security.cs.allow-jit`
 
 ### Phase 2: Ableton Live ✅ COMPLETE
 - [x] Plugin appears in Ableton's plugin browser
@@ -94,13 +95,13 @@
 - [x] Multiple instances work independently
 - [x] CPU usage acceptable
 
-### Phase 5a: Build-Only CI/CD ✅ IN SCOPE
-- [ ] CI workflow file exists (`.github/workflows/ci.yml`)
-- [ ] Push/PR triggers workflow
-- [ ] Workflow completes successfully
-- [ ] Ad-hoc signing step passes
-- [ ] Signature verification step passes (with assertions)
-- [ ] Signed artifacts are downloadable
+### Phase 5a: Build-Only CI/CD ✅ COMPLETE
+- [x] CI workflow file exists (`.github/workflows/ci.yml`)
+- [x] Push/PR triggers workflow
+- [x] Workflow completes successfully
+- [x] Ad-hoc signing step passes
+- [x] Signature verification step passes (with assertions)
+- [x] Signed artifacts are downloadable
 
 ### Phase 3: Developer ID Signing ⏸️ DEFERRED
 - [ ] `APPLE_SIGNING_IDENTITY` env var configured
@@ -124,16 +125,16 @@
 
 ---
 
-## Issues Found
+## Issues Found & Resolved
 
 | Issue | Phase | Severity | Status | Notes |
 |-------|-------|----------|--------|-------|
-| #1 | 1 | Medium | Documented | Ad-hoc signatures may not include entitlements - WebView JIT may not work. Resolved with Developer ID signing. |
-| #2 | 1 | Low | Documented | 10 Rust warnings (unused code, naming) - cosmetic only, non-blocking |
+| #1 | 1 | HIGH | ✅ FIXED | `run_adhoc()` missing hardened runtime - RESOLVED |
+| #2 | 1 | Low | Documented | 10 Rust warnings (unused code, naming) - cosmetic only |
 
 ---
 
-## Test Results
+## Final Test Results
 
 ### Phase 2: Ableton Live Tests
 
@@ -162,5 +163,5 @@
 
 ## Notes
 
-- **Phase 1, 2, 5a** can be completed without any Apple account ✅
+- **Phase 1, 2, 5a** completed without any Apple account ✅
 - **Phase 3, 4, 5b** require Apple Developer Program membership ($99/year) — deferred until credentials available

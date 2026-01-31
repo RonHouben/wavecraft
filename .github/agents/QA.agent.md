@@ -2,7 +2,7 @@
 name: qa
 description: Quality Assurance agent focused on code quality and static code analysis.
 tools: ['search', 'read', 'execute']
-model: Claude Opus 4.5 (copilot)
+model: Claude Sonnet 4.5 (copilot)
 infer: true
 handoffs:
   - label: Fix findings

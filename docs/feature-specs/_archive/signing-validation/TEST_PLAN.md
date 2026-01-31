@@ -4,7 +4,7 @@
 > **Test Date:** 2026-01-31 (Final Validation)  
 > **Tester:** Manual Testing (Post-Fix + QA)  
 > **Environment:** macOS with Xcode CLI tools  
-> **Implementation Status:** ✅ All Issues Resolved (hardened runtime + QA fixes)
+> **Implementation Status:** ✅ All Issues Resolved (Archived 2026-01-31)
 
 ---
 
@@ -15,17 +15,6 @@ This test plan covers the **in-scope** phases that don't require Apple Developer
 - ✅ Phase 5a: Build-only CI/CD (simulated locally)
 
 **Out of scope:** Phase 2 (Ableton Live), Phase 3-4 (Developer ID/Notarization) - require manual testing with DAW
-
-**Changes from v1.0:**
-- Updated TS-02 to verify hardened runtime is included in ad-hoc signing
-- Updated TS-03 to verify workflow works end-to-end without workarounds
-- Added TS-11 to test the complete workflow after Issue #1 fix
-
-**Changes for Final Validation (2026-01-31):**
-- Verified run_adhoc() fix includes --options runtime and --entitlements
-- Applied QA fixes: clippy warnings, Arc<Mutex> documentation, dead_code attributes
-- Confirmed all code quality issues resolved (cargo fmt + clippy pass)
-- Ready for final end-to-end validation
 
 ---
 
@@ -99,11 +88,6 @@ This test plan covers the **in-scope** phases that don't require Apple Developer
 - ✅ Output shows "All N signatures verified successfully"
 - ✅ Exit code 0
 
-**Success Criteria:**
-- All signatures pass verification
-- No errors or warnings
-- Command validates expected properties
-
 ---
 
 ### TS-04: Signature Verification (Verbose)
@@ -121,11 +105,6 @@ This test plan covers the **in-scope** phases that don't require Apple Developer
 - ✅ Shows "✓ Hardened runtime enabled"
 - ✅ Shows "✓ JIT entitlement present"
 
-**Success Criteria:**
-- Hardened runtime is enabled
-- JIT entitlement is present (required for WebView)
-- All expected entitlements are listed
-
 ---
 
 ### TS-05: Verification of Unsigned Bundles (Negative Test)
@@ -140,11 +119,6 @@ This test plan covers the **in-scope** phases that don't require Apple Developer
 - ❌ Command fails with non-zero exit code
 - ❌ Error message indicates signature verification failed
 - ❌ Clear error about which bundle failed
-
-**Success Criteria:**
-- Command properly detects missing signatures
-- Error message is clear and actionable
-- Exit code indicates failure
 
 ---
 
@@ -163,11 +137,6 @@ This test plan covers the **in-scope** phases that don't require Apple Developer
 - ✅ Verification passes after re-signing
 - ✅ No errors about existing signatures
 
-**Success Criteria:**
-- Re-signing works without manual intervention
-- Final signature is valid
-- Bundles remain functional
-
 ---
 
 ### TS-07: Missing Entitlements Detection
@@ -185,11 +154,6 @@ This test plan covers the **in-scope** phases that don't require Apple Developer
 - ⚠️ Warning about missing entitlements (ad-hoc signatures may not include entitlements)
 - ✅ OR error if JIT entitlement is critical and missing
 - ✅ Clear message about what's missing
-
-**Success Criteria:**
-- Missing entitlements are detected
-- User is informed about potential issues
-- Message explains impact (WebView won't work)
 
 ---
 
@@ -213,11 +177,6 @@ This test plan covers the **in-scope** phases that don't require Apple Developer
 - ✅ Signing succeeds
 - ✅ Verification succeeds with assertions
 - ✅ All steps complete in sequence
-
-**Success Criteria:**
-- Entire workflow completes without manual intervention
-- Each step produces expected artifacts
-- Final artifacts are signed and verified
 
 ---
 
@@ -243,11 +202,6 @@ This test plan covers the **in-scope** phases that don't require Apple Developer
 - ✅ `CodeResources` file exists in `_CodeSignature/`
 - ✅ Binary files are not corrupted
 
-**Success Criteria:**
-- All expected directories and files present
-- CodeSignature directory created by codesign
-- Bundle remains valid plugin format
-
 ---
 
 ### TS-10: Error Handling - Missing Bundles
@@ -263,11 +217,6 @@ This test plan covers the **in-scope** phases that don't require Apple Developer
 - ✅ Sign command completes (skips missing bundles)
 - ✅ Verify command fails with clear message
 - ✅ Error: "No plugin bundles found to verify"
-
-**Success Criteria:**
-- Clear error messages
-- No confusing stack traces
-- User knows what to do (build first)
 
 ---
 
@@ -287,11 +236,6 @@ This test plan covers the **in-scope** phases that don't require Apple Developer
 - ✅ Verbose output shows `flags=0x10002(adhoc,runtime)` (hardened runtime enabled)
 - ✅ No errors or failures
 - ✅ Warning about entitlements is expected (macOS limitation)
-
-**Success Criteria:**
-- Complete workflow works without manual intervention
-- Hardened runtime flag is present
-- All commands exit with code 0
 
 ---
 
@@ -349,21 +293,8 @@ This test plan covers the **in-scope** phases that don't require Apple Developer
 
 ---
 
-## Test Results
-
-**Detailed results:** See [MANUAL_TEST_RESULTS.md](MANUAL_TEST_RESULTS.md)
-
-**Summary:**
-- ✅ All 11 test scenarios passed
-- ✅ Issue #1 fixed and verified
-- ✅ Complete CI/CD workflow works without manual intervention
-- ✅ Hardened runtime properly enabled
-- ✅ Ready for production use
-
----
-
 ## Sign-off
 
-- **Tester:** _________________
-- **Date:** _________________
-- **Overall Result:** ⏳ Pending / ✅ Pass / ❌ Fail
+- **Tester:** Manual Testing
+- **Date:** 2026-01-31
+- **Overall Result:** ✅ Pass

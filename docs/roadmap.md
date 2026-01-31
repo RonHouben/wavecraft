@@ -166,6 +166,7 @@ This document tracks implementation progress against the milestones defined in t
 
 | Date | Update |
 |------|--------|
+| 2026-01-31 | **Archived signing-validation feature**: All in-scope phases complete (ad-hoc signing, Ableton Live testing, CI/CD). Docs moved to `_archive/signing-validation/`. Developer ID + notarization deferred until Apple Developer account available. |
 | 2026-01-31 | **Renamed `docs/specs` to `docs/feature-specs`**: Directory and all 16 references across 8 agent/config files updated. Clearer naming communicates these are feature specifications under active development. Archive references preserved as historical records. |
 | 2026-01-31 | **Milestone 4 fully validated**: Ableton Live (macOS) testing complete — plugin loads without security warnings, React UI renders, parameters work, automation syncs, state persists, multi-instance works. Ad-hoc signing validated. Developer ID signing/notarization deferred until Apple Developer account available. |
 | 2026-01-31 | **CI/CD pipeline paused for redesign**: Current pipeline disabled on PRs (was blocking). Scheduled for dedicated architecture review to define proper phases (build, lint, test, release). Will collaborate with architect. |
@@ -194,12 +195,12 @@ This document tracks implementation progress against the milestones defined in t
 2. **Investigate AU Custom UI Issue** (nice-to-have)
    - Understand why clap-wrapper shows generic parameter view
    - Research CLAP GUI extension forwarding in clap-wrapper
-3. **When Apple Developer account available**:
+
+### Deferred (Future Consideration)
+- **When Apple Developer account available**:
    - Developer ID signing validation
    - Notarization submission and Gatekeeper testing
    - Signed release CI/CD pipeline
-
-### Deprioritized (Future Consideration)
 - Windows WebView2 integration
 - Linux support
 - Non-Ableton DAW compatibility (Reaper, Cubase, FL Studio)

@@ -2,7 +2,7 @@
 name: tester
 description: Manual testing specialist for guiding users through test execution and tracking test results. Creates test plans and documents findings without modifying code.
 tools: ["read", "search", "execute", "todo", "edit", "agent"]
-model: Claude Opus 4.5 (copilot)
+model: Claude Sonnet 4.5 (copilot)
 infer: true
 handoffs:
   - label: Fix Issues

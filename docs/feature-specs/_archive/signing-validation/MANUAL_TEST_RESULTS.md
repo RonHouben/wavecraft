@@ -4,7 +4,7 @@
 > **Tester:** Manual Testing  
 > **Environment:** macOS 26.2, Xcode CLI, Rust 1.93.0  
 > **Test Plan Version:** 1.1 (Updated with TS-11)  
-> **Implementation Status:** ✅ Issue #1 FIXED
+> **Implementation Status:** ✅ Issue #1 FIXED (Archived 2026-01-31)
 
 ---
 
@@ -422,11 +422,6 @@ let status = Command::new("codesign")
 - No functional impact
 - Slightly clutters build output
 
-**Recommendation:**
-- Run `cargo fix --lib -p vstkit` to auto-fix some warnings
-- Add `#[allow(dead_code)]` for intentionally unused code
-- Add `#[allow(non_snake_case)]` for Objective-C bridge methods
-
 ---
 
 ## Comparison: Before vs After Fix
@@ -438,26 +433,6 @@ let status = Command::new("codesign")
 | Hardened runtime | ❌ `flags=0x2` | ✅ `flags=0x10002` |
 | Workaround needed | ⚠️ Manual codesign | ✅ None |
 | CI/CD ready | ❌ No | ✅ Yes |
-
----
-
-## Recommendations
-
-### Immediate Actions
-1. ✅ **COMPLETED:** Fix applied and verified
-2. ✅ **COMPLETED:** All tests passing
-3. ⏭️ **NEXT:** Consider addressing Rust warnings (low priority)
-
-### Future Testing (Out of Scope)
-1. **Phase 2:** Test in Ableton Live (requires DAW)
-2. **Phase 3:** Test Developer ID signing (requires Apple Developer account)
-3. **Phase 4:** Test notarization (requires Apple Developer account)
-4. **Phase 5b:** Test signed release in CI/CD (requires GitHub secrets)
-
-### Documentation
-1. Add note about ad-hoc entitlements limitation in signing guide
-2. Update CI/CD documentation with working workflow
-3. Document that no manual workarounds are needed
 
 ---
 
