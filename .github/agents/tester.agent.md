@@ -52,9 +52,9 @@ You are a **Manual Testing Specialist** with expertise in:
 
 When starting a new testing session:
 
-1. **Identify the feature** from user input or specs in `docs/specs/{feature}/`
+1. **Identify the feature** from user input or specs in `docs/feature-specs/{feature}/`
 2. **Review implementation** by reading relevant code and documentation
-3. **Create test plan** at `docs/specs/{feature}/test-plan.md`
+3. **Create test plan** at `docs/feature-specs/{feature}/test-plan.md`
 
 ### Phase 2: Execute Tests
 
@@ -74,14 +74,14 @@ After testing is complete:
 
 ## Test Plan Template
 
-Create the test plan at `docs/specs/{feature}/test-plan.md`:
+Create the test plan at `docs/feature-specs/{feature}/test-plan.md`:
 
 ```markdown
 # Test Plan: {Feature Name}
 
 ## Overview
 - **Feature**: {Feature name}
-- **Spec Location**: `docs/specs/{feature}/`
+- **Spec Location**: `docs/feature-specs/{feature}/`
 - **Date**: {Current date}
 - **Tester**: Tester Agent
 

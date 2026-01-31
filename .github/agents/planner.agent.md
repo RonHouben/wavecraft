@@ -96,9 +96,9 @@ Create detailed steps with:
 ```
 
 ## Saving / Updating the plan
-Make sure to save the plan in a markdown file named `plan.md` in the following directory: `docs/specs/[feature_name]/implementation-plan.md`. If updating an existing plan, increment the version number in the filename. If the directory does not exist, create it.
+Make sure to save the plan in a markdown file named `plan.md` in the following directory: `docs/feature-specs/[feature_name]/implementation-plan.md`. If updating an existing plan, increment the version number in the filename. If the directory does not exist, create it.
 
-Also create a todo list of tasks based on the plan steps and save it in `docs/specs/[feature_name]/implementation-progress.md`.
+Also create a todo list of tasks based on the plan steps and save it in `docs/feature-specs/[feature_name]/implementation-progress.md`.
 
 ## Best Practices
 

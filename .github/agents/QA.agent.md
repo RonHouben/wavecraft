@@ -138,7 +138,7 @@ Verify boundaries per `high-level-design.md`:
 
 ## QA Report Structure
 
-Create report at: `docs/specs/{feature}/QA-report.md`
+Create report at: `docs/feature-specs/{feature}/QA-report.md`
 
 ```markdown
 # QA Report: {Feature Name}
@@ -225,6 +225,6 @@ Hand off to `architect` when findings include:
 3. **Run targeted tests**: Execute `cargo test -p {crate}` for affected crates
 4. **Manual analysis**: Review code against checklists above
 5. **Classify findings**: Assign severity and category to each issue
-6. **Create report**: Write `QA-report.md` in `docs/specs/{feature}/`
+6. **Create report**: Write `QA-report.md` in `docs/feature-specs/{feature}/`
 7. **Determine handoff**: Decide if issues go to coder or architect
 8. **Hand off**: Use appropriate handoff with context

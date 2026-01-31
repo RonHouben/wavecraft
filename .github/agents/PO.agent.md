@@ -47,6 +47,7 @@ When asked to update the roadmap:
 - Add new tasks with appropriate status icons
 - Keep the changelog up to date
 - Ensure "Next Steps" section reflects current priorities
+- When feature-spec is complete, move the documentation to the `/docs/feature-specs/_archive/${feature-name}` folder. So it's archived but still accessible for future reference.
 
 ---
 
@@ -166,7 +167,7 @@ Use this format:
 ```
 
 #### Where to save user stories
-- Write them down in a markdown file in location `/docs/specs/{feature-name}/user-stories.md`
+- Write them down in a markdown file in location `/docs/feature-specs/{feature-name}/user-stories.md`
 
 ---
 
