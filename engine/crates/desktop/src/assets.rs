@@ -38,7 +38,7 @@ pub fn get_asset(path: &str) -> Option<(&'static [u8], &'static str)> {
 
 /// Infer MIME type from file extension
 fn mime_type_from_path(path: &str) -> &'static str {
-    let extension = path.split('.').last().unwrap_or("");
+    let extension = path.split('.').next_back().unwrap_or("");
 
     match extension {
         "html" => "text/html",

@@ -28,6 +28,7 @@ pub use webview::{WebViewConfig, WebViewHandle, create_webview};
 pub use egui::create_egui_editor as create_editor;
 
 /// Message types for communicating with the WebView from the editor.
+#[allow(dead_code)] // Used only when webview_editor feature is enabled
 #[derive(Debug, Clone)]
 pub enum EditorMessage {
     ParamUpdate { id: String, value: f32 },
@@ -38,6 +39,7 @@ pub enum EditorMessage {
 ///
 /// This editor creates a WebView that hosts the React UI and handles
 /// bidirectional parameter synchronization and metering.
+#[allow(dead_code)] // Used only when webview_editor feature is enabled
 pub struct VstKitEditor {
     params: Arc<VstKitParams>,
     /// Shared meter consumer - cloned to each bridge instance
@@ -151,26 +153,27 @@ impl Editor for VstKitEditor {
 
     fn param_modulation_changed(&self, id: &str, modulation_offset: f32) {
         // Push modulation update to WebView via JavaScript evaluation
-        if let Ok(webview_lock) = self.webview_handle.lock() {
-            if let Some(webview) = webview_lock.as_ref() {
-                let id_escaped = id.replace('\\', "\\\\").replace('\'', "\\'");
-                let js = format!(
-                    "if (globalThis.__VSTKIT_IPC__ && globalThis.__VSTKIT_IPC__._onParamUpdate) {{ \
-                        globalThis.__VSTKIT_IPC__._onParamUpdate({{ \
-                            jsonrpc: '2.0', \
-                            method: 'paramModulation', \
-                            params: {{ id: '{}', offset: {} }} \
-                        }}); \
-                    }}",
-                    id_escaped, modulation_offset
-                );
-                let _ = webview.evaluate_script(&js);
-            }
+        if let Ok(webview_lock) = self.webview_handle.lock()
+            && let Some(webview) = webview_lock.as_ref()
+        {
+            let id_escaped = id.replace('\\', "\\\\").replace('\'', "\\\'');
+            let js = format!(
+                "if (globalThis.__VSTKIT_IPC__ && globalThis.__VSTKIT_IPC__._onParamUpdate) {{ \
+                    globalThis.__VSTKIT_IPC__._onParamUpdate({{ \
+                        jsonrpc: '2.0', \
+                        method: 'paramModulation', \
+                        params: {{ id: '{}', offset: {} }} \
+                    }}); \
+                }}",
+                id_escaped, modulation_offset
+            );
+            let _ = webview.evaluate_script(&js);
         }
     }
 }
 
 /// Create a WebView editor.
+#[allow(dead_code)] // Used only when webview_editor feature is enabled
 pub fn create_webview_editor(
     params: Arc<VstKitParams>,
     meter_consumer: Arc<Mutex<MeterConsumer>>,

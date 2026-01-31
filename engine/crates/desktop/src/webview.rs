@@ -91,14 +91,12 @@ pub fn run_app(state: Arc<AppState>) -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        match event {
-            Event::WindowEvent {
-                event: WindowEvent::CloseRequested,
-                ..
-            } => {
-                *control_flow = ControlFlow::Exit;
-            }
-            _ => {}
+        if let Event::WindowEvent {
+            event: WindowEvent::CloseRequested,
+            ..
+        } = event
+        {
+            *control_flow = ControlFlow::Exit;
         }
     });
 }

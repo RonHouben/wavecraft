@@ -28,6 +28,7 @@ use super::webview::{WebViewConfig, WebViewHandle};
 /// macOS WebView handle.
 ///
 /// Holds the WKWebView and associated resources.
+#[allow(dead_code)] // Used only when webview_editor feature is enabled
 pub struct MacOSWebView {
     webview: Arc<Mutex<Option<Retained<WKWebView>>>>,
     _handler: Arc<Mutex<IpcHandler<PluginEditorBridge>>>,
@@ -79,6 +80,7 @@ impl WebViewHandle for MacOSWebView {
 }
 
 /// Create a macOS WebView editor.
+#[allow(dead_code)] // Used only when webview_editor feature is enabled
 pub fn create_macos_webview(config: WebViewConfig) -> Result<Box<dyn WebViewHandle>, String> {
     let mtm = MainThreadMarker::new()
         .ok_or_else(|| "WebView creation must happen on main thread".to_string())?;
@@ -254,6 +256,7 @@ fn load_ui(webview: &WKWebView) -> Result<(), String> {
 }
 
 /// Extract NSView from ParentWindowHandle.
+#[allow(dead_code)] // Used only when webview_editor feature is enabled
 unsafe fn get_parent_view(handle: ParentWindowHandle) -> Result<Retained<NSView>, String> {
     match handle {
         ParentWindowHandle::AppKitNsView(ns_view_ptr) => {
@@ -274,6 +277,7 @@ unsafe fn get_parent_view(handle: ParentWindowHandle) -> Result<Retained<NSView>
 }
 
 /// IPC message handler for WKWebView script messages.
+#[allow(dead_code)] // Used only when webview_editor feature is enabled
 struct IpcMessageHandlerIvars {
     handler: Arc<Mutex<IpcHandler<PluginEditorBridge>>>,
     webview: Weak<WKWebView>,
@@ -296,6 +300,7 @@ declare_class!(
 
     unsafe impl WKScriptMessageHandler for IpcMessageHandler {
         #[method(userContentController:didReceiveScriptMessage:)]
+        #[allow(non_snake_case)] // Objective-C selector naming convention
         unsafe fn userContentController_didReceiveScriptMessage(
             &self,
             _controller: &WKUserContentController,
@@ -361,6 +366,7 @@ impl IpcMessageHandler {
 }
 
 /// URL Scheme handler for serving embedded assets.
+#[allow(dead_code)] // Used only when webview_editor feature is enabled
 struct AssetSchemeHandlerIvars {}
 
 declare_class!(
@@ -380,6 +386,7 @@ declare_class!(
 
     unsafe impl WKURLSchemeHandler for AssetSchemeHandler {
         #[method(webView:startURLSchemeTask:)]
+        #[allow(non_snake_case)] // Objective-C selector naming convention
         unsafe fn webView_startURLSchemeTask(
             &self,
             _webview: &WKWebView,
@@ -455,6 +462,7 @@ declare_class!(
         }
 
         #[method(webView:stopURLSchemeTask:)]
+        #[allow(non_snake_case)] // Objective-C selector naming convention
         unsafe fn webView_stopURLSchemeTask(
             &self,
             _webview: &WKWebView,

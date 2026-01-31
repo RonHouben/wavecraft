@@ -1,10 +1,10 @@
 # Test Plan: Signing Infrastructure Validation
 
 > **Feature:** macOS Code Signing with Verification  
-> **Test Date:** 2026-01-31 (Updated post-fix)  
-> **Tester:** Manual Testing (Post-Implementation)  
+> **Test Date:** 2026-01-31 (Final Validation)  
+> **Tester:** Manual Testing (Post-Fix + QA)  
 > **Environment:** macOS with Xcode CLI tools  
-> **Implementation Status:** ✅ Issue #1 Fixed (hardened runtime + entitlements)
+> **Implementation Status:** ✅ All Issues Resolved (hardened runtime + QA fixes)
 
 ---
 
@@ -21,6 +21,12 @@ This test plan covers the **in-scope** phases that don't require Apple Developer
 - Updated TS-03 to verify workflow works end-to-end without workarounds
 - Added TS-11 to test the complete workflow after Issue #1 fix
 
+**Changes for Final Validation (2026-01-31):**
+- Verified run_adhoc() fix includes --options runtime and --entitlements
+- Applied QA fixes: clippy warnings, Arc<Mutex> documentation, dead_code attributes
+- Confirmed all code quality issues resolved (cargo fmt + clippy pass)
+- Ready for final end-to-end validation
+
 ---
 
 ## Prerequisites
@@ -30,6 +36,8 @@ This test plan covers the **in-scope** phases that don't require Apple Developer
 - [x] Plugin bundles built at `engine/target/bundled/`
 - [x] Rust toolchain installed
 - [x] Issue #1 fix applied (hardened runtime + entitlements in `run_adhoc()`)
+- [x] QA issues resolved (clippy warnings, dead_code attributes, Arc<Mutex> docs)
+- [x] Code quality checks pass (cargo fmt + clippy -D warnings)
 
 ---
 

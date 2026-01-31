@@ -25,8 +25,13 @@ pub struct VstKitPlugin {
     params: Arc<VstKitParams>,
     processor: Processor,
     meter_producer: MeterProducer,
-    /// Shared with the editor - wrapped in Arc<Mutex> so it can be accessed
-    /// across multiple editor open/close cycles.
+    /// Meter consumer shared with the editor (UI thread only).
+    ///
+    /// THREAD-SAFETY: This Arc<Mutex> is ONLY accessed from the UI thread
+    /// (editor creation/destruction and meter polling). It is NEVER touched
+    /// from the audio thread, which uses `meter_producer` instead.
+    /// The mutex protects against concurrent editor open/close operations.
+    #[allow(dead_code)] // Used via clone() in conditional compilation
     meter_consumer: Arc<std::sync::Mutex<MeterConsumer>>,
 }
 

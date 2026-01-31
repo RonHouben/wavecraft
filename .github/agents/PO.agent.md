@@ -9,9 +9,9 @@ handoffs:
     agent: planner
     prompt: Create an implementation plan for this feature based on the requirements and acceptance criteria defined above.
     send: true
-  - label: Review architecture
+  - label: Create low level design
     agent: architect
-    prompt: Review the architectural implications and design considerations for this feature.
+    prompt: Create a low level design for this feature.
     send: true
 ---
 
