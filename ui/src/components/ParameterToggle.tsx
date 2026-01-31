@@ -4,44 +4,57 @@
 
 import React from 'react';
 import { useParameter } from '@vstkit/ipc';
-import './ParameterToggle.css';
 
 interface ParameterToggleProps {
-  id: string;
+  readonly id: string;
 }
 
 export function ParameterToggle({ id }: ParameterToggleProps): React.JSX.Element {
   const { param, setValue, isLoading, error } = useParameter(id);
 
   if (isLoading) {
-    return <div className="parameter-toggle loading">Loading {id}...</div>;
+    return (
+      <div className="mb-4 flex items-center justify-between rounded-lg border border-plugin-border bg-plugin-surface p-4 italic text-gray-500">
+        Loading {id}...
+      </div>
+    );
   }
 
   if (error || !param) {
     return (
-      <div className="parameter-toggle error">Error: {error?.message || 'Parameter not found'}</div>
+      <div className="mb-4 flex items-center justify-between rounded-lg border border-red-400 bg-plugin-surface p-4 text-red-400">
+        Error: {error?.message || 'Parameter not found'}
+      </div>
     );
   }
 
   const isOn = param.value >= 0.5;
 
   const handleToggle = (): void => {
-    const newValue = isOn ? 0.0 : 1.0;
+    const newValue = isOn ? 0 : 1;
     setValue(newValue).catch((err) => {
       console.error('Failed to set parameter:', err);
     });
   };
 
   return (
-    <div className="parameter-toggle">
-      <label htmlFor={`toggle-${id}`}>{param.name}</label>
+    <div className="mb-4 flex items-center justify-between rounded-lg border border-plugin-border bg-plugin-surface p-4">
+      <label htmlFor={`toggle-${id}`} className="font-semibold text-gray-200">
+        {param.name}
+      </label>
       <button
         id={`toggle-${id}`}
-        className={`toggle-button ${isOn ? 'on' : 'off'}`}
+        className={`relative h-[26px] w-[50px] cursor-pointer rounded-full border-none outline-none transition-colors duration-200 ${
+          isOn ? 'bg-accent hover:bg-accent-light' : 'bg-gray-600 hover:bg-gray-500'
+        }`}
         onClick={handleToggle}
         aria-pressed={isOn}
       >
-        <span className="toggle-indicator"></span>
+        <span
+          className={`absolute top-[3px] h-5 w-5 rounded-full bg-white transition-[left] duration-200 ${
+            isOn ? 'left-[27px]' : 'left-[3px]'
+          }`}
+        ></span>
       </button>
     </div>
   );

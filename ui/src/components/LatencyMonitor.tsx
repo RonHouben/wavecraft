@@ -4,38 +4,51 @@
 
 import React from 'react';
 import { useLatencyMonitor } from '@vstkit/ipc';
-import './LatencyMonitor.css';
 
 export function LatencyMonitor(): React.JSX.Element {
   const { latency, avg, max, count } = useLatencyMonitor(1000);
 
+  const getStatusColor = (): string => {
+    if (avg < 5) return 'text-green-400';
+    if (avg < 10) return 'text-yellow-400';
+    return 'text-red-400';
+  };
+
+  const getStatusText = (): string => {
+    if (avg < 5) return '✓ Excellent';
+    if (avg < 10) return '⚠ Fair';
+    return '✗ Poor';
+  };
+
   return (
-    <div className="latency-monitor">
-      <h3>IPC Latency</h3>
-      <div className="metrics">
-        <div className="metric">
-          <span className="label">Current:</span>
-          <span className="value">{latency !== null ? `${latency.toFixed(2)} ms` : '—'}</span>
+    <div className="mb-4 rounded-lg border border-plugin-border bg-plugin-surface p-4">
+      <h3 className="m-0 mb-3 text-base font-semibold text-gray-200">IPC Latency</h3>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="flex justify-between rounded bg-plugin-dark p-2">
+          <span className="text-sm text-gray-500">Current:</span>
+          <span className="font-mono text-sm font-semibold text-accent">
+            {latency === null ? '—' : `${latency.toFixed(2)} ms`}
+          </span>
         </div>
-        <div className="metric">
-          <span className="label">Average:</span>
-          <span className="value">{avg > 0 ? `${avg.toFixed(2)} ms` : '—'}</span>
+        <div className="flex justify-between rounded bg-plugin-dark p-2">
+          <span className="text-sm text-gray-500">Average:</span>
+          <span className="font-mono text-sm font-semibold text-accent">
+            {avg > 0 ? `${avg.toFixed(2)} ms` : '—'}
+          </span>
         </div>
-        <div className="metric">
-          <span className="label">Max:</span>
-          <span className="value">{max > 0 ? `${max.toFixed(2)} ms` : '—'}</span>
+        <div className="flex justify-between rounded bg-plugin-dark p-2">
+          <span className="text-sm text-gray-500">Max:</span>
+          <span className="font-mono text-sm font-semibold text-accent">
+            {max > 0 ? `${max.toFixed(2)} ms` : '—'}
+          </span>
         </div>
-        <div className="metric">
-          <span className="label">Samples:</span>
-          <span className="value">{count}</span>
+        <div className="flex justify-between rounded bg-plugin-dark p-2">
+          <span className="text-sm text-gray-500">Samples:</span>
+          <span className="font-mono text-sm font-semibold text-accent">{count}</span>
         </div>
       </div>
-      <div className="status">
-        {avg > 0 && (
-          <span className={avg < 5 ? 'good' : avg < 10 ? 'warning' : 'poor'}>
-            {avg < 5 ? '✓ Excellent' : avg < 10 ? '⚠ Fair' : '✗ Poor'}
-          </span>
-        )}
+      <div className="mt-3 text-center text-sm font-semibold">
+        {avg > 0 && <span className={getStatusColor()}>{getStatusText()}</span>}
       </div>
     </div>
   );

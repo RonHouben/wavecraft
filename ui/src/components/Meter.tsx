@@ -6,7 +6,6 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { getMeterFrame, linearToDb, type MeterFrame } from '../lib/vstkit-ipc';
-import './Meter.css';
 
 const METER_UPDATE_HZ = 30;
 const METER_FLOOR_DB = -60;
@@ -93,12 +92,12 @@ export function Meter(): React.JSX.Element {
   };
 
   return (
-    <div className="meter">
-      <div className="meter-header">
-        <div className="meter-label">Levels</div>
+    <div className="flex flex-col gap-2 rounded-lg bg-black/30 p-4 font-sans">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Levels</div>
         {(clippedL || clippedR) && (
           <button
-            className="meter-clip-indicator"
+            className="animate-clip-pulse cursor-pointer select-none rounded border-none bg-meter-clip px-2 py-0.5 text-[10px] font-bold text-white hover:bg-meter-clip-dark active:scale-95"
             onClick={handleResetClip}
             title="Click to reset"
             type="button"
@@ -108,38 +107,58 @@ export function Meter(): React.JSX.Element {
         )}
       </div>
 
-      <div className="meter-channel">
-        <div className="meter-channel-label">L</div>
-        <div className="meter-bar-container">
-          <div className={`meter-bar-bg ${clippedL ? 'clipped' : ''}`}>
+      <div className="flex items-center gap-2">
+        <div className="w-4 text-center text-[11px] font-semibold text-gray-300">L</div>
+        <div className="relative h-6 flex-1">
+          <div
+            className={`relative h-full w-full overflow-hidden rounded bg-[#222] transition-shadow duration-100 ${
+              clippedL ? 'shadow-[inset_0_0_8px_rgba(255,23,68,0.8)]' : ''
+            }`}
+          >
             <div
-              className="meter-bar-rms"
+              className="absolute left-0 top-0 h-full bg-gradient-to-r from-meter-safe to-meter-safe-light transition-[width] duration-100"
               style={{ width: `${Math.max(0, Math.min(100, rmsLPercent))}%` }}
             />
             <div
-              className="meter-bar-peak"
+              className="duration-50 absolute left-0 top-0 h-full bg-gradient-to-r from-meter-safe via-meter-warning to-orange-500 opacity-60 transition-[width]"
               style={{ width: `${Math.max(0, Math.min(100, peakLPercent))}%` }}
             />
           </div>
         </div>
-        <div className={`meter-value ${clippedL ? 'clipped' : ''}`}>{peakLDb.toFixed(1)} dB</div>
+        <div
+          className={`w-[60px] text-right font-mono text-[11px] text-gray-300 transition-colors duration-100 ${
+            clippedL ? 'font-semibold text-meter-clip' : ''
+          }`}
+        >
+          {peakLDb.toFixed(1)} dB
+        </div>
       </div>
 
-      <div className="meter-channel">
-        <div className="meter-channel-label">R</div>
-        <div className="meter-bar-container">
-          <div className={`meter-bar-bg ${clippedR ? 'clipped' : ''}`}>
+      <div className="flex items-center gap-2">
+        <div className="w-4 text-center text-[11px] font-semibold text-gray-300">R</div>
+        <div className="relative h-6 flex-1">
+          <div
+            className={`relative h-full w-full overflow-hidden rounded bg-[#222] transition-shadow duration-100 ${
+              clippedR ? 'shadow-[inset_0_0_8px_rgba(255,23,68,0.8)]' : ''
+            }`}
+          >
             <div
-              className="meter-bar-rms"
+              className="absolute left-0 top-0 h-full bg-gradient-to-r from-meter-safe to-meter-safe-light transition-[width] duration-100"
               style={{ width: `${Math.max(0, Math.min(100, rmsRPercent))}%` }}
             />
             <div
-              className="meter-bar-peak"
+              className="duration-50 absolute left-0 top-0 h-full bg-gradient-to-r from-meter-safe via-meter-warning to-orange-500 opacity-60 transition-[width]"
               style={{ width: `${Math.max(0, Math.min(100, peakRPercent))}%` }}
             />
           </div>
         </div>
-        <div className={`meter-value ${clippedR ? 'clipped' : ''}`}>{peakRDb.toFixed(1)} dB</div>
+        <div
+          className={`w-[60px] text-right font-mono text-[11px] text-gray-300 transition-colors duration-100 ${
+            clippedR ? 'font-semibold text-meter-clip' : ''
+          }`}
+        >
+          {peakRDb.toFixed(1)} dB
+        </div>
       </div>
     </div>
   );

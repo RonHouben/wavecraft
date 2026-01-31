@@ -4,7 +4,6 @@
 
 import React, { useState } from 'react';
 import { useRequestResize } from '../lib/vstkit-ipc';
-import './ResizeControls.css';
 
 const PRESET_SIZES = [
   { name: 'Small', width: 600, height: 400 },
@@ -37,18 +36,20 @@ export function ResizeControls(): React.JSX.Element {
   };
 
   return (
-    <div className="resize-controls">
-      <h3>Window Size</h3>
-      <div className="resize-presets">
+    <div className="rounded-lg bg-black/5 p-5">
+      <h3 className="m-0 mb-4 text-sm font-semibold uppercase tracking-wide text-black/70">
+        Window Size
+      </h3>
+      <div className="mb-4 grid grid-cols-2 gap-2.5">
         {PRESET_SIZES.map((preset) => (
           <button
             key={preset.name}
             onClick={() => handleResize(preset.width, preset.height)}
             disabled={isLoading}
-            className="resize-button"
+            className="flex cursor-pointer flex-col items-center justify-center rounded-md border border-gray-300 bg-white p-3 font-medium text-gray-800 transition-all duration-200 hover:-translate-y-px hover:border-blue-500 hover:bg-gray-100 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
           >
             {preset.name}
-            <span className="size-label">
+            <span className="mt-1 text-[11px] text-gray-500">
               {preset.width} × {preset.height}
             </span>
           </button>
@@ -56,7 +57,11 @@ export function ResizeControls(): React.JSX.Element {
       </div>
       {status && (
         <div
-          className={`resize-status ${status.startsWith('✓') ? 'success' : status.startsWith('✗') ? 'error' : ''}`}
+          className={`rounded px-3 py-2 text-center text-sm ${((): string => {
+            if (status.startsWith('✓')) return 'bg-green-500/10 text-green-600';
+            if (status.startsWith('✗')) return 'bg-red-500/10 text-red-500';
+            return 'bg-black/5 text-gray-500';
+          })()}`}
         >
           {status}
         </div>
