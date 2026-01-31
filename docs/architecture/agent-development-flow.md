@@ -44,27 +44,32 @@ This project uses specialized agents with distinct responsibilities that hand of
      │                                                                     
      │  "Test Implementation"                                              
      ▼                                                                     
-┌────────┐                                                                 
-│ Tester │  Manual Testing                                                 
-└────┬───┘  └─► docs/feature-specs/{feature}/test-plan.md                  
-     │                                                                     
-     │ ─────────────────────────────────────────────┐                      
-     │  Test Issues Found?                          │ No Issues            
-     ▼                                              ▼                      
-┌────────┐                                    ┌──────┐                     
-│ Coder  │  Fix Test Issues ──► Re-test       │  QA  │  Static Analysis    
-└────────┘                                    └──┬───┘  └─► QA-report.md   
-                                                 │                         
+┌────────┐◄─────────────────────────────────────────────────────┐          
+│ Tester │  Manual Testing                                      │          
+└────┬───┘  └─► docs/feature-specs/{feature}/test-plan.md       │          
+     │                                                          │          
+     │ ─────────────────────────────────────────────┐           │          
+     │  Test Issues Found?                          │ No Issues │          
+     ▼                                              ▼           │          
+┌────────┐                                    ┌──────┐          │          
+│ Coder  │  Fix Test Issues ──► Re-test       │  QA  │  Static  │          
+└────────┘                                    └──┬───┘  Analysis│          
+                                                 │     └─► QA-report.md    
                                    ┌─────────────┴─────────────┐           
                                    │  QA Issues Found?         │ No Issues 
                                    ▼                           ▼           
-                             ┌────────┐                  ┌──────┐          
-                             │ Coder  │  Fix Findings    │  PO  │  Update  
-                             └────┬───┘                  └──┬───┘  Roadmap 
-                                  │                         │     Archive  
-                                  └──────► Re-QA ──────────►│              
-                                                            ▼              
-                                                     ✅ Feature Complete   
+                             ┌────────┐                  ┌──────────┐      
+                             │ Coder  │  Fix Findings    │ Architect│      
+                             └────┬───┘                  └────┬─────┘      
+                                  │                           │ Update     
+                                  └──────► Re-test ───────────┤ Arch Docs  
+                                                              ▼            
+                                                        ┌──────┐           
+                                                        │  PO  │  Update   
+                                                        └──┬───┘  Roadmap  
+                                                           │      Archive  
+                                                           ▼               
+                                                    ✅ Feature Complete    
 ```
 
 ## Handoff Summary
@@ -73,12 +78,14 @@ This project uses specialized agents with distinct responsibilities that hand of
 |------|----|---------|------------------|
 | PO → Architect | "Create low level design" | Feature requirements, user stories |
 | Architect → Planner | "Create implementation plan" | Low-level design document |
-| Architect → PO | "Update roadmap" | Design completion status |
 | Planner → Coder | "Start Implementation" | Implementation plan |
 | Coder → Tester | "Test Implementation" | Completed implementation |
 | Tester → Coder | "Fix Issues" | Test failures documented in test-plan.md |
+| Tester → QA | "Run QA" | All tests passing |
 | QA → Coder | "Fix findings" | QA report with severity/location |
-| QA → Architect | "Update architectural Docs" | Implementation review |
+| Coder → Tester | "Re-test" | QA findings fixed |
+| QA → Architect | "Update architectural Docs" | No QA issues, implementation review |
+| Architect → PO | "Update roadmap" | Architecture docs updated |
 
 ## Key Documentation Artifacts
 
