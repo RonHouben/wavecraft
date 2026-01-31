@@ -102,6 +102,7 @@ VstKit uses a Rust-based build system (`xtask`) that provides a unified interfac
 |---------|-------------|
 | `cargo xtask bundle` | Build and bundle VST3/CLAP plugins |
 | `cargo xtask test` | Run unit tests |
+| `cargo xtask lint` | Run linters for UI and/or engine code |
 | `cargo xtask desktop` | Build and run the desktop POC |
 | `cargo xtask au` | Build AU wrapper (macOS only) |
 | `cargo xtask install` | Install plugins to system directories |

@@ -49,15 +49,22 @@ This project uses specialized agents with distinct responsibilities that hand of
 └────┬───┘  └─► docs/feature-specs/{feature}/test-plan.md                  
      │                                                                     
      │ ─────────────────────────────────────────────┐                      
-     │  Issues Found?                               │ No Issues            
+     │  Test Issues Found?                          │ No Issues            
      ▼                                              ▼                      
 ┌────────┐                                    ┌──────┐                     
-│ Coder  │  Fix Issues                        │  PO  │  Update Roadmap     
-└────┬───┘                                    └──┬───┘  Archive Spec       
-     │                                           │                         
-     └───────────► Re-test ─────────────────────►│                         
-                                                 ▼                         
-                                          ✅ Feature Complete              
+│ Coder  │  Fix Test Issues ──► Re-test       │  QA  │  Static Analysis    
+└────────┘                                    └──┬───┘  └─► QA-report.md   
+                                                 │                         
+                                   ┌─────────────┴─────────────┐           
+                                   │  QA Issues Found?         │ No Issues 
+                                   ▼                           ▼           
+                             ┌────────┐                  ┌──────┐          
+                             │ Coder  │  Fix Findings    │  PO  │  Update  
+                             └────┬───┘                  └──┬───┘  Roadmap 
+                                  │                         │     Archive  
+                                  └──────► Re-QA ──────────►│              
+                                                            ▼              
+                                                     ✅ Feature Complete   
 ```
 
 ## Handoff Summary
@@ -83,7 +90,8 @@ docs/feature-specs/{feature}/
 ├── low-level-design-{feature}.md # Architect: Technical design
 ├── implementation-plan.md       # Planner: Step-by-step plan
 ├── implementation-progress.md   # Coder: Progress tracking
-└── test-plan.md                 # Tester: Test cases & results
+├── test-plan.md                 # Tester: Test cases & results
+└── QA-report.md                 # QA: Quality review & findings
 ```
 
 On completion, PO archives the entire feature folder to `docs/feature-specs/_archive/{feature}/`.
