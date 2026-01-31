@@ -162,6 +162,9 @@ Use this format:
 - Dependencies
 ```
 
+#### Where to save user stories
+- Write them down in a markdown file in location `/docs/specs/{feature-name}/user-stories.md`
+
 ---
 
 ## Domain Knowledge: Audio Plugin Users
