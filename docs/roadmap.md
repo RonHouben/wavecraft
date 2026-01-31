@@ -159,7 +159,7 @@ This document tracks implementation progress against the milestones defined in t
 | Automated visual regression tests | ⏳ | |
 | Make React UI default (remove feature flag) | ⏳ | Remove `webview` feature flag; React UI should be the default editor. Investigate if old Rust GUI code (`nih-plug` native UI) can be fully removed. |
 | Implement semantic versioning | ⏳ | SemVer for plugin releases; version in Cargo.toml, plugin metadata (VST3/CLAP/AU), **and visible in UI** so users can verify they're running the latest version |
-| CI/CD pipeline (GitHub Actions) | ⚠️ | **Blocked for redesign** — Current pipeline disabled on PRs. Needs architecture review to define phases (build, lint, test, release). Work with architect to design proper pipeline structure. |
+| CI/CD pipeline (GitHub Actions) | ✅ | Redesigned staged pipeline with 6 jobs across 3 stages. Ubuntu for lint/test (cost optimization), macos for build. Branch protection configured. Completed 2026-01-31. |
 
 ---
 
@@ -191,6 +191,7 @@ Currently, the UI can only communicate with the Rust engine when running inside 
 
 | Date | Update |
 |------|--------|
+| 2026-01-31 | **CI/CD pipeline redesign complete**: New staged pipeline with 6 specialized jobs (typecheck-ui, lint-ui, lint-engine, test-ui, test-engine, build-plugin). Stage 1 (fast feedback) on ubuntu, Stage 2 (tests) on ubuntu, Stage 3 (build) on macos (main only). Concurrency control, artifact sharing, branch protection. PR time <5 min, cost optimized (~90% ubuntu runners). Archived to `_archive/ci-cd-pipeline-redesign/`. |
 | 2026-01-31 | **UI unit testing framework complete**: Vitest + React Testing Library with IPC mock module. 25 passing tests covering ParameterSlider, Meter, and audio-math utilities. Unified `cargo xtask test` command with `--ui` and `--engine` flags. CI workflow ready (PR trigger disabled pending pipeline redesign). QA approved. Archived to `_archive/ui-unit-testing/`. |
 | 2026-01-31 | **TailwindCSS implementation complete**: Migrated all 7 component CSS files to Tailwind utilities. Custom theme with semantic tokens (plugin-dark, plugin-surface, accent, meter colors). Bundle size 3.74KB gzipped (63% under 10KB target). QA approved. Architectural docs updated. Archived to `_archive/tailwindcss/`. |
 | 2026-01-31 | **Added Milestone 6: Browser-Based UI Testing Infrastructure**: WebSocket IPC bridge to enable Playwright testing with real engine communication. Addresses limitation that UI can only talk to engine inside WKWebView. Enables automated visual testing, remote debugging, and hot-reload development with engine connectivity. |
@@ -223,9 +224,9 @@ Currently, the UI can only communicate with the Rust engine when running inside 
    - ✅ ~~Linting infrastructure implementation~~ (completed 2026-01-31)
    - ✅ ~~TailwindCSS implementation for React UI~~ (completed 2026-01-31)
    - ✅ ~~UI unit testing framework~~ (completed 2026-01-31)
-   - **Next up: CI/CD pipeline architecture review** (currently paused)
-   - Performance profiling at low buffer sizes
-   - Performance profiling at low buffer sizes
+   - ✅ ~~CI/CD pipeline redesign~~ (completed 2026-01-31)
+   - **Next up:** Performance profiling at low buffer sizes (32/64 samples)
+   - Semantic versioning implementation
 2. **Milestone 6**: Browser-Based UI Testing Infrastructure (upcoming)
    - WebSocket IPC bridge design
    - Enable Playwright visual testing with real engine data
