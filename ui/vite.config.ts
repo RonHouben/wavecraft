@@ -9,6 +9,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@vstkit/ipc': path.resolve(__dirname, './src/lib/vstkit-ipc'),
+      '@vstkit/ipc/meters': path.resolve(__dirname, './src/lib/vstkit-ipc/meters'),
     },
   },
   build: {

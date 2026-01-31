@@ -1,10 +1,11 @@
 # build artifacts
 /engine/target/
-target/
+/target/
 /packaging/macos/au-wrapper/build
-build
-ui/node_modules
-ui/dist
+/build
+/ui/node_modules
+/ui/dist
+/ui/coverage
 
 # Cargo lock for libraries (keep for binaries/plugins)
 # Cargo.lock

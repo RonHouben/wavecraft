@@ -148,7 +148,12 @@ src/
 │       └── hooks.ts          # React hooks (functional)
 ├── components/
 │   ├── ParameterSlider.tsx   # Functional component
+│   ├── ParameterSlider.test.tsx # Co-located test
 │   └── LatencyMonitor.tsx    # Functional component
+├── test/
+│   ├── setup.ts              # Global test setup
+│   └── mocks/
+│       └── ipc.ts            # IPC mock module
 └── App.tsx
 ```
 
@@ -158,17 +163,20 @@ src/
 
 **Rule:** Use configured path aliases instead of relative imports for shared libraries.
 
-The project defines the following import aliases (configured in `tsconfig.json` and `vite.config.ts`):
+The project defines the following import aliases (configured in `tsconfig.json`, `vite.config.ts`, and `vitest.config.ts`):
 
 | Alias | Path | Usage |
 |-------|------|-------|
-| `@vstkit/ipc` | `./src/lib/vstkit-ipc` | IPC client and types |
+| `@vstkit/ipc` | `./src/lib/vstkit-ipc` | IPC client, hooks, and types |
+| `@vstkit/ipc/meters` | `./src/lib/vstkit-ipc/meters` | Pure audio math utilities (no IPC side effects) |
 
 **Do:**
 ```typescript
-// ✅ Use alias for shared libraries
-import { getMeterFrame, MeterFrame } from '@vstkit/ipc';
-import { useParameter } from '@vstkit/ipc';
+// ✅ Use alias for IPC features (in components)
+import { getMeterFrame, MeterFrame, useParameter } from '@vstkit/ipc';
+
+// ✅ Use subpath alias for pure utilities (especially in tests)
+import { linearToDb, dbToLinear } from '@vstkit/ipc/meters';
 ```
 
 **Don't:**
@@ -176,12 +184,23 @@ import { useParameter } from '@vstkit/ipc';
 // ❌ Relative imports to shared libraries
 import { getMeterFrame } from '../lib/vstkit-ipc';
 import { useParameter } from '../../lib/vstkit-ipc';
+
+// ❌ Relative imports in test files
+import { linearToDb } from './vstkit-ipc/meters';
 ```
+
+**Subpath Aliases:**
+
+The `@vstkit/ipc/meters` subpath provides access to pure utility functions (`linearToDb`, `dbToLinear`, `getMeterFrame`) without triggering IPC initialization side effects. Use this subpath:
+- In unit tests for pure functions
+- When you only need math utilities, not hooks or clients
 
 **Rationale:**
 - Cleaner imports that don't change when files move
 - Immediately identifies imports as project-internal
 - Consistent import paths across the codebase
+- Test files follow the same conventions as production code
+- Subpath aliases avoid initialization side effects in tests
 
 ### Global Object Access
 
@@ -400,6 +419,87 @@ Code running on the audio thread must:
 - Never make system calls that can block
 - Use atomic types for shared state
 - Use SPSC ring buffers for data transfer
+
+---
+
+## Testing
+
+VstKit uses Vitest and React Testing Library for UI unit testing.
+
+### Running Tests
+
+```bash
+# Run all tests (Engine + UI)
+cargo xtask test
+
+# Run only UI tests
+cargo xtask test --ui
+
+# Run only Engine tests
+cargo xtask test --engine
+
+# Run UI tests in watch mode (from ui/ directory)
+npm run test:watch
+
+# Run UI tests with coverage
+npm run test:coverage
+```
+
+### Test File Organization
+
+Tests are co-located with source files:
+
+```
+ui/src/
+├── components/
+│   ├── Meter.tsx
+│   ├── Meter.test.tsx           # Component test
+│   ├── ParameterSlider.tsx
+│   └── ParameterSlider.test.tsx # Component test
+├── lib/
+│   ├── audio-math.ts
+│   └── audio-math.test.ts       # Pure function tests
+└── test/
+    ├── setup.ts                 # Global test setup
+    └── mocks/
+        └── ipc.ts               # IPC mock module
+```
+
+### Mocking IPC for Tests
+
+The `ui/src/test/mocks/ipc.ts` module provides mock implementations of IPC hooks that allow testing components without the Rust engine.
+
+**Do:**
+```typescript
+// ✅ Use mock utilities to set up test state
+import { setMockParameter, resetMocks } from '../test/mocks/ipc';
+import { useParameter } from '../test/mocks/ipc'; // Use mock hook
+
+beforeEach(() => {
+  resetMocks();
+  setMockParameter('volume', { value: 0.5, name: 'Volume' });
+});
+```
+
+**Mock API:**
+
+| Function | Purpose |
+|----------|----------|
+| `setMockParameter(id, info)` | Set parameter state for a test |
+| `setMockMeterFrame(frame)` | Set meter data for a test |
+| `getMockParameter(id)` | Get current mock parameter value |
+| `resetMocks()` | Clear all mock state (call in `beforeEach`) |
+
+### Test Configuration
+
+**Vitest Configuration** (`ui/vitest.config.ts`):
+- Environment: `happy-dom` (faster than jsdom)
+- Globals: enabled (`describe`, `it`, `expect` without imports)
+- Setup: `src/test/setup.ts` runs before each test file
+
+**TypeScript Support:**
+- Types: `vitest/globals`, `@testing-library/jest-dom`
+- Aliases: Same as production (`@vstkit/ipc`, `@vstkit/ipc/meters`)
 
 ---
 

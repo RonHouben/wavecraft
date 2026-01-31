@@ -98,7 +98,9 @@ cargo xtask all
 | `cargo xtask bundle --debug` | Debug build (faster compile, no optimizations) |
 | `cargo xtask bundle -f webview_editor` | Build with WebView UI (see Feature Flags) |
 | `cargo xtask bundle --install` | Build and install plugins in one step |
-| `cargo xtask test` | Run unit tests for dsp and protocol crates |
+| `cargo xtask test` | Run all tests (engine + UI) |
+| `cargo xtask test --ui` | Run UI tests only (npm test) |
+| `cargo xtask test --engine` | Run engine tests only (cargo test) |
 | `cargo xtask test --all` | Test all workspace crates |
 | `cargo xtask au` | Build AU wrapper (macOS only, requires CMake) |
 | `cargo xtask install` | Install plugins to system directories |

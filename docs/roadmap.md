@@ -7,14 +7,14 @@ This document tracks implementation progress against the milestones defined in t
 ## Progress Overview
 
 ```
-┌───────────────────────────────────────────────────────────────────────────────────────────┐
-│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           🚧 M5           ⏳ M6              │
-│  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ─────── Browser Testing     │
-│                                                         ▲                                │
-│                                                       YOU ARE HERE                       │
-│                                                                                          │
-│  Progress: [████████████████████████████████████████████████████░░░░░░░░░░░░░░░░] 70%    │
-└───────────────────────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           🚧 M5           ⏳ M6              ⭐       │
+│  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ─────── Browser Testing ─── Complete │
+│                                                         ▲                                         │
+│                                                       YOU ARE HERE                                │
+│                                                                                                   │
+│  Progress: [████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░] 70%    │
+└────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -149,7 +149,7 @@ This document tracks implementation progress against the milestones defined in t
 |------|--------|-------|
 | **Linting infrastructure** | ✅ | ESLint + Prettier (UI), Clippy + fmt (Engine), `cargo xtask lint` command, CI workflow. Completed 2026-01-31. |
 | **TailwindCSS for React UI** | ✅ | Utility-first CSS replacing component CSS files. Custom theme with semantic tokens. 3.74KB gzipped (under 10KB target). Completed 2026-01-31. |
-| **UI unit testing framework** | ⏳ | Vitest + React Testing Library for component testing. Enable test-driven development for React UI. |
+| **UI unit testing framework** | ✅ | Vitest + React Testing Library. IPC mock module for isolated component testing. 25 passing tests. `cargo xtask test --ui` command. CI workflow ready (PR trigger disabled pending pipeline redesign). Completed 2026-01-31. |
 | Performance profiling (low buffer sizes: 32/64 samples) | ⏳ | |
 | CPU stress testing | ⏳ | |
 | Memory usage optimization | ⏳ | |
@@ -191,6 +191,7 @@ Currently, the UI can only communicate with the Rust engine when running inside 
 
 | Date | Update |
 |------|--------|
+| 2026-01-31 | **UI unit testing framework complete**: Vitest + React Testing Library with IPC mock module. 25 passing tests covering ParameterSlider, Meter, and audio-math utilities. Unified `cargo xtask test` command with `--ui` and `--engine` flags. CI workflow ready (PR trigger disabled pending pipeline redesign). QA approved. Archived to `_archive/ui-unit-testing/`. |
 | 2026-01-31 | **TailwindCSS implementation complete**: Migrated all 7 component CSS files to Tailwind utilities. Custom theme with semantic tokens (plugin-dark, plugin-surface, accent, meter colors). Bundle size 3.74KB gzipped (63% under 10KB target). QA approved. Architectural docs updated. Archived to `_archive/tailwindcss/`. |
 | 2026-01-31 | **Added Milestone 6: Browser-Based UI Testing Infrastructure**: WebSocket IPC bridge to enable Playwright testing with real engine communication. Addresses limitation that UI can only talk to engine inside WKWebView. Enables automated visual testing, remote debugging, and hot-reload development with engine connectivity. |
 | 2026-01-31 | **Added UI unit testing framework to Milestone 5**: Vitest + React Testing Library for component testing. Enables test-driven development and regression prevention for React UI components. |
@@ -221,8 +222,9 @@ Currently, the UI can only communicate with the Rust engine when running inside 
 1. **Milestone 5**: Polish & Optimization
    - ✅ ~~Linting infrastructure implementation~~ (completed 2026-01-31)
    - ✅ ~~TailwindCSS implementation for React UI~~ (completed 2026-01-31)
-   - **Next up: UI unit testing framework** (Vitest + React Testing Library)
-   - CI/CD pipeline architecture review (currently paused)
+   - ✅ ~~UI unit testing framework~~ (completed 2026-01-31)
+   - **Next up: CI/CD pipeline architecture review** (currently paused)
+   - Performance profiling at low buffer sizes
    - Performance profiling at low buffer sizes
 2. **Milestone 6**: Browser-Based UI Testing Infrastructure (upcoming)
    - WebSocket IPC bridge design

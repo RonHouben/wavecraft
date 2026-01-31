@@ -1,6 +1,6 @@
 name: CI Build
 
-# TEMPORARILY DISABLED on PRs — Pipeline under redesign (2026-01-31)
+# TEMPORARILY DISABLED — UI test infrastructure added, but full CI pipeline needs redesign
 # See docs/roadmap.md for status. Will be re-enabled after architecture review.
 on:
   push:
@@ -38,6 +38,18 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+      
+      - name: Install UI dependencies
+        working-directory: ui
+        run: npm ci
+      
+      - name: Run UI tests
+        working-directory: ui
+        run: npm test
+      
+      - name: Run Engine tests
+        working-directory: engine
+        run: cargo test --workspace
       
       - name: Build UI
         working-directory: engine
