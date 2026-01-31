@@ -148,7 +148,12 @@ src/
 │       └── hooks.ts          # React hooks (functional)
 ├── components/
 │   ├── ParameterSlider.tsx   # Functional component
+│   ├── ParameterSlider.test.tsx # Co-located test
 │   └── LatencyMonitor.tsx    # Functional component
+├── test/
+│   ├── setup.ts              # Global test setup
+│   └── mocks/
+│       └── ipc.ts            # IPC mock module
 └── App.tsx
 ```
 
@@ -414,6 +419,87 @@ Code running on the audio thread must:
 - Never make system calls that can block
 - Use atomic types for shared state
 - Use SPSC ring buffers for data transfer
+
+---
+
+## Testing
+
+VstKit uses Vitest and React Testing Library for UI unit testing.
+
+### Running Tests
+
+```bash
+# Run all tests (Engine + UI)
+cargo xtask test
+
+# Run only UI tests
+cargo xtask test --ui
+
+# Run only Engine tests
+cargo xtask test --engine
+
+# Run UI tests in watch mode (from ui/ directory)
+npm run test:watch
+
+# Run UI tests with coverage
+npm run test:coverage
+```
+
+### Test File Organization
+
+Tests are co-located with source files:
+
+```
+ui/src/
+├── components/
+│   ├── Meter.tsx
+│   ├── Meter.test.tsx           # Component test
+│   ├── ParameterSlider.tsx
+│   └── ParameterSlider.test.tsx # Component test
+├── lib/
+│   ├── audio-math.ts
+│   └── audio-math.test.ts       # Pure function tests
+└── test/
+    ├── setup.ts                 # Global test setup
+    └── mocks/
+        └── ipc.ts               # IPC mock module
+```
+
+### Mocking IPC for Tests
+
+The `ui/src/test/mocks/ipc.ts` module provides mock implementations of IPC hooks that allow testing components without the Rust engine.
+
+**Do:**
+```typescript
+// ✅ Use mock utilities to set up test state
+import { setMockParameter, resetMocks } from '../test/mocks/ipc';
+import { useParameter } from '../test/mocks/ipc'; // Use mock hook
+
+beforeEach(() => {
+  resetMocks();
+  setMockParameter('volume', { value: 0.5, name: 'Volume' });
+});
+```
+
+**Mock API:**
+
+| Function | Purpose |
+|----------|----------|
+| `setMockParameter(id, info)` | Set parameter state for a test |
+| `setMockMeterFrame(frame)` | Set meter data for a test |
+| `getMockParameter(id)` | Get current mock parameter value |
+| `resetMocks()` | Clear all mock state (call in `beforeEach`) |
+
+### Test Configuration
+
+**Vitest Configuration** (`ui/vitest.config.ts`):
+- Environment: `happy-dom` (faster than jsdom)
+- Globals: enabled (`describe`, `it`, `expect` without imports)
+- Setup: `src/test/setup.ts` runs before each test file
+
+**TypeScript Support:**
+- Types: `vitest/globals`, `@testing-library/jest-dom`
+- Aliases: Same as production (`@vstkit/ipc`, `@vstkit/ipc/meters`)
 
 ---
 
