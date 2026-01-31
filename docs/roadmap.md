@@ -154,7 +154,7 @@ This document tracks implementation progress against the milestones defined in t
 | Automated visual regression tests | ⏳ | |
 | Make React UI default (remove feature flag) | ⏳ | Remove `webview` feature flag; React UI should be the default editor. Investigate if old Rust GUI code (`nih-plug` native UI) can be fully removed. |
 | Implement semantic versioning | ⏳ | SemVer for plugin releases; version in Cargo.toml, plugin metadata (VST3/CLAP/AU), **and visible in UI** so users can verify they're running the latest version |
-| CI/CD pipeline (GitHub Actions) | ⏳ | Automated builds, tests, linting; release workflow with artifact publishing |
+| CI/CD pipeline (GitHub Actions) | ⚠️ | **Blocked for redesign** — Current pipeline disabled on PRs. Needs architecture review to define phases (build, lint, test, release). Work with architect to design proper pipeline structure. |
 
 ---
 
@@ -162,6 +162,7 @@ This document tracks implementation progress against the milestones defined in t
 
 | Date | Update |
 |------|--------|
+| 2026-01-31 | **CI/CD pipeline paused for redesign**: Current pipeline disabled on PRs (was blocking). Scheduled for dedicated architecture review to define proper phases (build, lint, test, release). Will collaborate with architect. |
 | 2026-01-31 | **Linting infrastructure design complete**: User stories (7) and low-level design created. Covers ESLint + Prettier for UI, Clippy + fmt for Rust, `cargo xtask lint` commands, QA agent integration, and CI workflow. Ready for implementation. |
 | 2026-01-31 | Added **Linting infrastructure** to Milestone 5 — ESLint/Prettier for UI, Clippy/fmt for Rust, xtask commands, QA agent integration, CI enforcement. User stories in `docs/specs/linting-infrastructure/`. |
 | 2026-01-31 | **Milestone 4 implementation complete**: Code signing and notarization infrastructure implemented. Three new xtask commands (`sign`, `notarize`, `release`) with full CI/CD pipeline and documentation. Ready for manual testing with Apple Developer credentials. |
