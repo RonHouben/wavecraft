@@ -162,7 +162,13 @@ jobs:
           path: engine/target
 
       - name: Restore executable permissions
-        run: find engine/target/debug/build -name 'build-script-build' -type f -exec chmod +x {} \;
+        run: |
+          echo "=== Finding build scripts ==="
+          find engine/target/debug/build -name 'build-script-build' -type f | head -5
+          echo "=== Applying chmod ==="
+          find engine/target/debug/build -name 'build-script-build' -type f -exec chmod +x {} \;
+          echo "=== Verifying permissions ==="
+          ls -la engine/target/debug/build/proc-macro2-*/build-script-build 2>/dev/null || echo "No proc-macro2 build script found"
 
       - name: Debug artifact structure
         run: |
