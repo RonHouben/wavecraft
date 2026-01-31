@@ -21,10 +21,14 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
 
+    /* Testing */
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
+
     /* Path aliases */
     "paths": {
       "*": ["./*"],
-      "@vstkit/ipc": ["./src/lib/vstkit-ipc"]
+      "@vstkit/ipc": ["./src/lib/vstkit-ipc"],
+      "@vstkit/ipc/meters": ["./src/lib/vstkit-ipc/meters"]
     }
   },
   "include": ["src"]

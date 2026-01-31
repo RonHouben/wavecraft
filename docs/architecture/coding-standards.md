@@ -158,17 +158,20 @@ src/
 
 **Rule:** Use configured path aliases instead of relative imports for shared libraries.
 
-The project defines the following import aliases (configured in `tsconfig.json` and `vite.config.ts`):
+The project defines the following import aliases (configured in `tsconfig.json`, `vite.config.ts`, and `vitest.config.ts`):
 
 | Alias | Path | Usage |
 |-------|------|-------|
-| `@vstkit/ipc` | `./src/lib/vstkit-ipc` | IPC client and types |
+| `@vstkit/ipc` | `./src/lib/vstkit-ipc` | IPC client, hooks, and types |
+| `@vstkit/ipc/meters` | `./src/lib/vstkit-ipc/meters` | Pure audio math utilities (no IPC side effects) |
 
 **Do:**
 ```typescript
-// ✅ Use alias for shared libraries
-import { getMeterFrame, MeterFrame } from '@vstkit/ipc';
-import { useParameter } from '@vstkit/ipc';
+// ✅ Use alias for IPC features (in components)
+import { getMeterFrame, MeterFrame, useParameter } from '@vstkit/ipc';
+
+// ✅ Use subpath alias for pure utilities (especially in tests)
+import { linearToDb, dbToLinear } from '@vstkit/ipc/meters';
 ```
 
 **Don't:**
@@ -176,12 +179,23 @@ import { useParameter } from '@vstkit/ipc';
 // ❌ Relative imports to shared libraries
 import { getMeterFrame } from '../lib/vstkit-ipc';
 import { useParameter } from '../../lib/vstkit-ipc';
+
+// ❌ Relative imports in test files
+import { linearToDb } from './vstkit-ipc/meters';
 ```
+
+**Subpath Aliases:**
+
+The `@vstkit/ipc/meters` subpath provides access to pure utility functions (`linearToDb`, `dbToLinear`, `getMeterFrame`) without triggering IPC initialization side effects. Use this subpath:
+- In unit tests for pure functions
+- When you only need math utilities, not hooks or clients
 
 **Rationale:**
 - Cleaner imports that don't change when files move
 - Immediately identifies imports as project-internal
 - Consistent import paths across the codebase
+- Test files follow the same conventions as production code
+- Subpath aliases avoid initialization side effects in tests
 
 ### Global Object Access
 

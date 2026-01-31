@@ -34,7 +34,7 @@ pub fn run_all(
         if dry_run {
             println!("  [dry-run] Would run: cargo test -p dsp -p protocol");
         } else {
-            test::run(None, false, verbose)?;
+            test::run(None, false, false, true, verbose)?; // ui=false, engine=true
         }
         print_success("Tests passed.");
         println!();

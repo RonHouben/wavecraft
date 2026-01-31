@@ -39,6 +39,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
       
+      - name: Install UI dependencies
+        working-directory: ui
+        run: npm ci
+      
+      - name: Run UI tests
+        working-directory: ui
+        run: npm test
+      
+      - name: Run Engine tests
+        working-directory: engine
+        run: cargo test --workspace
+      
       - name: Build UI
         working-directory: engine
         run: cargo xtask build-ui --verbose

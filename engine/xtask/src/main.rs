@@ -78,6 +78,14 @@ enum Commands {
         /// Test all workspace crates
         #[arg(long)]
         all: bool,
+
+        /// Run UI tests only
+        #[arg(long)]
+        ui: bool,
+
+        /// Run engine tests only
+        #[arg(long)]
+        engine: bool,
     },
 
     /// Build and run the desktop POC application
@@ -222,13 +230,13 @@ fn main() -> Result<()> {
             }
             Ok(())
         }
-        Some(Commands::Test { package, all }) => {
+        Some(Commands::Test { package, all, ui, engine }) => {
             let packages = if package.is_empty() {
                 None
             } else {
                 Some(package)
             };
-            commands::test::run(packages, all, cli.verbose)
+            commands::test::run(packages, all, ui, engine, cli.verbose)
         }
         Some(Commands::Desktop { build_ui }) => {
             commands::desktop::run(!cli.debug, build_ui, cli.verbose)
