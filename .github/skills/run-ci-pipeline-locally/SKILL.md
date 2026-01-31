@@ -1,9 +1,9 @@
 ---
-name: run-gh-actions-locally
+name: Run CI/CD Pipeline Locally
 description: Test GitHub Actions workflows locally before pushing to GitHub using Docker and the 'act' CLI tool. Use this skill when users want to run CI locally, debug workflow failures, or validate GitHub Actions changes without pushing commits.
 ---
 
-# Skill: Run GitHub Actions Locally
+# Skill: Run GitHub Actions CI/CD pipeline Locally
 
 Use this skill to test GitHub Actions workflows locally before pushing to GitHub.
 
