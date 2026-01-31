@@ -90,13 +90,21 @@ jobs:
         with:
           components: rustfmt, clippy
 
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.4
+
+      - name: Configure sccache
+        run: |
+          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+
       - name: Download UI dist
         uses: actions/download-artifact@v4
         with:
           name: ui-dist
           path: ui/dist
 
-      - name: Cache cargo
+      - name: Cache cargo registry
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: engine
@@ -108,17 +116,6 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace -- -D warnings
         working-directory: engine
-
-      - name: Upload compiled artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: engine-target
-          path: |
-            engine/target/debug/deps
-            engine/target/debug/build
-            engine/target/debug/.fingerprint
-            engine/target/debug/incremental
-          retention-days: 1
 
   # ═══════════════════════════════════════════════════════════════════════════
   # STAGE 2: Tests (runs after Stage 1 passes)
@@ -162,17 +159,24 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.4
+
+      - name: Configure sccache
+        run: |
+          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+
       - name: Download UI dist
         uses: actions/download-artifact@v4
         with:
           name: ui-dist
           path: ui/dist
 
-      - name: Download compiled artifacts
-        uses: actions/download-artifact@v4
+      - name: Cache cargo registry
+        uses: Swatinem/rust-cache@v2
         with:
-          name: engine-target
-          path: engine/target/debug
+          workspaces: engine
 
       - name: Run tests
         run: cargo test --workspace
