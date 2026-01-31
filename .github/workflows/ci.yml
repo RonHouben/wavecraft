@@ -117,6 +117,17 @@ jobs:
         run: cargo clippy --workspace -- -D warnings
         working-directory: engine
 
+      - name: Upload compiled artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: engine-target
+          path: |
+            engine/target/debug/deps
+            engine/target/debug/build
+            engine/target/debug/.fingerprint
+            engine/target/debug/incremental
+          retention-days: 1
+
   # ═══════════════════════════════════════════════════════════════════════════
   # STAGE 2: Tests (runs after Stage 1 passes)
   # ═══════════════════════════════════════════════════════════════════════════
@@ -173,10 +184,11 @@ jobs:
           name: ui-dist
           path: ui/dist
 
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
+      - name: Download compiled artifacts
+        uses: actions/download-artifact@v4
         with:
-          workspaces: engine
+          name: engine-target
+          path: engine/target/debug
 
       - name: Run tests
         run: cargo test --workspace
