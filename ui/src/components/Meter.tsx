@@ -1,10 +1,10 @@
 /**
  * Meter - Audio level meter visualization component
- * 
+ *
  * Displays peak and RMS levels for stereo audio with dB scaling
  */
 
-import { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { getMeterFrame, linearToDb, type MeterFrame } from '../lib/vstkit-ipc';
 import './Meter.css';
 
@@ -14,11 +14,11 @@ const METER_RANGE_DB = 60; // 0 to -60 dB
 const CLIP_THRESHOLD = 1; // Linear amplitude threshold
 const CLIP_HOLD_MS = 2000; // Hold clip indicator for 2 seconds
 
-export function Meter() {
+export function Meter(): React.JSX.Element {
   const [frame, setFrame] = useState<MeterFrame | null>(null);
   const [clippedL, setClippedL] = useState(false);
   const [clippedR, setClippedR] = useState(false);
-  
+
   const clipLTimeoutRef = useRef<number | null>(null);
   const clipRTimeoutRef = useRef<number | null>(null);
 
@@ -27,7 +27,7 @@ export function Meter() {
     const interval = setInterval(async () => {
       const newFrame = await getMeterFrame();
       setFrame(newFrame);
-      
+
       // Detect clipping (peak > 1.0 linear = 0 dB)
       if (newFrame) {
         if (newFrame.peak_l > CLIP_THRESHOLD) {
@@ -41,7 +41,7 @@ export function Meter() {
             clipLTimeoutRef.current = null;
           }, CLIP_HOLD_MS);
         }
-        
+
         if (newFrame.peak_r > CLIP_THRESHOLD) {
           setClippedR(true);
           // Clear existing timeout and set new one
@@ -56,7 +56,7 @@ export function Meter() {
       }
     }, 1000 / METER_UPDATE_HZ);
 
-    return () => {
+    return (): void => {
       clearInterval(interval);
       if (clipLTimeoutRef.current !== null) {
         clearTimeout(clipLTimeoutRef.current);
@@ -78,8 +78,8 @@ export function Meter() {
   const peakRPercent = ((peakRDb - METER_FLOOR_DB) / METER_RANGE_DB) * 100;
   const rmsLPercent = ((rmsLDb - METER_FLOOR_DB) / METER_RANGE_DB) * 100;
   const rmsRPercent = ((rmsRDb - METER_FLOOR_DB) / METER_RANGE_DB) * 100;
-  
-  const handleResetClip = () => {
+
+  const handleResetClip = (): void => {
     setClippedL(false);
     setClippedR(false);
     if (clipLTimeoutRef.current !== null) {
@@ -97,8 +97,8 @@ export function Meter() {
       <div className="meter-header">
         <div className="meter-label">Levels</div>
         {(clippedL || clippedR) && (
-          <button 
-            className="meter-clip-indicator" 
+          <button
+            className="meter-clip-indicator"
             onClick={handleResetClip}
             title="Click to reset"
             type="button"
@@ -107,7 +107,7 @@ export function Meter() {
           </button>
         )}
       </div>
-      
+
       <div className="meter-channel">
         <div className="meter-channel-label">L</div>
         <div className="meter-bar-container">
@@ -122,9 +122,7 @@ export function Meter() {
             />
           </div>
         </div>
-        <div className={`meter-value ${clippedL ? 'clipped' : ''}`}>
-          {peakLDb.toFixed(1)} dB
-        </div>
+        <div className={`meter-value ${clippedL ? 'clipped' : ''}`}>{peakLDb.toFixed(1)} dB</div>
       </div>
 
       <div className="meter-channel">
@@ -141,9 +139,7 @@ export function Meter() {
             />
           </div>
         </div>
-        <div className={`meter-value ${clippedR ? 'clipped' : ''}`}>
-          {peakRDb.toFixed(1)} dB
-        </div>
+        <div className={`meter-value ${clippedR ? 'clipped' : ''}`}>{peakRDb.toFixed(1)} dB</div>
       </div>
     </div>
   );

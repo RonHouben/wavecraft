@@ -9,4 +9,3 @@ interface Window {
     postMessage(message: string): void;
   };
 }
-

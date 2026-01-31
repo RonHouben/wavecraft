@@ -148,11 +148,11 @@ This document tracks implementation progress against the milestones defined in t
 | Task | Status | Notes |
 |------|--------|-------|
 | **Linting infrastructure** | 🚧 | Design complete — [user stories](specs/linting-infrastructure/user-stories.md) + [low-level design](specs/linting-infrastructure/low-level-design-linting-infrastructure.md). Ready for implementation (~2h). |
+| **Implement TailwindCSS for React UI** | ⏳ | Industry standard for React; excellent flexibility, documentation, and LLM tooling support. Replace current CSS with utility-first approach. |
 | Performance profiling (low buffer sizes: 32/64 samples) | ⏳ | |
 | CPU stress testing | ⏳ | |
 | Memory usage optimization | ⏳ | |
 | UX polish | ⏳ | |
-| Investigate TailwindCSS for React UI | ⏳ | Evaluate utility-first CSS for plugin UI styling |
 | Format-specific feature parity verification | ⏳ | |
 | Cross-engine rendering consistency (WebKit vs Chromium) | ⏳ | |
 | Automated visual regression tests | ⏳ | |
@@ -166,6 +166,7 @@ This document tracks implementation progress against the milestones defined in t
 
 | Date | Update |
 |------|--------|
+| 2026-01-31 | **Added TailwindCSS implementation to Milestone 5**: Upgraded from "investigate" to full implementation item. Rationale: industry standard for React, excellent flexibility, strong documentation and LLM tooling support. |
 | 2026-01-31 | **Archived signing-validation feature**: All in-scope phases complete (ad-hoc signing, Ableton Live testing, CI/CD). Docs moved to `_archive/signing-validation/`. Developer ID + notarization deferred until Apple Developer account available. |
 | 2026-01-31 | **Renamed `docs/specs` to `docs/feature-specs`**: Directory and all 16 references across 8 agent/config files updated. Clearer naming communicates these are feature specifications under active development. Archive references preserved as historical records. |
 | 2026-01-31 | **Milestone 4 fully validated**: Ableton Live (macOS) testing complete — plugin loads without security warnings, React UI renders, parameters work, automation syncs, state persists, multi-instance works. Ad-hoc signing validated. Developer ID signing/notarization deferred until Apple Developer account available. |

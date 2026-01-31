@@ -2,6 +2,7 @@
  * ParameterToggle - Toggle control for boolean parameters
  */
 
+import React from 'react';
 import { useParameter } from '@vstkit/ipc';
 import './ParameterToggle.css';
 
@@ -9,7 +10,7 @@ interface ParameterToggleProps {
   id: string;
 }
 
-export function ParameterToggle({ id }: ParameterToggleProps) {
+export function ParameterToggle({ id }: ParameterToggleProps): React.JSX.Element {
   const { param, setValue, isLoading, error } = useParameter(id);
 
   if (isLoading) {
@@ -18,15 +19,13 @@ export function ParameterToggle({ id }: ParameterToggleProps) {
 
   if (error || !param) {
     return (
-      <div className="parameter-toggle error">
-        Error: {error?.message || 'Parameter not found'}
-      </div>
+      <div className="parameter-toggle error">Error: {error?.message || 'Parameter not found'}</div>
     );
   }
 
   const isOn = param.value >= 0.5;
 
-  const handleToggle = () => {
+  const handleToggle = (): void => {
     const newValue = isOn ? 0.0 : 1.0;
     setValue(newValue).catch((err) => {
       console.error('Failed to set parameter:', err);

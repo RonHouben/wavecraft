@@ -117,6 +117,11 @@ pub mod paths {
         Ok(project_root()?.join("engine"))
     }
 
+    /// Returns the UI directory.
+    pub fn ui_dir() -> Result<PathBuf> {
+        Ok(project_root()?.join("ui"))
+    }
+
     /// Returns the target/bundled directory where built plugins are placed.
     pub fn bundled_dir() -> Result<PathBuf> {
         Ok(engine_dir()?.join("target").join("bundled"))

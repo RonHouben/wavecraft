@@ -9,14 +9,6 @@ handoffs:
     agent: coder
     prompt: Please fix the issues documented in the test-plan.md. Focus on the FAILED test cases first, reviewing the documented issues and expected vs actual behavior.
     send: true
-  - label: Review Architecture
-    agent: architect
-    prompt: The testing revealed architectural concerns. Please review the issues documented in test-plan.md and provide guidance on the design approach.
-    send: true
-  - label: Update Roadmap
-    agent: po
-    prompt: Testing is complete. Please review the test results and update the roadmap as needed.
-    send: true
 ---
 
 # Manual Testing Specialist Agent

@@ -9,18 +9,6 @@ handoffs:
     agent: Tester
     prompt: Create/update the test plan based on the implementation. Then perform manual testing of the implemented feature according to the test plan. Document any issues found.
     send: true
-  - label: Quality Assurance
-    agent: qa
-    prompt: Do a thorough QA of the implemented feature
-    send: true
-  - label: Update architectural Docs
-    agent: architect
-    prompt: Review the implementation and update architectural documentation as needed
-    send: true
-  - label: Update roadmap
-    agent: po
-    prompt: Review the implementation and update the project roadmap as needed
-    send: true
 ---
 
 # Coder Agent
@@ -40,6 +28,8 @@ Your responsibility is to **implement, refactor, and maintain production-quality
 You execute on designs, follow architectural decisions, and write code that is correct, performant, and maintainable.
 
 You are a *code implementer*, not an architect. For architectural decisions, defer to the architect agent.
+
+In case you are still on the `main` branch, create a new feature branch for your work following the naming convention: `feature/[feature-name]` or `bugfix/[bug-description]`.
 
 ---
 

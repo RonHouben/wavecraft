@@ -1,6 +1,6 @@
 /**
  * IPC Types - TypeScript definitions matching Rust protocol
- * 
+ *
  * These types must stay in sync with engine/crates/protocol/src/ipc.rs
  */
 
@@ -83,9 +83,7 @@ export interface SetParameterParams {
   value: number;
 }
 
-export interface SetParameterResult {
-  // Empty success
-}
+export type SetParameterResult = Record<string, never>;
 
 // getAllParameters
 export interface GetAllParametersResult {
@@ -139,19 +137,10 @@ export function isIpcResponse(obj: unknown): obj is IpcResponse {
 
 export function isIpcNotification(obj: unknown): obj is IpcNotification {
   return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    'jsonrpc' in obj &&
-    'method' in obj &&
-    !('id' in obj)
+    typeof obj === 'object' && obj !== null && 'jsonrpc' in obj && 'method' in obj && !('id' in obj)
   );
 }
 
 export function isIpcError(obj: unknown): obj is IpcError {
-  return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    'code' in obj &&
-    'message' in obj
-  );
+  return typeof obj === 'object' && obj !== null && 'code' in obj && 'message' in obj;
 }

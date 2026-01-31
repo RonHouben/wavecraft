@@ -2,6 +2,7 @@
  * ParameterSlider - Slider control for float parameters
  */
 
+import React from 'react';
 import { useParameter } from '@vstkit/ipc';
 import './ParameterSlider.css';
 
@@ -9,7 +10,7 @@ interface ParameterSliderProps {
   id: string;
 }
 
-export function ParameterSlider({ id }: ParameterSliderProps) {
+export function ParameterSlider({ id }: ParameterSliderProps): React.JSX.Element {
   const { param, setValue, isLoading, error } = useParameter(id);
 
   if (isLoading) {
@@ -18,13 +19,11 @@ export function ParameterSlider({ id }: ParameterSliderProps) {
 
   if (error || !param) {
     return (
-      <div className="parameter-slider error">
-        Error: {error?.message || 'Parameter not found'}
-      </div>
+      <div className="parameter-slider error">Error: {error?.message || 'Parameter not found'}</div>
     );
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const value = parseFloat(e.target.value);
     setValue(value).catch((err) => {
       console.error('Failed to set parameter:', err);

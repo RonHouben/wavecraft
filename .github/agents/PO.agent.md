@@ -2,13 +2,9 @@
 name: po
 description: Product Owner for VstKit — audio plugin framework. Expert in user needs, feature prioritization, roadmap management, and product vision for audio software.
 tools: ["read", "search", "web", "todo", "edit", "agent", "execute"]
-model: Claude Sonnet 4.5 (copilot)
+model: Claude Opus 4.5 (copilot)
 infer: true
 handoffs: 
-  - label: Plan feature implementation
-    agent: planner
-    prompt: Create an implementation plan for this feature based on the requirements and acceptance criteria defined above.
-    send: true
   - label: Create low level design
     agent: architect
     prompt: Create a low level design for this feature.

@@ -5,6 +5,7 @@ pub mod bundle;
 pub mod clean;
 pub mod desktop;
 pub mod install;
+pub mod lint;
 pub mod notarize;
 pub mod release;
 pub mod sign;
