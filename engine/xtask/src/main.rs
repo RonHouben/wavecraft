@@ -230,7 +230,12 @@ fn main() -> Result<()> {
             }
             Ok(())
         }
-        Some(Commands::Test { package, all, ui, engine }) => {
+        Some(Commands::Test {
+            package,
+            all,
+            ui,
+            engine,
+        }) => {
             let packages = if package.is_empty() {
                 None
             } else {

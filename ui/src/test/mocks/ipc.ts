@@ -5,8 +5,9 @@
  * that allow testing components without the Rust engine.
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import type { ParameterInfo, MeterFrame } from '../../lib/vstkit-ipc/types';
+import type { UseParameterResult, UseAllParametersResult } from '../../lib/vstkit-ipc/hooks';
 
 // Re-export types
 export type {
@@ -74,22 +75,14 @@ export function resetMocks(): void {
 /**
  * Mock implementation of useParameter hook
  */
-export function useParameter(id: string) {
-  const [param, setParam] = useState<ParameterInfo | null>(mockParameters.get(id) ?? null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-
-  // Update when mock state changes
-  useEffect(() => {
-    const mockParam = mockParameters.get(id);
-    if (mockParam) {
-      setParam(mockParam);
-      setError(null);
-    } else {
-      setError(new Error(`Parameter not found: ${id}`));
-    }
-    setIsLoading(false);
-  }, [id]);
+export function useParameter(id: string): UseParameterResult {
+  // Initialize state directly from mockParameters without useEffect
+  const mockParam = mockParameters.get(id);
+  const [param, setParam] = useState<ParameterInfo | null>(mockParam ?? null);
+  const [isLoading] = useState(false); // Mock is never loading
+  const [error] = useState<Error | null>(
+    mockParam ? null : new Error(`Parameter not found: ${id}`)
+  );
 
   const setValue = useCallback(
     async (value: number): Promise<void> => {
@@ -102,7 +95,7 @@ export function useParameter(id: string) {
         throw new Error(`Parameter not found: ${id}`);
       }
     },
-    [id],
+    [id]
   );
 
   return { param, setValue, isLoading, error };
@@ -111,7 +104,7 @@ export function useParameter(id: string) {
 /**
  * Mock implementation of useAllParameters hook
  */
-export function useAllParameters() {
+export function useAllParameters(): UseAllParametersResult {
   const [params] = useState<ParameterInfo[]>(Array.from(mockParameters.values()));
   const [isLoading] = useState(false);
   const [error] = useState<Error | null>(null);

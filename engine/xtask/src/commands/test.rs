@@ -20,8 +20,8 @@ pub fn run(
     verbose: bool,
 ) -> Result<()> {
     // Determine what to test
-    let run_ui = ui_only || (!ui_only && !engine_only);
-    let run_engine = engine_only || (!ui_only && !engine_only);
+    let run_ui = ui_only || !engine_only;
+    let run_engine = engine_only || !ui_only;
 
     let mut all_passed = true;
 
@@ -50,11 +50,7 @@ pub fn run(
 }
 
 /// Run engine (Rust) tests.
-fn run_engine_tests(
-    packages: Option<Vec<String>>,
-    test_all: bool,
-    verbose: bool,
-) -> Result<()> {
+fn run_engine_tests(packages: Option<Vec<String>>, test_all: bool, verbose: bool) -> Result<()> {
     let engine_dir = paths::engine_dir()?;
 
     let mut cmd = Command::new("cargo");
