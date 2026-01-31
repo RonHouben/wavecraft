@@ -127,6 +127,8 @@ This document tracks implementation progress against the milestones defined in t
 | Cross-engine rendering consistency (WebKit vs Chromium) | ⏳ | |
 | Automated visual regression tests | ⏳ | |
 | Make React UI default (remove feature flag) | ⏳ | Remove `webview` feature flag; React UI should be the default editor. Investigate if old Rust GUI code (`nih-plug` native UI) can be fully removed. |
+| Implement semantic versioning | ⏳ | SemVer for plugin releases; version in Cargo.toml, plugin metadata (VST3/CLAP/AU), **and visible in UI** so users can verify they're running the latest version |
+| CI/CD pipeline (GitHub Actions) | ⏳ | Automated builds, tests, linting; release workflow with artifact publishing |
 
 ---
 
@@ -134,6 +136,8 @@ This document tracks implementation progress against the milestones defined in t
 
 | Date | Update |
 |------|--------|
+| 2026-01-31 | Added "CI/CD pipeline (GitHub Actions)" to Milestone 5 — automated builds, tests, and release workflow. |
+| 2026-01-31 | Added "Implement semantic versioning" to Milestone 5 — SemVer for consistent release tracking. |
 | 2026-01-30 | Initial roadmap created. Milestone 1 (Plugin Skeleton) marked complete. |
 | 2026-01-30 | **Milestone 2 complete**: WebView Desktop POC fully functional with <1ms IPC latency. Ready for plugin integration. |
 | 2025-01-31 | **Milestone 3 in progress**: WKWebView integration complete, working in Ableton Live. Added resizing and TailwindCSS investigation to roadmap. |
