@@ -32,7 +32,7 @@ pub fn run(verbose: bool) -> Result<()> {
 
     // Run npm build
     print_status("Building UI...");
-    
+
     if verbose {
         println!("  Running: npm run build (in ui/)");
     }
@@ -49,6 +49,6 @@ pub fn run(verbose: bool) -> Result<()> {
     }
 
     print_success("UI built successfully");
-    
+
     Ok(())
 }
