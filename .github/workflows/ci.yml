@@ -1,12 +1,10 @@
 name: CI Build
 
-# TEMPORARILY DISABLED on PRs — Pipeline under redesign (2026-01-31)
-# See docs/roadmap.md for status. Will be re-enabled after architecture review.
 on:
   push:
     branches: [main]
-  # pull_request:
-  #   branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
   build:
