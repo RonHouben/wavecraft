@@ -254,6 +254,28 @@ window.ipc.postMessage(JSON.stringify({
 
 ---
 
+## Pre-Handoff Checklist
+
+**Before handing off to Tester or QA, always run these checks locally:**
+
+```bash
+# 1. All linting passes
+cargo xtask lint
+
+# 2. TypeScript type-checking (UI changes)
+cd ui && npm run typecheck
+
+# 3. All tests pass
+cargo xtask test --ui        # UI unit tests
+cargo xtask test --engine    # Engine tests (if Rust code changed)
+```
+
+**⚠️ CRITICAL**: `npm run typecheck` is NOT run by `npm test` (Vitest). Always run it explicitly to catch type errors that CI will fail on.
+
+**Why this matters**: CI runs these checks in separate jobs. If any fail, the PR will be blocked. Running locally first saves time and prevents pipeline failures.
+
+---
+
 ## What You Should NOT Do
 
 - Make architectural decisions (defer to architect)
@@ -261,6 +283,7 @@ window.ipc.postMessage(JSON.stringify({
 - Bypass real-time safety rules "just this once"
 - Write code without understanding the full context
 - Implement features not in the current spec
+- **Skip pre-handoff checks** (always verify locally first)
 
 ---
 

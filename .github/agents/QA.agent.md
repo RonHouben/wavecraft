@@ -51,20 +51,23 @@ You are a **Senior Quality Assurance Specialist** with expertise in:
 **Always run at the start of every QA review**:
 
 ```bash
-# Run all linting checks (UI + Engine)
+# 1. Run all linting checks (UI + Engine)
 cargo xtask lint
+
+# 2. Run TypeScript type-checking (critical - catches issues CI will catch)
+cd ui && npm run typecheck
+
+# 3. Run all tests
+cargo xtask test --ui    # UI unit tests
+cargo xtask test --engine # Engine tests (conditionally, for affected crates)
 ```
 
 This runs:
 - **Engine**: `cargo fmt --check` + `cargo clippy --workspace -- -D warnings`
-- **UI**: `npm run lint` + `npm run format:check`
+- **UI**: `npm run lint` + `npm run format:check` + `npm run typecheck` (TypeScript compilation)
+- **Tests**: All unit tests
 
-**Run conditionally for affected crate(s)**:
-
-```bash
-# Only for the crate(s) being reviewed
-cargo test -p {crate_name}
-```
+**⚠️ CRITICAL**: Always run `npm run typecheck` — Vitest (`npm test`) does not perform TypeScript type-checking, but CI does! Missing this step will cause CI failures.
 
 Document all command outputs in the QA report, including:
 - Exit codes
