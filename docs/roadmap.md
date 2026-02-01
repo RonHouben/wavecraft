@@ -7,14 +7,15 @@ This document tracks implementation progress against the milestones defined in t
 ## Progress Overview
 
 ```
-┌────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           ✅ M5        ✅ M6            ✅ M7          ⭐    │
-│  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ───── WebSocket ───── Visual Testing ── Done  │
-│                                                                                       ▲                    │
-│                                                                              ALL MILESTONES COMPLETE!      │
-│                                                                                                            │
-│  Progress: [████████████████████████████████████████████████████████████████████████████████████████] 100% │
-└────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           ✅ M5        ✅ M6            ✅ M7           ⏳ M8       │
+│  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ───── WebSocket ───── Visual Testing ── SDK         │
+│                                                                                                       ▲          │
+│                                                                                              Framework Complete   │
+│                                                                                              Now: Make it usable! │
+│                                                                                                                   │
+│  Progress: [██████████████████████████████████████████████████████████████████████████████████████░░░░░░] ~88%   │
+└───────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **See also:** [Backlog](backlog.md) — unprioritized ideas for future consideration
@@ -269,10 +270,50 @@ Add a WebSocket server to the standalone app that exposes the same IPC protocol 
 
 ---
 
+## Milestone 8: Developer SDK
+
+**Status: ⏳ Not Started**
+
+> **Goal:** Transform VstKit from an internal framework into a reusable development kit that other developers can use to build their own VST/CLAP plugins with Rust + React.
+
+**Strategic Context:**
+VstKit has achieved its internal development goals (Milestones 1–7). The next step is to make it **accessible to other developers** as a proper SDK/toolkit. This requires rethinking packaging, documentation, and developer experience.
+
+### Phase 1: Investigation & Architecture
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Research & Analysis** | | |
+| Investigate SDK packaging options | ⏳ | Cargo workspace template, CLI scaffolding, binary + source hybrid |
+| Analyze similar Rust plugin frameworks | ⏳ | nih-plug, JUCE (C++), iPlug2 — what works, what doesn't |
+| Define target developer persona | ⏳ | Rust experience level, plugin development background |
+| **Architecture Design** | | |
+| Define SDK boundary (what's framework vs user code) | ⏳ | Which crates are SDK, which are example/template |
+| Design plugin project structure | ⏳ | Where does user DSP code go, UI customization points |
+| Design versioning strategy | ⏳ | How do SDK updates affect user projects |
+| **Developer Experience** | | |
+| Document minimum viable workflow | ⏳ | From `cargo vstkit new` to working plugin |
+| Identify documentation requirements | ⏳ | Getting started, API reference, examples |
+| Define tooling requirements | ⏳ | CLI commands, build scripts, debugging tools |
+
+### Phase 2: Implementation (TBD)
+
+*Scope to be defined after Phase 1 investigation with architect.*
+
+Potential areas:
+- CLI tool for project scaffolding (`cargo vstkit new my-plugin`)
+- Template project structure
+- API documentation
+- Example plugins (gain, EQ, synth starter)
+- Versioning and update workflow
+
+---
+
 ## Changelog
 
 | Date | Update |
 |------|--------|
+| 2026-02-01 | **Milestone 8 created**: Developer SDK initiative. Phase 1 focuses on investigation with architect to define packaging strategy, SDK boundaries, and developer experience. Goal: make VstKit usable by external developers. |
 | 2026-02-01 | **Milestone 7 complete**: Browser-Based Visual Testing infrastructure fully implemented. Playwright @1.41.0 with Chromium installed, 18 test IDs added across all UI components (Meter, ParameterSlider, VersionBadge, ResizeHandle, ConnectionStatus, App root). External baseline storage design (`~/.vstkit/visual-baselines/`). Comprehensive 11KB documentation guide. **Bonus:** Fixed version display — now reads from Cargo.toml in dev mode, improved VersionBadge styling for visibility. 35/35 unit tests, 18/18 feature tests passing. QA approved. Architecture docs updated. Version 0.3.1. Archived to `_archive/browser-visual-testing/`. **ALL COMMITTED MILESTONES COMPLETE!** |
 | 2026-02-01 | **Milestone 6 complete**: WebSocket IPC Bridge fully implemented and tested. Transport abstraction with factory pattern, `WebSocketTransport` with exponential backoff reconnection, `cargo xtask dev` unified development command, graceful degradation UI. 14/14 integration tests, 35 UI tests, 17 Rust tests passing. QA approved, architectural docs updated. Version 0.3.0. Archived to `_archive/websocket-ipc-bridge/`. Ready to merge `feature/websocket-ipc-bridge` branch. |
 | 2026-02-01 | **Backlog split from roadmap**: Created separate [backlog.md](backlog.md) for unprioritized future ideas. Removed Milestone 8 from roadmap — committed milestones now end at M7. Backlog contains: CI optimization, performance profiling, platform support, DAW compatibility, AU issues, Apple Developer-dependent items. |
@@ -311,7 +352,7 @@ Add a WebSocket server to the standalone app that exposes the same IPC protocol 
 
 ## Next Steps
 
-> 🎉 **All committed milestones are complete!** VstKit has achieved its initial development goals.
+> 🚀 **Framework complete!** Now focusing on making VstKit usable for other developers.
 
 ### Completed Milestones
 1. ✅ **Milestone 1**: Plugin Skeleton — Rust plugin with VST3/CLAP export
@@ -322,18 +363,16 @@ Add a WebSocket server to the standalone app that exposes the same IPC protocol 
 6. ✅ **Milestone 6**: WebSocket IPC Bridge — Real engine data in browser development
 7. ✅ **Milestone 7**: Browser-Based Visual Testing — Playwright infrastructure with test IDs
 
-### What's Next?
+### Current Focus: Milestone 8 — Developer SDK
 
-VstKit is now a **production-ready framework** for building audio plugins with Rust + React. Future work should focus on:
+**Goal:** Transform VstKit into a development kit that other developers can use to build their own audio plugins.
 
-1. **Build real plugins** — Use VstKit to create actual audio effects/instruments
-2. **Community feedback** — Gather user feedback from real-world usage
-3. **Backlog prioritization** — Review [backlog.md](backlog.md) for next priorities
+**Phase 1 (Investigation):**
+1. Work with **Architect agent** to investigate SDK packaging options
+2. Research similar frameworks (nih-plug, JUCE, iPlug2)
+3. Define SDK boundaries (framework code vs user code)
+4. Design the developer experience (project scaffolding, documentation, tooling)
 
-**Potential next priorities from backlog:**
-- Apple Developer account setup (enables signed distribution)
-- Performance profiling under high CPU load
-- Additional DAW compatibility testing (Logic Pro AU)
-- Windows platform support (if demand exists)
+**To start:** Hand off to Architect agent with: *"Create low level design for VstKit SDK packaging strategy"*
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (platform support, performance, DAW compatibility, etc.)
