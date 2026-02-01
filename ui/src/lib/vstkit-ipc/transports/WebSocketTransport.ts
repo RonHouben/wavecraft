@@ -187,6 +187,11 @@ export class WebSocketTransport implements Transport {
       console.error(
         `WebSocketTransport: Max reconnect attempts (${this.maxReconnectAttempts}) reached`
       );
+      // Close the WebSocket to stop browser reconnection attempts
+      if (this.ws) {
+        this.ws.close();
+        this.ws = null;
+      }
       return;
     }
 
