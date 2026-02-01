@@ -69,7 +69,10 @@ impl<H: ParameterHost + 'static> WsServer<H> {
         Ok(())
     }
 
-    /// Shutdown the server gracefully
+    /// Shutdown the server gracefully.
+    ///
+    /// Note: Not currently called but kept for future graceful shutdown support.
+    #[allow(dead_code)]
     pub fn shutdown(&self) {
         let _ = self.shutdown_tx.send(());
     }

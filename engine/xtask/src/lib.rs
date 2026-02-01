@@ -251,6 +251,17 @@ pub mod output {
     }
 }
 
+/// Create a new cargo Command with warnings-as-errors enabled.
+///
+/// This sets `RUSTFLAGS="-D warnings"` to ensure all xtask builds
+/// fail on compiler warnings.
+pub fn cargo_command() -> Command {
+    let mut cmd = Command::new("cargo");
+    // Fail on warnings: treat all warnings as errors
+    cmd.env("RUSTFLAGS", "-D warnings");
+    cmd
+}
+
 /// Run a command and return its exit status.
 ///
 /// This streams output to stdout/stderr in real-time.

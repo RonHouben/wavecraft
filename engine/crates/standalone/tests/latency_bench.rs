@@ -1,8 +1,8 @@
 //! Latency benchmarks for IPC communication
 
 use bridge::IpcHandler;
-use standalone::AppState;
 use protocol::{IpcRequest, METHOD_GET_PARAMETER, RequestId};
+use standalone::AppState;
 use std::time::Instant;
 
 #[test]

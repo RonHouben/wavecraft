@@ -1,10 +1,10 @@
 //! Integration tests for IPC communication
 
 use bridge::{IpcHandler, ParameterHost};
-use standalone::AppState;
 use protocol::{
     IpcRequest, METHOD_GET_ALL_PARAMETERS, METHOD_GET_PARAMETER, METHOD_SET_PARAMETER, RequestId,
 };
+use standalone::AppState;
 
 #[test]
 fn test_get_all_parameters_integration() {

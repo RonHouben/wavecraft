@@ -114,7 +114,30 @@
 
 **Actual Result**: Deferred - TC-002 validates server startup, custom port logic is trivial
 
-**Notes**: Can be verified if needed, but TC-002 covers core functionality 
+**Notes**: Can be verified if needed, but TC-002 covers core functionality
+
+---
+
+## Manual Browser Testing Instructions
+
+**Note**: The following tests (TC-004 through TC-011) require manual browser interaction and cannot be automated by the Tester agent. Follow these steps to complete manual testing:
+
+### Setup
+1. **Start Dev Server**: `cd engine && cargo run -p standalone --release -- --dev-server`
+   - Verify output: "Starting VstKit dev server on port 9000..."
+   - Verify output: "[WebSocket] Server listening on ws://127.0.0.1:9000"
+
+2. **Start UI Dev Server**: `cd ui && npm run dev`
+   - Verify output: "Local: http://localhost:5173/"
+
+3. **Open Browser**: Navigate to `http://localhost:5173`
+   - Open DevTools Console (F12 or Cmd+Option+I)
+
+### Test Execution Guide
+- Follow each test case below (TC-004 through TC-011)
+- Record results in the "Actual Result" field
+- Update status: ⬜ → ✅ PASS or ❌ FAIL
+- Document any issues in the "Issues Found" section 
 
 ---
 
