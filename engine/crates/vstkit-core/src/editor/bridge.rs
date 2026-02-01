@@ -15,18 +15,17 @@ use nih_plug::prelude::*;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use vstkit_protocol::{ParameterInfo, ParameterType};
 
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-use crate::params::VstKitParams;
-
 /// Bridge between nih-plug and the IPC handler.
 ///
 /// This struct implements ParameterHost to allow the IPC handler to
 /// interact with nih-plug's parameter system through GuiContext.
 ///
+/// Generic over `P` which must implement nih-plug's `Params` trait.
+///
 /// Only used on macOS/Windows where WebView is available.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub struct PluginEditorBridge {
-    params: Arc<VstKitParams>,
+pub struct PluginEditorBridge<P: Params> {
+    params: Arc<P>,
     context: Arc<dyn GuiContext>,
     /// Shared meter consumer - same instance used across editor open/close cycles
     meter_consumer: Arc<Mutex<MeterConsumer>>,
@@ -35,10 +34,10 @@ pub struct PluginEditorBridge {
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-impl PluginEditorBridge {
+impl<P: Params> PluginEditorBridge<P> {
     /// Create a new bridge with the given parameters and context.
     pub fn new(
-        params: Arc<VstKitParams>,
+        params: Arc<P>,
         context: Arc<dyn GuiContext>,
         meter_consumer: Arc<Mutex<MeterConsumer>>,
         editor_size: Arc<Mutex<(u32, u32)>>,
@@ -53,34 +52,47 @@ impl PluginEditorBridge {
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-impl ParameterHost for PluginEditorBridge {
+impl<P: Params> ParameterHost for PluginEditorBridge<P> {
     fn get_parameter(&self, id: &str) -> Option<ParameterInfo> {
-        // For now, we only have the gain parameter
-        if id == "gain" {
-            let normalized = self.params.gain.modulated_normalized_value();
-            Some(ParameterInfo {
-                id: "gain".to_string(),
-                name: "Gain".to_string(),
-                param_type: ParameterType::Float,
-                value: normalized,
-                default: self.params.gain.default_normalized_value(),
-                unit: Some("dB".to_string()),
-            })
-        } else {
-            None
-        }
+        // Use nih-plug's param_map to find the parameter
+        let param_map = self.params.param_map();
+        param_map.iter().find_map(|(param_id, param_ptr, _group)| {
+            if param_id == id {
+                // Access metadata directly from ParamPtr
+                let name = unsafe { param_ptr.name() };
+                let value = unsafe { param_ptr.modulated_normalized_value() };
+                let default = unsafe { param_ptr.default_normalized_value() };
+                let unit_str = unsafe { param_ptr.unit() };
+                
+                Some(ParameterInfo {
+                    id: param_id.clone(),
+                    name: name.to_string(),
+                    param_type: ParameterType::Float, // For now, assume float
+                    value,
+                    default,
+                    // Convert empty string to None
+                    unit: if unit_str.is_empty() {
+                        None
+                    } else {
+                        Some(unit_str.to_string())
+                    },
+                })
+            } else {
+                None
+            }
+        })
     }
 
     fn set_parameter(&self, id: &str, normalized_value: f32) -> Result<(), BridgeError> {
-        // For now, we only have the gain parameter
-        if id == "gain" {
+        // Use nih-plug's param_map to find the parameter
+        let param_map = self.params.param_map();
+        if let Some((_, param_ptr, _)) = param_map.iter().find(|(param_id, _, _)| param_id == id) {
             // Use nih-plug's GuiContext for proper host automation
-            let param_ptr = self.params.gain.as_ptr();
             unsafe {
-                self.context.raw_begin_set_parameter(param_ptr);
+                self.context.raw_begin_set_parameter(*param_ptr);
                 self.context
-                    .raw_set_parameter_normalized(param_ptr, normalized_value);
-                self.context.raw_end_set_parameter(param_ptr);
+                    .raw_set_parameter_normalized(*param_ptr, normalized_value);
+                self.context.raw_end_set_parameter(*param_ptr);
             }
             Ok(())
         } else {
@@ -89,8 +101,32 @@ impl ParameterHost for PluginEditorBridge {
     }
 
     fn get_all_parameters(&self) -> Vec<ParameterInfo> {
-        // For now, just return the gain parameter
-        self.get_parameter("gain").into_iter().collect()
+        // Iterate over all parameters in the param_map
+        let param_map = self.params.param_map();
+        param_map
+            .iter()
+            .map(|(param_id, param_ptr, _group)| {
+                // Access metadata directly from ParamPtr
+                let name = unsafe { param_ptr.name() };
+                let value = unsafe { param_ptr.modulated_normalized_value() };
+                let default = unsafe { param_ptr.default_normalized_value() };
+                let unit_str = unsafe { param_ptr.unit() };
+                
+                ParameterInfo {
+                    id: param_id.clone(),
+                    name: name.to_string(),
+                    param_type: ParameterType::Float, // For now, assume float
+                    value,
+                    default,
+                    // Convert empty string to None
+                    unit: if unit_str.is_empty() {
+                        None
+                    } else {
+                        Some(unit_str.to_string())
+                    },
+                }
+            })
+            .collect()
     }
 
     fn get_meter_frame(&self) -> Option<vstkit_protocol::MeterFrame> {

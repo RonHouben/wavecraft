@@ -1,11 +1,8 @@
-use nih_plug::prelude::*;
+use vstkit_core::prelude::*;
+use vstkit_core::util::calculate_stereo_meters;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+use vstkit_core::editor::VstKitEditor;
 use std::sync::Arc;
-use vstkit_dsp::{Processor, Transport};
-use vstkit_metering::{MeterFrame, MeterProducer, create_meter_channel};
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-use vstkit_metering::MeterConsumer;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-use vstkit_core::editor::{VstKitEditor};
 
 /// Example gain plugin using VstKit SDK
 pub struct MyPlugin {
@@ -150,8 +147,6 @@ impl Plugin for MyPlugin {
         None
     }
 }
-
-/// Simple gain processor implementing the VstKit Processor trait
 #[derive(Default)]
 struct GainProcessor {
     sample_rate: f32,
@@ -192,41 +187,6 @@ impl Vst3Plugin for MyPlugin {
         Vst3SubCategory::Fx,
         Vst3SubCategory::Tools,
     ];
-}
-
-/// Calculate peak and RMS values for stereo buffer (real-time safe).
-///
-/// Returns (peak_l, peak_r, rms_l, rms_r) in linear scale.
-#[inline]
-fn calculate_stereo_meters(buffer: &Buffer) -> (f32, f32, f32, f32) {
-    let mut peak_l = 0.0f32;
-    let mut peak_r = 0.0f32;
-    let mut sum_sq_l = 0.0f32;
-    let mut sum_sq_r = 0.0f32;
-
-    let num_samples = buffer.samples() as f32;
-
-    // Iterate over channels using nih-plug's safe API
-    let channels = buffer.as_slice_immutable();
-    if channels.len() >= 2 {
-        let left = &channels[0];
-        let right = &channels[1];
-
-        for &sample in left.iter() {
-            peak_l = peak_l.max(sample.abs());
-            sum_sq_l += sample * sample;
-        }
-
-        for &sample in right.iter() {
-            peak_r = peak_r.max(sample.abs());
-            sum_sq_r += sample * sample;
-        }
-    }
-
-    let rms_l = (sum_sq_l / num_samples).sqrt();
-    let rms_r = (sum_sq_r / num_samples).sqrt();
-
-    (peak_l, peak_r, rms_l, rms_r)
 }
 
 nih_plug::nih_export_clap!(MyPlugin);

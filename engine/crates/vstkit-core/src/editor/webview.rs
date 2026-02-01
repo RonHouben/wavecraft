@@ -16,9 +16,6 @@ use vstkit_metering::MeterConsumer;
 use nih_plug::prelude::*;
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-use crate::params::VstKitParams;
-
-#[cfg(any(target_os = "macos", target_os = "windows"))]
 use super::bridge::PluginEditorBridge;
 
 /// Platform-agnostic handle to a WebView instance.
@@ -47,10 +44,12 @@ pub trait WebViewHandle: Any + Send {
 
 /// Configuration for creating a WebView editor.
 ///
+/// Generic over `P` which must implement nih-plug's `Params` trait.
+///
 /// Only used on macOS/Windows where WebView is available.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub struct WebViewConfig {
-    pub params: Arc<VstKitParams>,
+pub struct WebViewConfig<P: Params> {
+    pub params: Arc<P>,
     pub context: Arc<dyn GuiContext>,
     pub parent: ParentWindowHandle,
     pub width: u32,
@@ -66,7 +65,7 @@ pub struct WebViewConfig {
 /// This function dispatches to the appropriate platform implementation
 /// based on compile-time target OS.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub fn create_webview(_config: WebViewConfig) -> Result<Box<dyn WebViewHandle>, String> {
+pub fn create_webview<P: Params>(_config: WebViewConfig<P>) -> Result<Box<dyn WebViewHandle>, String> {
     #[cfg(target_os = "macos")]
     {
         super::macos::create_macos_webview(_config)
@@ -88,14 +87,16 @@ pub fn create_webview(_config: WebViewConfig) -> Result<Box<dyn WebViewHandle>, 
 /// This is shared across all platforms and wires up the bridge between
 /// the WebView's IPC messages and the nih-plug parameter system.
 ///
+/// Generic over `P` which must implement nih-plug's `Params` trait.
+///
 /// Only used on macOS/Windows where WebView is available.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub fn create_ipc_handler(
-    params: Arc<VstKitParams>,
+pub fn create_ipc_handler<P: Params>(
+    params: Arc<P>,
     context: Arc<dyn GuiContext>,
     meter_consumer: Arc<Mutex<MeterConsumer>>,
     editor_size: Arc<Mutex<(u32, u32)>>,
-) -> IpcHandler<PluginEditorBridge> {
+) -> IpcHandler<PluginEditorBridge<P>> {
     let bridge = PluginEditorBridge::new(params, context, meter_consumer, editor_size);
     IpcHandler::new(bridge)
 }

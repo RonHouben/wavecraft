@@ -6,7 +6,7 @@
 /// Transport information for timing-aware DSP.
 ///
 /// Provides context about playback state, tempo, and position.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Transport {
     /// Current tempo in BPM (beats per minute).
     pub tempo: Option<f64>,
@@ -16,16 +16,6 @@ pub struct Transport {
     
     /// True if the host is playing.
     pub playing: bool,
-}
-
-impl Default for Transport {
-    fn default() -> Self {
-        Self {
-            tempo: None,
-            pos_samples: 0,
-            playing: false,
-        }
-    }
 }
 
 /// Trait for user-implemented DSP processors.

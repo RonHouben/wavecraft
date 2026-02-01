@@ -26,19 +26,33 @@ use super::assets;
 use super::bridge::PluginEditorBridge;
 use super::webview::{WebViewConfig, WebViewHandle};
 
+/// Trait for handling IPC JSON messages (type-erased interface).
+trait JsonIpcHandler: Send + Sync {
+    fn handle_json(&self, json: &str) -> String;
+}
+
+// Implement for IpcHandler with any ParameterHost
+impl<H: vstkit_bridge::ParameterHost> JsonIpcHandler for IpcHandler<H> {
+    fn handle_json(&self, json: &str) -> String {
+        IpcHandler::handle_json(self, json)
+    }
+}
+
 /// macOS WebView handle.
 ///
 /// Holds the WKWebView and associated resources.
-pub struct MacOSWebView {
+///
+/// Generic over `P` which must implement nih-plug's `Params` trait.
+pub struct MacOSWebView<P: Params> {
     webview: Rc<Mutex<Option<Retained<WKWebView>>>>,
-    _handler: Arc<Mutex<IpcHandler<PluginEditorBridge>>>,
+    _handler: Arc<Mutex<IpcHandler<PluginEditorBridge<P>>>>,
 }
 
 // SAFETY: The webview will only be accessed from the main thread
 // The host ensures this by calling spawn() and other methods on the main thread
-unsafe impl Send for MacOSWebView {}
+unsafe impl<P: Params> Send for MacOSWebView<P> {}
 
-impl WebViewHandle for MacOSWebView {
+impl<P: Params> WebViewHandle for MacOSWebView<P> {
     fn evaluate_script(&self, script: &str) -> Result<(), String> {
         let webview_lock = self.webview.lock().unwrap();
         if let Some(webview) = webview_lock.as_ref() {
@@ -80,7 +94,9 @@ impl WebViewHandle for MacOSWebView {
 }
 
 /// Create a macOS WebView editor.
-pub fn create_macos_webview(config: WebViewConfig) -> Result<Box<dyn WebViewHandle>, String> {
+pub fn create_macos_webview<P: Params + 'static>(
+    config: WebViewConfig<P>,
+) -> Result<Box<dyn WebViewHandle>, String> {
     let mtm = MainThreadMarker::new()
         .ok_or_else(|| "WebView creation must happen on main thread".to_string())?;
 
@@ -160,9 +176,9 @@ fn create_webview_config(
 }
 
 /// Configure the WKWebView with IPC handler and scripts.
-fn configure_webview(
+fn configure_webview<P: Params + 'static>(
     webview: &Retained<WKWebView>,
-    handler: Arc<Mutex<IpcHandler<PluginEditorBridge>>>,
+    handler: Arc<Mutex<IpcHandler<PluginEditorBridge<P>>>>,
     mtm: MainThreadMarker,
 ) -> Result<(), String> {
     // Get the configuration and user content controller
@@ -275,8 +291,11 @@ unsafe fn get_parent_view(handle: ParentWindowHandle) -> Result<Retained<NSView>
 }
 
 /// IPC message handler for WKWebView script messages.
+///
+/// Uses trait object to store the generic IpcHandler.
 struct IpcMessageHandlerIvars {
-    handler: Arc<Mutex<IpcHandler<PluginEditorBridge>>>,
+    /// IPC handler (trait object for type erasure).
+    handler: Arc<Mutex<dyn JsonIpcHandler>>,
     webview: Weak<WKWebView>,
 }
 
@@ -346,13 +365,16 @@ declare_class!(
 );
 
 impl IpcMessageHandler {
-    fn new(
-        handler: Arc<Mutex<IpcHandler<PluginEditorBridge>>>,
+    fn new<P: Params + 'static>(
+        handler: Arc<Mutex<IpcHandler<PluginEditorBridge<P>>>>,
         webview: &Retained<WKWebView>,
         mtm: MainThreadMarker,
     ) -> Retained<Self> {
+        // Convert to trait object for type erasure
+        let handler_trait: Arc<Mutex<dyn JsonIpcHandler>> = handler;
+        
         let ivars = IpcMessageHandlerIvars {
-            handler,
+            handler: handler_trait,
             webview: Weak::from_retained(webview),
         };
         unsafe {

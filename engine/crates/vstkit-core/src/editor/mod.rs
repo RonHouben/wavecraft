@@ -2,6 +2,23 @@
 //!
 //! This module provides the nih-plug Editor implementation, bridging
 //! the WebView UI with the plugin's parameter system and metering.
+//!
+//! # Example
+//!
+//! ```rust,no_run
+//! use vstkit_core::editor::VstKitEditor;
+//! use std::sync::{Arc, Mutex};
+//!
+//! // In your Plugin::editor() implementation:
+//! # /*
+//! fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
+//!     Some(Box::new(VstKitEditor::new(
+//!         self.params.clone(),
+//!         self.meter_consumer.clone(),
+//!     )))
+//! }
+//! # */
+//! ```
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use std::any::Any;
@@ -12,9 +29,6 @@ use std::sync::{Arc, Mutex};
 use vstkit_metering::MeterConsumer;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use nih_plug::prelude::*;
-
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-use crate::params::VstKitParams;
 
 mod assets;
 mod bridge;
@@ -33,9 +47,11 @@ pub use webview::{WebViewConfig, WebViewHandle, create_webview};
 ///
 /// This editor creates a WebView that hosts the React UI and handles
 /// bidirectional parameter synchronization and metering.
+///
+/// Generic over `P` which must implement nih-plug's `Params` trait.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub struct VstKitEditor {
-    params: Arc<VstKitParams>,
+pub struct VstKitEditor<P: Params> {
+    params: Arc<P>,
     /// Shared meter consumer - cloned to each bridge instance
     meter_consumer: Arc<Mutex<MeterConsumer>>,
     size: Arc<Mutex<(u32, u32)>>,
@@ -44,9 +60,9 @@ pub struct VstKitEditor {
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-impl VstKitEditor {
+impl<P: Params> VstKitEditor<P> {
     /// Create a new WebView editor.
-    pub fn new(params: Arc<VstKitParams>, meter_consumer: Arc<Mutex<MeterConsumer>>) -> Self {
+    pub fn new(params: Arc<P>, meter_consumer: Arc<Mutex<MeterConsumer>>) -> Self {
         Self {
             params,
             meter_consumer,
@@ -57,7 +73,7 @@ impl VstKitEditor {
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-impl Editor for VstKitEditor {
+impl<P: Params> Editor for VstKitEditor<P> {
     fn spawn(
         &self,
         parent: ParentWindowHandle,
@@ -166,9 +182,11 @@ impl Editor for VstKitEditor {
 }
 
 /// Create a WebView editor.
+///
+/// Generic over `P` which must implement nih-plug's `Params` trait.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub fn create_webview_editor(
-    params: Arc<VstKitParams>,
+pub fn create_webview_editor<P: Params + 'static>(
+    params: Arc<P>,
     meter_consumer: Arc<Mutex<MeterConsumer>>,
 ) -> Option<Box<dyn Editor>> {
     Some(Box::new(VstKitEditor::new(params, meter_consumer)))

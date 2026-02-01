@@ -1,9 +1,25 @@
-//! Plugin crate - nih-plug integration and host glue.
+//! VstKit Core - Audio plugin framework
 //!
-//! This crate bridges the DSP layer to the plugin host via nih-plug,
-//! handling VST3/CLAP exports, parameter binding, and the placeholder UI.
+//! This crate provides the main plugin framework for VstKit, including:
+//! - nih-plug integration (VST3/CLAP/AU export)
+//! - WebView-based UI editor
+//! - Parameter management
+//! - Real-time metering
+//!
+//! # Quick Start
+//!
+//! ```rust,no_run
+//! use vstkit_core::prelude::*;
+//!
+//! // Your plugin implementation here
+//! ```
 
-mod editor;
+// Public modules for SDK users
+pub mod editor;
+pub mod prelude;
+pub mod util;
+
+// Internal modules
 mod params;
 
 use std::sync::Arc;
@@ -17,6 +33,7 @@ use nih_plug::prelude::*;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use crate::editor::create_webview_editor;
 use crate::params::VstKitParams;
+use crate::util::calculate_stereo_meters;
 
 /// Main plugin struct for VstKit.
 pub struct VstKitPlugin {
@@ -135,41 +152,6 @@ impl ClapPlugin for VstKitPlugin {
     const CLAP_MANUAL_URL: Option<&'static str> = Some(Self::URL);
     const CLAP_SUPPORT_URL: Option<&'static str> = Some(Self::URL);
     const CLAP_FEATURES: &'static [ClapFeature] = &[ClapFeature::AudioEffect, ClapFeature::Utility];
-}
-
-/// Calculate peak and RMS values for stereo buffer (real-time safe).
-///
-/// Returns (peak_l, peak_r, rms_l, rms_r) in linear scale.
-#[inline]
-fn calculate_stereo_meters(buffer: &Buffer) -> (f32, f32, f32, f32) {
-    let mut peak_l = 0.0f32;
-    let mut peak_r = 0.0f32;
-    let mut sum_sq_l = 0.0f32;
-    let mut sum_sq_r = 0.0f32;
-
-    let num_samples = buffer.samples() as f32;
-
-    // Iterate over channels using nih-plug's safe API
-    let channels = buffer.as_slice_immutable();
-    if channels.len() >= 2 {
-        let left = &channels[0];
-        let right = &channels[1];
-
-        for &sample in left.iter() {
-            peak_l = peak_l.max(sample.abs());
-            sum_sq_l += sample * sample;
-        }
-
-        for &sample in right.iter() {
-            peak_r = peak_r.max(sample.abs());
-            sum_sq_r += sample * sample;
-        }
-    }
-
-    let rms_l = (sum_sq_l / num_samples).sqrt();
-    let rms_r = (sum_sq_r / num_samples).sqrt();
-
-    (peak_l, peak_r, rms_l, rms_r)
 }
 
 nih_export_vst3!(VstKitPlugin);
