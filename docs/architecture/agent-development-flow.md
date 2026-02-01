@@ -10,7 +10,7 @@ This project uses specialized agents with distinct responsibilities that hand of
 | **Architect** | Designs system architecture, enforces technical constraints | Low-level designs in `docs/feature-specs/{feature}/` |
 | **Planner** | Creates detailed implementation plans | `docs/feature-specs/{feature}/implementation-plan.md` |
 | **Coder** | Implements features, writes production code | Code changes, PRs |
-| **Tester** | Executes manual tests, documents results | `docs/feature-specs/{feature}/test-plan.md` |
+| **Tester** | Runs local CI pipeline, executes manual tests, documents results | `docs/feature-specs/{feature}/test-plan.md` |
 | **QA** | Static analysis, code quality verification | QA reports |
 
 ## Standard Feature Development Flow
@@ -120,5 +120,5 @@ On completion, PO archives the entire feature folder to `docs/feature-specs/_arc
 - **Use Architect** when: Design decisions needed, architectural review, defining boundaries
 - **Use Planner** when: Complex feature needs breakdown, multi-step implementation
 - **Use Coder** when: Ready to implement, bug fixes, code changes
-- **Use Tester** when: Feature ready for manual testing, creating test plans
+- **Use Tester** when: Feature ready for testing, runs local CI pipeline first, then manual testing
 - **Use QA** when: Code review needed, static analysis, quality verification
