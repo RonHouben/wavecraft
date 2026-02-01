@@ -18,6 +18,8 @@ export class IpcBridge {
   private readonly eventListeners = new Map<string, Set<EventCallback<unknown>>>();
   private transport: Transport | null = null;
   private isInitialized = false;
+  private lastDisconnectWarning = 0;
+  private readonly DISCONNECT_WARNING_INTERVAL_MS = 5000; // Log warning max once per 5s
 
   private constructor() {
     // Lazy initialization on first use
@@ -72,6 +74,12 @@ export class IpcBridge {
     this.initialize();
 
     if (!this.transport?.isConnected()) {
+      // Rate-limit disconnect warnings to avoid console spam
+      const now = Date.now();
+      if (now - this.lastDisconnectWarning > this.DISCONNECT_WARNING_INTERVAL_MS) {
+        console.warn('[IpcBridge] Transport not connected, call will fail. Waiting for reconnection...');
+        this.lastDisconnectWarning = now;
+      }
       throw new Error('IpcBridge: Transport not connected');
     }
 
