@@ -154,7 +154,7 @@ This document tracks implementation progress against the milestones defined in t
 | CPU stress testing | ⏳ | |
 | Memory usage optimization | ⏳ | |
 | UX polish | ⏳ | |
-| Resize handle visibility | ⏳ | Handle overlaps scrollbar, low contrast, too small. Improve visibility and usability. |
+| **Resize handle visibility** | ✅ | Handle visibility improved: 50% white (was 30%), accent blue on hover/drag, 36×36px (was 24×24), 20px scrollbar clearance. WebView background color fixed. Completed 2026-02-01. |
 | Format-specific feature parity verification | ⏳ | |
 | Cross-engine rendering consistency (WebKit vs Chromium) | ⏳ | |
 | Automated visual regression tests | ⏳ | |
@@ -231,6 +231,7 @@ Add a WebSocket server to the desktop app that exposes the same IPC protocol ove
 
 | Date | Update |
 |------|--------|
+| 2026-02-01 | **Resize handle visibility complete**: Handle visibility significantly improved — opacity increased (30%→50% white), hover/drag states use accent blue (#4a9eff/#6bb0ff), size increased (24×24→36×36px button, 16×16→20×20px icon), positioned 20px from right edge (scrollbar clearance). **Bonus:** Fixed WebView background color mismatch during over-scroll (was white, now matches dark theme). Version bumped to 0.2.1. All 13 tests passing, QA approved. Archived to `_archive/resize-handle-visibility/`. |
 | 2026-02-01 | **Milestone 6 elevated to WebSocket IPC Bridge**: Expanded scope from "Browser-Based UI Testing" to full WebSocket IPC infrastructure. Addresses development workflow pain point (mock data double implementation). Original testing goals moved to new Milestone 7. Added detailed task breakdown for Rust (WebSocket server, `--dev-server` flag) and UI (transport abstraction, auto-detect). |
 | 2026-02-01 | **Added Milestone 7: Browser-Based Visual Testing**: Playwright integration and visual regression testing. Depends on M6 WebSocket bridge. Separated from M6 to maintain single-responsibility milestones. |
 | 2026-02-01 | **Added dead code cleanup task**: ~12 `#[allow(dead_code)]` suppressions in editor modules (webview.rs, bridge.rs, assets.rs, mod.rs, windows.rs) need review. Added as workaround during resize-handle feature; now that React UI is default, unused code should be removed. |
@@ -272,7 +273,8 @@ Add a WebSocket server to the desktop app that exposes the same IPC protocol ove
    - ✅ ~~CI/CD pipeline redesign~~ (completed 2026-01-31)
    - ✅ ~~Semantic versioning~~ (completed 2026-01-31)
    - ✅ ~~Make React UI default~~ (completed 2026-02-01)
-   - **Remaining:** Resize handle visibility fix, dead code cleanup, CI cache optimization
+   - ✅ ~~Resize handle visibility fix~~ (completed 2026-02-01)
+   - **Remaining:** Dead code cleanup, CI cache optimization
 2. **Milestone 6**: WebSocket IPC Bridge (next major feature)
    - Eliminates mock data problem in development
    - Enables real engine communication from browser
