@@ -158,7 +158,7 @@ This document tracks implementation progress against the milestones defined in t
 | Format-specific feature parity verification | ⏳ | |
 | Cross-engine rendering consistency (WebKit vs Chromium) | ⏳ | |
 | Automated visual regression tests | ⏳ | |
-| Make React UI default (remove feature flag) | 🚧 | Remove `webview_editor` feature flag; React UI is now the default editor. In testing. |
+| **Make React UI default** | ✅ | Removed `webview_editor` feature flag; React UI is now the only editor. Deleted egui fallback. Version bumped to 0.2.0. Completed 2026-02-01. |
 | **Semantic versioning** | ✅ | Version extracted from `engine/Cargo.toml` (single source of truth), injected at build time via Vite `define`. VersionBadge component displays version in UI. **Bonus:** Browser dev mode with environment detection and lazy IPC init (partial M6). Completed 2026-01-31. |
 | CI/CD pipeline (GitHub Actions) | ✅ | Redesigned staged pipeline with 6 jobs across 3 stages. Ubuntu for lint/test (cost optimization), macos for build. Branch protection configured. Completed 2026-01-31. |
 | CI pipeline cache optimization | ⏳ | Test Engine job rebuilds instead of using cache from Check Engine (different profiles: check vs test). Consider adding `cargo test --no-run` to prepare-engine job or combining check + test jobs. |
@@ -193,6 +193,7 @@ Currently, the UI can only communicate with the Rust engine when running inside 
 
 | Date | Update |
 |------|--------|
+| 2026-02-01 | **React UI default complete**: Removed `webview_editor` feature flag, deleted egui fallback editor, simplified build commands. React UI is now the only editor implementation. Version bumped to 0.2.0. QA approved. Archived to `_archive/react-ui-default/`. |
 | 2026-01-31 | **Semantic versioning complete**: Version extracted from `engine/Cargo.toml` (single source of truth), injected at build time via Vite `define`, displayed in UI via `VersionBadge` component. 8/8 manual tests + 35/35 unit tests passing. **Bonus delivery:** Browser development mode with environment detection and lazy IPC initialization — unblocks browser-based UI testing (partial Milestone 6). QA approved. Archived to `_archive/semantic-versioning/`. |
 | 2026-01-31 | **CI/CD pipeline redesign complete**: New staged pipeline with 6 specialized jobs (typecheck-ui, lint-ui, lint-engine, test-ui, test-engine, build-plugin). Stage 1 (fast feedback) on ubuntu, Stage 2 (tests) on ubuntu, Stage 3 (build) on macos (main only). Concurrency control, artifact sharing, branch protection. PR time <5 min, cost optimized (~90% ubuntu runners). Archived to `_archive/ci-cd-pipeline-redesign/`. |
 | 2026-01-31 | **UI unit testing framework complete**: Vitest + React Testing Library with IPC mock module. 25 passing tests covering ParameterSlider, Meter, and audio-math utilities. Unified `cargo xtask test` command with `--ui` and `--engine` flags. CI workflow ready (PR trigger disabled pending pipeline redesign). QA approved. Archived to `_archive/ui-unit-testing/`. |
@@ -229,7 +230,8 @@ Currently, the UI can only communicate with the Rust engine when running inside 
    - ✅ ~~UI unit testing framework~~ (completed 2026-01-31)
    - ✅ ~~CI/CD pipeline redesign~~ (completed 2026-01-31)
    - ✅ ~~Semantic versioning~~ (completed 2026-01-31)
-   - **Next up:** Performance profiling at low buffer sizes (32/64 samples)
+   - ✅ ~~Make React UI default~~ (completed 2026-02-01)
+   - **Next up:** Resize handle visibility fix (UX polish)
 2. **Milestone 6**: Browser-Based UI Testing Infrastructure (🚧 partially started)
    - ✅ ~~Mock data layer / browser compatibility~~ (delivered early via semantic versioning)
    - **Next up:** WebSocket IPC bridge design
