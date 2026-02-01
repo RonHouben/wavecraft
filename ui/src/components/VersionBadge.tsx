@@ -1,7 +1,7 @@
 /**
  * VersionBadge Component
  *
- * Displays the plugin version in a small, unobtrusive badge.
+ * Displays the plugin version in a clearly visible badge.
  * Version is injected at build time from engine/Cargo.toml.
  */
 
