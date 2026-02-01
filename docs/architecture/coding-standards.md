@@ -520,6 +520,71 @@ engine/xtask/src/
 | Constants | UPPER_SNAKE_CASE | `const WINDOW_WIDTH: u32` |
 | Modules | snake_case | `mod params`, `mod handler` |
 
+### Platform-Specific Code
+
+**Rule:** Use `#[cfg(target_os = "...")]` attributes for platform-specific code. Do not use `#[allow(dead_code)]` to suppress warnings for platform-gated items.
+
+VstKit is primarily developed for macOS, with the editor/WebView components being platform-specific. Code that only runs on certain platforms should be properly gated.
+
+**Patterns:**
+
+```rust
+// ✅ Platform-gate the entire item (imports, functions, statics)
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+use include_dir::{Dir, include_dir};
+
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+static UI_ASSETS: Dir = include_dir!("$CARGO_MANIFEST_DIR/../../../ui/dist");
+
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub fn get_asset(path: &str) -> Option<(&'static [u8], &'static str)> {
+    // ...
+}
+
+// ✅ Platform-gate tests that use platform-specific functions
+#[cfg(test)]
+mod tests {
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    use super::*;
+
+    #[test]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    fn test_platform_specific_function() {
+        // Test only runs on macOS/Windows
+    }
+}
+
+// ✅ Use #[allow(dead_code)] ONLY for trait methods called by platform implementations
+// (Rust's analysis can't see calls from platform-specific code)
+pub trait WebViewHandle: Any + Send {
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    fn evaluate_script(&self, script: &str) -> Result<(), String>;
+
+    /// Note: Called by platform implementations, not from trait consumers.
+    #[allow(dead_code)]
+    fn resize(&self, width: u32, height: u32);
+}
+```
+
+**Don't:**
+```rust
+// ❌ Using #[allow(dead_code)] instead of proper platform-gating
+#[allow(dead_code)]
+pub fn get_asset(path: &str) -> Option<...> {
+    // This compiles everywhere but is only used on macOS
+}
+
+// ❌ Using `test` in cfg to make code compile for tests on all platforms
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
+static UI_ASSETS: Dir = ...;  // Compiles on Linux CI but isn't used
+```
+
+**Rationale:**
+- Platform-gated code should only compile on platforms where it's used
+- This catches real dead code (lint checks work correctly)
+- Linux CI doesn't need to compile macOS/Windows GUI code
+- `#[allow(dead_code)]` should be reserved for legitimate false positives (e.g., trait methods called by platform impls)
+
 ### Real-Time Safety
 
 Code running on the audio thread must:
