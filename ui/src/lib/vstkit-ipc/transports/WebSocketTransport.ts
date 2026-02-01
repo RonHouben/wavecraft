@@ -39,6 +39,7 @@ export class WebSocketTransport implements Transport {
   private reconnectAttempts = 0;
   private reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private isDisposed = false;
+  private maxAttemptsReached = false; // Flag to stop reconnection after max attempts
 
   private readonly pendingRequests = new Map<RequestId, PendingRequest>();
   private readonly notificationCallbacks = new Set<NotificationCallback>();
@@ -164,7 +165,7 @@ export class WebSocketTransport implements Transport {
         this.isConnecting = false;
         this.ws = null;
 
-        if (!this.isDisposed) {
+        if (!this.isDisposed && !this.maxAttemptsReached) {
           this.scheduleReconnect();
         }
       };
@@ -179,11 +180,12 @@ export class WebSocketTransport implements Transport {
    * Schedule reconnection attempt with exponential backoff
    */
   private scheduleReconnect(): void {
-    if (this.isDisposed) {
+    if (this.isDisposed || this.maxAttemptsReached) {
       return;
     }
 
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      this.maxAttemptsReached = true;
       console.error(
         `WebSocketTransport: Max reconnect attempts (${this.maxReconnectAttempts}) reached`
       );
