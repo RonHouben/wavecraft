@@ -99,8 +99,14 @@ async fn handle_connection<H: ParameterHost>(
     while let Some(msg) = read.next().await {
         match msg {
             Ok(Message::Text(json)) => {
+                // Log incoming message
+                println!("[WebSocket] Received from {}: {}", addr, json);
+
                 // Route through existing IpcHandler
                 let response = handler.handle_json(&json);
+
+                // Log outgoing response
+                println!("[WebSocket] Sending to {}: {}", addr, response);
 
                 // Send response back to client
                 if let Err(e) = write.send(Message::Text(response)).await {
