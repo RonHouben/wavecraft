@@ -7,14 +7,14 @@ This document tracks implementation progress against the milestones defined in t
 ## Progress Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           🚧 M5        ⏳ M6            ⏳ M7              ⭐       │
-│  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ───── WebSocket ───── Visual Testing ─── Complete │
-│                                                         ▲                                                      │
-│                                                       YOU ARE HERE                                             │
-│                                                                                                                │
-│  Progress: [██████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 67%        │
-└─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           ✅ M5        🚧 M6            ⏳ M7              ⏳ M8       ⭐    │
+│  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ───── WebSocket ───── Visual Testing ─── Backlog ── Done  │
+│                                                                       ▲                                                 │
+│                                                                     YOU ARE HERE                                        │
+│                                                                                                                         │
+│  Progress: [████████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 71%    │
+└───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -143,32 +143,27 @@ This document tracks implementation progress against the milestones defined in t
 
 ## Milestone 5: Polish & Optimization (Ongoing)
 
-**Status: 🚧 In Progress**
+**Status: ✅ Complete**
 
 | Task | Status | Notes |
 |------|--------|-------|
 | **Linting infrastructure** | ✅ | ESLint + Prettier (UI), Clippy + fmt (Engine), `cargo xtask lint` command, CI workflow. Completed 2026-01-31. |
 | **TailwindCSS for React UI** | ✅ | Utility-first CSS replacing component CSS files. Custom theme with semantic tokens. 3.74KB gzipped (under 10KB target). Completed 2026-01-31. |
 | **UI unit testing framework** | ✅ | Vitest + React Testing Library. IPC mock module for isolated component testing. 25 passing tests. `cargo xtask test --ui` command. CI workflow ready (PR trigger disabled pending pipeline redesign). Completed 2026-01-31. |
-| Performance profiling (low buffer sizes: 32/64 samples) | ⏳ | |
-| CPU stress testing | ⏳ | |
-| Memory usage optimization | ⏳ | |
-| UX polish | ⏳ | |
 | **Resize handle visibility** | ✅ | Handle visibility improved: 50% white (was 30%), accent blue on hover/drag, 36×36px (was 24×24), 20px scrollbar clearance. WebView background color fixed. Completed 2026-02-01. |
-| Format-specific feature parity verification | ⏳ | |
-| Cross-engine rendering consistency (WebKit vs Chromium) | ⏳ | |
-| Automated visual regression tests | ⏳ | |
 | **Make React UI default** | ✅ | Removed `webview_editor` feature flag; React UI is now the only editor. Deleted egui fallback. Version bumped to 0.2.0. Completed 2026-02-01. |
 | **Dead code cleanup** | ✅ | Platform-gating pattern established for macOS/Windows-only code. Reduced `#[allow(dead_code)]` suppressions from 14 to 3 (79% reduction). Remaining 3 are valid (trait methods called by platform impls). Patterns documented in coding-standards.md. Completed 2026-02-01. |
 | **Semantic versioning** | ✅ | Version extracted from `engine/Cargo.toml` (single source of truth), injected at build time via Vite `define`. VersionBadge component displays version in UI. **Bonus:** Browser dev mode with environment detection and lazy IPC init (partial M6). Completed 2026-01-31. |
 | CI/CD pipeline (GitHub Actions) | ✅ | Redesigned staged pipeline with 6 jobs across 3 stages. Ubuntu for lint/test (cost optimization), macos for build. Branch protection configured. Completed 2026-01-31. |
-| CI pipeline cache optimization | ⏳ | Test Engine job rebuilds instead of using cache from Check Engine (different profiles: check vs test). Consider adding `cargo test --no-run` to prepare-engine job or combining check + test jobs. |
+| CI pipeline cache optimization | ➡️ | Moved to Milestone 8 (Backlog). |
+| Performance profiling | ➡️ | Moved to Milestone 8 (Backlog). |
+| Format-specific feature parity | ➡️ | Moved to Milestone 8 (Backlog). |
 
 ---
 
 ## Milestone 6: WebSocket IPC Bridge
 
-**Status: ⏳ Not Started**
+**Status: 🚧 In Progress**
 
 > **Goal:** Enable real IPC communication between the React UI running in a browser and the Rust engine, eliminating the need for mock data during development.
 
@@ -227,10 +222,39 @@ Add a WebSocket server to the desktop app that exposes the same IPC protocol ove
 
 ---
 
+## Milestone 8: Backlog
+
+**Status: ⏳ Not Started**
+
+> **Goal:** Low-priority items moved from other milestones for future consideration.
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **CI/CD Optimization** | | |
+| CI pipeline cache optimization | ⏳ | Test Engine job rebuilds instead of using cache from Check Engine (different profiles: check vs test). Consider adding `cargo test --no-run` to prepare-engine job or combining check + test jobs. |
+| **Performance** | | |
+| Performance profiling (low buffer sizes: 32/64 samples) | ⏳ | Moved from M5 |
+| CPU stress testing | ⏳ | Moved from M5 |
+| Memory usage optimization | ⏳ | Moved from M5 |
+| **Platform Support** | | |
+| WebView2 integration (Windows) | ⏳ | Deprioritized — macOS + Ableton is primary target |
+| Linux packaging (AppImage/Flatpak) | ⏳ | Deprioritized |
+| **DAW Compatibility** | | |
+| Logic Pro (macOS, AU) | ⏳ | Secondary (nice-to-have) |
+| GarageBand (macOS, AU) | ⏳ | Secondary (nice-to-have) |
+| Reaper (all platforms) | ⏳ | Deprioritized |
+| Cubase | ⏳ | Deprioritized |
+| FL Studio | ⏳ | Deprioritized |
+| **AU Issues** | | |
+| Investigate AU custom UI issue | ⏳ | clap-wrapper shows generic view; root cause TBD |
+
+---
+
 ## Changelog
 
 | Date | Update |
 |------|--------|
+| 2026-02-01 | **Milestone 5 complete, starting M6**: Marked M5 (Polish & Optimization) as complete. Moved remaining low-priority tasks (CI cache optimization, performance profiling, format-specific parity) to new Milestone 8 (Backlog). Started Milestone 6 (WebSocket IPC Bridge) on `feature/websocket-ipc-bridge` branch. |
 | 2026-02-01 | **Dead code cleanup complete**: Established platform-gating pattern using `#[cfg(any(target_os = "macos", target_os = "windows"))]` for code that only runs on GUI platforms. Reduced `#[allow(dead_code)]` suppressions from 14 to 3 (79% reduction). Remaining 3 are valid cases (trait methods called by platform implementations). Pattern documented in new "Platform-Specific Code" section of coding-standards.md. Archived to `_archive/m5-dead-code-cleanup/`. |
 | 2026-02-01 | **Resize handle visibility complete**: Handle visibility significantly improved — opacity increased (30%→50% white), hover/drag states use accent blue (#4a9eff/#6bb0ff), size increased (24×24→36×36px button, 16×16→20×20px icon), positioned 20px from right edge (scrollbar clearance). **Bonus:** Fixed WebView background color mismatch during over-scroll (was white, now matches dark theme). Version bumped to 0.2.1. All 13 tests passing, QA approved. Archived to `_archive/resize-handle-visibility/`. |
 | 2026-02-01 | **Milestone 6 elevated to WebSocket IPC Bridge**: Expanded scope from "Browser-Based UI Testing" to full WebSocket IPC infrastructure. Addresses development workflow pain point (mock data double implementation). Original testing goals moved to new Milestone 7. Added detailed task breakdown for Rust (WebSocket server, `--dev-server` flag) and UI (transport abstraction, auto-detect). |
@@ -265,35 +289,22 @@ Add a WebSocket server to the desktop app that exposes the same IPC protocol ove
 
 ## Next Steps
 
-> **Focus:** Milestone 5 (Polish & Optimization) is the active milestone. Milestone 6 (WebSocket IPC Bridge) is next.
+> **Focus:** Milestone 6 (WebSocket IPC Bridge) is the active milestone.
 
-1. **Milestone 5**: Polish & Optimization (wrapping up)
-   - ✅ ~~Linting infrastructure implementation~~ (completed 2026-01-31)
-   - ✅ ~~TailwindCSS implementation for React UI~~ (completed 2026-01-31)
-   - ✅ ~~UI unit testing framework~~ (completed 2026-01-31)
-   - ✅ ~~CI/CD pipeline redesign~~ (completed 2026-01-31)
-   - ✅ ~~Semantic versioning~~ (completed 2026-01-31)
-   - ✅ ~~Make React UI default~~ (completed 2026-02-01)
-   - ✅ ~~Resize handle visibility fix~~ (completed 2026-02-01)
-   - ✅ ~~Dead code cleanup~~ (completed 2026-02-01)
-   - **Remaining:** CI cache optimization
-2. **Milestone 6**: WebSocket IPC Bridge (next major feature)
+1. **Milestone 6**: WebSocket IPC Bridge ← **YOU ARE HERE**
    - Eliminates mock data problem in development
    - Enables real engine communication from browser
    - Foundation for automated visual testing
-3. **Milestone 7**: Browser-Based Visual Testing
+2. **Milestone 7**: Browser-Based Visual Testing
    - Playwright integration (depends on M6)
    - Visual regression test suite
-4. **Investigate AU Custom UI Issue** (nice-to-have)
-   - Understand why clap-wrapper shows generic parameter view
-   - Research CLAP GUI extension forwarding in clap-wrapper
+3. **Milestone 8**: Backlog
+   - CI cache optimization
+   - Performance profiling
+   - Platform support expansion
 
 ### Deferred (Future Consideration)
 - **When Apple Developer account available**:
    - Developer ID signing validation
    - Notarization submission and Gatekeeper testing
    - Signed release CI/CD pipeline
-- Windows WebView2 integration
-- Linux support
-- Non-Ableton DAW compatibility (Reaper, Cubase, FL Studio)
-- Logic Pro / GarageBand AU testing
