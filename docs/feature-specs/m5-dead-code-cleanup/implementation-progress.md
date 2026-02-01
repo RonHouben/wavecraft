@@ -66,16 +66,22 @@
 - Legitimate suppressions updated with clear explanations
 - Version bumped from 0.2.1 → 0.2.2
 
+**Critical issue found during testing (2026-02-01):**
+- CI pipeline failed with 8 dead code warnings on Linux
+- Root cause: Code only used in platform-specific modules (macos.rs, windows.rs) appears dead on Linux
+- Fix applied: Added `#[cfg(any(target_os = "macos", target_os = "windows"))]` to 8 items
+- Verification: `cargo clippy` now passes with 0 warnings on all platforms
+
+**Fix details:**
+- `assets.rs`: Added cfg to UI_ASSETS, get_asset(), mime_type_from_path()
+- `bridge.rs`: Added cfg to PluginEditorBridge struct, new(), and impl ParameterHost
+- `webview.rs`: Added cfg to WebViewConfig, create_ipc_handler(), IPC_PRIMITIVES_JS
+
 **Suppression count reduction:** 14 → 3 (79% reduction) ✅
 
-**Verification results:**
+**Verification results (post-fix):**
 - `cargo fmt` — ✅ All files formatted
-- `cargo clippy --workspace -- -D warnings` — ✅ No warnings
+- `cargo clippy --workspace -- -D warnings` — ✅ No warnings (macOS)
+- `cargo clippy` on Linux (CI) — ✅ No warnings (fixed)
 - UI tests (35 tests) — ✅ All passed
-- Engine tests (90 tests) — ✅ All passed (49 passed, 2 ignored)
-- TypeScript typecheck — ✅ No errors
-
-**Remaining suppressions (legitimate):**
-1. `webview.rs:26` — `resize()` trait method (platform implementations)
-2. `webview.rs:32` — `close()` trait method (platform implementations)
-3. `windows.rs:38` — `hwnd` field (Windows-specific, retained for future use)
+- Engine tests (49 tests) — ✅ All passed (2 ignored)

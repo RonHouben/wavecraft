@@ -16,6 +16,9 @@ use crate::params::VstKitParams;
 ///
 /// This struct implements ParameterHost to allow the IPC handler to
 /// interact with nih-plug's parameter system through GuiContext.
+///
+/// Only used on macOS/Windows where WebView is available.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub struct PluginEditorBridge {
     params: Arc<VstKitParams>,
     context: Arc<dyn GuiContext>,
@@ -25,6 +28,7 @@ pub struct PluginEditorBridge {
     editor_size: Arc<Mutex<(u32, u32)>>,
 }
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 impl PluginEditorBridge {
     /// Create a new bridge with the given parameters and context.
     pub fn new(
@@ -42,6 +46,7 @@ impl PluginEditorBridge {
     }
 }
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 impl ParameterHost for PluginEditorBridge {
     fn get_parameter(&self, id: &str) -> Option<ParameterInfo> {
         // For now, we only have the gain parameter

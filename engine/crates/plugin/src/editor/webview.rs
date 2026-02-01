@@ -38,6 +38,9 @@ pub trait WebViewHandle: Any + Send {
 }
 
 /// Configuration for creating a WebView editor.
+///
+/// Only used on macOS/Windows where WebView is available.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub struct WebViewConfig {
     pub params: Arc<VstKitParams>,
     pub context: Arc<dyn GuiContext>,
@@ -75,6 +78,9 @@ pub fn create_webview(_config: WebViewConfig) -> Result<Box<dyn WebViewHandle>, 
 ///
 /// This is shared across all platforms and wires up the bridge between
 /// the WebView's IPC messages and the nih-plug parameter system.
+///
+/// Only used on macOS/Windows where WebView is available.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub fn create_ipc_handler(
     params: Arc<VstKitParams>,
     context: Arc<dyn GuiContext>,
@@ -89,4 +95,7 @@ pub fn create_ipc_handler(
 ///
 /// This is the plugin-specific version for WKWebView, which uses
 /// webkit.messageHandlers instead of wry's globalThis.ipc.
+///
+/// Only used on macOS/Windows where WebView is available.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub const IPC_PRIMITIVES_JS: &str = include_str!("js/ipc-primitives-plugin.js");
