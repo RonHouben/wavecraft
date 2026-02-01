@@ -15,11 +15,11 @@ Tracking implementation of the Developer SDK (Milestone 8).
 | Phase | Status | Progress |
 |-------|--------|----------|
 | Phase 1: Crate Restructuring | ✅ Complete | 7/7 steps |
-| Phase 2: API Extraction | 🚧 In Progress | 2/6 steps |
+| Phase 2: API Extraction | 🚧 In Progress | 3/6 steps |
 | Phase 3: Template Repository | ⏳ Not Started | 0/6 steps |
 | Phase 4: Documentation & Polish | ⏳ Not Started | 0/6 steps |
 
-**Overall Progress:** 9/25 steps (36%)
+**Overall Progress:** 10/25 steps (40%)
 
 ---
 
@@ -43,8 +43,8 @@ Tracking implementation of the Developer SDK (Milestone 8).
 |------|------|--------|-------|
 | 2.1 | Create Processor trait | ✅ | Commit: 329f3ce - Trait + Transport struct + doc test |
 | 2.2 | Create ParamSet trait | ✅ | Commit: 271142d - Trait + ParamId refactor + doc test |
-| 2.3 | Create vstkit_params! macro | 🚧 | |
-| 2.4 | Create vstkit_plugin! macro | ⏳ | |
+| 2.3 | Create vstkit_params! macro | ✅ | Commit: 7c9847e - Declarative param definitions + 5 unit tests |
+| 2.4 | Create vstkit_plugin! macro | 🚧 | |
 | 2.5 | Extract ParameterHost trait | ⏳ | |
 | 2.6 | Phase 2 integration test | ⏳ | |
 
