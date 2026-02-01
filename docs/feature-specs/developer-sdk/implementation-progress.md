@@ -15,11 +15,11 @@ Tracking implementation of the Developer SDK (Milestone 8).
 | Phase | Status | Progress |
 |-------|--------|----------|
 | Phase 1: Crate Restructuring | ✅ Complete | 7/7 steps |
-| Phase 2: API Extraction | 🚧 In Progress | 3/6 steps |
+| Phase 2: API Extraction | 🚧 In Progress | 4/6 steps (1 deferred) |
 | Phase 3: Template Repository | ⏳ Not Started | 0/6 steps |
 | Phase 4: Documentation & Polish | ⏳ Not Started | 0/6 steps |
 
-**Overall Progress:** 10/25 steps (40%)
+**Overall Progress:** 11/25 steps (44%)
 
 ---
 
@@ -44,9 +44,32 @@ Tracking implementation of the Developer SDK (Milestone 8).
 | 2.1 | Create Processor trait | ✅ | Commit: 329f3ce - Trait + Transport struct + doc test |
 | 2.2 | Create ParamSet trait | ✅ | Commit: 271142d - Trait + ParamId refactor + doc test |
 | 2.3 | Create vstkit_params! macro | ✅ | Commit: 7c9847e - Declarative param definitions + 5 unit tests |
-| 2.4 | Create vstkit_plugin! macro | 🚧 | |
-| 2.5 | Extract ParameterHost trait | ⏳ | |
-| 2.6 | Phase 2 integration test | ⏳ | |
+| 2.4 | Create vstkit_plugin! macro | ⏸️ | Deferred to Phase 3 (complex, needs nih-plug integration) |
+| 2.5 | Extract ParameterHost trait | ✅ | Commit: b4d1024 - Extracted to host.rs with doc example |
+| 2.6 | Phase 2 integration test | ✅ | All tests pass, plugin builds successfully |
+
+---
+
+### Phase 2 Completion (Feb 1, 2026)
+
+Successfully extracted public APIs for SDK users:
+
+**Completed API Traits:**
+1. **Processor trait** (vstkit-dsp): Core DSP processing abstraction
+2. **ParamSet trait** (vstkit-protocol): Parameter set definition
+3. **ParameterHost trait** (vstkit-bridge): Parameter management backend
+
+**Completed Macros:**
+- **vstkit_params!**: Declarative parameter definition macro
+
+**Test Coverage:**
+- 18 engine tests (including 5 macro unit tests)
+- 35 UI tests
+- 3 doc tests (with comprehensive examples)
+- Plugin builds and bundles successfully
+
+**Deferred:**
+- **vstkit_plugin! macro**: Postponed to Phase 3 (requires deeper nih-plug integration strategy)
 
 ---
 
@@ -120,4 +143,4 @@ All crate renames completed successfully:
 |------|--------|
 | 2026-02-01 | Implementation plan and progress tracker created |
 | 2026-02-01 | Phase 1 complete: All crates renamed with vstkit-* prefix |
-| 2026-02-01 | Phase 2 Steps 2.1-2.2 complete: Processor and ParamSet traits |
+| 2026-02-01 | Phase 2 Steps 2.1-2.2 complete: Processor and ParamSet traits || 2026-02-01 | Phase 2 complete: Core SDK APIs extracted (Step 2.4 deferred) |
