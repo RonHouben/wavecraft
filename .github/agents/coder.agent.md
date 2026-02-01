@@ -160,6 +160,7 @@ let gain = self.params.gain.value();
 1. **Read the spec** — Check `docs/feature-specs/` for implementation plans
 2. **Understand boundaries** — Know which crate/layer you're working in
 3. **Check existing patterns** — Follow established conventions
+4. **Bump the version** — Increment version in `engine/Cargo.toml` (see Version Bumping section)
 
 ### While Coding
 
@@ -167,6 +168,23 @@ let gain = self.params.gain.value();
 2. **Keep functions small** — Single responsibility
 3. **Document public APIs** — Use `///` doc comments
 4. **Handle errors gracefully** — No silent failures
+
+### Version Bumping
+
+**Every feature implementation must include a version bump.** This allows testers to verify the correct build is loaded.
+
+**Location:** `engine/Cargo.toml` → `[workspace.package]` → `version`
+
+```toml
+[workspace.package]
+version = "0.2.0"  # Increment this
+```
+
+**Rules:**
+- **Minor bump** (0.X.0): Significant features, architectural changes, milestones
+- **Patch bump** (0.0.X): Small features, bug fixes, polish, docs updates
+- Do this **early in the coding phase**, not at the end
+- The version appears in the UI via VersionBadge component
 
 ### After Coding
 
