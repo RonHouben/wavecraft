@@ -1,13 +1,13 @@
 [package]
-name = "desktop"
+name = "standalone"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
-description = "Desktop POC for WebView integration"
+description = "Standalone app for plugin development and testing"
 
 [[bin]]
-name = "desktop"
+name = "standalone"
 path = "src/main.rs"
 
 [dependencies]

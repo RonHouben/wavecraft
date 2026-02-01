@@ -17,7 +17,7 @@ nih_plug_egui = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28
 protocol = { path = "crates/protocol" }
 dsp = { path = "crates/dsp" }
 bridge = { path = "crates/bridge" }
-desktop = { path = "crates/desktop" }
+standalone = { path = "crates/standalone" }
 metering = { path = "crates/metering" }
 
 [profile.release]

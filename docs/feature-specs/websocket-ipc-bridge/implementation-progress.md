@@ -10,14 +10,14 @@
 ## Progress Overview
 
 ```
-Phase 0: Crate Rename (Preparation)  [ ] 0/4 steps
+Phase 0: Crate Rename (Preparation)  [✅] 4/4 steps
 Phase 1: WebSocket Server (Rust)     [ ] 0/5 steps
 Phase 2: Transport Abstraction (TS)  [ ] 0/5 steps  
 Phase 3: Refactor IpcBridge          [ ] 0/5 steps
 Phase 4: Meter Streaming             [ ] 0/3 steps
 Phase 5: Polish & Documentation      [ ] 0/6 steps
 ─────────────────────────────────────────────────
-Total                                [ ] 0/28 steps
+Total                                [ ] 4/28 steps
 ```
 
 ---
@@ -26,10 +26,10 @@ Total                                [ ] 0/28 steps
 
 | Step | Description | Status | Notes |
 |------|-------------|--------|-------|
-| 0.1 | Rename `desktop` → `standalone` directory | ⏳ | |
-| 0.2 | Update Cargo.toml package name | ⏳ | |
-| 0.3 | Update workspace members | ⏳ | |
-| 0.4 | Update internal references | ⏳ | |
+| 0.1 | Rename `desktop` → `standalone` directory | ✅ | |
+| 0.2 | Update Cargo.toml package name | ✅ | |
+| 0.3 | Update workspace members | ✅ | |
+| 0.4 | Update internal references | ✅ | cargo check passes |
 
 ---
 
