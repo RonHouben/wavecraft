@@ -16,7 +16,6 @@ use crate::params::VstKitParams;
 ///
 /// This struct implements ParameterHost to allow the IPC handler to
 /// interact with nih-plug's parameter system through GuiContext.
-#[allow(dead_code)] // Will be used when WebView editor is re-enabled
 pub struct PluginEditorBridge {
     params: Arc<VstKitParams>,
     context: Arc<dyn GuiContext>,
@@ -28,7 +27,6 @@ pub struct PluginEditorBridge {
 
 impl PluginEditorBridge {
     /// Create a new bridge with the given parameters and context.
-    #[allow(dead_code)] // Will be used when WebView editor is re-enabled
     pub fn new(
         params: Arc<VstKitParams>,
         context: Arc<dyn GuiContext>,

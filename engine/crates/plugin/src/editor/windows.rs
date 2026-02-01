@@ -34,7 +34,10 @@ use super::webview::{WebViewConfig, WebViewHandle};
 ///
 /// Holds the WebView2 controller and web view instances.
 pub struct WindowsWebView {
-    #[allow(dead_code)] // Stored for future window operations (resize, focus management)
+    /// Parent window handle, retained for potential focus/positioning operations.
+    ///
+    /// Note: Currently unused but required for future Windows platform features.
+    #[allow(dead_code)]
     hwnd: HWND,
     _handler: Arc<Mutex<IpcHandler<PluginEditorBridge>>>,
     controller: Arc<Mutex<Option<ICoreWebView2Controller>>>,

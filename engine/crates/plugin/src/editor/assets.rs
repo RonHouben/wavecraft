@@ -10,7 +10,6 @@ use include_dir::{Dir, include_dir};
 ///
 /// This directory is populated by running `npm run build` in the `ui/` folder.
 /// If the directory doesn't exist yet, we use an empty directory.
-#[allow(dead_code)] // Part of asset serving API, will be used when editor is re-enabled
 static UI_ASSETS: Dir = include_dir!("$CARGO_MANIFEST_DIR/../../../ui/dist");
 
 /// Get an embedded asset by path.
@@ -21,7 +20,6 @@ static UI_ASSETS: Dir = include_dir!("$CARGO_MANIFEST_DIR/../../../ui/dist");
 /// # Returns
 /// * `Some((bytes, mime_type))` if asset exists
 /// * `None` if asset not found
-#[allow(dead_code)] // Part of asset serving API, will be used when editor is re-enabled
 pub fn get_asset(path: &str) -> Option<(&'static [u8], &'static str)> {
     // Normalize path (remove leading slash)
     let path = path.trim_start_matches('/');
@@ -39,7 +37,6 @@ pub fn get_asset(path: &str) -> Option<(&'static [u8], &'static str)> {
 }
 
 /// Infer MIME type from file extension.
-#[allow(dead_code)] // Helper for get_asset, will be used when editor is re-enabled
 fn mime_type_from_path(path: &str) -> &'static str {
     let extension = path.split('.').next_back().unwrap_or("");
 

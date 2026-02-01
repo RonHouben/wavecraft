@@ -19,16 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("    desktop [OPTIONS]");
         println!();
         println!("OPTIONS:");
-        println!("    --list-assets    List all embedded UI assets");
         println!("    --help, -h       Show this help message");
-        return Ok(());
-    }
-
-    if args.contains(&"--list-assets".to_string()) {
-        println!("Embedded UI assets:");
-        for asset in assets::list_assets() {
-            println!("  {}", asset);
-        }
         return Ok(());
     }
 
