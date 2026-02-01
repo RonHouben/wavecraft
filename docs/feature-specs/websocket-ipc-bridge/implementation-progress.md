@@ -11,13 +11,13 @@
 
 ```
 Phase 0: Crate Rename (Preparation)  [✅] 4/4 steps
-Phase 1: WebSocket Server (Rust)     [ ] 0/5 steps
+Phase 1: WebSocket Server (Rust)     [✅] 5/5 steps
 Phase 2: Transport Abstraction (TS)  [ ] 0/5 steps  
 Phase 3: Refactor IpcBridge          [ ] 0/5 steps
 Phase 4: Meter Streaming             [ ] 0/3 steps
 Phase 5: Polish & Documentation      [ ] 0/6 steps
 ─────────────────────────────────────────────────
-Total                                [ ] 4/28 steps
+Total                                [✅] 9/28 steps
 ```
 
 ---
@@ -37,11 +37,11 @@ Total                                [ ] 4/28 steps
 
 | Step | Description | Status | Notes |
 |------|-------------|--------|-------|
-| 1.1 | Add dependencies (tokio, tokio-tungstenite, clap) | ⏳ | |
-| 1.2 | Create `ws_server.rs` module | ⏳ | |
-| 1.3 | Add CLI arguments (--dev-server, --port) | ⏳ | |
-| 1.4 | Implement dev server mode | ⏳ | |
-| 1.5 | Verify with websocat | ⏳ | |
+| 1.1 | Add dependencies (tokio, tokio-tungstenite, clap) | ✅ | Added to Cargo.toml |
+| 1.2 | Create `ws_server.rs` module | ✅ | WsServer struct with async start(), handle_connection() |
+| 1.3 | Add CLI arguments (--dev-server, --port) | ✅ | Clap-based Args struct |
+| 1.4 | Implement dev server mode | ✅ | run_dev_server() creates tokio runtime |
+| 1.5 | Verify with websocat | ✅ | Manual test: `cargo run -p standalone -- --dev-server` |
 
 ---
 
