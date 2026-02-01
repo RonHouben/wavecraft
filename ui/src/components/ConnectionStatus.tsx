@@ -5,9 +5,10 @@
  * Native transport (WKWebView) is always connected.
  */
 
+import React from 'react';
 import { useConnectionStatus } from '@vstkit/ipc';
 
-export function ConnectionStatus(): JSX.Element {
+export function ConnectionStatus(): React.JSX.Element {
   const { connected, transport } = useConnectionStatus();
 
   // Native transport is always connected - no need to show indicator

@@ -1,30 +1,28 @@
 /**
- * Tests for IpcBridge browser mode graceful degradation
+ * Tests for IpcBridge with mock transport
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { IpcBridge } from './IpcBridge';
+import { MockTransport } from './transports/MockTransport';
+import * as transportsModule from './transports';
 
-describe('IpcBridge Browser Mode', () => {
-  let originalVstkit: typeof globalThis.__VSTKIT_IPC__;
+describe('IpcBridge with MockTransport', () => {
+  let mockTransport: MockTransport;
 
   beforeEach(() => {
-    // Save original state
-    originalVstkit = globalThis.__VSTKIT_IPC__;
-    // Ensure we're in browser mode for these tests
-    delete globalThis.__VSTKIT_IPC__;
+    // Reset singleton state
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (IpcBridge as any).instance = null;
+
+    // Create mock transport
+    mockTransport = new MockTransport();
+
+    // Spy on getTransport to return our mock
+    vi.spyOn(transportsModule, 'getTransport').mockReturnValue(mockTransport);
   });
 
-  afterEach(() => {
-    // Restore original state
-    if (originalVstkit) {
-      globalThis.__VSTKIT_IPC__ = originalVstkit;
-    } else {
-      delete globalThis.__VSTKIT_IPC__;
-    }
-  });
-
-  it('should return mock parameter data in browser mode', async (): Promise<void> => {
+  it('should return mock parameter data', async (): Promise<void> => {
     const bridge = IpcBridge.getInstance();
     const result = await bridge.invoke('getParameter', { id: 'test' });
 
@@ -37,7 +35,7 @@ describe('IpcBridge Browser Mode', () => {
     });
   });
 
-  it('should return mock meter frame in browser mode', async (): Promise<void> => {
+  it('should return mock meter frame', async (): Promise<void> => {
     interface MeterFrameResponse {
       frame: {
         peak_l: number;
@@ -59,14 +57,14 @@ describe('IpcBridge Browser Mode', () => {
     expect(result.frame).toHaveProperty('timestamp');
   });
 
-  it('should return accepted resize response in browser mode', async (): Promise<void> => {
+  it('should return accepted resize response', async (): Promise<void> => {
     const bridge = IpcBridge.getInstance();
     const result = await bridge.invoke('requestResize', { width: 800, height: 600 });
 
     expect(result).toEqual({ accepted: true });
   });
 
-  it('should return no-op cleanup function for event listeners in browser mode', (): void => {
+  it('should return no-op cleanup function for event listeners', (): void => {
     const bridge = IpcBridge.getInstance();
     const unsubscribe = bridge.on('paramUpdate', (): void => {});
 
@@ -75,7 +73,7 @@ describe('IpcBridge Browser Mode', () => {
     unsubscribe();
   });
 
-  it('should not throw errors when invoking unknown methods in browser mode', async (): Promise<void> => {
+  it('should not throw errors when invoking unknown methods', async (): Promise<void> => {
     const bridge = IpcBridge.getInstance();
     const result = await bridge.invoke('unknownMethod', { foo: 'bar' });
 
