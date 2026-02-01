@@ -4,6 +4,7 @@
 //! into the plugin binary using `include_dir!`. Assets are served via a
 //! custom protocol handler in the WebView.
 
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 use include_dir::{Dir, include_dir};
 
 /// Embedded UI assets from `ui/dist/`

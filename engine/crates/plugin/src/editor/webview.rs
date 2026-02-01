@@ -3,13 +3,19 @@
 //! Provides a platform-agnostic interface for creating and managing WebViews
 //! across different platforms (macOS, Windows, Linux).
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use std::any::Any;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use std::sync::{Arc, Mutex};
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use bridge::IpcHandler;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use metering::MeterConsumer;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use nih_plug::prelude::*;
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use crate::params::VstKitParams;
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]

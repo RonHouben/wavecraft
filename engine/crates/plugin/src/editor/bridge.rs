@@ -3,13 +3,19 @@
 //! Implements the ParameterHost trait for use with the bridge crate,
 //! wrapping nih-plug's GuiContext for parameter automation.
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use std::sync::{Arc, Mutex};
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use bridge::{BridgeError, ParameterHost};
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use metering::MeterConsumer;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use nih_plug::prelude::*;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use protocol::{ParameterInfo, ParameterType};
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use crate::params::VstKitParams;
 
 /// Bridge between nih-plug and the IPC handler.

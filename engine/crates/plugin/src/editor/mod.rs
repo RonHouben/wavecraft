@@ -3,12 +3,17 @@
 //! This module provides the nih-plug Editor implementation, bridging
 //! the WebView UI with the plugin's parameter system and metering.
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use std::any::Any;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use std::sync::{Arc, Mutex};
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use metering::MeterConsumer;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use nih_plug::prelude::*;
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use crate::params::VstKitParams;
 
 mod assets;
@@ -23,9 +28,6 @@ mod windows;
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub use webview::{WebViewConfig, WebViewHandle, create_webview};
-
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
-pub use webview::WebViewHandle;
 
 /// WebView-based editor for the plugin.
 ///

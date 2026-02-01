@@ -27,17 +27,19 @@ pub struct VstKitPlugin {
     /// (editor creation/destruction and meter polling). It is NEVER touched
     /// from the audio thread, which uses `meter_producer` instead.
     /// The mutex protects against concurrent editor open/close operations.
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     meter_consumer: Arc<std::sync::Mutex<MeterConsumer>>,
 }
 
 impl Default for VstKitPlugin {
     fn default() -> Self {
-        let (meter_producer, meter_consumer) = create_meter_channel(64);
+        let (meter_producer, _meter_consumer) = create_meter_channel(64);
         Self {
             params: Arc::new(VstKitParams::default()),
             processor: Processor::new(44100.0),
             meter_producer,
-            meter_consumer: Arc::new(std::sync::Mutex::new(meter_consumer)),
+            #[cfg(any(target_os = "macos", target_os = "windows"))]
+            meter_consumer: Arc::new(std::sync::Mutex::new(_meter_consumer)),
         }
     }
 }
