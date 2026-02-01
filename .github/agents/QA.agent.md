@@ -202,12 +202,26 @@ Hand off to `coder` when findings include:
 
 ### → Architect Agent
 
-Hand off to `architect` when findings include:
+Hand off to `architect` when:
+
+**Issues Found:**
 - Domain boundary violations requiring structural changes
 - New abstractions needed
 - Design trade-offs requiring decisions
 - Changes to crate dependencies or module structure
 - Deviations from `high-level-design.md`
+
+**No Issues (PASS):**
+- All automated checks passed (linting, tests, CI)
+- No Critical/High/Medium issues found
+- Implementation complete and quality verified
+- Ready for architectural documentation review
+
+**What Architect Does Next:**
+1. Review implementation against architectural decisions
+2. Update documentation in `docs/architecture/` if needed
+3. Ensure high-level design reflects current implementation
+4. Hand off to PO for roadmap update and spec archival
 
 ## Constraints
 
