@@ -11,9 +11,11 @@
 | Status | Count |
 |--------|-------|
 | ✅ PASS | 3 |
-| ❌ FAIL | 4 |
-| ⏸️ BLOCKED | 0 |
-| ⬜ NOT RUN | 9 |
+| ❌ FAIL | 5 |
+| ⏸️ BLOCKED | 9 |
+| ⬜ NOT RUN | 0 |
+
+**Note**: 5 issues found. Issues #1-5 are fixed. Issue #6 (race condition) blocks all manual browser tests (TC-004 through TC-014).
 
 ## Prerequisites
 
@@ -511,6 +513,106 @@
 
 ---
 
+### Issue #5: Dev Server Exits Immediately After Starting
+
+- **Severity**: Critical
+- **Test Case**: TC-002 (Dev Server Startup)
+- **Description**: Standalone dev server spawns WebSocket server but then exits immediately instead of keeping the process alive
+- **Expected**: Server runs until user presses Ctrl+C
+- **Actual**: Server prints "Server listening..." but process terminates immediately
+- **Steps to Reproduce**:
+  1. Run: `cargo run -p standalone -- --dev-server`
+  2. Observe: Server starts, logs "Server listening on ws://127.0.0.1:9000", then exits
+  3. Result: Port 9000 immediately becomes unavailable
+- **Evidence**:
+  ```bash
+  $ cargo run -p standalone -- --dev-server
+  Starting VstKit dev server on port 9000...
+  [WebSocket] Server listening on ws://127.0.0.1:9000
+  $ # <-- Process exits, returns to shell
+  ```
+- **Root Cause**: The `run_dev_server()` function spawns the WebSocket server on a tokio task, but the main function doesn't wait for any signal. The spawned task runs in the background but the main function returns immediately, terminating the process.
+- **Fix Applied**:
+  1. Added `tokio::signal::ctrl_c().await?;` to wait for Ctrl+C signal
+  2. Added `tokio` "signal" feature to `standalone/Cargo.toml`
+  3. Server now blocks until user presses Ctrl+C, then shuts down gracefully
+- **Verification**: 
+  - Server stays running: `lsof -i :9000` shows process listening
+  - Ctrl+C exits cleanly with message "Ctrl+C received, shutting down..."
+- **Status**: ✅ FIXED (commit 41eb1d9)
+
+---
+
+### Issue #6: Race Condition - UI Components Call IPC Before WebSocket Connected
+
+- **Severity**: High
+- **Test Case**: TC-004 (WebSocket Connection Establishment), TC-008 (Meter Display)
+- **Description**: React components (Meter, LatencyMonitor) start calling IpcBridge methods during component mount, but WebSocket connection isn't fully established yet
+- **Expected**: Components wait for WebSocket connection before attempting IPC calls
+- **Actual**: Components throw "Transport not connected" error immediately on page load
+- **Steps to Reproduce**:
+  1. Run dev servers: `cargo xtask dev --verbose`
+  2. Open browser to http://localhost:5173
+  3. Open browser console (F12)
+  4. Observe error: `Uncaught (in promise) Error: IpcBridge: Transport not connected`
+  5. Note: Console also shows `WebSocketTransport: Connected to ws://127.0.0.1:9000` shortly after
+- **Evidence**:
+  ```
+  ❌ Uncaught (in promise) Error: IpcBridge: Transport not connected
+     at IpcBridge.invoke (IpcBridge.ts:75:13)
+     at getMeterFrame (meters.ts:30:31)
+     at Meter.tsx:27:30
+  ✅ WebSocketTransport: Connected to ws://127.0.0.1:9000 (WebSocketTransport.ts:152)
+  ```
+- **Root Cause Analysis**:
+  1. WebSocketTransport constructor creates WebSocket immediately
+  2. WebSocket creation is async - `new WebSocket(url)` returns immediately with `readyState = CONNECTING`
+  3. Meter component mounts and starts `setInterval` calling `getMeterFrame()` immediately
+  4. `IpcBridge.invoke()` checks `isConnected()` which returns `ws.readyState === WebSocket.OPEN`
+  5. During connection phase, readyState is `CONNECTING` (0), not `OPEN` (1), so check fails
+  6. Error thrown before `ws.onopen` event fires and sets readyState to `OPEN`
+- **Timeline**:
+  ```
+  T+0ms:   WebSocketTransport created → new WebSocket(url) [readyState = CONNECTING]
+  T+10ms:  Meter component mounts → setInterval starts → getMeterFrame() called
+  T+10ms:  IpcBridge.invoke() → isConnected() returns false → throws error ❌
+  T+50ms:  WebSocket.onopen fires → readyState = OPEN → logs "Connected" ✅
+  ```
+- **Recommended Solution**:
+  The `useConnectionStatus` hook already exists and polls connection status every 1 second. Components that need IPC should:
+  1. Use `useConnectionStatus()` hook to monitor connection state
+  2. Only start IPC operations (setInterval, API calls) when `status.connected === true`
+  3. Show loading state or disable controls while not connected
+  
+  Example fix for Meter.tsx:
+  ```tsx
+  import { useConnectionStatus } from '../lib/vstkit-ipc';
+  
+  export function Meter(): React.JSX.Element {
+    const { connected } = useConnectionStatus();
+    
+    useEffect(() => {
+      if (!connected) return; // Don't start polling until connected
+      
+      const interval = setInterval(async () => {
+        const newFrame = await getMeterFrame();
+        setFrame(newFrame);
+      }, METER_UPDATE_MS);
+      
+      return () => clearInterval(interval);
+    }, [connected]); // Re-run effect when connection changes
+    
+    if (!connected) {
+      return <div>Connecting...</div>;
+    }
+    // ... rest of component
+  }
+  ```
+- **Status**: ⚠️ REQUIRES FIX (blocks manual browser testing)
+- **Handoff**: Coder agent should fix components: Meter.tsx, LatencyMonitor.tsx, and any other components that use IPC in useEffect
+
+---
+
 ## Testing Notes
 
 ### Successfully Tested (Automated)
@@ -563,15 +665,20 @@ The following test cases (TC-004 through TC-014) require manual browser interact
 
 - [✅] All critical tests pass (CI pipeline, dev server startup)
 - [✅] All high-priority tests pass (test compilation, parameter logic)
-- [✅] Issues documented and fixed (4 issues resolved in commits 008b9a2 and 25ac027)
-- [⚠️] Ready for release: **CONDITIONAL** - Requires manual browser testing (TC-004 onwards)
+- [✅] Issues #1-5 documented and fixed (commits 008b9a2, 25ac027, 41eb1d9)
+- [⚠️] Issue #6 (race condition) BLOCKS release - **REQUIRES FIX**
+- [❌] Ready for release: **NO** - Race condition prevents UI from working
 
-**Testing Status**: Automated tests ✅ COMPLETE | Manual browser tests ⏳ PENDING
+**Testing Status**: 
+- Automated tests: ✅ COMPLETE (3 PASS)
+- Manual browser tests: ⏸️ BLOCKED by Issue #6 (9 tests blocked)
 
-**Recommendation**: Coder agent should:
-1. Review and merge the test fixes (commits 008b9a2 and 25ac027)
-2. User or QA should perform manual browser testing (TC-004 through TC-011)
-3. If manual tests pass, feature is ready for release
+**Critical Issue**: UI components attempt to call IpcBridge before WebSocket connection completes, causing "Transport not connected" errors on page load. This blocks all manual testing of the WebSocket integration.
+
+**Recommended Next Steps**:
+1. **HANDOFF TO CODER**: Fix Issue #6 by updating UI components (Meter.tsx, LatencyMonitor.tsx) to use `useConnectionStatus()` hook
+2. After fix, re-test manual browser tests (TC-004 through TC-014)
+3. If manual tests pass, feature ready for QA review
 
 **Tester Signature**: Tester Agent  
-**Date**: 2026-02-01
+**Date**: 2026-02-01 (Updated with Issue #6)
