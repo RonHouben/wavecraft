@@ -417,6 +417,38 @@ Valid exceptions:
 
 **Note:** The Prettier Tailwind plugin automatically sorts classes. Run `npm run format` to apply.
 
+### WebView Background Color
+
+**Rule:** Both `body` and `#root` must have explicit background colors matching the theme.
+
+The WebView shows a default white background when the user scrolls beyond the content boundaries (over-scroll/rubber-band scrolling). To prevent this visual inconsistency:
+
+1. Apply `bg-plugin-dark` to both `body` and `#root` in `index.css`
+2. Add an inline `style="background-color: #1a1a1a;"` to the `<html>` element in `index.html` as a pre-CSS fallback
+
+**Why both?**
+- `body` background covers the document area
+- `#root` background covers the React app container
+- `<html>` inline style prevents white flash before CSS loads
+
+**Example (`index.css`):**
+```css
+@layer base {
+  body {
+    @apply m-0 bg-plugin-dark p-0;
+  }
+
+  #root {
+    @apply h-screen w-full overflow-y-auto bg-plugin-dark;
+  }
+}
+```
+
+**Example (`index.html`):**
+```html
+<html lang="en" style="background-color: #1a1a1a;">
+```
+
 ### File Structure
 
 ```
@@ -653,11 +685,16 @@ Linting runs automatically on all PRs via `.github/workflows/lint.yml`:
 
 ### Versioning
 
-**Rule:** Increment the version number during the coding phase of each feature.
+**Rule:** The Product Owner decides the target version in the user stories. The Coder implements the version bump during the coding phase.
 
 The version is defined in `engine/Cargo.toml` under `[workspace.package]` and is the **single source of truth**. It gets injected into the UI at build time via Vite's `define` configuration.
 
-**When to bump:**
+**Workflow:**
+1. **PO** specifies the target version in `user-stories.md` with rationale
+2. **Coder** implements the version bump in `engine/Cargo.toml` during coding
+3. **Tester** verifies the correct version is displayed in the UI
+
+**Version bump criteria:**
 - **Minor version** (0.X.0): Significant features, architectural changes, milestone completions
 - **Patch version** (0.0.X): Small features, bug fixes, polish items, documentation updates
 
@@ -667,7 +704,12 @@ The version is defined in `engine/Cargo.toml` under `[workspace.package]` and is
 - Performance optimization → Patch bump
 - New UI component → Patch bump (unless it's a major feature)
 
-**Why during coding:**
+**Why PO decides:**
+- Version communicates product significance to users — a product decision
+- Ensures consistent versioning across features
+- Separates "what version" (product) from "when to bump" (engineering)
+
+**Why Coder implements during coding:**
 - Allows testers to verify the correct version is rendered in the UI
 - Creates clear traceability between builds and features
 - Ensures version is updated before testing, not as an afterthought

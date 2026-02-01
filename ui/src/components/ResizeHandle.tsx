@@ -53,21 +53,21 @@ export function ResizeHandle(): React.JSX.Element {
 
   return (
     <button
-      className={`group fixed bottom-0 right-0 z-[9999] flex h-6 w-6 cursor-nwse-resize select-none items-center justify-center border-none bg-transparent p-0 transition-colors duration-150 ${
-        isDragging ? 'bg-white/10' : 'hover:bg-white/5'
+      className={`group fixed bottom-1 right-5 z-[9999] flex h-9 w-9 cursor-nwse-resize select-none items-center justify-center rounded border-none bg-transparent p-0 transition-colors duration-150 ${
+        isDragging ? 'bg-accent/20' : 'hover:bg-white/10'
       }`}
       onMouseDown={handleMouseDown}
       aria-label="Resize window"
       type="button"
     >
       <svg
-        width="16"
-        height="16"
+        width="20"
+        height="20"
         viewBox="0 0 16 16"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className={`transition-colors duration-150 ${
-          isDragging ? 'text-white/80' : 'text-white/30 group-hover:text-white/60'
+          isDragging ? 'text-accent-light' : 'text-white/50 group-hover:text-accent'
         }`}
       >
         {/* Diagonal grip lines */}

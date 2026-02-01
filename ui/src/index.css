@@ -4,11 +4,11 @@
 
 @layer base {
   body {
-    @apply m-0 overflow-hidden p-0;
+    @apply m-0 bg-plugin-dark p-0;
   }
 
   #root {
-    @apply h-screen w-full overflow-y-auto;
+    @apply h-screen w-full overflow-y-auto bg-plugin-dark;
   }
 
   * {

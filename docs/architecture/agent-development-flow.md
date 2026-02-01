@@ -6,11 +6,11 @@ This project uses specialized agents with distinct responsibilities that hand of
 
 | Agent | Role | Key Outputs |
 |-------|------|-------------|
-| **PO** (Product Owner) | Owns product vision, roadmap, and feature prioritization | User stories, `docs/roadmap.md` |
+| **PO** (Product Owner) | Owns product vision, roadmap, feature prioritization, and **version decisions** | User stories (incl. target version), `docs/roadmap.md` |
 | **Architect** | Designs system architecture, enforces technical constraints | Low-level designs in `docs/feature-specs/{feature}/` |
 | **Planner** | Creates detailed implementation plans | `docs/feature-specs/{feature}/implementation-plan.md` |
-| **Coder** | Implements features, writes production code | Code changes, PRs |
-| **Tester** | Runs local CI pipeline, executes manual tests, documents results | `docs/feature-specs/{feature}/test-plan.md` |
+| **Coder** | Implements features, writes production code, **bumps version per user stories** | Code changes, PRs |
+| **Tester** | Runs local CI pipeline, executes manual tests, **verifies version display** | `docs/feature-specs/{feature}/test-plan.md` |
 | **QA** | Static analysis, code quality verification | QA reports |
 
 ## Standard Feature Development Flow
@@ -76,7 +76,7 @@ This project uses specialized agents with distinct responsibilities that hand of
 
 | From | To | Trigger | What Gets Passed |
 |------|----|---------|------------------|
-| PO → Architect | "Create low level design" | Feature requirements, user stories |
+| PO → Architect | "Create low level design" | Feature requirements, user stories (incl. target version) |
 | Architect → Planner | "Create implementation plan" | Low-level design document |
 | Planner → Coder | "Start Implementation" | Implementation plan |
 | Coder → Tester | "Test Implementation" | Completed implementation |

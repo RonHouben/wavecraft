@@ -7,14 +7,14 @@ This document tracks implementation progress against the milestones defined in t
 ## Progress Overview
 
 ```
-┌────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           🚧 M5           🚧 M6              ⭐       │
-│  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ─────── Browser Testing ─── Complete │
-│                                                         ▲                                         │
-│                                                       YOU ARE HERE                                │
-│                                                                                                   │
-│  Progress: [██████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░░] 75%    │
-└────────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           🚧 M5        ⏳ M6            ⏳ M7              ⭐       │
+│  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ───── WebSocket ───── Visual Testing ─── Complete │
+│                                                         ▲                                                      │
+│                                                       YOU ARE HERE                                             │
+│                                                                                                                │
+│  Progress: [██████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 67%        │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -154,38 +154,76 @@ This document tracks implementation progress against the milestones defined in t
 | CPU stress testing | ⏳ | |
 | Memory usage optimization | ⏳ | |
 | UX polish | ⏳ | |
-| Resize handle visibility | ⏳ | Handle overlaps scrollbar, low contrast, too small. Improve visibility and usability. |
+| **Resize handle visibility** | ✅ | Handle visibility improved: 50% white (was 30%), accent blue on hover/drag, 36×36px (was 24×24), 20px scrollbar clearance. WebView background color fixed. Completed 2026-02-01. |
 | Format-specific feature parity verification | ⏳ | |
 | Cross-engine rendering consistency (WebKit vs Chromium) | ⏳ | |
 | Automated visual regression tests | ⏳ | |
 | **Make React UI default** | ✅ | Removed `webview_editor` feature flag; React UI is now the only editor. Deleted egui fallback. Version bumped to 0.2.0. Completed 2026-02-01. |
+| **Dead code cleanup** | ⏳ | Remove `#[allow(dead_code)]` suppressions and associated unused code in editor modules (webview.rs, bridge.rs, assets.rs, mod.rs, windows.rs). ~12 instances added as workaround during resize-handle feature. Now that React UI is default, assess what's actually needed vs. deletable. |
 | **Semantic versioning** | ✅ | Version extracted from `engine/Cargo.toml` (single source of truth), injected at build time via Vite `define`. VersionBadge component displays version in UI. **Bonus:** Browser dev mode with environment detection and lazy IPC init (partial M6). Completed 2026-01-31. |
 | CI/CD pipeline (GitHub Actions) | ✅ | Redesigned staged pipeline with 6 jobs across 3 stages. Ubuntu for lint/test (cost optimization), macos for build. Branch protection configured. Completed 2026-01-31. |
 | CI pipeline cache optimization | ⏳ | Test Engine job rebuilds instead of using cache from Check Engine (different profiles: check vs test). Consider adding `cargo test --no-run` to prepare-engine job or combining check + test jobs. |
 
 ---
 
-## Milestone 6: Browser-Based UI Testing Infrastructure
+## Milestone 6: WebSocket IPC Bridge
 
-**Status: 🚧 Partially Complete**
+**Status: ⏳ Not Started**
 
-> **Goal:** Enable Playwright-based visual testing with real engine communication by creating a WebSocket IPC bridge that works in browsers (not just WKWebView).
+> **Goal:** Enable real IPC communication between the React UI running in a browser and the Rust engine, eliminating the need for mock data during development.
 
 **Problem Statement:**
-Currently, the UI can only communicate with the Rust engine when running inside the desktop app (WKWebView). This makes automated visual testing impossible because Playwright can only control browsers, not embedded WKWebViews.
+Currently, the UI can only communicate with the Rust engine when running inside WKWebView (plugin or desktop app). When developing with `npm run dev` in a browser, the UI falls back to static mock data. This creates:
+- **Double implementation** — Mock behavior can drift from real engine behavior
+- **Limited dev experience** — Can't see real meters, test actual parameter changes
+- **Testing gaps** — Automated browser testing (Playwright) can't use real engine data
+
+**Solution:**
+Add a WebSocket server to the desktop app that exposes the same IPC protocol over `ws://localhost:9000`. The UI auto-detects the environment and connects via WebSocket when not in WKWebView.
 
 **Benefits:**
-- **Playwright testing with real engine data** — Automated visual testing with actual parameter sync, meter data, etc.
-- **Remote debugging** — Debug UI issues while connected to a running engine
-- **Development workflow** — Hot reload with `npm run dev` while still having engine communication
+- **Single source of truth** — Same `IpcHandler` serves both native and WebSocket transports
+- **Real dev experience** — Hot reload with `npm run dev` + live meters, real parameter sync
+- **Testing foundation** — Enables Milestone 7 (Playwright visual testing)
+- **Future extensibility** — Remote debugging, external tools, mobile companion apps
 
 | Task | Status | Notes |
 |------|--------|-------|
-| WebSocket IPC bridge design | ⏳ | Architecture for browser ↔ engine communication |
-| WebSocket server in desktop app | ⏳ | Desktop app runs WebSocket server alongside UI |
-| UI IPC layer abstraction (WKWebView vs WebSocket) | ⏳ | Auto-detect environment, same protocol, different transport |
-| Playwright MCP integration for visual testing | ⏳ | Automated visual regression testing |
-| **Mock data layer for offline/isolated testing** | ✅ | **Early delivery via semantic versioning**: Environment detection (`isBrowserEnvironment()`), lazy IPC init, mock data for browser dev mode. UI runs in browsers without IPC errors. Completed 2026-01-31. |
+| **Architecture & Design** | | |
+| WebSocket IPC bridge design doc | ⏳ | Transport abstraction, protocol compatibility |
+| User stories | ⏳ | |
+| **Rust Implementation** | | |
+| Add WebSocket server to desktop crate | ⏳ | `tokio-tungstenite` or similar |
+| Route WebSocket messages through existing `IpcHandler` | ⏳ | Same protocol, different transport |
+| Add `--dev-server` CLI flag | ⏳ | Starts WebSocket server without UI window |
+| Meter data streaming over WebSocket | ⏳ | Push-based updates for real-time meters |
+| **UI Implementation** | | |
+| Create `WebSocketTransport` class | ⏳ | Implements same interface as native bridge |
+| Abstract `IpcBridge` to support multiple transports | ⏳ | Factory pattern or strategy |
+| Auto-detect environment and select transport | ⏳ | WKWebView → native, browser → WebSocket |
+| Reconnection handling | ⏳ | Auto-reconnect on disconnect |
+| **Developer Experience** | | |
+| Document dev workflow (two-terminal setup) | ⏳ | `cargo run -p desktop -- --dev-server` + `npm run dev` |
+| Consider Vite plugin for auto-starting Rust dev server | ⏳ | Nice-to-have |
+| **Cleanup** | | |
+| Remove static mock data from `IpcBridge` | ⏳ | No longer needed once WebSocket works |
+
+---
+
+## Milestone 7: Browser-Based Visual Testing
+
+**Status: ⏳ Not Started**
+
+> **Goal:** Automated visual regression testing using Playwright with real engine data (enabled by Milestone 6).
+
+**Depends on:** Milestone 6 (WebSocket IPC Bridge)
+
+| Task | Status | Notes |
+|------|--------|-------|
+| Playwright MCP integration | ⏳ | Automated browser control |
+| Visual regression test suite | ⏳ | Screenshot comparisons |
+| CI integration for visual tests | ⏳ | Run on PR, compare against baseline |
+| Test scenarios (meters, parameters, resize) | ⏳ | Cover key UI behaviors |
 
 ---
 
@@ -193,6 +231,10 @@ Currently, the UI can only communicate with the Rust engine when running inside 
 
 | Date | Update |
 |------|--------|
+| 2026-02-01 | **Resize handle visibility complete**: Handle visibility significantly improved — opacity increased (30%→50% white), hover/drag states use accent blue (#4a9eff/#6bb0ff), size increased (24×24→36×36px button, 16×16→20×20px icon), positioned 20px from right edge (scrollbar clearance). **Bonus:** Fixed WebView background color mismatch during over-scroll (was white, now matches dark theme). Version bumped to 0.2.1. All 13 tests passing, QA approved. Archived to `_archive/resize-handle-visibility/`. |
+| 2026-02-01 | **Milestone 6 elevated to WebSocket IPC Bridge**: Expanded scope from "Browser-Based UI Testing" to full WebSocket IPC infrastructure. Addresses development workflow pain point (mock data double implementation). Original testing goals moved to new Milestone 7. Added detailed task breakdown for Rust (WebSocket server, `--dev-server` flag) and UI (transport abstraction, auto-detect). |
+| 2026-02-01 | **Added Milestone 7: Browser-Based Visual Testing**: Playwright integration and visual regression testing. Depends on M6 WebSocket bridge. Separated from M6 to maintain single-responsibility milestones. |
+| 2026-02-01 | **Added dead code cleanup task**: ~12 `#[allow(dead_code)]` suppressions in editor modules (webview.rs, bridge.rs, assets.rs, mod.rs, windows.rs) need review. Added as workaround during resize-handle feature; now that React UI is default, unused code should be removed. |
 | 2026-02-01 | **React UI default complete**: Removed `webview_editor` feature flag, deleted egui fallback editor, simplified build commands. React UI is now the only editor implementation. Version bumped to 0.2.0. QA approved. Archived to `_archive/react-ui-default/`. |
 | 2026-01-31 | **Semantic versioning complete**: Version extracted from `engine/Cargo.toml` (single source of truth), injected at build time via Vite `define`, displayed in UI via `VersionBadge` component. 8/8 manual tests + 35/35 unit tests passing. **Bonus delivery:** Browser development mode with environment detection and lazy IPC initialization — unblocks browser-based UI testing (partial Milestone 6). QA approved. Archived to `_archive/semantic-versioning/`. |
 | 2026-01-31 | **CI/CD pipeline redesign complete**: New staged pipeline with 6 specialized jobs (typecheck-ui, lint-ui, lint-engine, test-ui, test-engine, build-plugin). Stage 1 (fast feedback) on ubuntu, Stage 2 (tests) on ubuntu, Stage 3 (build) on macos (main only). Concurrency control, artifact sharing, branch protection. PR time <5 min, cost optimized (~90% ubuntu runners). Archived to `_archive/ci-cd-pipeline-redesign/`. |
@@ -222,21 +264,25 @@ Currently, the UI can only communicate with the Rust engine when running inside 
 
 ## Next Steps
 
-> **Focus:** Milestone 5 (Polish & Optimization) is now the active milestone.
+> **Focus:** Milestone 5 (Polish & Optimization) is the active milestone. Milestone 6 (WebSocket IPC Bridge) is next.
 
-1. **Milestone 5**: Polish & Optimization
+1. **Milestone 5**: Polish & Optimization (wrapping up)
    - ✅ ~~Linting infrastructure implementation~~ (completed 2026-01-31)
    - ✅ ~~TailwindCSS implementation for React UI~~ (completed 2026-01-31)
    - ✅ ~~UI unit testing framework~~ (completed 2026-01-31)
    - ✅ ~~CI/CD pipeline redesign~~ (completed 2026-01-31)
    - ✅ ~~Semantic versioning~~ (completed 2026-01-31)
    - ✅ ~~Make React UI default~~ (completed 2026-02-01)
-   - **Next up:** Resize handle visibility fix (UX polish)
-2. **Milestone 6**: Browser-Based UI Testing Infrastructure (🚧 partially started)
-   - ✅ ~~Mock data layer / browser compatibility~~ (delivered early via semantic versioning)
-   - **Next up:** WebSocket IPC bridge design
-   - Enable Playwright visual testing with real engine data
-3. **Investigate AU Custom UI Issue** (nice-to-have)
+   - ✅ ~~Resize handle visibility fix~~ (completed 2026-02-01)
+   - **Remaining:** Dead code cleanup, CI cache optimization
+2. **Milestone 6**: WebSocket IPC Bridge (next major feature)
+   - Eliminates mock data problem in development
+   - Enables real engine communication from browser
+   - Foundation for automated visual testing
+3. **Milestone 7**: Browser-Based Visual Testing
+   - Playwright integration (depends on M6)
+   - Visual regression test suite
+4. **Investigate AU Custom UI Issue** (nice-to-have)
    - Understand why clap-wrapper shows generic parameter view
    - Research CLAP GUI extension forwarding in clap-wrapper
 
