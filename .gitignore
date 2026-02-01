@@ -27,3 +27,6 @@
 *.dll
 *.vst3
 *.component
+
+# vskit-plugin-template specific
+/vstkit-plugin-template/target

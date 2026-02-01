@@ -1,0 +1,33 @@
+[package]
+name = "my-plugin"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "my_plugin"
+crate-type = ["cdylib"]
+
+[dependencies]
+# VstKit SDK dependencies (local paths for development)
+# TODO: Switch to git dependencies when published:
+#   vstkit-core = { git = "https://github.com/YOUR_ORG/vstkit", branch = "main" }
+vstkit-core = { path = "../../engine/crates/vstkit-core" }
+vstkit-protocol = { path = "../../engine/crates/vstkit-protocol" }
+vstkit-dsp = { path = "../../engine/crates/vstkit-dsp" }
+vstkit-bridge = { path = "../../engine/crates/vstkit-bridge" }
+vstkit-metering = { path = "../../engine/crates/vstkit-metering" }
+
+# Plugin framework (nih-plug)
+nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", branch = "master" }
+nih_plug_xtask = { git = "https://github.com/robbert-vdh/nih-plug.git", branch = "master" }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Logging
+log = "0.4"
+
+[build-dependencies]
+nih_plug_xtask = { git = "https://github.com/robbert-vdh/nih-plug.git", branch = "master" }
