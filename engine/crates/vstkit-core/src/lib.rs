@@ -8,7 +8,7 @@ mod params;
 
 use std::sync::Arc;
 
-use vstkit_dsp::Processor;
+use vstkit_dsp::GainProcessor;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use vstkit_metering::MeterConsumer;
 use vstkit_metering::{MeterFrame, MeterProducer, create_meter_channel};
@@ -21,7 +21,7 @@ use crate::params::VstKitParams;
 /// Main plugin struct for VstKit.
 pub struct VstKitPlugin {
     params: Arc<VstKitParams>,
-    processor: Processor,
+    processor: GainProcessor,
     meter_producer: MeterProducer,
     /// Meter consumer shared with the editor (UI thread only).
     ///
@@ -38,7 +38,7 @@ impl Default for VstKitPlugin {
         let (meter_producer, _meter_consumer) = create_meter_channel(64);
         Self {
             params: Arc::new(VstKitParams::default()),
-            processor: Processor::new(44100.0),
+            processor: GainProcessor::new(44100.0),
             meter_producer,
             #[cfg(any(target_os = "macos", target_os = "windows"))]
             meter_consumer: Arc::new(std::sync::Mutex::new(_meter_consumer)),

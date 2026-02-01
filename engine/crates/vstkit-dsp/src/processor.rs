@@ -1,21 +1,22 @@
-//! Audio processor - core DSP processing engine.
+//! Audio processor - reference implementation with gain control.
 //!
-//! The `Processor` struct encapsulates all audio processing state and provides
-//! real-time safe methods for processing audio buffers.
+//! The `GainProcessor` struct is a reference implementation of a simple gain
+//! processor. It demonstrates real-time safe audio processing patterns.
 
 use crate::gain::db_to_linear;
 
-/// Core audio processor for VstKit.
+/// Reference gain processor implementation for VstKit.
 ///
-/// This struct maintains processing state and provides the main `process()`
-/// method for audio transformation. All methods are designed to be real-time
-/// safe (no allocations, no locks, no syscalls).
-pub struct Processor {
+/// This struct maintains processing state and provides a simple gain effect.
+/// All methods are designed to be real-time safe (no allocations, no locks, no syscalls).
+///
+/// This serves as a reference implementation for the `Processor` trait.
+pub struct GainProcessor {
     sample_rate: f32,
 }
 
-impl Processor {
-    /// Create a new processor with the given sample rate.
+impl GainProcessor {
+    /// Create a new gain processor with the given sample rate.
     ///
     /// # Arguments
     /// * `sample_rate` - The audio sample rate in Hz (e.g., 44100.0)
@@ -80,7 +81,7 @@ mod tests {
 
     #[test]
     fn test_passthrough_at_0db() {
-        let processor = Processor::new(44100.0);
+        let processor = GainProcessor::new(44100.0);
         let mut left = [0.5, -0.5, 0.25, -0.25];
         let mut right = [0.3, -0.3, 0.1, -0.1];
 
@@ -105,7 +106,7 @@ mod tests {
 
     #[test]
     fn test_gain_applied() {
-        let processor = Processor::new(44100.0);
+        let processor = GainProcessor::new(44100.0);
         let mut left = [1.0, 1.0, 1.0, 1.0];
         let mut right = [1.0, 1.0, 1.0, 1.0];
 
@@ -129,7 +130,7 @@ mod tests {
 
     #[test]
     fn test_negative_gain() {
-        let processor = Processor::new(44100.0);
+        let processor = GainProcessor::new(44100.0);
         let mut left = [1.0];
         let mut right = [1.0];
 
@@ -144,7 +145,7 @@ mod tests {
 
     #[test]
     fn test_positive_gain() {
-        let processor = Processor::new(44100.0);
+        let processor = GainProcessor::new(44100.0);
         let mut left = [0.5];
         let mut right = [0.5];
 
@@ -159,7 +160,7 @@ mod tests {
 
     #[test]
     fn test_sample_rate_update() {
-        let mut processor = Processor::new(44100.0);
+        let mut processor = GainProcessor::new(44100.0);
         assert!((processor.sample_rate() - 44100.0).abs() < 1e-6);
 
         processor.set_sample_rate(48000.0);

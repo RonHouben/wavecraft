@@ -5,5 +5,10 @@
 
 pub mod gain;
 pub mod processor;
+pub mod traits;
 
-pub use processor::Processor;
+// Re-export the core trait for user implementations
+pub use traits::{Processor, Transport};
+
+// Re-export the concrete gain processor
+pub use processor::GainProcessor;
