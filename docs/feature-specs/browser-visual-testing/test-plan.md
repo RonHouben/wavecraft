@@ -12,8 +12,8 @@
 
 | Status | Count |
 |--------|-------|
-| ✅ PASS | 17 |
-| ❌ FAIL | 2 |
+| ✅ PASS | 18 |
+| ❌ FAIL | 1 |
 | ⏸️ BLOCKED | 0 |
 | ⬜ NOT RUN | 0 |
 
@@ -495,11 +495,11 @@
 
 **Expected Result**: Shows "v0.3.1"
 
-**Status**: ❌ FAIL
+**Status**: ✅ PASS
 
-**Actual Result**: Version number does not display in the UI. The VersionBadge component is present in the DOM (test ID found) but the version text is not visible to the user.
+**Actual Result**: Version displays correctly as "v0.3.1" in blue accent color in the footer.
 
-**Notes**: Issue documented as Issue #2 - requires coder agent to investigate and fix 
+**Notes**: Fixed by coder agent - improved styling (text-sm, font-medium, text-accent) and added getAppVersion() function in vite.config.ts to read version from Cargo.toml during development 
 
 ---
 
@@ -528,26 +528,23 @@
 
 ---
 
-### Issue #2: Version Number Not Displaying in UI
+### Issue #2: Version Number Not Displaying in UI ✅ RESOLVED
 
-- **Severity**: High
+- **Severity**: High (was blocking)
 - **Test Case**: TC-018
-- **Description**: The VersionBadge component is present in the DOM with correct test ID, but the version number (v0.3.1) is not visible to users in the browser.
-- **Expected**: Version badge should display "v0.3.1" in the UI
-- **Actual**: Version number does not appear in the rendered UI
-- **Steps to Reproduce**:
-  1. Start dev server: `cd ui && npm run dev`
-  2. Open browser to http://localhost:5173
-  3. Look for version badge in the UI
-  4. Version text is not visible
-- **Evidence**: User confirmed via manual browser inspection - VersionBadge test ID exists in DOM but no visible version text
-- **Impact**: BLOCKS release - users cannot see the application version, which is important for debugging and support
-- **Suggested Fix**: Investigate VersionBadge component rendering:
-  - Check if `__APP_VERSION__` is defined at build time
-  - Verify component is not hidden by CSS
-  - Check if component renders children correctly
-  - Verify Vite define configuration is working
-- **Status**: BLOCKING - requires coder agent to fix before QA review
+- **Description**: The VersionBadge component was present in the DOM but version text was not visible to users.
+- **Root Cause**: Two issues:
+  1. Styling too subtle: `text-xs text-gray-500` made tiny gray text on gray background nearly invisible
+  2. Development mode: `VITE_APP_VERSION` env var not set, so version defaulted to 'dev'
+- **Fix Applied**:
+  1. Updated VersionBadge styling to `text-sm font-medium text-accent` (larger, blue, bold)
+  2. Added `getAppVersion()` function in vite.config.ts to read version from `engine/Cargo.toml` during development
+  3. Regex parser extracts version from `[workspace.package]` section
+- **Verification**: User confirmed version "v0.3.1" now displays correctly in blue in footer
+- **Files Modified**:
+  - `ui/src/components/VersionBadge.tsx` - improved styling
+  - `ui/vite.config.ts` - added version extraction from Cargo.toml
+- **Status**: ✅ RESOLVED
 
 ---
 
@@ -555,8 +552,8 @@
 
 ### Summary
 - **Total Tests**: 18
-- **Passed**: 17
-- **Failed**: 2 (1 pre-existing CI failure, 1 version display issue)
+- **Passed**: 18 (feature tests)
+- **Failed**: 1 (pre-existing CI failure - unrelated to feature)
 - **Blocked**: 0
 
 ### Key Findings
@@ -567,8 +564,8 @@
 5. ✅ **Version**: Correctly bumped to 0.3.1 in Cargo.toml
 6. ✅ **Unit Tests**: All 35 UI tests passing (Vitest)
 7. ⚠️ **CI**: 53/54 tests pass (1 pre-existing xtask signing test failure - unrelated to this feature)
-8. ✅ **Runtime Validation**: Test IDs render correctly in DOM (TC-011, TC-012)
-9. ❌ **Version Display**: Version number not visible in UI (TC-018) - BLOCKING issue
+8. ✅ **Runtime Validation**: All test IDs render correctly in DOM (TC-011, TC-012, TC-018)
+9. ✅ **Version Display**: Version "v0.3.1" displays correctly in UI (TC-018 fixed)
 
 ### Code Quality
 - ✅ TypeScript typechecking: Clean
@@ -581,39 +578,38 @@ One pre-existing test failure in `engine/xtask/src/commands/sign.rs` (signing co
 
 ## Sign-off
 
-- [x] All critical tests pass (except version display)
-- [ ] All high-priority tests pass (version display fails)
+- [x] All critical tests pass
+- [x] All high-priority tests pass
 - [x] All feature-specific code validated
-- [x] Issues documented for coder agent
+- [x] Issues documented and resolved
 - [x] Documentation complete and comprehensive
-- [ ] Ready for QA review: **NO** - version display issue must be fixed first
+- [x] Ready for QA review: **YES**
 
 ### Recommendation
 
-**⚠️ HAND OFF TO CODER AGENT** - Version display issue must be fixed
+**✅ READY FOR QA REVIEW**
 
-1. **Feature Implementation**: ⚠️ MOSTLY COMPLETE
+1. **Feature Implementation**: ✅ COMPLETE
    - ✅ All 18 test IDs added correctly and verified in browser
    - ✅ Playwright infrastructure installed and configured
    - ✅ Comprehensive documentation created
    - ✅ Version bumped appropriately in Cargo.toml
-   - ❌ Version not displaying in UI (BLOCKING)
+   - ✅ Version displays correctly in UI (v0.3.1)
 
 2. **Code Quality**: ✅ VERIFIED
    - All unit tests passing (35/35)
    - Code formatted and linted
    - Test IDs work correctly in browser
+   - Version extraction working in both dev and production modes
 
-3. **Blocking Issue**: 
-   - **Issue #2**: Version number not visible in UI (High severity)
-   - VersionBadge component exists with test ID but no visible text
-   - Likely build-time variable issue (`__APP_VERSION__` not defined during dev)
-   - Requires coder agent investigation
+3. **Issues Resolved**: 
+   - **Issue #2**: Version display fixed (styling improved + Cargo.toml reading)
+   - All 18/18 feature tests passing
 
 4. **Non-Blocking Issues**:
    - Issue #1: Pre-existing xtask signing test failure (separate from this feature)
 
-**Next Step:** Hand off to **coder agent** to fix version display issue (Issue #2), then return to tester for re-testing before QA.
+**Next Step:** Hand off to **QA agent** for code quality review and final sign-off.
 
 ## Testing Notes
 
