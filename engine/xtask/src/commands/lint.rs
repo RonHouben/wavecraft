@@ -3,6 +3,7 @@
 use anyhow::{Context, Result};
 use std::process::Command;
 
+use xtask::cargo_command;
 use xtask::output::*;
 use xtask::paths;
 
@@ -76,7 +77,7 @@ fn run_engine_lint(fix: bool, verbose: bool) -> Result<()> {
     print_status("Checking Rust formatting...");
 
     // Step 1: cargo fmt
-    let mut fmt_cmd = Command::new("cargo");
+    let mut fmt_cmd = cargo_command();
     fmt_cmd.current_dir(&engine_dir);
 
     if fix {
@@ -106,7 +107,7 @@ fn run_engine_lint(fix: bool, verbose: bool) -> Result<()> {
     // Step 2: cargo clippy
     print_status("Running Clippy...");
 
-    let mut clippy_cmd = Command::new("cargo");
+    let mut clippy_cmd = cargo_command();
     clippy_cmd.current_dir(&engine_dir);
 
     if fix {

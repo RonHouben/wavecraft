@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useState, useRef } from 'react';
-import { getMeterFrame, linearToDb, type MeterFrame } from '../lib/vstkit-ipc';
+import { getMeterFrame, linearToDb, useConnectionStatus, type MeterFrame } from '../lib/vstkit-ipc';
 
 const METER_UPDATE_HZ = 30;
 const METER_FLOOR_DB = -60;
@@ -14,6 +14,7 @@ const CLIP_THRESHOLD = 1; // Linear amplitude threshold
 const CLIP_HOLD_MS = 2000; // Hold clip indicator for 2 seconds
 
 export function Meter(): React.JSX.Element {
+  const { connected } = useConnectionStatus();
   const [frame, setFrame] = useState<MeterFrame | null>(null);
   const [clippedL, setClippedL] = useState(false);
   const [clippedR, setClippedR] = useState(false);
@@ -22,6 +23,11 @@ export function Meter(): React.JSX.Element {
   const clipRTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
+    // Only poll when connected
+    if (!connected) {
+      return;
+    }
+
     // Poll meter frames at 30 Hz
     const interval = setInterval(async () => {
       const newFrame = await getMeterFrame();
@@ -64,7 +70,7 @@ export function Meter(): React.JSX.Element {
         clearTimeout(clipRTimeoutRef.current);
       }
     };
-  }, []);
+  }, [connected]);
 
   // Convert linear to dB for display
   const peakLDb = frame ? linearToDb(frame.peak_l, METER_FLOOR_DB) : METER_FLOOR_DB;
@@ -90,6 +96,20 @@ export function Meter(): React.JSX.Element {
       clipRTimeoutRef.current = null;
     }
   };
+
+  // Show connecting state when not connected
+  if (!connected) {
+    return (
+      <div className="flex flex-col gap-2 rounded-lg border border-plugin-border bg-plugin-surface p-4 font-sans">
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Levels</div>
+        </div>
+        <div className="flex items-center justify-center py-8 text-sm text-gray-400">
+          ⏳ Connecting...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-plugin-border bg-plugin-surface p-4 font-sans">

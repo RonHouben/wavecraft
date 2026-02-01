@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { ParameterClient } from './ParameterClient';
+import { IpcBridge } from './IpcBridge';
 import type { ParameterInfo } from './types';
 import { isBrowserEnvironment } from './environment';
 
@@ -197,6 +198,7 @@ export interface UseLatencyMonitorResult {
 export function useLatencyMonitor(intervalMs = 1000): UseLatencyMonitorResult {
   const [latency, setLatency] = useState<number | null>(null);
   const [measurements, setMeasurements] = useState<number[]>([]);
+  const bridge = IpcBridge.getInstance();
 
   useEffect(() => {
     if (IS_BROWSER) {
@@ -207,6 +209,11 @@ export function useLatencyMonitor(intervalMs = 1000): UseLatencyMonitorResult {
     let isMounted = true;
 
     async function measure(): Promise<void> {
+      // Only measure when connected
+      if (!bridge.isConnected()) {
+        return;
+      }
+
       try {
         const ms = await getClient().ping();
         if (isMounted) {
@@ -228,7 +235,7 @@ export function useLatencyMonitor(intervalMs = 1000): UseLatencyMonitorResult {
       isMounted = false;
       clearInterval(intervalId);
     };
-  }, [intervalMs]);
+  }, [intervalMs, bridge]);
 
   // Calculate statistics
   const avg =

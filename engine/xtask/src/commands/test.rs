@@ -3,6 +3,7 @@
 use anyhow::{Context, Result};
 use std::process::Command;
 
+use xtask::cargo_command;
 use xtask::output::*;
 use xtask::paths;
 
@@ -53,7 +54,7 @@ pub fn run(
 fn run_engine_tests(packages: Option<Vec<String>>, test_all: bool, verbose: bool) -> Result<()> {
     let engine_dir = paths::engine_dir()?;
 
-    let mut cmd = Command::new("cargo");
+    let mut cmd = cargo_command();
     cmd.current_dir(&engine_dir);
     cmd.arg("test");
 

@@ -11,6 +11,7 @@ import type {
   MeterFrame,
   UseParameterResult,
   UseAllParametersResult,
+  ConnectionStatus,
 } from '@vstkit/ipc';
 
 // Re-export types
@@ -20,6 +21,7 @@ export type {
   MeterFrame,
   UseParameterResult,
   UseAllParametersResult,
+  ConnectionStatus,
 } from '@vstkit/ipc';
 
 // ============================================================================
@@ -148,4 +150,15 @@ export function linearToDb(linear: number, floor: number = -60): number {
  */
 export function dbToLinear(db: number): number {
   return Math.pow(10, db / 20);
+}
+
+/**
+ * Mock implementation of useConnectionStatus
+ * Always returns connected in test environment
+ */
+export function useConnectionStatus(): ConnectionStatus {
+  return {
+    connected: true,
+    transport: 'native',
+  };
 }

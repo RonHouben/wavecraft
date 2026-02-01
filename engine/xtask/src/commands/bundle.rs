@@ -5,6 +5,7 @@ use std::process::Command;
 
 use xtask::BuildMode;
 use xtask::PLUGIN_NAME;
+use xtask::cargo_command;
 use xtask::output::*;
 use xtask::paths;
 
@@ -59,7 +60,7 @@ pub fn run_with_features(
     print_status(&format!("Building {} plugin...", package_name));
 
     // Build the command: cargo build --release -p <package>
-    let mut build_cmd = Command::new("cargo");
+    let mut build_cmd = cargo_command();
     build_cmd.current_dir(&engine_dir);
     build_cmd.arg("build");
     build_cmd.arg("-p").arg(package_name);

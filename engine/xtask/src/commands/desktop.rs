@@ -5,6 +5,7 @@
 
 use anyhow::{Context, Result};
 use std::process::Command;
+use xtask::cargo_command;
 use xtask::output::*;
 
 /// Run the desktop POC application.
@@ -24,7 +25,7 @@ pub fn run(release: bool, build_ui: bool, verbose: bool) -> Result<()> {
     print_status("Building desktop application...");
     let profile = if release { "release" } else { "debug" };
 
-    let mut cmd = Command::new("cargo");
+    let mut cmd = cargo_command();
     cmd.arg("build").arg("-p").arg("desktop");
 
     if release {

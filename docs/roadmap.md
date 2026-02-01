@@ -7,15 +7,17 @@ This document tracks implementation progress against the milestones defined in t
 ## Progress Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           🚧 M5        ⏳ M6            ⏳ M7              ⭐       │
-│  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ───── WebSocket ───── Visual Testing ─── Complete │
-│                                                         ▲                                                      │
-│                                                       YOU ARE HERE                                             │
-│                                                                                                                │
-│  Progress: [██████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 67%        │
-└─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           ✅ M5        ✅ M6            ⏳ M7          ⭐    │
+│  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ───── WebSocket ───── Visual Testing ── Done  │
+│                                                                                       ▲                    │
+│                                                                                     YOU ARE HERE           │
+│                                                                                                            │
+│  Progress: [███████████████████████████████████████████████████████████████████████████████░░░░░░░] 86%   │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+**See also:** [Backlog](backlog.md) — unprioritized ideas for future consideration
 
 ---
 
@@ -143,32 +145,27 @@ This document tracks implementation progress against the milestones defined in t
 
 ## Milestone 5: Polish & Optimization (Ongoing)
 
-**Status: 🚧 In Progress**
+**Status: ✅ Complete**
 
 | Task | Status | Notes |
 |------|--------|-------|
 | **Linting infrastructure** | ✅ | ESLint + Prettier (UI), Clippy + fmt (Engine), `cargo xtask lint` command, CI workflow. Completed 2026-01-31. |
 | **TailwindCSS for React UI** | ✅ | Utility-first CSS replacing component CSS files. Custom theme with semantic tokens. 3.74KB gzipped (under 10KB target). Completed 2026-01-31. |
 | **UI unit testing framework** | ✅ | Vitest + React Testing Library. IPC mock module for isolated component testing. 25 passing tests. `cargo xtask test --ui` command. CI workflow ready (PR trigger disabled pending pipeline redesign). Completed 2026-01-31. |
-| Performance profiling (low buffer sizes: 32/64 samples) | ⏳ | |
-| CPU stress testing | ⏳ | |
-| Memory usage optimization | ⏳ | |
-| UX polish | ⏳ | |
 | **Resize handle visibility** | ✅ | Handle visibility improved: 50% white (was 30%), accent blue on hover/drag, 36×36px (was 24×24), 20px scrollbar clearance. WebView background color fixed. Completed 2026-02-01. |
-| Format-specific feature parity verification | ⏳ | |
-| Cross-engine rendering consistency (WebKit vs Chromium) | ⏳ | |
-| Automated visual regression tests | ⏳ | |
 | **Make React UI default** | ✅ | Removed `webview_editor` feature flag; React UI is now the only editor. Deleted egui fallback. Version bumped to 0.2.0. Completed 2026-02-01. |
 | **Dead code cleanup** | ✅ | Platform-gating pattern established for macOS/Windows-only code. Reduced `#[allow(dead_code)]` suppressions from 14 to 3 (79% reduction). Remaining 3 are valid (trait methods called by platform impls). Patterns documented in coding-standards.md. Completed 2026-02-01. |
 | **Semantic versioning** | ✅ | Version extracted from `engine/Cargo.toml` (single source of truth), injected at build time via Vite `define`. VersionBadge component displays version in UI. **Bonus:** Browser dev mode with environment detection and lazy IPC init (partial M6). Completed 2026-01-31. |
 | CI/CD pipeline (GitHub Actions) | ✅ | Redesigned staged pipeline with 6 jobs across 3 stages. Ubuntu for lint/test (cost optimization), macos for build. Branch protection configured. Completed 2026-01-31. |
-| CI pipeline cache optimization | ⏳ | Test Engine job rebuilds instead of using cache from Check Engine (different profiles: check vs test). Consider adding `cargo test --no-run` to prepare-engine job or combining check + test jobs. |
+| CI pipeline cache optimization | ➡️ | Moved to Milestone 8 (Backlog). |
+| Performance profiling | ➡️ | Moved to Milestone 8 (Backlog). |
+| Format-specific feature parity | ➡️ | Moved to Milestone 8 (Backlog). |
 
 ---
 
 ## Milestone 6: WebSocket IPC Bridge
 
-**Status: ⏳ Not Started**
+**Status: ✅ Complete**
 
 > **Goal:** Enable real IPC communication between the React UI running in a browser and the Rust engine, eliminating the need for mock data during development.
 
@@ -179,7 +176,7 @@ Currently, the UI can only communicate with the Rust engine when running inside 
 - **Testing gaps** — Automated browser testing (Playwright) can't use real engine data
 
 **Solution:**
-Add a WebSocket server to the desktop app that exposes the same IPC protocol over `ws://localhost:9000`. The UI auto-detects the environment and connects via WebSocket when not in WKWebView.
+Add a WebSocket server to the standalone app that exposes the same IPC protocol over `ws://127.0.0.1:9000`. The UI auto-detects the environment and connects via WebSocket when not in WKWebView.
 
 **Benefits:**
 - **Single source of truth** — Same `IpcHandler` serves both native and WebSocket transports
@@ -190,23 +187,33 @@ Add a WebSocket server to the desktop app that exposes the same IPC protocol ove
 | Task | Status | Notes |
 |------|--------|-------|
 | **Architecture & Design** | | |
-| WebSocket IPC bridge design doc | ⏳ | Transport abstraction, protocol compatibility |
-| User stories | ⏳ | |
+| WebSocket IPC bridge design doc | ✅ | Transport abstraction, protocol compatibility |
+| User stories | ✅ | 7 user stories covering dev workflow |
 | **Rust Implementation** | | |
-| Add WebSocket server to desktop crate | ⏳ | `tokio-tungstenite` or similar |
-| Route WebSocket messages through existing `IpcHandler` | ⏳ | Same protocol, different transport |
-| Add `--dev-server` CLI flag | ⏳ | Starts WebSocket server without UI window |
-| Meter data streaming over WebSocket | ⏳ | Push-based updates for real-time meters |
+| Add WebSocket server to standalone crate | ✅ | `tokio-tungstenite` with async broadcast |
+| Route WebSocket messages through existing `IpcHandler` | ✅ | Same JSON-RPC protocol |
+| Add `--ws-only` CLI flag | ✅ | Headless mode for browser-only dev |
+| Meter data streaming over WebSocket | ✅ | Push-based updates at 30fps |
 | **UI Implementation** | | |
-| Create `WebSocketTransport` class | ⏳ | Implements same interface as native bridge |
-| Abstract `IpcBridge` to support multiple transports | ⏳ | Factory pattern or strategy |
-| Auto-detect environment and select transport | ⏳ | WKWebView → native, browser → WebSocket |
-| Reconnection handling | ⏳ | Auto-reconnect on disconnect |
+| Create `WebSocketTransport` class | ✅ | Exponential backoff reconnection |
+| Abstract `IpcBridge` to support multiple transports | ✅ | Factory pattern with lazy init |
+| Auto-detect environment and select transport | ✅ | WKWebView → native, browser → WebSocket |
+| Reconnection handling | ✅ | Max 5 attempts with backoff (1s→16s) |
 | **Developer Experience** | | |
-| Document dev workflow (two-terminal setup) | ⏳ | `cargo run -p desktop -- --dev-server` + `npm run dev` |
-| Consider Vite plugin for auto-starting Rust dev server | ⏳ | Nice-to-have |
+| Document dev workflow | ✅ | `cargo xtask dev` runs both servers |
+| Unified dev command | ✅ | Single command starts WS + Vite |
+| Graceful degradation in browser | ✅ | Shows helpful status when disconnected |
 | **Cleanup** | | |
-| Remove static mock data from `IpcBridge` | ⏳ | No longer needed once WebSocket works |
+| Remove static mock data from `IpcBridge` | ✅ | Browser mode uses real engine data |
+
+**Key Deliverables:**
+- `WebSocketTransport` class with automatic reconnection
+- Transport factory with environment-based selection
+- `cargo xtask dev` command for unified development workflow
+- Graceful degradation UI for connection status
+- 14/14 manual integration tests passing
+- 35 UI unit tests, 17 Rust tests passing
+- Comprehensive documentation in high-level-design.md
 
 ---
 
@@ -231,6 +238,9 @@ Add a WebSocket server to the desktop app that exposes the same IPC protocol ove
 
 | Date | Update |
 |------|--------|
+| 2026-02-01 | **Milestone 6 complete**: WebSocket IPC Bridge fully implemented and tested. Transport abstraction with factory pattern, `WebSocketTransport` with exponential backoff reconnection, `cargo xtask dev` unified development command, graceful degradation UI. 14/14 integration tests, 35 UI tests, 17 Rust tests passing. QA approved, architectural docs updated. Version 0.3.0. Archived to `_archive/websocket-ipc-bridge/`. Ready to merge `feature/websocket-ipc-bridge` branch. |
+| 2026-02-01 | **Backlog split from roadmap**: Created separate [backlog.md](backlog.md) for unprioritized future ideas. Removed Milestone 8 from roadmap — committed milestones now end at M7. Backlog contains: CI optimization, performance profiling, platform support, DAW compatibility, AU issues, Apple Developer-dependent items. |
+| 2026-02-01 | **Milestone 5 complete, starting M6**: Marked M5 (Polish & Optimization) as complete. Moved remaining low-priority tasks (CI cache optimization, performance profiling, format-specific parity) to new Milestone 8 (Backlog). Started Milestone 6 (WebSocket IPC Bridge) on `feature/websocket-ipc-bridge` branch. |
 | 2026-02-01 | **Dead code cleanup complete**: Established platform-gating pattern using `#[cfg(any(target_os = "macos", target_os = "windows"))]` for code that only runs on GUI platforms. Reduced `#[allow(dead_code)]` suppressions from 14 to 3 (79% reduction). Remaining 3 are valid cases (trait methods called by platform implementations). Pattern documented in new "Platform-Specific Code" section of coding-standards.md. Archived to `_archive/m5-dead-code-cleanup/`. |
 | 2026-02-01 | **Resize handle visibility complete**: Handle visibility significantly improved — opacity increased (30%→50% white), hover/drag states use accent blue (#4a9eff/#6bb0ff), size increased (24×24→36×36px button, 16×16→20×20px icon), positioned 20px from right edge (scrollbar clearance). **Bonus:** Fixed WebView background color mismatch during over-scroll (was white, now matches dark theme). Version bumped to 0.2.1. All 13 tests passing, QA approved. Archived to `_archive/resize-handle-visibility/`. |
 | 2026-02-01 | **Milestone 6 elevated to WebSocket IPC Bridge**: Expanded scope from "Browser-Based UI Testing" to full WebSocket IPC infrastructure. Addresses development workflow pain point (mock data double implementation). Original testing goals moved to new Milestone 7. Added detailed task breakdown for Rust (WebSocket server, `--dev-server` flag) and UI (transport abstraction, auto-detect). |
@@ -265,35 +275,15 @@ Add a WebSocket server to the desktop app that exposes the same IPC protocol ove
 
 ## Next Steps
 
-> **Focus:** Milestone 5 (Polish & Optimization) is the active milestone. Milestone 6 (WebSocket IPC Bridge) is next.
+> **Focus:** Milestone 7 (Browser-Based Visual Testing) is the next milestone.
 
-1. **Milestone 5**: Polish & Optimization (wrapping up)
-   - ✅ ~~Linting infrastructure implementation~~ (completed 2026-01-31)
-   - ✅ ~~TailwindCSS implementation for React UI~~ (completed 2026-01-31)
-   - ✅ ~~UI unit testing framework~~ (completed 2026-01-31)
-   - ✅ ~~CI/CD pipeline redesign~~ (completed 2026-01-31)
-   - ✅ ~~Semantic versioning~~ (completed 2026-01-31)
-   - ✅ ~~Make React UI default~~ (completed 2026-02-01)
-   - ✅ ~~Resize handle visibility fix~~ (completed 2026-02-01)
-   - ✅ ~~Dead code cleanup~~ (completed 2026-02-01)
-   - **Remaining:** CI cache optimization
-2. **Milestone 6**: WebSocket IPC Bridge (next major feature)
-   - Eliminates mock data problem in development
-   - Enables real engine communication from browser
-   - Foundation for automated visual testing
-3. **Milestone 7**: Browser-Based Visual Testing
-   - Playwright integration (depends on M6)
+1. ~~**Milestone 6**: WebSocket IPC Bridge~~ ✅ **COMPLETE**
+   - Real engine communication from browser enabled
+   - `cargo xtask dev` for unified development workflow
+   - Archived to `_archive/websocket-ipc-bridge/`
+2. **Milestone 7**: Browser-Based Visual Testing ← **NEXT**
+   - Playwright integration (M6 dependency satisfied)
    - Visual regression test suite
-4. **Investigate AU Custom UI Issue** (nice-to-have)
-   - Understand why clap-wrapper shows generic parameter view
-   - Research CLAP GUI extension forwarding in clap-wrapper
+   - CI integration for automated screenshot comparisons
 
-### Deferred (Future Consideration)
-- **When Apple Developer account available**:
-   - Developer ID signing validation
-   - Notarization submission and Gatekeeper testing
-   - Signed release CI/CD pipeline
-- Windows WebView2 integration
-- Linux support
-- Non-Ableton DAW compatibility (Reaper, Cubase, FL Studio)
-- Logic Pro / GarageBand AU testing
+**Future ideas:** See [backlog.md](backlog.md) for unprioritized items (platform support, performance, DAW compatibility, etc.)

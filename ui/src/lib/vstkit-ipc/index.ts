@@ -47,6 +47,10 @@ export { ParameterClient } from './ParameterClient';
 export { useParameter, useAllParameters, useLatencyMonitor } from './hooks';
 export type { UseParameterResult, UseAllParametersResult, UseLatencyMonitorResult } from './hooks';
 
+// Connection status hook
+export { useConnectionStatus } from './useConnectionStatus';
+export type { ConnectionStatus, TransportType } from './useConnectionStatus';
+
 // Resize API
 export { requestResize, useRequestResize } from './resize';
 export type { RequestResizeParams, RequestResizeResult } from './resize';
@@ -54,3 +58,7 @@ export type { RequestResizeParams, RequestResizeResult } from './resize';
 // Metering API
 export { getMeterFrame, linearToDb, dbToLinear } from './meters';
 export type { MeterFrame, GetMeterFrameResult } from './meters';
+
+// Transports (advanced use)
+export type { Transport, NotificationCallback } from './transports';
+export { WebSocketTransport, NativeTransport } from './transports';

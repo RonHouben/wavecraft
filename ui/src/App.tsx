@@ -8,6 +8,7 @@ import { LatencyMonitor } from './components/LatencyMonitor';
 import { Meter } from './components/Meter';
 import { ResizeHandle } from './components/ResizeHandle';
 import { VersionBadge } from './components/VersionBadge';
+import { ConnectionStatus } from './components/ConnectionStatus';
 import { requestResize } from './lib/vstkit-ipc';
 
 function App(): React.JSX.Element {
@@ -33,11 +34,16 @@ function App(): React.JSX.Element {
 
   return (
     <div className="flex min-h-full flex-col bg-plugin-dark">
-      <header className="border-b-2 border-plugin-border bg-gradient-to-br from-plugin-surface to-plugin-dark p-8 text-center">
-        <h1 className="mb-2 bg-gradient-to-r from-accent to-accent-light bg-clip-text text-2xl text-transparent">
-          VstKit — Plugin UI
-        </h1>
-        <p className="text-sm text-gray-400">WebView ↔ Rust IPC Demo</p>
+      <header className="border-b-2 border-plugin-border bg-gradient-to-br from-plugin-surface to-plugin-dark p-8">
+        <div className="mx-auto flex max-w-3xl items-center justify-between">
+          <div className="flex-1 text-center">
+            <h1 className="mb-2 bg-gradient-to-r from-accent to-accent-light bg-clip-text text-2xl text-transparent">
+              VstKit — Plugin UI Test
+            </h1>
+            <p className="text-sm text-gray-400">WebView ↔ Rust IPC Demo</p>
+          </div>
+          <ConnectionStatus />
+        </div>
       </header>
 
       <main className="mx-auto w-full max-w-3xl flex-1 p-8">

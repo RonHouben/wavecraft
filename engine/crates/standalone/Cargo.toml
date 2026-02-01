@@ -1,13 +1,13 @@
 [package]
-name = "desktop"
+name = "standalone"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
-description = "Desktop POC for WebView integration"
+description = "Standalone app for plugin development and testing"
 
 [[bin]]
-name = "desktop"
+name = "standalone"
 path = "src/main.rs"
 
 [dependencies]
@@ -21,3 +21,11 @@ serde_json = "1.0"
 # For atomic parameter storage
 atomic_float = "1.1"
 parking_lot = "0.12"
+
+# WebSocket server dependencies
+tokio = { version = "1", features = ["rt-multi-thread", "net", "sync", "macros", "time", "signal"] }
+tokio-tungstenite = "0.24"
+futures-util = "0.3"
+
+# CLI argument parsing
+clap = { version = "4", features = ["derive"] }
