@@ -34,7 +34,7 @@ use super::webview::{WebViewConfig, WebViewHandle};
 ///
 /// Holds the WebView2 controller and web view instances.
 pub struct WindowsWebView {
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Stored for future window operations (resize, focus management)
     hwnd: HWND,
     _handler: Arc<Mutex<IpcHandler<PluginEditorBridge>>>,
     controller: Arc<Mutex<Option<ICoreWebView2Controller>>>,
