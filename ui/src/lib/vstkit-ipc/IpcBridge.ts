@@ -1,73 +1,50 @@
 /**
  * IpcBridge - Low-level IPC communication layer
  *
- * Wraps the injected primitives and provides a Promise-based API
- * for sending requests and receiving responses.
- *
- * **Lazy Initialization**: The bridge is initialized on first use,
- * allowing the module to load in browser environments without crashing.
+ * Provides a Promise-based API for sending requests and receiving responses
+ * using pluggable transport implementations (NativeTransport, WebSocketTransport).
  */
 
-import type { IpcRequest, IpcResponse, IpcNotification, RequestId } from './types';
-import { isIpcResponse, isIpcNotification } from './types';
-import { isWebViewEnvironment, isBrowserEnvironment } from './environment';
+import type { IpcRequest, IpcResponse, IpcNotification } from './types';
+import { isIpcNotification } from './types';
+import type { Transport } from './transports';
+import { getTransport } from './transports';
 
 type EventCallback<T> = (data: T) => void;
 
 export class IpcBridge {
   private static instance: IpcBridge | null = null;
   private nextId = 1;
-  private readonly pendingRequests = new Map<
-    RequestId,
-    {
-      resolve: (response: IpcResponse) => void;
-      reject: (error: Error) => void;
-      timeoutId: ReturnType<typeof setTimeout>;
-    }
-  >();
   private readonly eventListeners = new Map<string, Set<EventCallback<unknown>>>();
-  private primitives: typeof globalThis.__VSTKIT_IPC__ | null = null;
+  private transport: Transport | null = null;
   private isInitialized = false;
 
   private constructor() {
-    // Don't initialize here - lazy init on first use
+    // Lazy initialization on first use
   }
 
   /**
    * Initialize the IPC bridge (lazy)
-   * Only called when first method is invoked
    */
   private initialize(): void {
     if (this.isInitialized) {
       return;
     }
 
-    if (!isWebViewEnvironment()) {
-      // Browser mode: fail silently, don't throw
-      this.isInitialized = false;
-      return;
-    }
+    // Get transport (auto-selected based on environment)
+    this.transport = getTransport();
 
-    this.primitives = globalThis.__VSTKIT_IPC__;
-
-    if (!this.primitives) {
-      throw new Error('IPC primitives unexpectedly missing after environment check');
-    }
-
-    // Set up receive callback for responses
-    this.primitives.setReceiveCallback((message: string) => {
-      this.handleIncomingMessage(message);
-    });
-
-    // Set up parameter update listener for pushed updates from Rust
-    if (this.primitives.onParamUpdate) {
-      this.primitives.onParamUpdate((notification: unknown) => {
-        // Handle as a notification
-        if (isIpcNotification(notification)) {
-          this.handleNotification(notification);
+    // Subscribe to notifications from transport
+    this.transport.onNotification((notificationJson: string) => {
+      try {
+        const parsed = JSON.parse(notificationJson);
+        if (isIpcNotification(parsed)) {
+          this.handleNotification(parsed);
         }
-      });
-    }
+      } catch (error) {
+        console.error('[IpcBridge] Failed to parse notification:', error);
+      }
+    });
 
     this.isInitialized = true;
   }
@@ -81,19 +58,21 @@ export class IpcBridge {
   }
 
   /**
+   * Check if the bridge is connected
+   */
+  public isConnected(): boolean {
+    return this.transport?.isConnected() ?? false;
+  }
+
+  /**
    * Invoke a method and wait for response
    */
-  public async invoke<TResult>(
-    method: string,
-    params?: unknown,
-    timeoutMs = 5000
-  ): Promise<TResult> {
+  public async invoke<TResult>(method: string, params?: unknown): Promise<TResult> {
     // Lazy initialization on first use
     this.initialize();
 
-    // Browser mode: return mock data
-    if (isBrowserEnvironment()) {
-      return this.getMockResponse<TResult>(method);
+    if (!this.transport?.isConnected()) {
+      throw new Error('IpcBridge: Transport not connected');
     }
 
     const id = this.nextId++;
@@ -104,26 +83,14 @@ export class IpcBridge {
       params,
     };
 
-    // Create promise for response
-    const responsePromise = new Promise<IpcResponse>((resolve, reject) => {
-      // Set timeout
-      const timeoutId = setTimeout(() => {
-        this.pendingRequests.delete(id);
-        reject(new Error(`Request timeout: ${method}`));
-      }, timeoutMs);
-
-      this.pendingRequests.set(id, { resolve, reject, timeoutId });
-    });
-
-    // Send request
+    // Serialize request
     const requestJson = JSON.stringify(request);
-    if (!this.primitives) {
-      throw new Error('IpcBridge not initialized');
-    }
-    this.primitives.postMessage(requestJson);
 
-    // Wait for response
-    const response = await responsePromise;
+    // Send via transport (transport handles timeout internally)
+    const responseJson = await this.transport.send(requestJson);
+
+    // Parse response
+    const response: IpcResponse = JSON.parse(responseJson);
 
     // Check for error
     if (response.error) {
@@ -139,11 +106,6 @@ export class IpcBridge {
   public on<T>(event: string, callback: EventCallback<T>): () => void {
     // Lazy initialization on first use
     this.initialize();
-
-    // Browser mode: return no-op cleanup
-    if (isBrowserEnvironment()) {
-      return () => {};
-    }
 
     if (!this.eventListeners.has(event)) {
       this.eventListeners.set(event, new Set());
@@ -162,76 +124,7 @@ export class IpcBridge {
   }
 
   /**
-   * Return mock response for browser mode
-   */
-  private getMockResponse<TResult>(method: string): Promise<TResult> {
-    // Mock responses based on method
-    if (method === 'getParameter') {
-      return Promise.resolve({
-        value: 0,
-        default: 0,
-        min: 0,
-        max: 1,
-        name: 'Mock Parameter',
-      } as TResult);
-    }
-
-    if (method === 'getMeterFrame') {
-      return Promise.resolve({
-        frame: {
-          peak_l: 0,
-          peak_r: 0,
-          rms_l: 0,
-          rms_r: 0,
-          timestamp: Date.now(),
-        },
-      } as TResult);
-    }
-
-    if (method === 'requestResize') {
-      return Promise.resolve({ accepted: true } as TResult);
-    }
-
-    // Default: return empty object
-    return Promise.resolve({} as TResult);
-  }
-
-  /**
-   * Handle incoming message from Rust
-   */
-  private handleIncomingMessage(message: string): void {
-    try {
-      const parsed = JSON.parse(message);
-
-      if (isIpcResponse(parsed)) {
-        this.handleResponse(parsed);
-      } else if (isIpcNotification(parsed)) {
-        this.handleNotification(parsed);
-      } else {
-        console.warn('[IpcBridge] Unknown message type:', parsed);
-      }
-    } catch (error) {
-      console.error('[IpcBridge] Failed to parse message:', error, message);
-    }
-  }
-
-  /**
-   * Handle response from Rust
-   */
-  private handleResponse(response: IpcResponse): void {
-    const pending = this.pendingRequests.get(response.id);
-    if (!pending) {
-      console.warn('[IpcBridge] Received response for unknown request:', response.id);
-      return;
-    }
-
-    clearTimeout(pending.timeoutId);
-    this.pendingRequests.delete(response.id);
-    pending.resolve(response);
-  }
-
-  /**
-   * Handle notification from Rust
+   * Handle notification and dispatch to listeners
    */
   private handleNotification(notification: IpcNotification): void {
     const listeners = this.eventListeners.get(notification.method);

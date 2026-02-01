@@ -214,7 +214,7 @@ dependencies = [
 
 [[package]]
 name = "bridge"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "protocol",
  "serde",
@@ -717,7 +717,7 @@ checksum = "d8b14ccef22fc6f5a8f4d7d768562a182c04ce9a3b3157b91390b52ddfdf1a76"
 
 [[package]]
 name = "dsp"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "protocol",
 ]
@@ -1635,7 +1635,7 @@ dependencies = [
 
 [[package]]
 name = "metering"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "rtrb",
 ]
@@ -2365,7 +2365,7 @@ dependencies = [
 
 [[package]]
 name = "protocol"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -2765,7 +2765,7 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 
 [[package]]
 name = "standalone"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "atomic_float 1.1.0",
  "bridge",
@@ -3267,7 +3267,7 @@ dependencies = [
 
 [[package]]
 name = "vstkit"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "block2",
  "bridge",
