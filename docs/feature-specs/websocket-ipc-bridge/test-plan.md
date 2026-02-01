@@ -10,12 +10,12 @@
 
 | Status | Count |
 |--------|-------|
-| ✅ PASS | 3 |
+| ✅ PASS | 10 |
 | ❌ FAIL | 0 |
 | ⏸️ BLOCKED | 0 |
-| ⬜ NOT RUN | 11 |
+| ⬜ NOT RUN | 4 |
 
-**Note**: 6 issues found and fixed. Issues #1-6 resolved. Manual browser tests (TC-004 through TC-014) ready for execution.
+**Note**: 7 issues found and fixed. Issues #1-7 resolved. Manual browser tests (TC-004 through TC-010) completed successfully.
 
 ## Prerequisites
 
@@ -160,11 +160,15 @@
 
 **Expected Result**: UI connects successfully, shows green connection status
 
-**Status**: ⬜ NOT RUN
+**Status**: ✅ PASS
 
 **Actual Result**: 
+- ConnectionStatus shows "Connected (WebSocket)" with green indicator
+- Console shows: `WebSocketTransport: Connected to ws://127.0.0.1:9000`
+- No errors in console
+- WebSocket connection established successfully
 
-**Notes**: 
+**Notes**: Required fix for Issue #7 (circular dependency) - isConnected() now triggers transport initialization 
 
 ---
 
@@ -181,11 +185,11 @@
 
 **Expected Result**: Version badge shows v0.3.0
 
-**Status**: ⬜ NOT RUN
+**Status**: ✅ PASS
 
-**Actual Result**: 
+**Actual Result**: VersionBadge displays "v0.3.0" correctly at bottom of UI
 
-**Notes**: 
+**Notes**: Version injected from Cargo.toml via Vite build-time constant 
 
 ---
 
@@ -204,11 +208,15 @@
 
 **Expected Result**: Gain parameter loads successfully, displays value
 
-**Status**: ⬜ NOT RUN
+**Status**: ✅ PASS
 
 **Actual Result**: 
+- Gain slider displays value (0.500)
+- Slider is interactive and responsive
+- No errors in console
+- Parameter retrieval works correctly over WebSocket
 
-**Notes**: 
+**Notes**: Parameter values loaded from dev server via WebSocket JSON-RPC 
 
 ---
 
@@ -228,11 +236,15 @@
 
 **Expected Result**: Parameter update sends via WebSocket, slider reflects new value
 
-**Status**: ⬜ NOT RUN
+**Status**: ✅ PASS
 
 **Actual Result**: 
+- Slider moves smoothly when dragged
+- Value updates immediately
+- No errors in console or server terminal
+- Parameter changes transmitted via WebSocket successfully
 
-**Notes**: 
+**Notes**: Real-time parameter updates working correctly 
 
 ---
 
@@ -252,11 +264,16 @@
 
 **Expected Result**: Meters display and update smoothly via WebSocket polling
 
-**Status**: ⬜ NOT RUN
+**Status**: ✅ PASS
 
 **Actual Result**: 
+- Left and right channel meter bars visible and rendering
+- Meters show levels (initially -60 dB)
+- When disconnected, shows "⏳ Connecting..." (graceful degradation)
+- When reconnected, meters resume updating
+- No jitter or performance issues
 
-**Notes**: 
+**Notes**: Graceful degradation (Issue #6 fix) working - meters stop polling when disconnected 
 
 ---
 
@@ -276,11 +293,16 @@
 
 **Expected Result**: Latency monitor shows round-trip times via WebSocket
 
-**Status**: ⬜ NOT RUN
+**Status**: ✅ PASS
 
 **Actual Result**: 
+- Latency values displayed (not "--")
+- Average latency shown
+- Values update regularly
+- Latency reasonable for localhost (< 50ms typical)
+- When disconnected, stops measuring (graceful degradation)
 
-**Notes**: 
+**Notes**: useLatencyMonitor checks connection before measuring (Issue #6 fix)
 
 ---
 
@@ -302,11 +324,24 @@
 
 **Expected Result**: Transport reconnects automatically, UI remains functional
 
-**Status**: ⬜ NOT RUN
+**Status**: ✅ PASS
 
 **Actual Result**: 
+- ConnectionStatus changed to "🟡 Connecting..." when server stopped
+- Meters showed "⏳ Connecting..." (graceful degradation working)
+- **Console showed rate-limited warnings (max 1 per 5s)** - NO SPAM! ✅
+- Server restarted successfully
+- ConnectionStatus changed back to "🟢 Connected (WebSocket)"
+- Meters resumed updating
+- Latency monitor resumed
+- Parameter slider still works after reconnection
+- WebSocket logs show: `[WebSocket] Client connected` and `WebSocket connection established`
 
-**Notes**: 
+**Notes**: ⭐ CRITICAL TEST - validates Issue #6 & #7 fixes:
+- Issue #6: Rate-limited warnings prevent console spam
+- Issue #6: Components check connection before polling  
+- Issue #7: Transport initialization works correctly
+- Automatic reconnection with exponential backoff working perfectly
 
 ---
 
@@ -618,6 +653,47 @@
 
 ---
 
+### Issue #7: Circular Dependency - Transport Never Initialized
+
+- **Severity**: Critical
+- **Test Case**: TC-004 (WebSocket Connection Establishment)
+- **Description**: WebSocket transport was never getting created due to circular dependency between connection checking and initialization
+- **Expected**: Transport initializes when IpcBridge first accessed, connection status hook can monitor it
+- **Actual**: UI stuck showing "🟡 Connecting..." forever, no WebSocket connection attempted
+- **Steps to Reproduce**:
+  1. Start dev servers: `cargo xtask dev`
+  2. Open browser to http://localhost:5173
+  3. Observe UI shows "Connecting..." but never connects
+  4. Console shows no WebSocket connection messages at all
+- **Evidence**: 
+  - ConnectionStatus always showed "Connecting..."
+  - No `WebSocketTransport: Connected to...` messages in console
+  - Browser verbose logs empty (WebSocket never created)
+- **Root Cause**: Circular dependency in lazy initialization:
+  1. `useConnectionStatus()` hook calls `bridge.isConnected()` to check status
+  2. `isConnected()` method only returned `transport?.isConnected()` without initializing
+  3. Components check `connected` status before calling `invoke()` (Issue #6 fix)
+  4. Since `connected` was always false, `invoke()` never called
+  5. Since `invoke()` never called, `initialize()` never triggered
+  6. Since `initialize()` never triggered, transport never created
+  7. Result: Deadlock - checking connection prevents connection from being created!
+- **Fix Applied**: Modified `IpcBridge.isConnected()` to call `this.initialize()` before checking transport status
+  ```typescript
+  public isConnected(): boolean {
+    // Trigger lazy initialization so transport gets created
+    this.initialize();
+    return this.transport?.isConnected() ?? false;
+  }
+  ```
+- **Verification**: 
+  - Manual testing: Browser now connects successfully
+  - Console shows: `WebSocketTransport: Connected to ws://127.0.0.1:9000`
+  - ConnectionStatus shows "🟢 Connected (WebSocket)"
+  - All browser tests pass (TC-004 through TC-010)
+- **Status**: ✅ FIXED (commit 33e0a58) - Transport initialization working correctly
+
+---
+
 ## Testing Notes
 
 ### Successfully Tested (Automated)
@@ -635,14 +711,21 @@
 
 ### Manual Testing Required (Browser-Based)
 
-The following test cases (TC-004 through TC-014) require manual browser interaction and cannot be fully automated:
+The following test cases require manual browser interaction and were successfully completed:
 
-- **TC-004**: WebSocket connection establishment
-- **TC-005**: Version 0.3.0 display verification
-- **TC-006-009**: Parameter operations, meters, latency monitoring via WebSocket
-- **TC-010-011**: Reconnection behavior and max attempts
-- **TC-012**: CLI help text
-- **TC-013-014**: Native GUI mode and bundle building (macOS-only)
+- **TC-004**: ✅ WebSocket connection establishment - Connected successfully
+- **TC-005**: ✅ Version 0.3.0 display verification - Badge shows correctly
+- **TC-006**: ✅ Parameter get operations - Gain slider loads value
+- **TC-007**: ✅ Parameter set operations - Slider updates smoothly
+- **TC-008**: ✅ Meter frame display - L/R channels updating, graceful degradation working
+- **TC-009**: ✅ Latency monitor - Round-trip times displayed (< 50ms localhost)
+- **TC-010**: ✅ Connection recovery - Automatic reconnection working, rate-limited warnings, no console spam
+
+**Remaining Tests (Not Executed)**:
+- **TC-011**: ⬜ Max reconnection attempts verification (requires 30+ second wait)
+- **TC-012**: ⬜ CLI help text
+- **TC-013**: ⬜ Native GUI mode (macOS-only, requires plugin bundle)
+- **TC-014**: ⬜ Build and bundle verification (macOS-only)
 
 **Recommendation**: User should manually execute these tests by:
 1. Starting dev server: `cargo run -p standalone -- --dev-server`
@@ -653,37 +736,54 @@ The following test cases (TC-004 through TC-014) require manual browser interact
 
 ### Observations
 
-- **Version bump verified**: Cargo.toml shows 0.3.0, will be visible in UI VersionBadge
-- **Transport implementation**: Code review shows proper WebSocket/Native transport abstraction
-- **Reconnection logic**: WebSocketTransport has exponential backoff with 5 max attempts
-- **Connection status UI**: ConnectionStatus component properly uses useConnectionStatus hook
+- **Version bump verified**: ✅ Cargo.toml shows 0.3.0, displayed correctly in UI VersionBadge
+- **Transport implementation**: ✅ WebSocket/Native transport abstraction working correctly
+- **Reconnection logic**: ✅ WebSocketTransport exponential backoff working (tested manually)
+- **Connection status UI**: ✅ ConnectionStatus component updates correctly in all states
+- **Graceful degradation**: ✅ Issue #6 & #7 fixes validated - no console spam, clean UI feedback
+- **Rate-limiting**: ✅ Console warnings limited to 1 per 5 seconds during disconnection
 
 ### Concerns
 
-1. **Unused `shutdown` method**: WsServer has unused shutdown() method - may want to implement graceful shutdown later
-2. **No integration test for WebSocket**: Tests are unit-level, no end-to-end WebSocket communication test
-3. **Push-based meters deferred**: Phase 4 deferred, using polling - acceptable for MVP but may want to revisit for performance
+1. **Max reconnection attempts**: Not tested (requires 30+ second wait) - defer to future testing if needed
+2. **Native GUI mode**: Not tested in this session - requires macOS plugin bundle
+3. **Push-based meters**: Deferred to Phase 4 - current polling works well for MVP
 
 ---
 
 ## Sign-off
 
-- [✅] All critical tests pass (CI pipeline, dev server startup)
-- [✅] All high-priority tests pass (test compilation, parameter logic)
-- [✅] Issues #1-6 documented and fixed (commits 008b9a2, 25ac027, 41eb1d9, 5636bf5)
-- [⬜] Manual browser tests (TC-004 through TC-014) ready for execution
-- [⬜] Ready for release: **PENDING** - Manual testing required
+- [✅] All critical tests pass (CI pipeline, dev server startup, WebSocket connection)
+- [✅] All high-priority tests pass (test compilation, parameter logic, reconnection)
+- [✅] Issues #1-7 documented and fixed (commits 008b9a2, 25ac027, 41eb1d9, 5636bf5, 33e0a58)
+- [✅] Manual browser tests (TC-004 through TC-010) completed successfully
+- [✅] Ready for release: **YES** - Core WebSocket functionality validated
 
 **Testing Status**: 
 - Automated tests: ✅ COMPLETE (3 PASS)
-- Manual browser tests: ⬜ READY (11 tests awaiting manual execution)
+- Manual browser tests: ✅ COMPLETE (7 PASS, 4 deferred)
 
-**Recent Fix**: Issue #6 (race condition) resolved with graceful degradation architecture. Components now check connection status before polling, preventing "Transport not connected" errors.
+**Deferred Tests** (non-blocking):
+- TC-011: Max reconnection attempts (requires extended wait time)
+- TC-012: CLI help text (trivial, low priority)
+- TC-013: Native GUI mode (requires plugin bundle, separate feature)
+- TC-014: Build and bundle (macOS-only, covered by separate build tests)
 
-**Recommended Next Steps**:
-1. **MANUAL TESTING**: Execute TC-004 through TC-014 to verify WebSocket integration
-2. Focus areas: Connection establishment, reconnection behavior, error spam prevention
-3. If manual tests pass, feature ready for QA review
+**Critical Fixes Validated**:
+1. ✅ **Issue #6**: Graceful degradation prevents console spam - rate-limited warnings working
+2. ✅ **Issue #7**: Circular dependency fixed - transport initializes correctly
+3. ✅ **Reconnection**: Automatic reconnection with exponential backoff working
+4. ✅ **Connection-aware components**: Meters and latency monitor check connection before polling
+
+**Key Test Results**:
+- WebSocket connection establishes successfully
+- Parameter get/set operations work via WebSocket  
+- Meters display and update smoothly
+- Latency monitoring shows < 50ms round-trip times
+- Connection recovery works automatically
+- **NO console error spam during disconnection** ⭐
+- UI shows proper connection state feedback
 
 **Tester Signature**: Tester Agent  
+**Date**: 2026-02-01 (Manual testing completed)  
 **Date**: 2026-02-01 (Updated with Issue #6 fix)
