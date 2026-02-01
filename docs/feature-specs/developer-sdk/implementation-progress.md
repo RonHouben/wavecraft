@@ -15,11 +15,11 @@ Tracking implementation of the Developer SDK (Milestone 8).
 | Phase | Status | Progress |
 |-------|--------|----------|
 | Phase 1: Crate Restructuring | ✅ Complete | 7/7 steps |
-| Phase 2: API Extraction | ⏳ Not Started | 0/6 steps |
+| Phase 2: API Extraction | 🚧 In Progress | 2/6 steps |
 | Phase 3: Template Repository | ⏳ Not Started | 0/6 steps |
 | Phase 4: Documentation & Polish | ⏳ Not Started | 0/6 steps |
 
-**Overall Progress:** 7/25 steps (28%)
+**Overall Progress:** 9/25 steps (36%)
 
 ---
 
@@ -41,9 +41,9 @@ Tracking implementation of the Developer SDK (Milestone 8).
 
 | Step | Task | Status | Notes |
 |------|------|--------|-------|
-| 2.1 | Create Processor trait | ⏳ | |
-| 2.2 | Create ParamSet trait | ⏳ | |
-| 2.3 | Create vstkit_params! macro | ⏳ | |
+| 2.1 | Create Processor trait | ✅ | Commit: 329f3ce - Trait + Transport struct + doc test |
+| 2.2 | Create ParamSet trait | ✅ | Commit: 271142d - Trait + ParamId refactor + doc test |
+| 2.3 | Create vstkit_params! macro | 🚧 | |
 | 2.4 | Create vstkit_plugin! macro | ⏳ | |
 | 2.5 | Extract ParameterHost trait | ⏳ | |
 | 2.6 | Phase 2 integration test | ⏳ | |
@@ -120,3 +120,4 @@ All crate renames completed successfully:
 |------|--------|
 | 2026-02-01 | Implementation plan and progress tracker created |
 | 2026-02-01 | Phase 1 complete: All crates renamed with vstkit-* prefix |
+| 2026-02-01 | Phase 2 Steps 2.1-2.2 complete: Processor and ParamSet traits |

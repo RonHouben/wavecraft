@@ -4,6 +4,7 @@
 //! ensuring consistency between DSP, plugin, and UI layers.
 
 pub mod ipc;
+pub mod macros;
 pub mod params;
 
 pub use params::{
