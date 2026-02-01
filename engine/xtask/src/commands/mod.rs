@@ -5,6 +5,7 @@ pub mod build_ui;
 pub mod bundle;
 pub mod clean;
 pub mod desktop;
+pub mod dev;
 pub mod install;
 pub mod lint;
 pub mod notarize;

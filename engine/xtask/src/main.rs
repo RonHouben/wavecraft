@@ -195,6 +195,14 @@ enum Commands {
         #[arg(long)]
         fix: bool,
     },
+
+    /// Run dev servers (WebSocket + UI) for development
+    #[command(about = "Run dev servers (WebSocket + UI) for development")]
+    Dev {
+        /// WebSocket server port
+        #[arg(long, default_value = "9000")]
+        port: u16,
+    },
 }
 
 fn main() -> Result<()> {
@@ -322,6 +330,7 @@ fn main() -> Result<()> {
             };
             commands::lint::run(targets, cli.verbose)
         }
+        Some(Commands::Dev { port }) => commands::dev::run(port, cli.verbose),
         None => {
             // Default behavior: run nih_plug_xtask for backward compatibility
             // This handles `cargo xtask bundle vstkit --release` style invocations
