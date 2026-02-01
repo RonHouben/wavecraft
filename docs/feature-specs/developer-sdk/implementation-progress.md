@@ -17,9 +17,9 @@ Tracking implementation of the Developer SDK (Milestone 8).
 | Phase 1: Crate Restructuring | ✅ Complete | 7/7 steps |
 | Phase 2: API Extraction | ✅ Complete | 5/6 steps (1 deferred) |
 | Phase 3: Template Repository | ✅ Complete | 6/6 steps |
-| Phase 4: Documentation & Polish | 🚧 In Progress | 3/6 steps |
+| Phase 4: Documentation & Polish | 🚧 In Progress | 5/6 steps |
 
-**Overall Progress:** 21/25 steps (84%)
+**Overall Progress:** 23/25 steps (92%)
 
 ---
 
@@ -197,12 +197,12 @@ impl Plugin for MyPlugin {
 
 | Step | Task | Status | Notes |
 |------|------|--------|-------|
-| 4.1 | Update architecture docs | ⏳ | |
-| 4.2 | Generate API documentation | 🚧 | Public exports created (prelude, util, editor) |
-| 4.3 | Create concept guides | ⏳ | |
-| 4.4 | Update roadmap | ⏳ | |
-| 4.5 | Version bump to 0.4.0 | ⏳ | |
-| 4.6 | Final integration test | ⏳ | |
+| 4.1 | Update architecture docs | ✅ | SDK Architecture section added to high-level-design.md |
+| 4.2 | Generate API documentation | ✅ | Public exports created (prelude, util, editor) |
+| 4.3 | Create concept guides | ✅ | SDK Getting Started guide at docs/guides/sdk-getting-started.md |
+| 4.4 | Update roadmap | ⏳ | PO responsibility |
+| 4.5 | Version bump to 0.4.0 | ⏳ | Coder responsibility |
+| 4.6 | Final integration test | ⏳ | Tester responsibility |
 
 ---
 
@@ -253,3 +253,4 @@ All crate renames completed successfully:
 | 2026-02-01 | Phase 2 Steps 2.1-2.2 complete: Processor and ParamSet traits |
 | 2026-02-01 | Phase 2 complete: Core SDK APIs extracted (Step 2.4 deferred) |
 | 2026-02-01 | Phase 3 complete: Template repository created with working example plugin |
+| 2026-02-01 | Phase 4 Steps 4.1, 4.3 complete: Architecture docs updated (SDK section in high-level-design.md), SDK Getting Started guide created |
