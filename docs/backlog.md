@@ -20,6 +20,14 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 
 ---
 
+## Code Quality
+
+| Item | Notes |
+|------|-------|
+| Replace console.log with Logger class | Create a centralized Logger class instead of using `console.log` directly. Enables log levels (debug/info/warn/error), consistent formatting, and easier filtering/disabling in production builds. |
+
+---
+
 ## CI/CD Optimization
 
 | Item | Notes |
@@ -84,5 +92,6 @@ These items are ready to implement but require an Apple Developer Program member
 
 | Date | Update |
 |------|--------|
+| 2026-02-01 | **Code Quality section added**: Logger class to replace direct console.log usage |
 | 2026-02-01 | **UI Polish section added**: Horizontal scroll wiggle issue — block elastic scrolling on macOS |
 | 2026-02-01 | **Backlog created**: Split from roadmap Milestone 8 to separate committed work from future ideas. Items moved: CI cache optimization, performance profiling, platform support, DAW compatibility, AU issues, Apple Developer-dependent items. |
