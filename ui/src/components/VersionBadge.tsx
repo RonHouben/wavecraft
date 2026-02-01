@@ -8,5 +8,9 @@
 import React from 'react';
 
 export function VersionBadge(): React.JSX.Element {
-  return <span className="text-xs text-gray-500">v{__APP_VERSION__}</span>;
+  return (
+    <span data-testid="version-badge" className="text-xs text-gray-500">
+      v{__APP_VERSION__}
+    </span>
+  );
 }

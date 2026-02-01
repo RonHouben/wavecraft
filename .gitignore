@@ -7,6 +7,10 @@
 /ui/dist
 /ui/coverage
 
+# Playwright
+/ui/playwright-report/
+/ui/test-results/
+
 # Cargo lock for libraries (keep for binaries/plugins)
 # Cargo.lock
 

@@ -42,14 +42,24 @@ export function ParameterSlider({ id }: ParameterSliderProps): React.JSX.Element
     : param.value.toFixed(3);
 
   return (
-    <div className="mb-4 rounded-lg border border-plugin-border bg-plugin-surface p-4">
+    <div
+      data-testid={`param-${id}`}
+      className="mb-4 rounded-lg border border-plugin-border bg-plugin-surface p-4"
+    >
       <div className="mb-2 flex items-center justify-between">
-        <label htmlFor={`slider-${id}`} className="font-semibold text-gray-200">
+        <label
+          data-testid={`param-${id}-label`}
+          htmlFor={`slider-${id}`}
+          className="font-semibold text-gray-200"
+        >
           {param.name}
         </label>
-        <span className="font-mono text-sm text-accent">{displayValue}</span>
+        <span data-testid={`param-${id}-value`} className="font-mono text-sm text-accent">
+          {displayValue}
+        </span>
       </div>
       <input
+        data-testid={`param-${id}-slider`}
         id={`slider-${id}`}
         type="range"
         min="0"
