@@ -786,4 +786,42 @@ The following test cases require manual browser interaction and were successfull
 
 **Tester Signature**: Tester Agent  
 **Date**: 2026-02-01 (Manual testing completed)  
-**Date**: 2026-02-01 (Updated with Issue #6 fix)
+**Last Updated**: 2026-02-01 (Post-QA fixes regression tested)
+
+---
+
+## Post-QA Regression Testing
+
+### QA Fixes Applied (commit eea94a7)
+
+**QA Finding #1 (HIGH)**: React pattern violation in Meter.tsx
+- **Issue**: Synchronous `setState(null)` in useEffect body
+- **Fix**: Removed setState call, implemented conditional rendering
+- **Impact**: Component now returns "⏳ Connecting..." state when disconnected
+
+**QA Finding #2 (MEDIUM)**: Prettier formatting in IpcBridge.ts
+- **Fix**: Ran `npm run format` to auto-fix formatting
+- **Impact**: Code style compliant
+
+### Regression Test Results
+
+**Re-tested**: TC-008 (Meter Display) - Critical test affected by QA fix
+
+**Steps**:
+1. Started dev servers: `cargo run -p xtask -- dev`
+2. Opened browser to http://localhost:5173
+3. Verified meters display when connected
+4. Verified conditional rendering shows "⏳ Connecting..." when disconnected
+
+**Result**: ✅ **PASS** - QA fix maintains graceful degradation behavior
+
+**Verification**:
+- ✅ Meters display correctly when connected
+- ✅ "⏳ Connecting..." message shows when disconnected (conditional rendering working)
+- ✅ No console errors or warnings
+- ✅ Graceful degradation architecture intact
+- ✅ All automated tests still pass (35/35)
+- ✅ ESLint violations resolved
+- ✅ Prettier formatting compliant
+
+**Conclusion**: QA fixes did not introduce regressions. Feature ready for architect review.
