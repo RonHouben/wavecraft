@@ -1,13 +1,13 @@
 ---
 name: merge-pull-request
-description: Merges a Pull Request using GitHub CLI after verifying CI passes. Handles squash merge, branch cleanup, and local sync. Use when user wants to merge a PR or asks to complete/finish a feature.
+description: Merges a Pull Request using GitHub CLI after verifying CI passes. Handles squash merge, remote branch cleanup, and local sync. Local branch is preserved. Use when user wants to merge a PR or asks to complete/finish a feature.
 ---
 
 # Merge Pull Request Skill
 
 ## Purpose
 
-Merges an approved Pull Request using `gh pr merge`, cleans up the feature branch, and syncs the local repository.
+Merges an approved Pull Request using `gh pr merge`, cleans up the **remote** feature branch (keeps local), and syncs the local repository.
 
 ## Prerequisites
 
@@ -50,7 +50,7 @@ gh pr merge --squash --delete-branch --subject "feat: Feature title" --body "Des
 - `--squash` — Combines all commits into one (preferred)
 - `--rebase` — Rebases commits onto base branch
 - `--merge` — Creates merge commit
-- `--delete-branch` — Deletes remote branch after merge
+- `--delete-branch` — Deletes **remote** branch after merge (local branch is preserved)
 
 ### Step 3: Sync Local Repository
 
@@ -97,6 +97,7 @@ git log --oneline -5
 ## Notes
 
 - Always use `--squash` for cleaner history
-- Always use `--delete-branch` to keep remote clean
+- Always use `--delete-branch` to keep remote clean (local branch is **never** auto-deleted)
 - Sync local repo immediately after merge
+- Local feature branch is preserved for reference; user can delete manually with `git branch -d <branch>` when no longer needed
 - If PR was created from a fork, `--delete-branch` only affects the fork
