@@ -11,7 +11,7 @@
 | Status | Count |
 |--------|-------|
 | ✅ PASS | 3 |
-| ❌ FAIL | 2 |
+| ❌ FAIL | 4 |
 | ⏸️ BLOCKED | 0 |
 | ⬜ NOT RUN | 9 |
 
@@ -19,7 +19,7 @@
 
 - [✅] Docker is running: `docker info`
 - [✅] CI image exists: `docker images | grep vstkit-ci`
-- [❌] Local CI passes (see Phase 2) - **2 failures found and fixed**
+- [❌] Local CI passes (see Phase 2) - **4 failures found and fixed**
 
 ## Test Cases
 
@@ -45,16 +45,20 @@
 **Status**: ❌ FAIL (Initial run) → ✅ PASS (After fixes)
 
 **Actual Result**: 
-- **Initial run**: 2 failures detected:
+- **Initial run**: 4 failures detected:
   1. **check-ui job failed**: Prettier formatting errors in 3 files (App.tsx, ConnectionStatus.tsx, useConnectionStatus.ts)
   2. **prepare-engine job failed**: Test files (integration_test.rs, latency_bench.rs) still importing `desktop` instead of `standalone`
+  3. **check-ui job failed**: ESLint error in ConnectionStatus.tsx - missing React import
+  4. **test-ui job failed**: IpcBridge tests failing - expected browser mode mocks but transport refactor requires connected transport
 
 - **Fixes applied**:
   1. Ran `npm run format` to auto-fix Prettier issues
   2. Updated test file imports: `use desktop::AppState;` → `use standalone::AppState;`
-  3. Committed fixes in commit 008b9a2
+  3. Added `import React from 'react'` to ConnectionStatus.tsx and changed return type to `React.JSX.Element`
+  4. Created MockTransport for testing and updated IpcBridge.test.ts to use mocked transport
+  5. Committed all fixes in commits 008b9a2 and 25ac027
 
-- **After fixes**: All standalone tests pass (17 tests total: 8 unit tests, 6 integration tests, 3 latency benchmarks)
+- **After fixes**: All tests pass (35 UI tests, 17 standalone tests)
 
 **Notes**: The failures were due to incomplete crate rename from Phase 0. All test files needed to be updated.
 
@@ -432,15 +436,67 @@
 
 ---
 
+### Issue #3: ConnectionStatus Missing React Import
+
+- **Severity**: High
+- **Test Case**: TC-001 (check-ui CI job - ESLint)
+- **Description**: ConnectionStatus.tsx used `JSX.Element` without importing React
+- **Expected**: All components use `React.JSX.Element` with proper React import
+- **Actual**: ConnectionStatus used bare `JSX.Element` causing ESLint error
+- **Steps to Reproduce**:
+  1. Run: `cd ui && npm run lint`
+  2. Observe error: `'JSX' is not defined` at line 10
+- **Evidence**:
+  ```
+  /Users/.../ui/src/components/ConnectionStatus.tsx
+    10:37  error  'JSX' is not defined  no-undef
+  ```
+- **Root Cause**: New component created without following established pattern (all other components import React and use `React.JSX.Element`)
+- **Fix Applied**: 
+  1. Added `import React from 'react';` at top of file
+  2. Changed return type from `JSX.Element` to `React.JSX.Element`
+- **Verification**: `npm run lint` passes with no errors
+- **Status**: ✅ FIXED (commit 25ac027)
+
+---
+
+### Issue #4: IpcBridge Tests Failing After Transport Refactor
+
+- **Severity**: High
+- **Test Case**: TC-001 (test-ui CI job)
+- **Description**: IpcBridge.test.ts tests failing with "Transport not connected" errors
+- **Expected**: Tests mock transport layer to avoid requiring real WebSocket connection
+- **Actual**: Tests expected browser mode fallback, but transport refactor requires connected transport
+- **Steps to Reproduce**:
+  1. Run: `cd ui && npm test`
+  2. Observe 4 test failures in IpcBridge.test.ts
+  3. Error: `IpcBridge: Transport not connected`
+- **Evidence**:
+  ```
+  FAIL  src/lib/vstkit-ipc/IpcBridge.test.ts > IpcBridge Browser Mode > should return mock parameter data
+  Error: IpcBridge: Transport not connected
+   ❯ IpcBridge.invoke src/lib/vstkit-ipc/IpcBridge.ts:75:13
+  ```
+- **Root Cause**: Step 3.5 of implementation plan ("Update Existing Tests") was incomplete. Tests were written for old browser mode with inline mock data, but transport abstraction now requires connected transport.
+- **Fix Applied**:
+  1. Created `MockTransport.ts` implementing Transport interface with mock responses
+  2. Updated IpcBridge.test.ts to use `vi.spyOn(transportsModule, 'getTransport')` to inject MockTransport
+  3. Removed "browser mode" references from test descriptions
+  4. All 5 tests now properly mock the transport layer
+- **Verification**: All 35 UI tests pass (including 5 IpcBridge tests)
+- **Status**: ✅ FIXED (commit 25ac027)
+
+---
+
 ## Testing Notes
 
 ### Successfully Tested (Automated)
 
 1. **CI Pipeline (TC-001)**: ✅
    - All Linux-compatible jobs pass after fixes
-   - UI build, linting, type checking work
+   - UI build, linting (ESLint + Prettier), type checking work
    - Rust compilation, formatting, clippy checks pass
-   - All test suites execute successfully (17 standalone tests)
+   - All test suites execute successfully (35 UI tests, 17 standalone tests)
 
 2. **Dev Server Startup (TC-002)**: ✅
    - Server starts correctly on default port 9000
@@ -484,13 +540,13 @@ The following test cases (TC-004 through TC-014) require manual browser interact
 
 - [✅] All critical tests pass (CI pipeline, dev server startup)
 - [✅] All high-priority tests pass (test compilation, parameter logic)
-- [✅] Issues documented and fixed
+- [✅] Issues documented and fixed (4 issues resolved in commits 008b9a2 and 25ac027)
 - [⚠️] Ready for release: **CONDITIONAL** - Requires manual browser testing (TC-004 onwards)
 
 **Testing Status**: Automated tests ✅ COMPLETE | Manual browser tests ⏳ PENDING
 
 **Recommendation**: Coder agent should:
-1. Review and merge the test fixes (commit 008b9a2)
+1. Review and merge the test fixes (commits 008b9a2 and 25ac027)
 2. User or QA should perform manual browser testing (TC-004 through TC-011)
 3. If manual tests pass, feature is ready for release
 
