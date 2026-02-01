@@ -29,14 +29,23 @@ pub fn run(port: u16, verbose: bool) -> Result<()> {
 
     // Start WebSocket server in background
     let port_str = port.to_string();
-    let mut ws_args = vec!["run", "-p", "standalone", "--release", "--", "--dev-server", "--port", &port_str];
+    let mut ws_args = vec![
+        "run",
+        "-p",
+        "standalone",
+        "--release",
+        "--",
+        "--dev-server",
+        "--port",
+        &port_str,
+    ];
     if verbose {
         ws_args.push("--verbose");
     }
     let ws_server = Command::new("cargo")
         .args(&ws_args)
         .current_dir(&engine_dir)
-        .stdout(Stdio::inherit())  // Always show connection messages
+        .stdout(Stdio::inherit()) // Always show connection messages
         .stderr(Stdio::inherit())
         .spawn()
         .context("Failed to start WebSocket server")?;
@@ -72,7 +81,7 @@ pub fn run(port: u16, verbose: bool) -> Result<()> {
 
     // Wait for Ctrl+C or UI server to exit
     let ui_result = thread::spawn(move || ui_server.wait());
-    
+
     // Block until either Ctrl+C or UI server exits
     match rx.recv_timeout(std::time::Duration::from_millis(100)) {
         Ok(_) | Err(mpsc::RecvTimeoutError::Disconnected) => {
@@ -95,7 +104,7 @@ pub fn run(port: u16, verbose: bool) -> Result<()> {
 
     // Kill both servers
     kill_process_group(ws_server)?;
-    
+
     print_success("Servers stopped");
     Ok(())
 }
@@ -103,9 +112,9 @@ pub fn run(port: u16, verbose: bool) -> Result<()> {
 /// Kill a process and its children on Unix systems
 #[cfg(unix)]
 fn kill_process_group(mut child: Child) -> Result<()> {
-    use nix::sys::signal::{kill, Signal};
+    use nix::sys::signal::{Signal, kill};
     use nix::unistd::Pid;
-    
+
     let pid = child.id();
     // Kill the process group (negative PID)
     let _ = kill(Pid::from_raw(-(pid as i32)), Signal::SIGTERM);
