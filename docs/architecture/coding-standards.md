@@ -417,6 +417,38 @@ Valid exceptions:
 
 **Note:** The Prettier Tailwind plugin automatically sorts classes. Run `npm run format` to apply.
 
+### WebView Background Color
+
+**Rule:** Both `body` and `#root` must have explicit background colors matching the theme.
+
+The WebView shows a default white background when the user scrolls beyond the content boundaries (over-scroll/rubber-band scrolling). To prevent this visual inconsistency:
+
+1. Apply `bg-plugin-dark` to both `body` and `#root` in `index.css`
+2. Add an inline `style="background-color: #1a1a1a;"` to the `<html>` element in `index.html` as a pre-CSS fallback
+
+**Why both?**
+- `body` background covers the document area
+- `#root` background covers the React app container
+- `<html>` inline style prevents white flash before CSS loads
+
+**Example (`index.css`):**
+```css
+@layer base {
+  body {
+    @apply m-0 bg-plugin-dark p-0;
+  }
+
+  #root {
+    @apply h-screen w-full overflow-y-auto bg-plugin-dark;
+  }
+}
+```
+
+**Example (`index.html`):**
+```html
+<html lang="en" style="background-color: #1a1a1a;">
+```
+
 ### File Structure
 
 ```
