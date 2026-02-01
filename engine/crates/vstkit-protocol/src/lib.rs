@@ -6,7 +6,9 @@
 pub mod ipc;
 pub mod params;
 
-pub use params::{PARAM_SPECS, ParamId, ParamSpec, db_to_linear};
+pub use params::{
+    PARAM_SPECS, ParamId, ParamSet, ParamSpec, VstKitParamId, VstKitParams, db_to_linear,
+};
 
 // Re-export key IPC types for convenience
 pub use ipc::{

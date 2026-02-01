@@ -1,15 +1,120 @@
 //! Parameter definitions - the single source of truth for all plugin parameters.
 //!
-//! This module defines parameter IDs, specifications, and conversion functions
-//! that are shared across all layers of the plugin.
+//! This module defines parameter IDs, specifications, conversion functions,
+//! and the ParamSet trait for user-defined parameter sets.
+
+/// Trait for user-defined parameter sets.
+///
+/// Implement this trait to define custom parameters for your plugin.
+/// The trait provides type-safe access to parameter specifications.
+///
+/// # Example
+///
+/// ```rust
+/// use vstkit_protocol::{ParamSet, ParamSpec, ParamId};
+///
+/// #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// #[repr(u32)]
+/// pub enum MyParamId {
+///     Volume = 0,
+///     Pan = 1,
+/// }
+///
+/// impl From<MyParamId> for ParamId {
+///     fn from(id: MyParamId) -> Self {
+///         ParamId(id as u32)
+///     }
+/// }
+///
+/// pub struct MyParams;
+///
+/// impl ParamSet for MyParams {
+///     type Id = MyParamId;
+///     
+///     const SPECS: &'static [ParamSpec] = &[
+///         ParamSpec {
+///             id: ParamId(0),
+///             name: "Volume",
+///             short_name: "Vol",
+///             unit: "dB",
+///             default: 0.0,
+///             min: -60.0,
+///             max: 12.0,
+///             step: 0.1,
+///         },
+///         ParamSpec {
+///             id: ParamId(1),
+///             name: "Pan",
+///             short_name: "Pan",
+///             unit: "",
+///             default: 0.0,
+///             min: -1.0,
+///             max: 1.0,
+///             step: 0.01,
+///         },
+///     ];
+///     
+///     fn spec(id: Self::Id) -> Option<&'static ParamSpec> {
+///         Self::SPECS.iter().find(|s| s.id.0 == id as u32)
+///     }
+///     
+///     fn iter() -> impl Iterator<Item = &'static ParamSpec> {
+///         Self::SPECS.iter()
+///     }
+/// }
+/// ```
+pub trait ParamSet: 'static + Send + Sync {
+    /// The parameter ID type (typically an enum).
+    type Id: Copy + Into<ParamId>;
+    
+    /// All parameter specifications for this set.
+    const SPECS: &'static [ParamSpec];
+    
+    /// Get the specification for a parameter by ID.
+    ///
+    /// # Arguments
+    /// * `id` - The parameter ID
+    ///
+    /// # Returns
+    /// The parameter specification, or `None` if the ID is invalid.
+    fn spec(id: Self::Id) -> Option<&'static ParamSpec>;
+    
+    /// Iterate over all parameter specifications.
+    fn iter() -> impl Iterator<Item = &'static ParamSpec>;
+    
+    /// Get the number of parameters in this set.
+    fn count() -> usize {
+        Self::SPECS.len()
+    }
+}
 
 /// Unique identifier for each parameter.
 ///
-/// The `#[repr(u32)]` ensures stable ABI for host compatibility.
+/// This wraps a u32 ID for maximum flexibility. Plugin-specific parameter
+/// enums can convert to this type via `Into<ParamId>`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(transparent)]
+pub struct ParamId(pub u32);
+
+impl From<u32> for ParamId {
+    fn from(id: u32) -> Self {
+        ParamId(id)
+    }
+}
+
+/// Legacy parameter IDs for the VstKit reference implementation.
+///
+/// This enum is kept for backward compatibility with the existing plugin code.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u32)]
-pub enum ParamId {
+pub enum VstKitParamId {
     Gain = 0,
+}
+
+impl From<VstKitParamId> for ParamId {
+    fn from(id: VstKitParamId) -> Self {
+        ParamId(id as u32)
+    }
 }
 
 /// Specification for a single parameter.
@@ -37,7 +142,7 @@ pub struct ParamSpec {
 ///
 /// This is the single source of truth for all parameter metadata.
 pub const PARAM_SPECS: &[ParamSpec] = &[ParamSpec {
-    id: ParamId::Gain,
+    id: ParamId(0),
     name: "Gain",
     short_name: "Gain",
     unit: "dB",
@@ -46,6 +151,23 @@ pub const PARAM_SPECS: &[ParamSpec] = &[ParamSpec {
     max: 24.0,
     step: 0.1,
 }];
+
+/// Default parameter set for VstKit reference implementation.
+pub struct VstKitParams;
+
+impl ParamSet for VstKitParams {
+    type Id = VstKitParamId;
+    
+    const SPECS: &'static [ParamSpec] = PARAM_SPECS;
+    
+    fn spec(id: Self::Id) -> Option<&'static ParamSpec> {
+        Self::SPECS.iter().find(|s| s.id.0 == id as u32)
+    }
+    
+    fn iter() -> impl Iterator<Item = &'static ParamSpec> {
+        Self::SPECS.iter()
+    }
+}
 
 /// Convert decibels to linear gain.
 ///
