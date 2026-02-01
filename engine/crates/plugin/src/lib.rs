@@ -12,6 +12,7 @@ use dsp::Processor;
 use metering::{MeterConsumer, MeterFrame, MeterProducer, create_meter_channel};
 use nih_plug::prelude::*;
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use crate::editor::create_webview_editor;
 use crate::params::VstKitParams;
 
@@ -65,7 +66,15 @@ impl Plugin for VstKitPlugin {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-        create_webview_editor(self.params.clone(), self.meter_consumer.clone())
+        #[cfg(any(target_os = "macos", target_os = "windows"))]
+        {
+            create_webview_editor(self.params.clone(), self.meter_consumer.clone())
+        }
+
+        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+        {
+            None
+        }
     }
 
     fn initialize(

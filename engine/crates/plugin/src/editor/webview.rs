@@ -58,6 +58,7 @@ pub struct WebViewConfig {
 ///
 /// This function dispatches to the appropriate platform implementation
 /// based on compile-time target OS.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub fn create_webview(_config: WebViewConfig) -> Result<Box<dyn WebViewHandle>, String> {
     #[cfg(target_os = "macos")]
     {

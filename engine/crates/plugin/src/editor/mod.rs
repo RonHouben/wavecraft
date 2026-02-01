@@ -31,6 +31,7 @@ pub use webview::WebViewHandle;
 ///
 /// This editor creates a WebView that hosts the React UI and handles
 /// bidirectional parameter synchronization and metering.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub struct VstKitEditor {
     params: Arc<VstKitParams>,
     /// Shared meter consumer - cloned to each bridge instance
@@ -40,6 +41,7 @@ pub struct VstKitEditor {
     webview_handle: Arc<Mutex<Option<Box<dyn WebViewHandle>>>>,
 }
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 impl VstKitEditor {
     /// Create a new WebView editor.
     pub fn new(params: Arc<VstKitParams>, meter_consumer: Arc<Mutex<MeterConsumer>>) -> Self {
@@ -52,6 +54,7 @@ impl VstKitEditor {
     }
 }
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 impl Editor for VstKitEditor {
     fn spawn(
         &self,
@@ -161,6 +164,7 @@ impl Editor for VstKitEditor {
 }
 
 /// Create a WebView editor.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub fn create_webview_editor(
     params: Arc<VstKitParams>,
     meter_consumer: Arc<Mutex<MeterConsumer>>,
