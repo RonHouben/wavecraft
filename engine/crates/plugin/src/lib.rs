@@ -8,10 +8,10 @@ mod params;
 
 use std::sync::Arc;
 
-use dsp::Processor;
+use vstkit_dsp::Processor;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-use metering::MeterConsumer;
-use metering::{MeterFrame, MeterProducer, create_meter_channel};
+use vstkit_metering::MeterConsumer;
+use vstkit_metering::{MeterFrame, MeterProducer, create_meter_channel};
 use nih_plug::prelude::*;
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]

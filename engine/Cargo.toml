@@ -15,10 +15,10 @@ nih_plug_egui = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28
 
 # Internal crates
 vstkit-protocol = { path = "crates/vstkit-protocol" }
-dsp = { path = "crates/dsp" }
+vstkit-dsp = { path = "crates/vstkit-dsp" }
 vstkit-bridge = { path = "crates/vstkit-bridge" }
 standalone = { path = "crates/standalone" }
-metering = { path = "crates/metering" }
+vstkit-metering = { path = "crates/vstkit-metering" }
 
 [profile.release]
 lto = "thin"

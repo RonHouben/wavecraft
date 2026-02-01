@@ -744,13 +744,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d8b14ccef22fc6f5a8f4d7d768562a182c04ce9a3b3157b91390b52ddfdf1a76"
 
 [[package]]
-name = "dsp"
-version = "0.3.1"
-dependencies = [
- "vstkit-protocol",
-]
-
-[[package]]
 name = "dtoa"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1659,13 +1652,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "488016bfae457b036d996092f6cb448677611ce4449e970ceaf42695203f218a"
 dependencies = [
  "autocfg",
-]
-
-[[package]]
-name = "metering"
-version = "0.3.1"
-dependencies = [
- "rtrb",
 ]
 
 [[package]]
@@ -3333,9 +3319,7 @@ name = "vstkit"
 version = "0.3.1"
 dependencies = [
  "block2 0.5.1",
- "dsp",
  "include_dir",
- "metering",
  "nih_plug",
  "objc2 0.5.2",
  "objc2-app-kit",
@@ -3344,6 +3328,8 @@ dependencies = [
  "raw-window-handle 0.6.2",
  "serde_json",
  "vstkit-bridge",
+ "vstkit-dsp",
+ "vstkit-metering",
  "vstkit-protocol",
  "webview2-com",
  "windows 0.58.0",
@@ -3358,6 +3344,20 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.18",
  "vstkit-protocol",
+]
+
+[[package]]
+name = "vstkit-dsp"
+version = "0.3.1"
+dependencies = [
+ "vstkit-protocol",
+]
+
+[[package]]
+name = "vstkit-metering"
+version = "0.3.1"
+dependencies = [
+ "rtrb",
 ]
 
 [[package]]
