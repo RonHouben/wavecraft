@@ -462,21 +462,42 @@ cargo xtask bundle --install
 
 ## 6. Versioning Strategy
 
-### 6.1 Version Synchronization
+### 6.1 Independent Package Versioning
 
-All VstKit packages share a unified version:
+Each VstKit package maintains its **own independent version**, following standard ecosystem practices:
 
 ```
-vstkit-core         = "0.4.0"
-vstkit-protocol     = "0.4.0"
-vstkit-bridge       = "0.4.0"
-vstkit-metering     = "0.4.0"
-vstkit-dsp          = "0.4.0"
-@vstkit/ui          = "0.4.0"
-@vstkit/ipc         = "0.4.0"
+vstkit-core         = "0.4.0"   ← Core framework, most active
+vstkit-protocol     = "0.2.1"   ← Stable, changes rarely
+vstkit-bridge       = "0.3.0"   ← Follows protocol changes
+vstkit-metering     = "0.1.0"   ← Stable since M3
+vstkit-dsp          = "0.1.0"   ← Traits rarely change
+@vstkit/ui          = "0.5.0"   ← UI evolves independently
+@vstkit/ipc         = "0.3.0"   ← Matches bridge protocol
 ```
 
-### 6.2 Semantic Versioning Policy
+**Rationale:**
+- Packages evolve at different rates (UI changes more often than metering)
+- Users only get breaking changes for packages they use
+- Follows Rust/npm ecosystem conventions
+- Avoids unnecessary version bumps for unchanged packages
+
+### 6.2 Compatibility Matrix
+
+Each `vstkit-core` release documents compatible versions of other packages:
+
+```toml
+# vstkit-core 0.4.0 compatibility
+[dependencies]
+vstkit-protocol = ">=0.2.0, <0.3.0"
+vstkit-bridge = ">=0.3.0, <0.4.0"
+vstkit-metering = ">=0.1.0"
+vstkit-dsp = ">=0.1.0"
+```
+
+The template repository pins known-good combinations.
+
+### 6.3 Semantic Versioning Policy
 
 | Change Type | Version Bump | User Impact |
 |-------------|--------------|-------------|
@@ -487,15 +508,16 @@ vstkit-dsp          = "0.4.0"
 ### 6.3 User Update Workflow
 
 ```toml
-# User's Cargo.toml
+# User's Cargo.toml - each package versioned independently
 [dependencies]
-vstkit-core = "0.4"  # Accepts 0.4.x patches automatically
+vstkit-core = "0.4"       # Accepts 0.4.x patches
+vstkit-protocol = "0.2"   # Stable, rarely changes
+vstkit-dsp = "0.1"        # Optional, for DSP traits
 
-# To update to new minor version:
-# 1. Read changelog
+# To update a specific package:
+# 1. Check CHANGELOG.md for that package
 # 2. Update version constraint
-# 3. cargo update
-# 4. Fix any deprecation warnings
+# 3. cargo update -p vstkit-core
 ```
 
 ### 6.4 Breaking Change Policy
@@ -628,7 +650,7 @@ docs/
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | **API instability** | Users hit breaking changes frequently | Deprecation warnings, migration guides, conservative 1.0 release |
-| **UI/Rust version mismatch** | Runtime errors, confusing debugging | Unified versioning, version check at startup |
+| **Package version mismatch** | Incompatible combinations | Compatibility matrix in docs, template pins known-good versions |
 | **nih-plug breaking changes** | SDK must adapt | Pin nih-plug version, document upgrade path |
 | **Documentation debt** | Users can't onboard | Budget docs time, treat as blocking for releases |
 | **Scope creep** | SDK never ships | Phased approach, MVP first |
