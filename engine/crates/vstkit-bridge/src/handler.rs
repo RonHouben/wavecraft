@@ -183,7 +183,7 @@ impl<H: ParameterHost> IpcHandler<H> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vstkit_protocol::{ParameterType, RequestId};
+    use vstkit_protocol::{MeterFrame, ParameterInfo, ParameterType, RequestId};
 
     // Mock ParameterHost for testing
     struct MockHost {

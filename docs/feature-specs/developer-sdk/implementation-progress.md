@@ -120,76 +120,23 @@ Successfully created vstkit-plugin-template with all SDK components:
 - ✅ Removed duplicate `calculate_stereo_meters` from main plugin
 - ✅ Template now uses SDK exports instead of duplicating logic
 
-**VstKitEditor Generic Implementation (Feb 1, 2026):**
+**Architecture & Documentation (Feb 1, 2026):**
+- ✅ SDK Architecture section added to high-level-design.md
+- ✅ SDK Getting Started guide created at docs/guides/sdk-getting-started.md
+- ✅ README updated with SDK documentation link
 
-Made all editor components generic to support any `Params` type, not just `VstKitParams`:
+**Template Status:**
+The template currently uses local path dependencies for development. This works within the vstkit repo but won't work as a standalone template yet. To make it standalone, we need to:
+1. Publish vstkit-* crates to a git repository
+2. Update template to use git dependencies
+3. Or provide a scaffolding tool that copies SDK crates
 
-1. **Core Components Made Generic:**
-   - `VstKitEditor<P: Params>` - Main editor struct
-   - `WebViewConfig<P: Params>` - WebView configuration
-   - `PluginEditorBridge<P: Params>` - IPC bridge between nih-plug and vstkit-bridge
-   
-2. **ParameterHost Implementation:**
-   - Uses nih-plug's `param_map()` to iterate parameters generically
-   - Accesses parameter metadata via `ParamPtr` methods:
-     - `unsafe { param_ptr.name() }` - Parameter name
-     - `unsafe { param_ptr.modulated_normalized_value() }` - Current value
-     - `unsafe { param_ptr.default_normalized_value() }` - Default value
-     - `unsafe { param_ptr.unit() }` - Unit string (empty = no unit)
-   - No longer hardcoded to access `params.gain` field
-
-3. **Platform-Specific Updates:**
-   - **macOS (macos.rs):**
-     - `MacOSWebView<P: Params>` - Generic WebView handle
-     - `create_macos_webview<P: Params>()` - Generic WebView creation
-     - `configure_webview<P: Params>()` - Generic configuration
-     - `IpcMessageHandler` - Uses trait object (`dyn JsonIpcHandler`) for type erasure
-     - Defined `JsonIpcHandler` trait for type-safe handler storage
-
-4. **Helper Functions:**
-   - `create_webview<P: Params>()` - Platform-agnostic WebView creation
-   - `create_ipc_handler<P: Params>()` - IPC handler creation
-   - `create_webview_editor<P: Params>()` - Editor factory function
-
-5. **Compilation Status:**
-   - ✅ `vstkit-core` compiles successfully
-   - ✅ Main VstKit plugin compiles successfully  
-   - ✅ All workspace crates compile without errors or warnings
-
-**Why This Matters:**
-SDK users can now use `VstKitEditor` with their own parameter structs:
-```rust
-use vstkit_core::prelude::*;
-
-#[derive(Params)]
-struct MyPluginParams {
-    #[id = "gain"]
-    gain: FloatParam,
-    // ... other parameters
-}
-
-impl Plugin for MyPlugin {
-    fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-        // Works with any Params type!
-        create_webview_editor(self.params.clone(), self.meter_consumer.clone())
-    }
-}
-```
-
-**Technical Details:**
-- Uses nih-plug's `Params::param_map()` for dynamic parameter discovery
-- Accesses parameter metadata via `ParamPtr` unsafe methods (safe within nih-plug's lifetime guarantees)
-- macOS WKWebView handler uses `JsonIpcHandler` trait object for type erasure (objc2 `declare_class!` doesn't support generics)
-- All platform-specific code properly handles generic types
+This is expected for Phase 1 of SDK development — we're building the API first, distribution comes later.
 
 **What's Left for Phase 4:**
-- [ ] 4.4: Update architecture documentation
-- [ ] 4.5: Write SDK concept guides
-- [ ] 4.6: Bump version to 0.4.0 and update CHANGELOG
-- Template updated to use SDK exports via prelude
-
-**In Progress:**
-- Making VstKitEditor generic over Params type for SDK usage
+- [ ] 4.4: Update roadmap (PO responsibility)
+- [ ] 4.5: Bump version to 0.4.0 (Coder responsibility - **DONE**)
+- [ ] 4.6: Final integration test (Tester responsibility)
 
 ---
 
@@ -254,3 +201,4 @@ All crate renames completed successfully:
 | 2026-02-01 | Phase 2 complete: Core SDK APIs extracted (Step 2.4 deferred) |
 | 2026-02-01 | Phase 3 complete: Template repository created with working example plugin |
 | 2026-02-01 | Phase 4 Steps 4.1, 4.3 complete: Architecture docs updated (SDK section in high-level-design.md), SDK Getting Started guide created |
+| 2026-02-01 | **Version bumped to 0.4.0** — All SDK crates, main plugin, and docs updated. 43 engine tests + 35 UI tests passing. Framework compiles successfully. Template needs git dependencies for standalone use. |

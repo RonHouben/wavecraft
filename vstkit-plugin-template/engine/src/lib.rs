@@ -2,6 +2,14 @@ use vstkit_core::prelude::*;
 use vstkit_core::util::calculate_stereo_meters;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use vstkit_core::editor::VstKitEditor;
+
+// nih-plug imports
+use nih_plug::prelude::*;
+
+// vstkit imports for types not in prelude
+use vstkit_dsp::{Processor as VstKitProcessor, Transport as VstKitTransport};
+use vstkit_metering::{create_meter_channel, MeterFrame, MeterProducer, MeterConsumer};
+
 use std::sync::Arc;
 
 /// Example gain plugin using VstKit SDK
@@ -99,7 +107,7 @@ impl Plugin for MyPlugin {
 
         // Get transport info
         let transport_info = context.transport();
-        let vstkit_transport = Transport {
+        let vstkit_transport = VstKitTransport {
             tempo: transport_info.tempo,
             playing: transport_info.playing,
             pos_samples: transport_info.pos_samples().unwrap_or(0),
@@ -152,8 +160,8 @@ struct GainProcessor {
     sample_rate: f32,
 }
 
-impl Processor for GainProcessor {
-    fn process(&mut self, buffer: &mut [&mut [f32]], _transport: &Transport) {
+impl VstKitProcessor for GainProcessor {
+    fn process(&mut self, buffer: &mut [&mut [f32]], _transport: &VstKitTransport) {
         // Simple passthrough - actual gain is applied in the plugin's process()
         // This demonstrates the Processor trait pattern
         let _ = buffer; // Placeholder processing
