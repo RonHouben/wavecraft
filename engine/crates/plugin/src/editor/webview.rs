@@ -27,6 +27,8 @@ use super::bridge::PluginEditorBridge;
 /// must support: script evaluation, resizing, and lifecycle management.
 pub trait WebViewHandle: Any + Send {
     /// Evaluate a JavaScript string in the WebView context.
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    #[allow(dead_code)]
     fn evaluate_script(&self, script: &str) -> Result<(), String>;
 
     /// Resize the WebView to the given dimensions.

@@ -14,6 +14,7 @@ use include_dir::{Dir, include_dir};
 ///
 /// Only used on macOS/Windows where WebView is available.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
+#[allow(dead_code)]
 static UI_ASSETS: Dir = include_dir!("$CARGO_MANIFEST_DIR/../../../ui/dist");
 
 /// Get an embedded asset by path.
@@ -27,6 +28,7 @@ static UI_ASSETS: Dir = include_dir!("$CARGO_MANIFEST_DIR/../../../ui/dist");
 ///
 /// Only used on macOS/Windows where WebView is available.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
+#[allow(dead_code)]
 pub fn get_asset(path: &str) -> Option<(&'static [u8], &'static str)> {
     // Normalize path (remove leading slash)
     let path = path.trim_start_matches('/');
