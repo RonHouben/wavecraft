@@ -3315,7 +3315,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "vstkit"
+name = "vstkit-bridge"
+version = "0.3.1"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "vstkit-protocol",
+]
+
+[[package]]
+name = "vstkit-core"
 version = "0.3.1"
 dependencies = [
  "block2 0.5.1",
@@ -3334,16 +3344,6 @@ dependencies = [
  "webview2-com",
  "windows 0.58.0",
  "wry",
-]
-
-[[package]]
-name = "vstkit-bridge"
-version = "0.3.1"
-dependencies = [
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "vstkit-protocol",
 ]
 
 [[package]]
