@@ -1,37 +1,14 @@
-//! IPC request handler and parameter host trait
+//! IPC request handler.
 
 use crate::error::BridgeError;
+use crate::host::ParameterHost;
 use vstkit_protocol::{
     GetAllParametersResult, GetMeterFrameResult, GetParameterParams, GetParameterResult,
     IpcRequest, IpcResponse, METHOD_GET_ALL_PARAMETERS, METHOD_GET_METER_FRAME,
-    METHOD_GET_PARAMETER, METHOD_REQUEST_RESIZE, METHOD_SET_PARAMETER, MeterFrame, ParameterInfo,
+    METHOD_GET_PARAMETER, METHOD_REQUEST_RESIZE, METHOD_SET_PARAMETER,
     RequestId, RequestResizeParams, RequestResizeResult, SetParameterParams, SetParameterResult,
 };
 use serde::Serialize;
-
-/// Trait for objects that store and manage parameters
-///
-/// This trait abstracts parameter storage, allowing the bridge to work with
-/// both the desktop POC (atomic parameters) and future plugin hosts.
-pub trait ParameterHost: Send + Sync {
-    /// Get information about a single parameter
-    fn get_parameter(&self, id: &str) -> Option<ParameterInfo>;
-
-    /// Set a parameter value (normalized [0.0, 1.0])
-    fn set_parameter(&self, id: &str, value: f32) -> Result<(), BridgeError>;
-
-    /// Get all parameters with their current values and metadata
-    fn get_all_parameters(&self) -> Vec<ParameterInfo>;
-
-    /// Get the latest meter frame for UI visualization
-    fn get_meter_frame(&self) -> Option<MeterFrame>;
-
-    /// Request resize of the editor window
-    ///
-    /// Returns true if the host accepted the resize request.
-    /// The host is free to reject or adjust the size.
-    fn request_resize(&self, width: u32, height: u32) -> bool;
-}
 
 /// IPC message handler that dispatches requests to a ParameterHost
 pub struct IpcHandler<H: ParameterHost> {

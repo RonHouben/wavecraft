@@ -13,8 +13,8 @@
 //! # Example
 //!
 //! ```rust,no_run
-//! use bridge::{IpcHandler, ParameterHost, BridgeError, ParameterInfo};
-//! use vstkit_protocol::MeterFrame;
+//! use vstkit_bridge::{IpcHandler, ParameterHost, BridgeError};
+//! use vstkit_protocol::{MeterFrame, ParameterInfo};
 //!
 //! // Implement ParameterHost for your application state
 //! struct MyApp;
@@ -56,10 +56,12 @@
 
 pub mod error;
 pub mod handler;
+pub mod host;
 
 // Re-export key types for convenience
 pub use error::BridgeError;
-pub use handler::{IpcHandler, ParameterHost};
+pub use handler::IpcHandler;
+pub use host::ParameterHost;
 
 // Re-export protocol types used in bridge API
 pub use vstkit_protocol::{
