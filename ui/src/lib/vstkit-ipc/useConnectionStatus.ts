@@ -30,7 +30,7 @@ export function useConnectionStatus(): ConnectionStatus {
   const [status, setStatus] = useState<ConnectionStatus>(() => {
     const bridge = IpcBridge.getInstance();
     const connected = bridge.isConnected();
-    
+
     let transport: TransportType;
     if (isWebViewEnvironment()) {
       transport = 'native';
@@ -49,7 +49,7 @@ export function useConnectionStatus(): ConnectionStatus {
     // Poll connection status every second
     const intervalId = setInterval(() => {
       const connected = bridge.isConnected();
-      
+
       let transport: TransportType;
       if (isWebViewEnvironment()) {
         transport = 'native';

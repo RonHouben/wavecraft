@@ -18,18 +18,12 @@ export function ConnectionStatus(): JSX.Element {
   return (
     <div
       className={`flex items-center gap-2 rounded px-3 py-1.5 text-sm ${
-        connected
-          ? 'bg-green-900/30 text-green-400'
-          : 'bg-yellow-900/30 text-yellow-400'
+        connected ? 'bg-green-900/30 text-green-400' : 'bg-yellow-900/30 text-yellow-400'
       }`}
     >
-      <div
-        className={`h-2 w-2 rounded-full ${connected ? 'bg-green-400' : 'bg-yellow-400'}`}
-      />
+      <div className={`h-2 w-2 rounded-full ${connected ? 'bg-green-400' : 'bg-yellow-400'}`} />
       <span>{connected ? 'Connected' : 'Connecting...'}</span>
-      {transport === 'websocket' && (
-        <span className="text-xs opacity-70">(WebSocket)</span>
-      )}
+      {transport === 'websocket' && <span className="text-xs opacity-70">(WebSocket)</span>}
     </div>
   );
 }

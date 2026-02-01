@@ -36,7 +36,7 @@ function App(): React.JSX.Element {
     <div className="flex min-h-full flex-col bg-plugin-dark">
       <header className="border-b-2 border-plugin-border bg-gradient-to-br from-plugin-surface to-plugin-dark p-8">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
-          <div className="text-center flex-1">
+          <div className="flex-1 text-center">
             <h1 className="mb-2 bg-gradient-to-r from-accent to-accent-light bg-clip-text text-2xl text-transparent">
               VstKit — Plugin UI
             </h1>

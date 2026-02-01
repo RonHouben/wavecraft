@@ -1,7 +1,7 @@
 //! Integration tests for IPC communication
 
 use bridge::{IpcHandler, ParameterHost};
-use desktop::AppState;
+use standalone::AppState;
 use protocol::{
     IpcRequest, METHOD_GET_ALL_PARAMETERS, METHOD_GET_PARAMETER, METHOD_SET_PARAMETER, RequestId,
 };
