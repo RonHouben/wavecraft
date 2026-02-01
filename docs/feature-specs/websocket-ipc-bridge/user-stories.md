@@ -9,7 +9,7 @@ Enable real IPC communication between the React UI running in a browser and the 
 - Limited dev experience (no real meters, parameters)
 - Testing gaps for automated browser testing
 
-**The Solution:** Add a WebSocket server to the desktop app that exposes the same IPC protocol over `ws://localhost:9000`. The UI auto-detects the environment and connects via WebSocket when not in WKWebView.
+**The Solution:** Add a WebSocket server to the standalone app that exposes the same IPC protocol over `ws://localhost:9000`. The UI auto-detects the environment and connects via WebSocket when not in WKWebView.
 
 ---
 
@@ -21,14 +21,14 @@ Enable real IPC communication between the React UI running in a browser and the 
 
 ---
 
-## User Story 1: WebSocket Server in Desktop App
+## User Story 1: WebSocket Server in Standalone App
 
 **As a** plugin developer  
-**I want** the desktop app to run a WebSocket server  
+**I want** the standalone app to run a WebSocket server  
 **So that** the browser-based UI can connect to the real Rust engine
 
 ### Acceptance Criteria
-- [ ] Desktop app starts WebSocket server on `ws://localhost:9000` by default
+- [ ] Standalone app starts WebSocket server on `ws://localhost:9000` by default
 - [ ] WebSocket server uses the same `IpcHandler` as the native bridge
 - [ ] Server accepts JSON-RPC 2.0 messages (same protocol as native IPC)
 - [ ] Server gracefully handles client connect/disconnect
@@ -53,7 +53,7 @@ Enable real IPC communication between the React UI running in a browser and the 
 - [ ] Clean shutdown on Ctrl+C
 
 ### Notes
-- Typical workflow: `cargo run -p desktop -- --dev-server` + `npm run dev`
+- Typical workflow: `cargo run -p standalone -- --dev-server` + `npm run dev`
 - Consider logging connection events for debugging
 
 ---

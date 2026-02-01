@@ -12,7 +12,7 @@ This document describes the technical design for adding WebSocket transport to V
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  Plugin / Desktop App                                           │
+│  Plugin / Standalone App                                        │
 │                                                                 │
 │  ┌───────────────┐     ┌─────────────┐     ┌─────────────────┐ │
 │  │  AppState /   │────▶│ IpcHandler  │────▶│ WKWebView       │ │
@@ -33,7 +33,7 @@ This document describes the technical design for adding WebSocket transport to V
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  Desktop App                                                                │
+│  Standalone App                                                             │
 │                                                                             │
 │  ┌───────────────┐     ┌─────────────┐                                     │
 │  │  AppState     │────▶│ IpcHandler  │◀──────────────────────────┐         │
@@ -66,7 +66,7 @@ This document describes the technical design for adding WebSocket transport to V
 
 ### 1. Rust: WebSocket Server Module
 
-**New file:** `engine/crates/desktop/src/ws_server.rs`
+**New file:** `engine/crates/standalone/src/ws_server.rs`
 
 ```rust
 /// WebSocket server for browser-based UI development
@@ -96,7 +96,7 @@ impl WsServer {
 }
 ```
 
-**Dependencies to add to `desktop/Cargo.toml`:**
+**Dependencies to add to `standalone/Cargo.toml`:**
 ```toml
 tokio = { version = "1", features = ["rt-multi-thread", "net", "sync", "macros"] }
 tokio-tungstenite = "0.24"
@@ -128,13 +128,13 @@ async fn handle_connection(
 
 ### 2. Rust: CLI Arguments
 
-**Modified:** `engine/crates/desktop/src/main.rs`
+**Modified:** `engine/crates/standalone/src/main.rs`
 
 ```rust
 use clap::Parser;
 
 #[derive(Parser)]
-#[command(name = "desktop", about = "VstKit Desktop POC")]
+#[command(name = "standalone", about = "VstKit Standalone App")]
 struct Args {
     /// Run in headless dev-server mode (WebSocket only, no UI window)
     #[arg(long)]
@@ -170,7 +170,7 @@ clap = { version = "4", features = ["derive"] }
 
 The current `get_meter_frame` is poll-based. For WebSocket, we need push-based updates.
 
-**Modified:** `engine/crates/desktop/src/ws_server.rs`
+**Modified:** `engine/crates/standalone/src/ws_server.rs`
 
 ```rust
 /// Meter broadcaster that polls at 60fps and pushes to clients
@@ -619,7 +619,7 @@ function getTransportType(): 'native' | 'websocket' | 'none' {
 ### New Files (Rust)
 
 ```
-engine/crates/desktop/src/
+engine/crates/standalone/src/
 ├── main.rs              # Modified: CLI args, mode selection
 ├── app.rs               # Unchanged
 ├── assets.rs            # Unchanged  
@@ -704,10 +704,10 @@ No protocol changes required. WebSocket uses the exact same JSON-RPC 2.0 message
 **Terminal 1: Rust Engine**
 ```bash
 # Headless mode (WebSocket only, no window)
-cargo run -p desktop -- --dev-server
+cargo run -p standalone -- --dev-server
 
 # Or with custom port
-cargo run -p desktop -- --dev-server --port 9001
+cargo run -p standalone -- --dev-server --port 9001
 ```
 
 **Terminal 2: React UI**
@@ -721,7 +721,7 @@ npm run dev
 
 For integrated development (WebSocket + WKWebView):
 ```bash
-cargo run -p desktop
+cargo run -p standalone
 # Opens WKWebView AND starts WebSocket server
 # Browser can connect to ws://localhost:9000 while native UI runs
 ```
@@ -886,7 +886,7 @@ WebSocket is built into browsers. No additional npm packages required.
 
 ## Success Criteria
 
-1. ✅ `cargo run -p desktop -- --dev-server` starts WebSocket server
+1. ✅ `cargo run -p standalone -- --dev-server` starts WebSocket server
 2. ✅ `npm run dev` connects to WebSocket automatically
 3. ✅ Parameters read/write work over WebSocket
 4. ✅ Meters update at ~60fps in browser
