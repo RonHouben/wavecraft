@@ -86,6 +86,7 @@ This project uses specialized agents with distinct responsibilities that hand of
 | Coder → Tester | "Re-test" | QA findings fixed |
 | QA → Architect | "Update architectural Docs" | No QA issues, implementation review |
 | Architect → PO | "Update roadmap" | Architecture docs updated |
+| **PO** | — | **Archive & Merge** | Archive feature spec, update roadmap, **then** merge PR |
 
 ## Key Documentation Artifacts
 
@@ -102,6 +103,17 @@ docs/feature-specs/{feature}/
 ```
 
 On completion, PO archives the entire feature folder to `docs/feature-specs/_archive/{feature}/`.
+
+## PR Merge Policy
+
+**CRITICAL: PRs must NOT be merged until the PO has completed the following:**
+
+1. ✅ QA approval received
+2. ✅ Feature spec archived to `docs/feature-specs/_archive/{feature}/`
+3. ✅ Roadmap updated (task marked complete, changelog entry added)
+4. ✅ Then and only then: PR can be merged
+
+**Rationale:** The feature spec documents the implementation. Archiving before merge ensures the documentation matches the merged code. Updating the roadmap before merge ensures accurate project tracking.
 
 ## Agent Constraints
 
