@@ -93,7 +93,13 @@ cd /Users/ronhouben/code/private/vstkit/engine
 cargo xtask bundle --release
 cargo xtask sign --adhoc
 cargo xtask sign --verify
+cargo xtask install  # Install to system directories for DAW testing
 ```
+
+**Note**: The `install` command copies built plugins to system directories where DAWs can find them:
+- VST3: `~/Library/Audio/Plug-Ins/VST3/`
+- CLAP: `~/Library/Audio/Plug-Ins/CLAP/`
+- AU: `~/Library/Audio/Plug-Ins/Components/`
 
 ### Phase 3: Execute Feature-Specific Tests
 
@@ -237,10 +243,11 @@ cd engine && cargo test --workspace
 ### macOS-Only (cannot run in Docker)
 
 ```bash
-# Plugin bundling and signing
+# Plugin bundling, signing, and installation
 cd engine && cargo xtask bundle --release
 cd engine && cargo xtask sign --adhoc
 cd engine && cargo xtask sign --verify
+cd engine && cargo xtask install  # Install to system for DAW testing
 
 # Run the desktop app
 cd engine && cargo run -p desktop
