@@ -76,6 +76,14 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 
 ---
 
+## Project Rename
+
+| Item | Notes |
+|------|-------|
+| Rename VstKit → Wavecraft | Avoid "VST" trademark concerns for open-source release. Scope: repo name, crate names, npm packages, documentation, UI references, README. Check availability on GitHub, crates.io, npm before starting. |
+
+---
+
 ## Deferred (Requires Apple Developer Account)
 
 These items are ready to implement but require an Apple Developer Program membership:
@@ -93,6 +101,7 @@ These items are ready to implement but require an Apple Developer Program member
 
 | Date | Update |
 |------|--------|
+| 2026-02-01 | **Project Rename section added**: Rename VstKit → Wavecraft to avoid VST trademark concerns |
 | 2026-02-01 | **Code Quality section added**: Logger class (UI) and `log`/`tracing` crate (Engine) to replace direct console output |
 | 2026-02-01 | **UI Polish section added**: Horizontal scroll wiggle issue — block elastic scrolling on macOS |
 | 2026-02-01 | **Backlog created**: Split from roadmap Milestone 8 to separate committed work from future ideas. Items moved: CI cache optimization, performance profiling, platform support, DAW compatibility, AU issues, Apple Developer-dependent items. |
