@@ -33,7 +33,7 @@ function App(): React.JSX.Element {
   }, []);
 
   return (
-    <div className="flex min-h-full flex-col bg-plugin-dark">
+    <div data-testid="app-root" className="flex min-h-full flex-col bg-plugin-dark">
       <header className="border-b-2 border-plugin-border bg-gradient-to-br from-plugin-surface to-plugin-dark p-8">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
           <div className="flex-1 text-center">

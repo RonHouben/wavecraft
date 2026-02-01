@@ -25,7 +25,7 @@ describe('VersionBadge', () => {
     render(<VersionBadge />);
     const badge = screen.getByText(/^v/);
 
-    // Check for expected Tailwind classes
-    expect(badge).toHaveClass('text-xs', 'text-gray-500');
+    // Check for expected Tailwind classes (visible styling for better UX)
+    expect(badge).toHaveClass('text-sm', 'font-medium', 'text-accent');
   });
 });

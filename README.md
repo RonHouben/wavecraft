@@ -65,6 +65,7 @@ vstkit/
 - [Coding Standards](docs/architecture/coding-standards.md) — TypeScript, Rust, and React conventions
 - [Agent Development Flow](docs/architecture/agent-development-flow.md) — How specialized agents collaborate through the development lifecycle
 - [Roadmap](docs/roadmap.md) — Milestone tracking and implementation progress
+- [Visual Testing Guide](docs/guides/visual-testing.md) — Playwright-based visual testing with agent-driven workflows
 
 ## Building
 

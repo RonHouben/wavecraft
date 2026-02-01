@@ -18,6 +18,7 @@ export function ConnectionStatus(): React.JSX.Element {
 
   return (
     <div
+      data-testid="connection-status"
       className={`flex items-center gap-2 rounded px-3 py-1.5 text-sm ${
         connected ? 'bg-green-900/30 text-green-400' : 'bg-yellow-900/30 text-yellow-400'
       }`}

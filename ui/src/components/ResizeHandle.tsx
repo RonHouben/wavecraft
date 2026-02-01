@@ -53,6 +53,7 @@ export function ResizeHandle(): React.JSX.Element {
 
   return (
     <button
+      data-testid="resize-handle"
       className={`group fixed bottom-1 right-5 z-[9999] flex h-9 w-9 cursor-nwse-resize select-none items-center justify-center rounded border-none bg-transparent p-0 transition-colors duration-150 ${
         isDragging ? 'bg-accent/20' : 'hover:bg-white/10'
       }`}

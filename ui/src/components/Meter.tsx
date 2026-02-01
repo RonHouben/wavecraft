@@ -100,7 +100,10 @@ export function Meter(): React.JSX.Element {
   // Show connecting state when not connected
   if (!connected) {
     return (
-      <div className="flex flex-col gap-2 rounded-lg border border-plugin-border bg-plugin-surface p-4 font-sans">
+      <div
+        data-testid="meter"
+        className="flex flex-col gap-2 rounded-lg border border-plugin-border bg-plugin-surface p-4 font-sans"
+      >
         <div className="flex items-center justify-between gap-2">
           <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Levels</div>
         </div>
@@ -112,11 +115,15 @@ export function Meter(): React.JSX.Element {
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-plugin-border bg-plugin-surface p-4 font-sans">
+    <div
+      data-testid="meter"
+      className="flex flex-col gap-2 rounded-lg border border-plugin-border bg-plugin-surface p-4 font-sans"
+    >
       <div className="flex items-center justify-between gap-2">
         <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Levels</div>
         {(clippedL || clippedR) && (
           <button
+            data-testid="meter-clip-button"
             className="animate-clip-pulse cursor-pointer select-none rounded border-none bg-meter-clip px-2 py-0.5 text-[10px] font-bold text-white hover:bg-meter-clip-dark active:scale-95"
             onClick={handleResetClip}
             title="Click to reset"
@@ -127,7 +134,7 @@ export function Meter(): React.JSX.Element {
         )}
       </div>
 
-      <div className="flex items-center gap-2 rounded bg-plugin-dark p-2">
+      <div data-testid="meter-L" className="flex items-center gap-2 rounded bg-plugin-dark p-2">
         <div className="w-4 text-center text-[11px] font-semibold text-gray-300">L</div>
         <div className="relative h-6 flex-1">
           <div
@@ -136,16 +143,19 @@ export function Meter(): React.JSX.Element {
             }`}
           >
             <div
+              data-testid="meter-L-rms"
               className="absolute left-0 top-0 h-full bg-gradient-to-r from-meter-safe to-meter-safe-light transition-[width] duration-100"
               style={{ width: `${Math.max(0, Math.min(100, rmsLPercent))}%` }}
             />
             <div
+              data-testid="meter-L-peak"
               className="duration-50 absolute left-0 top-0 h-full bg-gradient-to-r from-meter-safe via-meter-warning to-orange-500 opacity-60 transition-[width]"
               style={{ width: `${Math.max(0, Math.min(100, peakLPercent))}%` }}
             />
           </div>
         </div>
         <div
+          data-testid="meter-L-db"
           className={`w-[60px] text-right font-mono text-[11px] text-gray-300 transition-colors duration-100 ${
             clippedL ? 'font-semibold text-meter-clip' : ''
           }`}
@@ -154,7 +164,7 @@ export function Meter(): React.JSX.Element {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 rounded bg-plugin-dark p-2">
+      <div data-testid="meter-R" className="flex items-center gap-2 rounded bg-plugin-dark p-2">
         <div className="w-4 text-center text-[11px] font-semibold text-gray-300">R</div>
         <div className="relative h-6 flex-1">
           <div
@@ -163,16 +173,19 @@ export function Meter(): React.JSX.Element {
             }`}
           >
             <div
+              data-testid="meter-R-rms"
               className="absolute left-0 top-0 h-full bg-gradient-to-r from-meter-safe to-meter-safe-light transition-[width] duration-100"
               style={{ width: `${Math.max(0, Math.min(100, rmsRPercent))}%` }}
             />
             <div
+              data-testid="meter-R-peak"
               className="duration-50 absolute left-0 top-0 h-full bg-gradient-to-r from-meter-safe via-meter-warning to-orange-500 opacity-60 transition-[width]"
               style={{ width: `${Math.max(0, Math.min(100, peakRPercent))}%` }}
             />
           </div>
         </div>
         <div
+          data-testid="meter-R-db"
           className={`w-[60px] text-right font-mono text-[11px] text-gray-300 transition-colors duration-100 ${
             clippedR ? 'font-semibold text-meter-clip' : ''
           }`}

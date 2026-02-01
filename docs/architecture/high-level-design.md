@@ -7,6 +7,7 @@
 - [Coding Standards](./coding-standards.md) — Conventions for TypeScript, Rust, and React code
 - [Roadmap](../roadmap.md) — Project milestones and implementation plan
 - [macOS Signing Guide](../guides/macos-signing.md) — Code signing and notarization setup
+- [Visual Testing Guide](../guides/visual-testing.md) — Browser-based visual testing with Playwright
 
 ⸻
 
@@ -141,7 +142,7 @@ VstKit uses semantic versioning (SemVer) with a single source of truth in `engin
 
 2. **Vite `define` block** — The `__APP_VERSION__` constant is injected via Vite's `define` configuration, which performs compile-time string replacement.
 
-3. **Development fallback** — When building without xtask (e.g., `npm run dev`), the version falls back to `'dev'`.
+3. **Development fallback** — When building without xtask (e.g., `npm run dev`), the version is read directly from `engine/Cargo.toml` using a regex parser in `vite.config.ts`. This ensures developers always see the correct version during development.
 
 4. **No manual sync** — Changing the version in `Cargo.toml` automatically updates all consumers on next build.
 
@@ -405,6 +406,61 @@ VstKit uses GitHub Actions for continuous integration and release automation.
 
 ⸻
 
+## Visual Testing
+
+VstKit supports browser-based visual testing using Playwright MCP for agent-driven UI validation.
+
+### Architecture
+
+```
+  Agent / Developer                 Playwright MCP              Browser
+  ┌─────────────┐                  ┌─────────────┐           ┌─────────────┐
+  │             │ "take screenshot"│             │   CDP     │             │
+  │   Copilot   │─────────────────►│  Playwright │──────────►│  Chromium   │
+  │             │                  │  MCP Server │           │  VstKit UI  │
+  │             │◄─────────────────│             │◄──────────│             │
+  └─────────────┘  screenshot.png  └─────────────┘           └──────┬──────┘
+        │                                                          │ ws://
+        ▼                                                          ▼
+  ┌─────────────┐                                           ┌─────────────┐
+  │  External   │                                           │    Rust     │
+  │  Baselines  │                                           │   Engine    │
+  │ ~/.vstkit/  │                                           │ (xtask dev) │
+  └─────────────┘                                           └─────────────┘
+```
+
+### Test ID Convention
+
+All UI components have `data-testid` attributes for reliable Playwright selection:
+
+| Component | Test ID Pattern | Example |
+|-----------|-----------------|---------|
+| App Root | `app-root` | Full page container |
+| Meter | `meter-{L\|R}[-{peak\|rms\|db}]` | `meter-L-peak` |
+| Parameter | `param-{id}[-{label\|slider\|value}]` | `param-gain-slider` |
+| Version | `version-badge` | Version display |
+| Connection | `connection-status` | WebSocket status |
+
+### Baseline Storage
+
+Visual baselines are stored externally (not in git) at `~/.vstkit/visual-baselines/`:
+- Keeps repository lean
+- Independent versioning from code
+- Shareable across development machines
+
+### Key Design Decisions
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Automation tool | Playwright MCP | Agent-native, no custom scripts |
+| Baseline location | External (`~/.vstkit/`) | Repository stays lean |
+| Test orchestration | Agent-driven | On-demand, not CI |
+| Component targeting | `data-testid` attributes | Stable selectors |
+
+See [Visual Testing Guide](../guides/visual-testing.md) for complete setup and usage instructions.
+
+⸻
+
 ## Audio Unit (AU) Architecture
 
 ### Overview
@@ -659,7 +715,7 @@ Docs for VST3 build process: Steinberg dev portal.  ￼
 	•	Mitigation: do host tests early; consider disabling in-webview audio entirely (avoiding audio playback inside the UI).
 	2.	Cross-engine rendering differences
 	•	Risk: CSS/JS behaves slightly differently across WebKit vs Chromium.
-	•	Mitigation: constrain to common subset of web APIs; automated visual tests per platform.
+	•	Mitigation: constrain to common subset of web APIs; automated visual tests per platform. See [Visual Testing Guide](../guides/visual-testing.md) for Playwright-based screenshot comparison.
 	3.	Binary size / dependency issues
 	•	Risk: shipping a large engine increases installer size.
 	•	Mitigation: use system webviews (wry/tauri approach) to avoid bundling Chromium; selectively polyfill features.
