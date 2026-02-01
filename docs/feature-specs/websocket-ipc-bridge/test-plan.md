@@ -10,12 +10,13 @@
 
 | Status | Count |
 |--------|-------|
-| ✅ PASS | 10 |
+| ✅ PASS | 12 |
+| ⏳ IN PROGRESS | 2 |
 | ❌ FAIL | 0 |
 | ⏸️ BLOCKED | 0 |
-| ⬜ NOT RUN | 4 |
+| ⬜ NOT RUN | 0 |
 
-**Note**: 7 issues found and fixed. Issues #1-7 resolved. Manual browser tests (TC-004 through TC-010) completed successfully.
+**Note**: 7 issues found and fixed. Issues #1-7 resolved. Manual browser tests (TC-004 through TC-010) completed successfully. Deferred tests (TC-011 through TC-014) now executed: 2 passed, 2 awaiting user verification.
 
 ## Prerequisites
 
@@ -362,11 +363,17 @@
 
 **Expected Result**: Transport attempts 5 reconnections then stops
 
-**Status**: ⬜ NOT RUN
+**Status**: ⏳ IN PROGRESS (awaiting manual verification)
 
 **Actual Result**: 
+Dev servers running. User will verify:
+1. Browser connects to http://localhost:5173
+2. Servers stopped to trigger reconnection attempts
+3. Monitor console for 5 reconnection attempts with exponential backoff
+4. Verify "Max reconnect attempts (5) reached" message appears
+5. Wait 30 seconds, confirm no more attempts
 
-**Notes**: 
+**Notes**: Requires extended monitoring (30+ seconds) to verify max attempts reached 
 
 ---
 
@@ -387,11 +394,31 @@
 
 **Expected Result**: Help text displays correctly
 
-**Status**: ⬜ NOT RUN
+**Status**: ✅ PASS
 
 **Actual Result**: 
+Command: `cargo run -p standalone -- --help`
+Output:
+```
+VstKit standalone app for UI development and testing
 
-**Notes**: 
+Usage: standalone [OPTIONS]
+
+Options:
+      --dev-server   Run in dev server mode (headless, WebSocket only)
+      --port <PORT>  WebSocket server port (default: 9000) [default: 9000]
+      --verbose      Show verbose output (all JSON-RPC messages)
+  -h, --help         Print help
+```
+
+All expected information present:
+- ✅ Description shown
+- ✅ Usage format
+- ✅ --dev-server flag documented
+- ✅ --port option with default value
+- ✅ --verbose flag (from Issue #6 fix)
+
+**Notes**: Help text clear and complete 
 
 ---
 
@@ -413,11 +440,19 @@
 
 **Expected Result**: Native GUI mode works as before, uses NativeTransport
 
-**Status**: ⬜ NOT RUN
+**Status**: ⏳ IN PROGRESS (awaiting manual verification)
 
 **Actual Result**: 
+Command: `cargo run -p standalone --release`
+- Native window launched successfully (background process started)
+- User needs to verify:
+  - ✓ Window opens with plugin UI
+  - ✓ ConnectionStatus component hidden (native mode)
+  - ✓ Parameters work (Gain slider)
+  - ✓ Meters display
+  - ✓ No WebSocket connection attempts in logs
 
-**Notes**: macOS-only test, skip on Linux CI
+**Notes**: macOS-only test, requires GUI verification
 
 ---
 
@@ -437,11 +472,26 @@
 
 **Expected Result**: Bundles build and sign successfully
 
-**Status**: ⬜ NOT RUN
+**Status**: ✅ PASS
 
 **Actual Result**: 
 
-**Notes**: macOS-only test, cannot run in Docker
+**Build Command**: `cargo xtask bundle --release`
+- ✅ VST3 bundle created: `target/bundled/vstkit.vst3`
+- ✅ CLAP bundle created: `target/bundled/vstkit.clap`
+- Build completed in 13.26s (release mode)
+- No errors or warnings
+
+**Signing Command**: `cargo xtask sign --adhoc`
+- ✅ VST3 signed successfully (ad-hoc signature)
+- ✅ CLAP signed successfully (ad-hoc signature)
+
+**Verification Command**: `cargo xtask sign --verify`
+- ✅ VST3 signature valid
+- ✅ CLAP signature valid
+- All 2 signatures verified successfully
+
+**Notes**: Full plugin build pipeline working correctly. Both VST3 and CLAP formats build and sign without issues.
 
 ---
 
