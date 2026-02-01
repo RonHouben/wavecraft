@@ -79,7 +79,9 @@ export class IpcBridge {
       // Rate-limit disconnect warnings to avoid console spam
       const now = Date.now();
       if (now - this.lastDisconnectWarning > this.DISCONNECT_WARNING_INTERVAL_MS) {
-        console.warn('[IpcBridge] Transport not connected, call will fail. Waiting for reconnection...');
+        console.warn(
+          '[IpcBridge] Transport not connected, call will fail. Waiting for reconnection...'
+        );
         this.lastDisconnectWarning = now;
       }
       throw new Error('IpcBridge: Transport not connected');

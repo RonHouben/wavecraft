@@ -25,7 +25,6 @@ export function Meter(): React.JSX.Element {
   useEffect(() => {
     // Only poll when connected
     if (!connected) {
-      setFrame(null);
       return;
     }
 
@@ -97,6 +96,20 @@ export function Meter(): React.JSX.Element {
       clipRTimeoutRef.current = null;
     }
   };
+
+  // Show connecting state when not connected
+  if (!connected) {
+    return (
+      <div className="flex flex-col gap-2 rounded-lg border border-plugin-border bg-plugin-surface p-4 font-sans">
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Levels</div>
+        </div>
+        <div className="flex items-center justify-center py-8 text-sm text-gray-400">
+          ⏳ Connecting...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-plugin-border bg-plugin-surface p-4 font-sans">
