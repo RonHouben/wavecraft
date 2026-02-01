@@ -6,6 +6,14 @@ The resize handle in the bottom-right corner of the plugin UI needs improved vis
 
 ---
 
+## Version
+
+**Target Version:** `0.2.1` (patch bump from `0.2.0`)
+
+**Rationale:** This is a UX polish improvement to an existing feature. No new functionality is being added — we're making the resize handle more visible and usable.
+
+---
+
 ## User Story 1: Improved Contrast for Accessibility
 
 **As a** music producer using VstKit plugins  

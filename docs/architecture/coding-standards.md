@@ -653,11 +653,16 @@ Linting runs automatically on all PRs via `.github/workflows/lint.yml`:
 
 ### Versioning
 
-**Rule:** Increment the version number during the coding phase of each feature.
+**Rule:** The Product Owner decides the target version in the user stories. The Coder implements the version bump during the coding phase.
 
 The version is defined in `engine/Cargo.toml` under `[workspace.package]` and is the **single source of truth**. It gets injected into the UI at build time via Vite's `define` configuration.
 
-**When to bump:**
+**Workflow:**
+1. **PO** specifies the target version in `user-stories.md` with rationale
+2. **Coder** implements the version bump in `engine/Cargo.toml` during coding
+3. **Tester** verifies the correct version is displayed in the UI
+
+**Version bump criteria:**
 - **Minor version** (0.X.0): Significant features, architectural changes, milestone completions
 - **Patch version** (0.0.X): Small features, bug fixes, polish items, documentation updates
 
@@ -667,7 +672,12 @@ The version is defined in `engine/Cargo.toml` under `[workspace.package]` and is
 - Performance optimization → Patch bump
 - New UI component → Patch bump (unless it's a major feature)
 
-**Why during coding:**
+**Why PO decides:**
+- Version communicates product significance to users — a product decision
+- Ensures consistent versioning across features
+- Separates "what version" (product) from "when to bump" (engineering)
+
+**Why Coder implements during coding:**
 - Allows testers to verify the correct version is rendered in the UI
 - Creates clear traceability between builds and features
 - Ensures version is updated before testing, not as an afterthought
