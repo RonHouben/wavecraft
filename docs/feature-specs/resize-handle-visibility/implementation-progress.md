@@ -63,7 +63,13 @@
 
 ## Blockers
 
-None identified.
+**Resolved:**
+- ✅ Clippy dead code errors fixed (2026-02-01)
+  - Added `#[allow(dead_code)]` attributes to 7 items in editor modules
+  - `cargo clippy --workspace -- -D warnings` now passes
+
+**Current:**
+None.
 
 ---
 

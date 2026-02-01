@@ -32,6 +32,7 @@ pub trait WebViewHandle: Any + Send {
 }
 
 /// Configuration for creating a WebView editor.
+#[allow(dead_code)] // Configuration struct for platform implementations
 pub struct WebViewConfig {
     pub params: Arc<VstKitParams>,
     pub context: Arc<dyn GuiContext>,
@@ -69,6 +70,7 @@ pub fn create_webview(_config: WebViewConfig) -> Result<Box<dyn WebViewHandle>, 
 ///
 /// This is shared across all platforms and wires up the bridge between
 /// the WebView's IPC messages and the nih-plug parameter system.
+#[allow(dead_code)] // Will be used when WebView editor is re-enabled
 pub fn create_ipc_handler(
     params: Arc<VstKitParams>,
     context: Arc<dyn GuiContext>,
