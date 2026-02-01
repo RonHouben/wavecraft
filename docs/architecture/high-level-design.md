@@ -77,12 +77,18 @@ Key: the audio path never blocks on UI; the UI never directly runs audio code.
 	•	On Windows: WebView2 (Edge/Chromium); macOS: WKWebView; Linux: WebKitGTK or an appropriate system webview.
 	•	**Development Environment Note:** Development is focused exclusively on **macOS + Ableton Live**. Windows and Linux support is deprioritized and not actively developed or tested. The architecture supports cross-platform via wry's abstraction, but this is a future consideration, not a current goal.
 	5.	IPC / Bridge
-	•	Lightweight JSON-RPC or custom message format over the webview host-bridge (postMessage / host object). Expose a minimal API:
-	•	setParameter(id, value)
-	•	getParameter(id)
-	•	subscribeParamChanges(ids)
-	•	sendUICommand(name, payload) (non-critical)
-	•	requestOfflineProcessing (if you need offline render)
+	•	**Transport Abstraction**: The IPC layer uses a pluggable transport system:
+		- `NativeTransport`: postMessage-based communication in WKWebView (production)
+		- `WebSocketTransport`: WebSocket-based communication in browser (development)
+	•	JSON-RPC 2.0 message format with request/response correlation. Expose a minimal API:
+		- `setParameter(id, value)`
+		- `getParameter(id)`
+		- `getMeterFrame()`
+		- `ping()`
+	•	**Connection Management**:
+		- Automatic reconnection with exponential backoff (WebSocket mode)
+		- Rate-limited disconnect warnings (max 1 per 5s)
+		- Connection-aware React hooks via `useConnectionStatus()`
 	•	Keep messages small and rate-limited.
 	6.	Realtime-safe comms
 	•	Use a single-producer single-consumer lock-free ring buffer (SPSC) or atomic double buffer for data from audio → UI (metering, waveform snapshots). Use crates such as rtrb or other proven SPSC ring buffer crates to avoid allocations and locks on the audio thread.  ￼
@@ -143,28 +149,58 @@ VstKit uses semantic versioning (SemVer) with a single source of truth in `engin
 
 ## Browser Development Mode
 
-VstKit supports running the UI in a standard browser for rapid development iteration, without requiring the full plugin environment.
+VstKit supports running the UI in a standard browser for rapid development iteration, with **real engine communication** via WebSocket.
 
-### Dual-Mode Architecture
+### Development Mode Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                         ENVIRONMENT DETECTION                           │
+│                       TRANSPORT ABSTRACTION                             │
 └─────────────────────────────────────────────────────────────────────────┘
 
-  ┌─────────────────┐         ┌─────────────────┐
-  │ Browser Mode    │         │ WKWebView Mode  │
-  │ (npm run dev)   │         │ (Plugin in DAW) │
-  └────────┬────────┘         └────────┬────────┘
-           │                           │
-           ▼                           ▼
-  ┌─────────────────┐         ┌─────────────────┐
-  │ IS_BROWSER=true │         │ IS_BROWSER=false│
-  │                 │         │                 │
-  │ • Mock data     │         │ • Real IPC      │
-  │ • Local state   │         │ • Rust backend  │
-  │ • No crashes    │         │ • Host params   │
-  └─────────────────┘         └─────────────────┘
+  ┌─────────────────────┐                ┌─────────────────────┐
+  │  Browser Dev Mode   │                │  Plugin Mode        │
+  │  (npm run dev +     │                │  (Plugin in DAW)    │
+  │   cargo xtask dev)  │                │                     │
+  └──────────┬──────────┘                └──────────┬──────────┘
+             │                                      │
+             ▼                                      ▼
+  ┌─────────────────────┐                ┌─────────────────────┐
+  │ WebSocketTransport  │                │ NativeTransport     │
+  │                     │                │                     │
+  │ • ws://127.0.0.1:9000               │ • postMessage IPC   │
+  │ • Auto-reconnect    │                │ • WKWebView native  │
+  │ • Real engine data  │                │ • Synchronous calls │
+  └──────────┬──────────┘                └──────────┬──────────┘
+             │                                      │
+             ▼                                      ▼
+  ┌─────────────────────┐                ┌─────────────────────┐
+  │ Standalone Dev      │                │ Plugin Binary       │
+  │ Server (Rust)       │                │ (Embedded WebView)  │
+  │ IpcHandler          │                │ IpcHandler          │
+  └─────────────────────┘                └─────────────────────┘
+```
+
+### Transport Factory Pattern
+
+The IPC system uses a factory pattern to automatically select the appropriate transport:
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                      getTransport()                            │
+│                                                                │
+│   isWebViewEnvironment() ─────┬───────────────┐                │
+│                               │               │                │
+│                          (true)          (false)               │
+│                               │               │                │
+│                               ▼               ▼                │
+│                    ┌──────────────┐  ┌───────────────────┐     │
+│                    │NativeTransport│  │WebSocketTransport │     │
+│                    │              │  │                   │     │
+│                    │ postMessage  │  │ ws://127.0.0.1:   │     │
+│                    │ __VSTKIT_IPC__│  │ 9000              │     │
+│                    └──────────────┘  └───────────────────┘     │
+└────────────────────────────────────────────────────────────────┘
 ```
 
 ### How It Works
@@ -176,26 +212,57 @@ VstKit supports running the UI in a standard browser for rapid development itera
    }
    ```
 
-2. **Module-Level Constant** (`hooks.ts`):
+2. **Transport Selection** (`transports/index.ts`):
    ```typescript
-   // Evaluated once at module load, before any hooks run
-   const IS_BROWSER = isBrowserEnvironment();
+   // Module-level constant (evaluated once)
+   const IS_WEBVIEW = isWebViewEnvironment();
+   
+   export function getTransport(): Transport {
+     if (IS_WEBVIEW) {
+       return new NativeTransport();
+     } else {
+       return new WebSocketTransport({ url: 'ws://127.0.0.1:9000' });
+     }
+   }
    ```
 
-3. **Conditional Hook Behavior**:
-   - **Browser mode**: Hooks return mock data immediately, skip IPC calls
-   - **WKWebView mode**: Hooks use real IPC to communicate with Rust backend
+3. **IpcBridge Abstraction** (`IpcBridge.ts`):
+   - Lazy initialization of transport
+   - Same API regardless of transport type
+   - Rate-limited disconnect warnings (1 per 5s)
+   - Graceful degradation when disconnected
+
+4. **WebSocket Features**:
+   - Automatic reconnection with exponential backoff (1s, 2s, 4s, 8s, 16s)
+   - Maximum 5 reconnection attempts
+   - Request timeout (5s) with proper cleanup
+   - Connection status monitoring via `useConnectionStatus()` hook
+
+### Development Workflow
+
+```bash
+# Start both servers (recommended)
+cargo xtask dev
+
+# Or manually:
+# Terminal 1: Start WebSocket server
+cargo run -p standalone -- --dev-server --port 9000
+
+# Terminal 2: Start Vite dev server
+cd ui && npm run dev
+```
 
 ### Why Module-Level Detection?
 
-The `IS_BROWSER` constant is evaluated at module scope (not inside hooks) to comply with React's Rules of Hooks. Conditional hook calls based on runtime checks inside hook bodies would violate hook call order consistency.
+The environment constant is evaluated at module scope (not inside hooks) to comply with React's Rules of Hooks. This ensures consistent hook call order across renders.
 
 ### Benefits
 
-- **Rapid iteration**: UI developers can work without building the full plugin
-- **No crashes**: Missing IPC primitives don't cause errors in browser
-- **Same codebase**: No separate "mock mode" build or configuration
-- **Sensible defaults**: Mock data provides reasonable starting values for UI development
+- **Real engine communication**: Browser UI talks to real Rust backend
+- **Hot module reload**: Vite HMR for instant UI updates
+- **Same IPC layer**: Identical JSON-RPC protocol as production
+- **Robust reconnection**: Automatic recovery from connection drops
+- **Graceful degradation**: UI shows "Connecting..." when disconnected
 
 ⸻
 
@@ -203,10 +270,12 @@ The `IS_BROWSER` constant is evaluated at module scope (not inside hooks) to com
 
 VstKit uses a Rust-based build system (`xtask`) that provides a unified interface for building, testing, signing, and distributing plugins.
 
+
 ### Available Commands
 
 | Command | Description |
 |---------|-------------|
+| `cargo xtask dev` | Start WebSocket + Vite dev servers for browser development |
 | `cargo xtask bundle` | Build and bundle VST3/CLAP plugins |
 | `cargo xtask test` | Run all tests (Engine + UI) |
 | `cargo xtask test --ui` | Run UI tests only (Vitest) |
@@ -224,6 +293,10 @@ VstKit uses a Rust-based build system (`xtask`) that provides a unified interfac
 ### Development Workflow
 
 ```bash
+# Browser-based UI development (recommended for UI work)
+cargo xtask dev              # Starts WebSocket server + Vite
+cargo xtask dev --verbose    # With detailed IPC logging
+
 # Fast iteration (debug build, no signing)
 cargo xtask bundle --debug
 
