@@ -53,7 +53,13 @@ fn run_dev_server(port: u16) -> Result<(), Box<dyn std::error::Error>> {
 
         // Start WebSocket server
         let server = WsServer::new(port, handler);
-        server.start().await
+        server.start().await?;
+
+        // Wait for Ctrl+C signal
+        tokio::signal::ctrl_c().await?;
+        println!("\nShutting down...");
+
+        Ok(())
     })
 }
 

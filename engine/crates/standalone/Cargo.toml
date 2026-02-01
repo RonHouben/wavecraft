@@ -23,7 +23,7 @@ atomic_float = "1.1"
 parking_lot = "0.12"
 
 # WebSocket server dependencies
-tokio = { version = "1", features = ["rt-multi-thread", "net", "sync", "macros", "time"] }
+tokio = { version = "1", features = ["rt-multi-thread", "net", "sync", "macros", "time", "signal"] }
 tokio-tungstenite = "0.24"
 futures-util = "0.3"
 
