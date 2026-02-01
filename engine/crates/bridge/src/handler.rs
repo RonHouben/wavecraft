@@ -1,7 +1,7 @@
 //! IPC request handler and parameter host trait
 
 use crate::error::BridgeError;
-use protocol::{
+use vstkit_protocol::{
     GetAllParametersResult, GetMeterFrameResult, GetParameterParams, GetParameterResult,
     IpcRequest, IpcResponse, METHOD_GET_ALL_PARAMETERS, METHOD_GET_METER_FRAME,
     METHOD_GET_PARAMETER, METHOD_REQUEST_RESIZE, METHOD_SET_PARAMETER, MeterFrame, ParameterInfo,
@@ -75,7 +75,7 @@ impl<H: ParameterHost> IpcHandler<H> {
             Err(_e) => {
                 // Can't extract ID from malformed request, use null
                 let response =
-                    IpcResponse::error(RequestId::Number(0), protocol::IpcError::parse_error());
+                    IpcResponse::error(RequestId::Number(0), vstkit_protocol::IpcError::parse_error());
                 return serde_json::to_string(&response).unwrap();
             }
         };
@@ -206,7 +206,7 @@ impl<H: ParameterHost> IpcHandler<H> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use protocol::{ParameterType, RequestId};
+    use vstkit_protocol::{ParameterType, RequestId};
 
     // Mock ParameterHost for testing
     struct MockHost {
@@ -303,7 +303,7 @@ mod tests {
         assert!(response.result.is_none());
 
         let error = response.error.unwrap();
-        assert_eq!(error.code, protocol::ERROR_PARAM_NOT_FOUND);
+        assert_eq!(error.code, vstkit_protocol::ERROR_PARAM_NOT_FOUND);
     }
 
     #[test]
@@ -338,7 +338,7 @@ mod tests {
         assert!(response.result.is_none());
 
         let error = response.error.unwrap();
-        assert_eq!(error.code, protocol::ERROR_PARAM_OUT_OF_RANGE);
+        assert_eq!(error.code, vstkit_protocol::ERROR_PARAM_OUT_OF_RANGE);
     }
 
     #[test]
@@ -351,7 +351,7 @@ mod tests {
 
         assert!(response.error.is_some());
         let error = response.error.unwrap();
-        assert_eq!(error.code, protocol::ERROR_METHOD_NOT_FOUND);
+        assert_eq!(error.code, vstkit_protocol::ERROR_METHOD_NOT_FOUND);
     }
 
     #[test]

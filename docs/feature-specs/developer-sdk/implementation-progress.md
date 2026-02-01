@@ -14,12 +14,12 @@ Tracking implementation of the Developer SDK (Milestone 8).
 
 | Phase | Status | Progress |
 |-------|--------|----------|
-| Phase 1: Crate Restructuring | ⏳ Not Started | 0/7 steps |
+| Phase 1: Crate Restructuring | 🚧 In Progress | 1/7 steps |
 | Phase 2: API Extraction | ⏳ Not Started | 0/6 steps |
 | Phase 3: Template Repository | ⏳ Not Started | 0/6 steps |
 | Phase 4: Documentation & Polish | ⏳ Not Started | 0/6 steps |
 
-**Overall Progress:** 0/25 steps (0%)
+**Overall Progress:** 1/25 steps (4%)
 
 ---
 
@@ -27,7 +27,7 @@ Tracking implementation of the Developer SDK (Milestone 8).
 
 | Step | Task | Status | Notes |
 |------|------|--------|-------|
-| 1.1 | Rename protocol → vstkit-protocol | ⏳ | |
+| 1.1 | Rename protocol → vstkit-protocol | ✅ | Completed: directory renamed, all imports updated |
 | 1.2 | Rename bridge → vstkit-bridge | ⏳ | |
 | 1.3 | Rename metering → vstkit-metering | ⏳ | |
 | 1.4 | Rename dsp → vstkit-dsp | ⏳ | |

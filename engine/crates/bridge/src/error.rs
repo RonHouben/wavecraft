@@ -32,16 +32,16 @@ pub enum BridgeError {
 
 impl BridgeError {
     /// Convert BridgeError to IpcError from protocol
-    pub fn to_ipc_error(&self) -> protocol::IpcError {
+    pub fn to_ipc_error(&self) -> vstkit_protocol::IpcError {
         match self {
-            BridgeError::JsonParse(_) => protocol::IpcError::parse_error(),
-            BridgeError::ParameterNotFound(id) => protocol::IpcError::param_not_found(id),
+            BridgeError::JsonParse(_) => vstkit_protocol::IpcError::parse_error(),
+            BridgeError::ParameterNotFound(id) => vstkit_protocol::IpcError::param_not_found(id),
             BridgeError::ParameterOutOfRange { id, value } => {
-                protocol::IpcError::param_out_of_range(id, *value)
+                vstkit_protocol::IpcError::param_out_of_range(id, *value)
             }
-            BridgeError::UnknownMethod(method) => protocol::IpcError::method_not_found(method),
-            BridgeError::InvalidParams { reason, .. } => protocol::IpcError::invalid_params(reason),
-            BridgeError::Internal(reason) => protocol::IpcError::internal_error(reason),
+            BridgeError::UnknownMethod(method) => vstkit_protocol::IpcError::method_not_found(method),
+            BridgeError::InvalidParams { reason, .. } => vstkit_protocol::IpcError::invalid_params(reason),
+            BridgeError::Internal(reason) => vstkit_protocol::IpcError::internal_error(reason),
         }
     }
 }

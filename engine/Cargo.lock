@@ -225,10 +225,10 @@ dependencies = [
 name = "bridge"
 version = "0.3.1"
 dependencies = [
- "protocol",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
+ "vstkit-protocol",
 ]
 
 [[package]]
@@ -757,7 +757,7 @@ checksum = "d8b14ccef22fc6f5a8f4d7d768562a182c04ce9a3b3157b91390b52ddfdf1a76"
 name = "dsp"
 version = "0.3.1"
 dependencies = [
- "protocol",
+ "vstkit-protocol",
 ]
 
 [[package]]
@@ -2435,14 +2435,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "protocol"
-version = "0.3.1"
-dependencies = [
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "quote"
 version = "1.0.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2853,11 +2845,11 @@ dependencies = [
  "futures-util",
  "include_dir",
  "parking_lot",
- "protocol",
  "serde_json",
  "tao",
  "tokio",
  "tokio-tungstenite",
+ "vstkit-protocol",
  "wry",
 ]
 
@@ -3360,12 +3352,20 @@ dependencies = [
  "objc2-app-kit",
  "objc2-foundation",
  "objc2-web-kit",
- "protocol",
  "raw-window-handle 0.6.2",
  "serde_json",
+ "vstkit-protocol",
  "webview2-com",
  "windows 0.58.0",
  "wry",
+]
+
+[[package]]
+name = "vstkit-protocol"
+version = "0.3.1"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

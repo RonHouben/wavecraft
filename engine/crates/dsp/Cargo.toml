@@ -7,4 +7,4 @@ authors.workspace = true
 description = "Pure DSP algorithms for VstKit - no plugin framework dependencies"
 
 [dependencies]
-protocol.workspace = true
+vstkit-protocol.workspace = true

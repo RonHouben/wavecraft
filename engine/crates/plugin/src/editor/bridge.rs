@@ -13,7 +13,7 @@ use metering::MeterConsumer;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use nih_plug::prelude::*;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-use protocol::{ParameterInfo, ParameterType};
+use vstkit_protocol::{ParameterInfo, ParameterType};
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use crate::params::VstKitParams;
@@ -93,10 +93,10 @@ impl ParameterHost for PluginEditorBridge {
         self.get_parameter("gain").into_iter().collect()
     }
 
-    fn get_meter_frame(&self) -> Option<protocol::MeterFrame> {
+    fn get_meter_frame(&self) -> Option<vstkit_protocol::MeterFrame> {
         // Read latest meter frame from the shared consumer
         let mut consumer = self.meter_consumer.lock().unwrap();
-        consumer.read_latest().map(|frame| protocol::MeterFrame {
+        consumer.read_latest().map(|frame| vstkit_protocol::MeterFrame {
             peak_l: frame.peak_l,
             peak_r: frame.peak_r,
             rms_l: frame.rms_l,

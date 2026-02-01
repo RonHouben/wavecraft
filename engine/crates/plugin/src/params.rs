@@ -4,7 +4,7 @@
 //! to nih-plug's parameter system.
 
 use nih_plug::prelude::*;
-use protocol::PARAM_SPECS;
+use vstkit_protocol::PARAM_SPECS;
 
 /// Plugin parameters wrapped for nih-plug.
 #[derive(Params)]

@@ -16,7 +16,7 @@ default = []
 assert_process_allocs = ["nih_plug/assert_process_allocs"]
 
 [dependencies]
-protocol.workspace = true
+vstkit-protocol.workspace = true
 dsp.workspace = true
 metering.workspace = true
 bridge.workspace = true

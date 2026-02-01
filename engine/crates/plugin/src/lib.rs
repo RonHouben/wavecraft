@@ -100,7 +100,7 @@ impl Plugin for VstKitPlugin {
         // Process audio in-place with per-sample smoothing
         for mut channel_samples in buffer.iter_samples() {
             let gain_db = self.params.gain.smoothed.next();
-            let gain_linear = protocol::db_to_linear(gain_db);
+            let gain_linear = vstkit_protocol::db_to_linear(gain_db);
 
             for sample in channel_samples.iter_mut() {
                 *sample *= gain_linear;

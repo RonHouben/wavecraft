@@ -103,7 +103,7 @@ impl ParameterHost for AppState {
         ]
     }
 
-    fn get_meter_frame(&self) -> Option<protocol::MeterFrame> {
+    fn get_meter_frame(&self) -> Option<vstkit_protocol::MeterFrame> {
         // Desktop POC doesn't have metering yet
         None
     }

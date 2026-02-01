@@ -1,7 +1,7 @@
 //! Integration tests for IPC communication
 
 use bridge::{IpcHandler, ParameterHost};
-use protocol::{
+use vstkit_protocol::{
     IpcRequest, METHOD_GET_ALL_PARAMETERS, METHOD_GET_PARAMETER, METHOD_SET_PARAMETER, RequestId,
 };
 use standalone::AppState;
@@ -18,7 +18,7 @@ fn test_get_all_parameters_integration() {
     assert!(response.result.is_some());
     assert!(response.error.is_none());
 
-    let result: protocol::GetAllParametersResult =
+    let result: vstkit_protocol::GetAllParametersResult =
         serde_json::from_value(response.result.unwrap()).unwrap();
 
     assert_eq!(result.parameters.len(), 3);
@@ -43,7 +43,7 @@ fn test_get_parameter_integration() {
     assert!(response.result.is_some());
     assert!(response.error.is_none());
 
-    let result: protocol::GetParameterResult =
+    let result: vstkit_protocol::GetParameterResult =
         serde_json::from_value(response.result.unwrap()).unwrap();
 
     assert_eq!(result.id, "gain");
@@ -81,12 +81,12 @@ fn test_json_roundtrip() {
     let response_json = handler.handle_json(request_json);
 
     // Parse response
-    let response: protocol::IpcResponse = serde_json::from_str(&response_json).unwrap();
+    let response: vstkit_protocol::IpcResponse = serde_json::from_str(&response_json).unwrap();
 
     assert!(response.result.is_some());
     assert!(response.error.is_none());
 
-    let result: protocol::GetParameterResult =
+    let result: vstkit_protocol::GetParameterResult =
         serde_json::from_value(response.result.unwrap()).unwrap();
 
     assert_eq!(result.id, "mix");
@@ -124,5 +124,5 @@ fn test_parameter_value_validation() {
     assert!(response.result.is_none());
 
     let error = response.error.unwrap();
-    assert_eq!(error.code, protocol::ERROR_PARAM_OUT_OF_RANGE);
+    assert_eq!(error.code, vstkit_protocol::ERROR_PARAM_OUT_OF_RANGE);
 }

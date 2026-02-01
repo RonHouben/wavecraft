@@ -14,7 +14,7 @@
 //!
 //! ```rust,no_run
 //! use bridge::{IpcHandler, ParameterHost, BridgeError, ParameterInfo};
-//! use protocol::MeterFrame;
+//! use vstkit_protocol::MeterFrame;
 //!
 //! // Implement ParameterHost for your application state
 //! struct MyApp;
@@ -62,7 +62,7 @@ pub use error::BridgeError;
 pub use handler::{IpcHandler, ParameterHost};
 
 // Re-export protocol types used in bridge API
-pub use protocol::{
+pub use vstkit_protocol::{
     GetAllParametersResult, GetParameterParams, GetParameterResult, IpcError, IpcNotification,
     IpcRequest, IpcResponse, ParameterChangedNotification, ParameterInfo, ParameterType, RequestId,
     SetParameterParams, SetParameterResult,
