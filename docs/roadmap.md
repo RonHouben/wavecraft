@@ -7,15 +7,17 @@ This document tracks implementation progress against the milestones defined in t
 ## Progress Overview
 
 ```
-┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           ✅ M5        🚧 M6            ⏳ M7              ⏳ M8       ⭐    │
-│  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ───── WebSocket ───── Visual Testing ─── Backlog ── Done  │
-│                                                                       ▲                                                 │
-│                                                                     YOU ARE HERE                                        │
-│                                                                                                                         │
-│  Progress: [████████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 71%    │
-└───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           ✅ M5        🚧 M6            ⏳ M7          ⭐    │
+│  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ───── WebSocket ───── Visual Testing ── Done  │
+│                                                                       ▲                                    │
+│                                                                     YOU ARE HERE                           │
+│                                                                                                            │
+│  Progress: [█████████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░] 71%     │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+**See also:** [Backlog](backlog.md) — unprioritized ideas for future consideration
 
 ---
 
@@ -222,38 +224,11 @@ Add a WebSocket server to the desktop app that exposes the same IPC protocol ove
 
 ---
 
-## Milestone 8: Backlog
-
-**Status: ⏳ Not Started**
-
-> **Goal:** Low-priority items moved from other milestones for future consideration.
-
-| Task | Status | Notes |
-|------|--------|-------|
-| **CI/CD Optimization** | | |
-| CI pipeline cache optimization | ⏳ | Test Engine job rebuilds instead of using cache from Check Engine (different profiles: check vs test). Consider adding `cargo test --no-run` to prepare-engine job or combining check + test jobs. |
-| **Performance** | | |
-| Performance profiling (low buffer sizes: 32/64 samples) | ⏳ | Moved from M5 |
-| CPU stress testing | ⏳ | Moved from M5 |
-| Memory usage optimization | ⏳ | Moved from M5 |
-| **Platform Support** | | |
-| WebView2 integration (Windows) | ⏳ | Deprioritized — macOS + Ableton is primary target |
-| Linux packaging (AppImage/Flatpak) | ⏳ | Deprioritized |
-| **DAW Compatibility** | | |
-| Logic Pro (macOS, AU) | ⏳ | Secondary (nice-to-have) |
-| GarageBand (macOS, AU) | ⏳ | Secondary (nice-to-have) |
-| Reaper (all platforms) | ⏳ | Deprioritized |
-| Cubase | ⏳ | Deprioritized |
-| FL Studio | ⏳ | Deprioritized |
-| **AU Issues** | | |
-| Investigate AU custom UI issue | ⏳ | clap-wrapper shows generic view; root cause TBD |
-
----
-
 ## Changelog
 
 | Date | Update |
 |------|--------|
+| 2026-02-01 | **Backlog split from roadmap**: Created separate [backlog.md](backlog.md) for unprioritized future ideas. Removed Milestone 8 from roadmap — committed milestones now end at M7. Backlog contains: CI optimization, performance profiling, platform support, DAW compatibility, AU issues, Apple Developer-dependent items. |
 | 2026-02-01 | **Milestone 5 complete, starting M6**: Marked M5 (Polish & Optimization) as complete. Moved remaining low-priority tasks (CI cache optimization, performance profiling, format-specific parity) to new Milestone 8 (Backlog). Started Milestone 6 (WebSocket IPC Bridge) on `feature/websocket-ipc-bridge` branch. |
 | 2026-02-01 | **Dead code cleanup complete**: Established platform-gating pattern using `#[cfg(any(target_os = "macos", target_os = "windows"))]` for code that only runs on GUI platforms. Reduced `#[allow(dead_code)]` suppressions from 14 to 3 (79% reduction). Remaining 3 are valid cases (trait methods called by platform implementations). Pattern documented in new "Platform-Specific Code" section of coding-standards.md. Archived to `_archive/m5-dead-code-cleanup/`. |
 | 2026-02-01 | **Resize handle visibility complete**: Handle visibility significantly improved — opacity increased (30%→50% white), hover/drag states use accent blue (#4a9eff/#6bb0ff), size increased (24×24→36×36px button, 16×16→20×20px icon), positioned 20px from right edge (scrollbar clearance). **Bonus:** Fixed WebView background color mismatch during over-scroll (was white, now matches dark theme). Version bumped to 0.2.1. All 13 tests passing, QA approved. Archived to `_archive/resize-handle-visibility/`. |
@@ -298,13 +273,5 @@ Add a WebSocket server to the desktop app that exposes the same IPC protocol ove
 2. **Milestone 7**: Browser-Based Visual Testing
    - Playwright integration (depends on M6)
    - Visual regression test suite
-3. **Milestone 8**: Backlog
-   - CI cache optimization
-   - Performance profiling
-   - Platform support expansion
 
-### Deferred (Future Consideration)
-- **When Apple Developer account available**:
-   - Developer ID signing validation
-   - Notarization submission and Gatekeeper testing
-   - Signed release CI/CD pipeline
+**Future ideas:** See [backlog.md](backlog.md) for unprioritized items (platform support, performance, DAW compatibility, etc.)
