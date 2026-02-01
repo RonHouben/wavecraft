@@ -3,12 +3,17 @@
 //! This module provides the nih-plug Editor implementation, bridging
 //! the WebView UI with the plugin's parameter system and metering.
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use std::any::Any;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use std::sync::{Arc, Mutex};
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use metering::MeterConsumer;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use nih_plug::prelude::*;
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use crate::params::VstKitParams;
 
 mod assets;
@@ -21,32 +26,24 @@ mod macos;
 #[cfg(target_os = "windows")]
 mod windows;
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub use webview::{WebViewConfig, WebViewHandle, create_webview};
-
-/// Message types for communicating with the WebView from the editor.
-#[allow(dead_code)] // Variants defined for future IPC use
-#[derive(Debug, Clone)]
-pub enum EditorMessage {
-    ParamUpdate { id: String, value: f32 },
-    ParamModulation { id: String, offset: f32 },
-}
 
 /// WebView-based editor for the plugin.
 ///
 /// This editor creates a WebView that hosts the React UI and handles
 /// bidirectional parameter synchronization and metering.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub struct VstKitEditor {
     params: Arc<VstKitParams>,
     /// Shared meter consumer - cloned to each bridge instance
     meter_consumer: Arc<Mutex<MeterConsumer>>,
     size: Arc<Mutex<(u32, u32)>>,
-    /// Channel for sending messages to the WebView
-    #[allow(dead_code)] // Kept for future IPC enhancement
-    message_tx: Arc<Mutex<Option<std::sync::mpsc::Sender<EditorMessage>>>>,
     /// Handle to the WebView for resize operations
     webview_handle: Arc<Mutex<Option<Box<dyn WebViewHandle>>>>,
 }
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 impl VstKitEditor {
     /// Create a new WebView editor.
     pub fn new(params: Arc<VstKitParams>, meter_consumer: Arc<Mutex<MeterConsumer>>) -> Self {
@@ -54,12 +51,12 @@ impl VstKitEditor {
             params,
             meter_consumer,
             size: Arc::new(Mutex::new((800, 800))), // Default size - increased to show all content
-            message_tx: Arc::new(Mutex::new(None)),
             webview_handle: Arc::new(Mutex::new(None)),
         }
     }
 }
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 impl Editor for VstKitEditor {
     fn spawn(
         &self,
@@ -169,6 +166,7 @@ impl Editor for VstKitEditor {
 }
 
 /// Create a WebView editor.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub fn create_webview_editor(
     params: Arc<VstKitParams>,
     meter_consumer: Arc<Mutex<MeterConsumer>>,

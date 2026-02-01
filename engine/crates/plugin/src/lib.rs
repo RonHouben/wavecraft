@@ -9,9 +9,12 @@ mod params;
 use std::sync::Arc;
 
 use dsp::Processor;
-use metering::{MeterConsumer, MeterFrame, MeterProducer, create_meter_channel};
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+use metering::MeterConsumer;
+use metering::{MeterFrame, MeterProducer, create_meter_channel};
 use nih_plug::prelude::*;
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use crate::editor::create_webview_editor;
 use crate::params::VstKitParams;
 
@@ -26,17 +29,19 @@ pub struct VstKitPlugin {
     /// (editor creation/destruction and meter polling). It is NEVER touched
     /// from the audio thread, which uses `meter_producer` instead.
     /// The mutex protects against concurrent editor open/close operations.
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     meter_consumer: Arc<std::sync::Mutex<MeterConsumer>>,
 }
 
 impl Default for VstKitPlugin {
     fn default() -> Self {
-        let (meter_producer, meter_consumer) = create_meter_channel(64);
+        let (meter_producer, _meter_consumer) = create_meter_channel(64);
         Self {
             params: Arc::new(VstKitParams::default()),
             processor: Processor::new(44100.0),
             meter_producer,
-            meter_consumer: Arc::new(std::sync::Mutex::new(meter_consumer)),
+            #[cfg(any(target_os = "macos", target_os = "windows"))]
+            meter_consumer: Arc::new(std::sync::Mutex::new(_meter_consumer)),
         }
     }
 }
@@ -65,7 +70,15 @@ impl Plugin for VstKitPlugin {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-        create_webview_editor(self.params.clone(), self.meter_consumer.clone())
+        #[cfg(any(target_os = "macos", target_os = "windows"))]
+        {
+            create_webview_editor(self.params.clone(), self.meter_consumer.clone())
+        }
+
+        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+        {
+            None
+        }
     }
 
     fn initialize(

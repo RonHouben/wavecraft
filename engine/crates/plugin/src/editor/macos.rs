@@ -303,7 +303,7 @@ declare_class!(
             _controller: &WKUserContentController,
             message: &WKScriptMessage,
         ) {
-            let ivars = self.ivars();
+            let vars = self.ivars();
 
             // Get message body as string
             // SAFETY: WKScriptMessage::body() is safe to call within this message handler context
@@ -319,7 +319,7 @@ declare_class!(
 
             // Handle the IPC message
             let response = {
-                let handler = ivars.handler.lock().unwrap();
+                let handler = vars.handler.lock().unwrap();
                 handler.handle_json(&body_str)
             };
 
@@ -336,7 +336,7 @@ declare_class!(
             let js_string = NSString::from_str(&js_code);
 
             // Get webview from weak reference
-            if let Some(wv) = ivars.webview.load() {
+            if let Some(wv) = vars.webview.load() {
                 unsafe {
                     let _: () = msg_send![&*wv, evaluateJavaScript:&*js_string completionHandler:std::ptr::null_mut::<AnyObject>()];
                 }

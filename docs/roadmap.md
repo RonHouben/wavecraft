@@ -159,7 +159,7 @@ This document tracks implementation progress against the milestones defined in t
 | Cross-engine rendering consistency (WebKit vs Chromium) | ⏳ | |
 | Automated visual regression tests | ⏳ | |
 | **Make React UI default** | ✅ | Removed `webview_editor` feature flag; React UI is now the only editor. Deleted egui fallback. Version bumped to 0.2.0. Completed 2026-02-01. |
-| **Dead code cleanup** | ⏳ | Remove `#[allow(dead_code)]` suppressions and associated unused code in editor modules (webview.rs, bridge.rs, assets.rs, mod.rs, windows.rs). ~12 instances added as workaround during resize-handle feature. Now that React UI is default, assess what's actually needed vs. deletable. |
+| **Dead code cleanup** | ✅ | Platform-gating pattern established for macOS/Windows-only code. Reduced `#[allow(dead_code)]` suppressions from 14 to 3 (79% reduction). Remaining 3 are valid (trait methods called by platform impls). Patterns documented in coding-standards.md. Completed 2026-02-01. |
 | **Semantic versioning** | ✅ | Version extracted from `engine/Cargo.toml` (single source of truth), injected at build time via Vite `define`. VersionBadge component displays version in UI. **Bonus:** Browser dev mode with environment detection and lazy IPC init (partial M6). Completed 2026-01-31. |
 | CI/CD pipeline (GitHub Actions) | ✅ | Redesigned staged pipeline with 6 jobs across 3 stages. Ubuntu for lint/test (cost optimization), macos for build. Branch protection configured. Completed 2026-01-31. |
 | CI pipeline cache optimization | ⏳ | Test Engine job rebuilds instead of using cache from Check Engine (different profiles: check vs test). Consider adding `cargo test --no-run` to prepare-engine job or combining check + test jobs. |
@@ -231,6 +231,7 @@ Add a WebSocket server to the desktop app that exposes the same IPC protocol ove
 
 | Date | Update |
 |------|--------|
+| 2026-02-01 | **Dead code cleanup complete**: Established platform-gating pattern using `#[cfg(any(target_os = "macos", target_os = "windows"))]` for code that only runs on GUI platforms. Reduced `#[allow(dead_code)]` suppressions from 14 to 3 (79% reduction). Remaining 3 are valid cases (trait methods called by platform implementations). Pattern documented in new "Platform-Specific Code" section of coding-standards.md. Archived to `_archive/m5-dead-code-cleanup/`. |
 | 2026-02-01 | **Resize handle visibility complete**: Handle visibility significantly improved — opacity increased (30%→50% white), hover/drag states use accent blue (#4a9eff/#6bb0ff), size increased (24×24→36×36px button, 16×16→20×20px icon), positioned 20px from right edge (scrollbar clearance). **Bonus:** Fixed WebView background color mismatch during over-scroll (was white, now matches dark theme). Version bumped to 0.2.1. All 13 tests passing, QA approved. Archived to `_archive/resize-handle-visibility/`. |
 | 2026-02-01 | **Milestone 6 elevated to WebSocket IPC Bridge**: Expanded scope from "Browser-Based UI Testing" to full WebSocket IPC infrastructure. Addresses development workflow pain point (mock data double implementation). Original testing goals moved to new Milestone 7. Added detailed task breakdown for Rust (WebSocket server, `--dev-server` flag) and UI (transport abstraction, auto-detect). |
 | 2026-02-01 | **Added Milestone 7: Browser-Based Visual Testing**: Playwright integration and visual regression testing. Depends on M6 WebSocket bridge. Separated from M6 to maintain single-responsibility milestones. |
@@ -274,7 +275,8 @@ Add a WebSocket server to the desktop app that exposes the same IPC protocol ove
    - ✅ ~~Semantic versioning~~ (completed 2026-01-31)
    - ✅ ~~Make React UI default~~ (completed 2026-02-01)
    - ✅ ~~Resize handle visibility fix~~ (completed 2026-02-01)
-   - **Remaining:** Dead code cleanup, CI cache optimization
+   - ✅ ~~Dead code cleanup~~ (completed 2026-02-01)
+   - **Remaining:** CI cache optimization
 2. **Milestone 6**: WebSocket IPC Bridge (next major feature)
    - Eliminates mock data problem in development
    - Enables real engine communication from browser

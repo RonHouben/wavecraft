@@ -4,14 +4,21 @@
 //! across different platforms (macOS, Windows, Linux).
 
 use std::any::Any;
+
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use std::sync::{Arc, Mutex};
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use bridge::IpcHandler;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use metering::MeterConsumer;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use nih_plug::prelude::*;
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use crate::params::VstKitParams;
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use super::bridge::PluginEditorBridge;
 
 /// Platform-agnostic handle to a WebView instance.
@@ -20,19 +27,28 @@ use super::bridge::PluginEditorBridge;
 /// must support: script evaluation, resizing, and lifecycle management.
 pub trait WebViewHandle: Any + Send {
     /// Evaluate a JavaScript string in the WebView context.
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     fn evaluate_script(&self, script: &str) -> Result<(), String>;
 
     /// Resize the WebView to the given dimensions.
-    #[allow(dead_code)] // Platform trait completeness
+    ///
+    /// Note: Called by platform implementations, not from trait consumers.
+    /// The allow(dead_code) suppresses false positive from Rust's analysis.
+    #[allow(dead_code)]
     fn resize(&self, width: u32, height: u32);
 
     /// Clean up resources (called on drop).
-    #[allow(dead_code)] // Platform trait completeness
+    ///
+    /// Note: Called by platform implementations, not from trait consumers.
+    /// The allow(dead_code) suppresses false positive from Rust's analysis.
+    #[allow(dead_code)]
     fn close(&mut self);
 }
 
 /// Configuration for creating a WebView editor.
-#[allow(dead_code)] // Configuration struct for platform implementations
+///
+/// Only used on macOS/Windows where WebView is available.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub struct WebViewConfig {
     pub params: Arc<VstKitParams>,
     pub context: Arc<dyn GuiContext>,
@@ -49,6 +65,7 @@ pub struct WebViewConfig {
 ///
 /// This function dispatches to the appropriate platform implementation
 /// based on compile-time target OS.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub fn create_webview(_config: WebViewConfig) -> Result<Box<dyn WebViewHandle>, String> {
     #[cfg(target_os = "macos")]
     {
@@ -70,7 +87,9 @@ pub fn create_webview(_config: WebViewConfig) -> Result<Box<dyn WebViewHandle>, 
 ///
 /// This is shared across all platforms and wires up the bridge between
 /// the WebView's IPC messages and the nih-plug parameter system.
-#[allow(dead_code)] // Will be used when WebView editor is re-enabled
+///
+/// Only used on macOS/Windows where WebView is available.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub fn create_ipc_handler(
     params: Arc<VstKitParams>,
     context: Arc<dyn GuiContext>,
@@ -85,5 +104,7 @@ pub fn create_ipc_handler(
 ///
 /// This is the plugin-specific version for WKWebView, which uses
 /// webkit.messageHandlers instead of wry's globalThis.ipc.
-#[allow(dead_code)] // Used conditionally per platform
+///
+/// Only used on macOS/Windows where WebView is available.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub const IPC_PRIMITIVES_JS: &str = include_str!("js/ipc-primitives-plugin.js");

@@ -56,27 +56,27 @@ fn mime_type_from_path(path: &str) -> &'static str {
     }
 }
 
-/// List all embedded assets (for debugging)
-#[allow(dead_code)]
-pub fn list_assets() -> Vec<String> {
-    let mut paths = Vec::new();
-    collect_paths(&UI_ASSETS, "", &mut paths);
-    paths
-}
-
-fn collect_paths(dir: &Dir, prefix: &str, paths: &mut Vec<String>) {
-    for file in dir.files() {
-        paths.push(format!("{}{}", prefix, file.path().display()));
-    }
-    for subdir in dir.dirs() {
-        let subdir_name = subdir.path().file_name().unwrap().to_str().unwrap();
-        collect_paths(subdir, &format!("{}{}/", prefix, subdir_name), paths);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use include_dir::Dir;
+
+    /// List all embedded assets (for debugging)
+    fn list_assets() -> Vec<String> {
+        let mut paths = Vec::new();
+        collect_paths(&UI_ASSETS, "", &mut paths);
+        paths
+    }
+
+    fn collect_paths(dir: &Dir, prefix: &str, paths: &mut Vec<String>) {
+        for file in dir.files() {
+            paths.push(format!("{}{}", prefix, file.path().display()));
+        }
+        for subdir in dir.dirs() {
+            let subdir_name = subdir.path().file_name().unwrap().to_str().unwrap();
+            collect_paths(subdir, &format!("{}{}/", prefix, subdir_name), paths);
+        }
+    }
 
     #[test]
     fn test_mime_type_inference() {

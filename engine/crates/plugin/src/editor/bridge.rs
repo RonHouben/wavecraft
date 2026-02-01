@@ -3,20 +3,28 @@
 //! Implements the ParameterHost trait for use with the bridge crate,
 //! wrapping nih-plug's GuiContext for parameter automation.
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use std::sync::{Arc, Mutex};
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use bridge::{BridgeError, ParameterHost};
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use metering::MeterConsumer;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use nih_plug::prelude::*;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use protocol::{ParameterInfo, ParameterType};
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use crate::params::VstKitParams;
 
 /// Bridge between nih-plug and the IPC handler.
 ///
 /// This struct implements ParameterHost to allow the IPC handler to
 /// interact with nih-plug's parameter system through GuiContext.
-#[allow(dead_code)] // Will be used when WebView editor is re-enabled
+///
+/// Only used on macOS/Windows where WebView is available.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub struct PluginEditorBridge {
     params: Arc<VstKitParams>,
     context: Arc<dyn GuiContext>,
@@ -26,9 +34,9 @@ pub struct PluginEditorBridge {
     editor_size: Arc<Mutex<(u32, u32)>>,
 }
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 impl PluginEditorBridge {
     /// Create a new bridge with the given parameters and context.
-    #[allow(dead_code)] // Will be used when WebView editor is re-enabled
     pub fn new(
         params: Arc<VstKitParams>,
         context: Arc<dyn GuiContext>,
@@ -44,6 +52,7 @@ impl PluginEditorBridge {
     }
 }
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 impl ParameterHost for PluginEditorBridge {
     fn get_parameter(&self, id: &str) -> Option<ParameterInfo> {
         // For now, we only have the gain parameter
