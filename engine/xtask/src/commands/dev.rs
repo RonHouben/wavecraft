@@ -28,11 +28,16 @@ pub fn run(port: u16, verbose: bool) -> Result<()> {
     print_status(&format!("Starting WebSocket server on port {}", port));
 
     // Start WebSocket server in background
+    let port_str = port.to_string();
+    let mut ws_args = vec!["run", "-p", "standalone", "--release", "--", "--dev-server", "--port", &port_str];
+    if verbose {
+        ws_args.push("--verbose");
+    }
     let ws_server = Command::new("cargo")
-        .args(["run", "-p", "standalone", "--release", "--", "--dev-server", "--port", &port.to_string()])
+        .args(&ws_args)
         .current_dir(&engine_dir)
-        .stdout(if verbose { Stdio::inherit() } else { Stdio::piped() })
-        .stderr(if verbose { Stdio::inherit() } else { Stdio::piped() })
+        .stdout(Stdio::inherit())  // Always show connection messages
+        .stderr(Stdio::inherit())
         .spawn()
         .context("Failed to start WebSocket server")?;
 

@@ -20,16 +20,19 @@ pub struct WsServer<H: ParameterHost + 'static> {
     handler: Arc<IpcHandler<H>>,
     /// Shutdown signal
     shutdown_tx: broadcast::Sender<()>,
+    /// Enable verbose logging (all JSON-RPC messages)
+    verbose: bool,
 }
 
 impl<H: ParameterHost + 'static> WsServer<H> {
     /// Create a new WebSocket server
-    pub fn new(port: u16, handler: Arc<IpcHandler<H>>) -> Self {
+    pub fn new(port: u16, handler: Arc<IpcHandler<H>>, verbose: bool) -> Self {
         let (shutdown_tx, _) = broadcast::channel(1);
         Self {
             port,
             handler,
             shutdown_tx,
+            verbose,
         }
     }
 
@@ -42,6 +45,7 @@ impl<H: ParameterHost + 'static> WsServer<H> {
 
         let handler = Arc::clone(&self.handler);
         let mut shutdown_rx = self.shutdown_tx.subscribe();
+        let verbose = self.verbose;
 
         tokio::spawn(async move {
             loop {
@@ -51,7 +55,7 @@ impl<H: ParameterHost + 'static> WsServer<H> {
                             Ok((stream, addr)) => {
                                 println!("[WebSocket] Client connected: {}", addr);
                                 let handler = Arc::clone(&handler);
-                                tokio::spawn(handle_connection(handler, stream, addr));
+                                tokio::spawn(handle_connection(handler, stream, addr, verbose));
                             }
                             Err(e) => {
                                 eprintln!("[WebSocket] Accept error: {}", e);
@@ -83,6 +87,7 @@ async fn handle_connection<H: ParameterHost>(
     handler: Arc<IpcHandler<H>>,
     stream: TcpStream,
     addr: SocketAddr,
+    verbose: bool,
 ) {
     let ws_stream = match accept_async(stream).await {
         Ok(ws) => ws,
@@ -99,14 +104,18 @@ async fn handle_connection<H: ParameterHost>(
     while let Some(msg) = read.next().await {
         match msg {
             Ok(Message::Text(json)) => {
-                // Log incoming message
-                println!("[WebSocket] Received from {}: {}", addr, json);
+                // Log incoming message (verbose only)
+                if verbose {
+                    println!("[WebSocket] Received from {}: {}", addr, json);
+                }
 
                 // Route through existing IpcHandler
                 let response = handler.handle_json(&json);
 
-                // Log outgoing response
-                println!("[WebSocket] Sending to {}: {}", addr, response);
+                // Log outgoing response (verbose only)
+                if verbose {
+                    println!("[WebSocket] Sending to {}: {}", addr, response);
+                }
 
                 // Send response back to client
                 if let Err(e) = write.send(Message::Text(response)).await {
@@ -146,7 +155,7 @@ mod tests {
     async fn test_server_creation() {
         let state = AppState::new();
         let handler = Arc::new(IpcHandler::new(state));
-        let server = WsServer::new(9001, handler);
+        let server = WsServer::new(9001, handler, false);
 
         // Just verify we can create a server without panicking
         assert_eq!(server.port, 9001);
