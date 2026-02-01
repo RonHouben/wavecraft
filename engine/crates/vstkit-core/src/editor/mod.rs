@@ -26,9 +26,9 @@ use std::any::Any;
 use std::sync::{Arc, Mutex};
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-use vstkit_metering::MeterConsumer;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
 use nih_plug::prelude::*;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+use vstkit_metering::MeterConsumer;
 
 mod assets;
 mod bridge;

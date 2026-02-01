@@ -7,11 +7,11 @@
 use std::sync::{Arc, Mutex};
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
+use nih_plug::prelude::*;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use vstkit_bridge::{BridgeError, ParameterHost};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use vstkit_metering::MeterConsumer;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-use nih_plug::prelude::*;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use vstkit_protocol::{ParameterInfo, ParameterType};
 
@@ -63,7 +63,7 @@ impl<P: Params> ParameterHost for PluginEditorBridge<P> {
                 let value = unsafe { param_ptr.modulated_normalized_value() };
                 let default = unsafe { param_ptr.default_normalized_value() };
                 let unit_str = unsafe { param_ptr.unit() };
-                
+
                 Some(ParameterInfo {
                     id: param_id.clone(),
                     name: name.to_string(),
@@ -111,7 +111,7 @@ impl<P: Params> ParameterHost for PluginEditorBridge<P> {
                 let value = unsafe { param_ptr.modulated_normalized_value() };
                 let default = unsafe { param_ptr.default_normalized_value() };
                 let unit_str = unsafe { param_ptr.unit() };
-                
+
                 ParameterInfo {
                     id: param_id.clone(),
                     name: name.to_string(),
@@ -132,13 +132,15 @@ impl<P: Params> ParameterHost for PluginEditorBridge<P> {
     fn get_meter_frame(&self) -> Option<vstkit_protocol::MeterFrame> {
         // Read latest meter frame from the shared consumer
         let mut consumer = self.meter_consumer.lock().unwrap();
-        consumer.read_latest().map(|frame| vstkit_protocol::MeterFrame {
-            peak_l: frame.peak_l,
-            peak_r: frame.peak_r,
-            rms_l: frame.rms_l,
-            rms_r: frame.rms_r,
-            timestamp: frame.timestamp,
-        })
+        consumer
+            .read_latest()
+            .map(|frame| vstkit_protocol::MeterFrame {
+                peak_l: frame.peak_l,
+                peak_r: frame.peak_r,
+                rms_l: frame.rms_l,
+                rms_r: frame.rms_r,
+                timestamp: frame.timestamp,
+            })
     }
 
     fn request_resize(&self, width: u32, height: u32) -> bool {

@@ -14,16 +14,10 @@ pub use nih_plug::prelude::*;
 pub use vstkit_dsp::{Processor, Transport};
 
 // Re-export VstKit protocol types
-pub use vstkit_protocol::{
-    ParamId, ParameterInfo, ParameterType,
-    db_to_linear,
-};
+pub use vstkit_protocol::{ParamId, ParameterInfo, ParameterType, db_to_linear};
 
 // Re-export metering
-pub use vstkit_metering::{
-    MeterFrame, MeterProducer, MeterConsumer,
-    create_meter_channel,
-};
+pub use vstkit_metering::{MeterConsumer, MeterFrame, MeterProducer, create_meter_channel};
 
 // Re-export editor (platform-specific)
 #[cfg(any(target_os = "macos", target_os = "windows"))]

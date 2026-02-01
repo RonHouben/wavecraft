@@ -66,10 +66,10 @@
 pub trait ParamSet: 'static + Send + Sync {
     /// The parameter ID type (typically an enum).
     type Id: Copy + Into<ParamId>;
-    
+
     /// All parameter specifications for this set.
     const SPECS: &'static [ParamSpec];
-    
+
     /// Get the specification for a parameter by ID.
     ///
     /// # Arguments
@@ -78,10 +78,10 @@ pub trait ParamSet: 'static + Send + Sync {
     /// # Returns
     /// The parameter specification, or `None` if the ID is invalid.
     fn spec(id: Self::Id) -> Option<&'static ParamSpec>;
-    
+
     /// Iterate over all parameter specifications.
     fn iter() -> impl Iterator<Item = &'static ParamSpec>;
-    
+
     /// Get the number of parameters in this set.
     fn count() -> usize {
         Self::SPECS.len()
@@ -157,13 +157,13 @@ pub struct VstKitParams;
 
 impl ParamSet for VstKitParams {
     type Id = VstKitParamId;
-    
+
     const SPECS: &'static [ParamSpec] = PARAM_SPECS;
-    
+
     fn spec(id: Self::Id) -> Option<&'static ParamSpec> {
         Self::SPECS.iter().find(|s| s.id.0 == id as u32)
     }
-    
+
     fn iter() -> impl Iterator<Item = &'static ParamSpec> {
         Self::SPECS.iter()
     }

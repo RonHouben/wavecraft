@@ -10,10 +10,10 @@
 pub struct Transport {
     /// Current tempo in BPM (beats per minute).
     pub tempo: Option<f64>,
-    
+
     /// Current playback position in samples.
     pub pos_samples: i64,
-    
+
     /// True if the host is playing.
     pub playing: bool,
 }

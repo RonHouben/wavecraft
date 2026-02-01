@@ -9,11 +9,11 @@ use std::any::Any;
 use std::sync::{Arc, Mutex};
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
+use nih_plug::prelude::*;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use vstkit_bridge::IpcHandler;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use vstkit_metering::MeterConsumer;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-use nih_plug::prelude::*;
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use super::bridge::PluginEditorBridge;
@@ -65,7 +65,9 @@ pub struct WebViewConfig<P: Params> {
 /// This function dispatches to the appropriate platform implementation
 /// based on compile-time target OS.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub fn create_webview<P: Params>(_config: WebViewConfig<P>) -> Result<Box<dyn WebViewHandle>, String> {
+pub fn create_webview<P: Params>(
+    _config: WebViewConfig<P>,
+) -> Result<Box<dyn WebViewHandle>, String> {
     #[cfg(target_os = "macos")]
     {
         super::macos::create_macos_webview(_config)

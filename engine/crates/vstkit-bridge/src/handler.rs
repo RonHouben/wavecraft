@@ -2,13 +2,13 @@
 
 use crate::error::BridgeError;
 use crate::host::ParameterHost;
+use serde::Serialize;
 use vstkit_protocol::{
     GetAllParametersResult, GetMeterFrameResult, GetParameterParams, GetParameterResult,
     IpcRequest, IpcResponse, METHOD_GET_ALL_PARAMETERS, METHOD_GET_METER_FRAME,
-    METHOD_GET_PARAMETER, METHOD_REQUEST_RESIZE, METHOD_SET_PARAMETER,
-    RequestId, RequestResizeParams, RequestResizeResult, SetParameterParams, SetParameterResult,
+    METHOD_GET_PARAMETER, METHOD_REQUEST_RESIZE, METHOD_SET_PARAMETER, RequestId,
+    RequestResizeParams, RequestResizeResult, SetParameterParams, SetParameterResult,
 };
-use serde::Serialize;
 
 /// IPC message handler that dispatches requests to a ParameterHost
 pub struct IpcHandler<H: ParameterHost> {
@@ -51,8 +51,10 @@ impl<H: ParameterHost> IpcHandler<H> {
             Ok(req) => req,
             Err(_e) => {
                 // Can't extract ID from malformed request, use null
-                let response =
-                    IpcResponse::error(RequestId::Number(0), vstkit_protocol::IpcError::parse_error());
+                let response = IpcResponse::error(
+                    RequestId::Number(0),
+                    vstkit_protocol::IpcError::parse_error(),
+                );
                 return serde_json::to_string(&response).unwrap();
             }
         };

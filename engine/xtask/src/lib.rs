@@ -71,8 +71,8 @@ impl Platform {
 
 /// Plugin name constants.
 pub const PLUGIN_PACKAGE: &str = "vstkit-core"; // Crate name (for -p flag)
-pub const PLUGIN_NAME: &str = "vstkit";          // Binary/library name
-pub const PLUGIN_DISPLAY_NAME: &str = "VstKit";  // Display name
+pub const PLUGIN_NAME: &str = "vstkit"; // Binary/library name
+pub const PLUGIN_DISPLAY_NAME: &str = "VstKit"; // Display name
 
 /// Read version from workspace Cargo.toml.
 ///

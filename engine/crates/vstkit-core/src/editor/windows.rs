@@ -5,8 +5,8 @@
 
 use std::sync::{Arc, Mutex, Once};
 
-use vstkit_bridge::IpcHandler;
 use nih_plug::prelude::*;
+use vstkit_bridge::IpcHandler;
 use webview2_com::Microsoft::Web::WebView2::Win32::{
     COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL, ICoreWebView2, ICoreWebView2Controller,
     ICoreWebView2WebMessageReceivedEventArgs,

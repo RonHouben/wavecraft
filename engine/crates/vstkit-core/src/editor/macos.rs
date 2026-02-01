@@ -372,7 +372,7 @@ impl IpcMessageHandler {
     ) -> Retained<Self> {
         // Convert to trait object for type erasure
         let handler_trait: Arc<Mutex<dyn JsonIpcHandler>> = handler;
-        
+
         let ivars = IpcMessageHandlerIvars {
             handler: handler_trait,
             webview: Weak::from_retained(webview),

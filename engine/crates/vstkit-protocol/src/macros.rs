@@ -141,7 +141,7 @@ macro_rules! vstkit_params {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ParamSet, ParamId};
+    use crate::{ParamId, ParamSet};
 
     // Test the macro with a simple parameter set
     vstkit_params! {
@@ -174,7 +174,7 @@ mod tests {
     fn test_generated_enum() {
         let gain_id = TestParamsId::Gain;
         let freq_id = TestParamsId::Frequency;
-        
+
         assert_eq!(gain_id as u32, 0);
         assert_eq!(freq_id as u32, 1);
     }
@@ -189,7 +189,7 @@ mod tests {
     fn test_param_set_specs() {
         assert_eq!(TestParams::SPECS.len(), 2);
         assert_eq!(TestParams::count(), 2);
-        
+
         let gain_spec = &TestParams::SPECS[0];
         assert_eq!(gain_spec.name, "Gain");
         assert_eq!(gain_spec.unit, "dB");
@@ -201,7 +201,7 @@ mod tests {
         let gain_spec = TestParams::spec(TestParamsId::Gain);
         assert!(gain_spec.is_some());
         assert_eq!(gain_spec.unwrap().name, "Gain");
-        
+
         let freq_spec = TestParams::spec(TestParamsId::Frequency);
         assert!(freq_spec.is_some());
         assert_eq!(freq_spec.unwrap().name, "Frequency");

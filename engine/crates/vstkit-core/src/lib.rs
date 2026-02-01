@@ -24,11 +24,11 @@ mod params;
 
 use std::sync::Arc;
 
+use nih_plug::prelude::*;
 use vstkit_dsp::GainProcessor;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use vstkit_metering::MeterConsumer;
 use vstkit_metering::{MeterFrame, MeterProducer, create_meter_channel};
-use nih_plug::prelude::*;
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use crate::editor::create_webview_editor;

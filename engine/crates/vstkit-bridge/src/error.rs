@@ -39,8 +39,12 @@ impl BridgeError {
             BridgeError::ParameterOutOfRange { id, value } => {
                 vstkit_protocol::IpcError::param_out_of_range(id, *value)
             }
-            BridgeError::UnknownMethod(method) => vstkit_protocol::IpcError::method_not_found(method),
-            BridgeError::InvalidParams { reason, .. } => vstkit_protocol::IpcError::invalid_params(reason),
+            BridgeError::UnknownMethod(method) => {
+                vstkit_protocol::IpcError::method_not_found(method)
+            }
+            BridgeError::InvalidParams { reason, .. } => {
+                vstkit_protocol::IpcError::invalid_params(reason)
+            }
             BridgeError::Internal(reason) => vstkit_protocol::IpcError::internal_error(reason),
         }
     }
