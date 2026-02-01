@@ -10,9 +10,9 @@ use xtask::output::*;
 pub fn run(skip_notarize: bool, verbose: bool) -> Result<()> {
     print_header("VstKit Release Build");
 
-    // Step 1: Build with webview feature
+    // Step 1: Build release bundles
     print_status("Building release bundles...");
-    bundle::run_with_features(BuildMode::Release, None, &["webview_editor"], verbose)?;
+    bundle::run(BuildMode::Release, None, verbose)?;
 
     // Step 2: Sign
     print_status("Signing bundles...");

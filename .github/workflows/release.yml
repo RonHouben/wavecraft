@@ -44,7 +44,7 @@ jobs:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         run: |
           cd engine
-          cargo xtask bundle --release --features webview_editor
+          cargo xtask bundle --release
           cargo xtask sign
 
       - name: Submit for notarization

@@ -18,20 +18,20 @@ use super::bridge::PluginEditorBridge;
 ///
 /// This trait provides common operations that all platform implementations
 /// must support: script evaluation, resizing, and lifecycle management.
-#[allow(dead_code)] // Used only when webview_editor feature is enabled
 pub trait WebViewHandle: Any + Send {
     /// Evaluate a JavaScript string in the WebView context.
     fn evaluate_script(&self, script: &str) -> Result<(), String>;
 
     /// Resize the WebView to the given dimensions.
+    #[allow(dead_code)] // Platform trait completeness
     fn resize(&self, width: u32, height: u32);
 
     /// Clean up resources (called on drop).
+    #[allow(dead_code)] // Platform trait completeness
     fn close(&mut self);
 }
 
 /// Configuration for creating a WebView editor.
-#[allow(dead_code)] // Used only when webview_editor feature is enabled
 pub struct WebViewConfig {
     pub params: Arc<VstKitParams>,
     pub context: Arc<dyn GuiContext>,
@@ -48,7 +48,6 @@ pub struct WebViewConfig {
 ///
 /// This function dispatches to the appropriate platform implementation
 /// based on compile-time target OS.
-#[allow(dead_code)] // Used only when webview_editor feature is enabled
 pub fn create_webview(_config: WebViewConfig) -> Result<Box<dyn WebViewHandle>, String> {
     #[cfg(target_os = "macos")]
     {
@@ -70,7 +69,6 @@ pub fn create_webview(_config: WebViewConfig) -> Result<Box<dyn WebViewHandle>, 
 ///
 /// This is shared across all platforms and wires up the bridge between
 /// the WebView's IPC messages and the nih-plug parameter system.
-#[allow(dead_code)] // Used only when webview_editor feature is enabled
 pub fn create_ipc_handler(
     params: Arc<VstKitParams>,
     context: Arc<dyn GuiContext>,

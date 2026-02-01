@@ -13,7 +13,6 @@ use crate::params::VstKitParams;
 
 mod assets;
 mod bridge;
-mod egui;
 mod webview;
 
 #[cfg(target_os = "macos")]
@@ -25,7 +24,7 @@ mod windows;
 pub use webview::{WebViewConfig, WebViewHandle, create_webview};
 
 /// Message types for communicating with the WebView from the editor.
-#[allow(dead_code)] // Used only when webview_editor feature is enabled
+#[allow(dead_code)] // Variants defined for future IPC use
 #[derive(Debug, Clone)]
 pub enum EditorMessage {
     ParamUpdate { id: String, value: f32 },
@@ -36,13 +35,13 @@ pub enum EditorMessage {
 ///
 /// This editor creates a WebView that hosts the React UI and handles
 /// bidirectional parameter synchronization and metering.
-#[allow(dead_code)] // Used only when webview_editor feature is enabled
 pub struct VstKitEditor {
     params: Arc<VstKitParams>,
     /// Shared meter consumer - cloned to each bridge instance
     meter_consumer: Arc<Mutex<MeterConsumer>>,
     size: Arc<Mutex<(u32, u32)>>,
     /// Channel for sending messages to the WebView
+    #[allow(dead_code)] // Kept for future IPC enhancement
     message_tx: Arc<Mutex<Option<std::sync::mpsc::Sender<EditorMessage>>>>,
     /// Handle to the WebView for resize operations
     webview_handle: Arc<Mutex<Option<Box<dyn WebViewHandle>>>>,
@@ -170,18 +169,9 @@ impl Editor for VstKitEditor {
 }
 
 /// Create a WebView editor.
-#[allow(dead_code)] // Used only when webview_editor feature is enabled
 pub fn create_webview_editor(
     params: Arc<VstKitParams>,
     meter_consumer: Arc<Mutex<MeterConsumer>>,
 ) -> Option<Box<dyn Editor>> {
     Some(Box::new(VstKitEditor::new(params, meter_consumer)))
-}
-
-/// Create the fallback egui editor (when webview feature is disabled).
-pub fn create_editor(
-    params: Arc<VstKitParams>,
-    _meter_consumer: Arc<Mutex<MeterConsumer>>,
-) -> Option<Box<dyn Editor>> {
-    egui::create_egui_editor(params)
 }

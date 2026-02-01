@@ -91,7 +91,7 @@ export APPLE_APP_PASSWORD="@keychain:AC_PASSWORD"
 
 ```bash
 cd engine
-cargo xtask bundle --features webview_editor
+cargo xtask bundle
 ```
 
 ### 3.2 Ad-Hoc Sign for Local Testing

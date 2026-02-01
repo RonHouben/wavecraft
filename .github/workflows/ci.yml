@@ -226,7 +226,7 @@ jobs:
           workspaces: engine
 
       - name: Build plugin bundles
-        run: cargo xtask bundle --release --features webview_editor
+        run: cargo xtask bundle --release
         working-directory: engine
 
       - name: Ad-hoc sign (macOS)

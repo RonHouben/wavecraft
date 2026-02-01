@@ -225,13 +225,13 @@ VstKit uses a Rust-based build system (`xtask`) that provides a unified interfac
 
 ```bash
 # Fast iteration (debug build, no signing)
-cargo xtask bundle --debug --features webview_editor
+cargo xtask bundle --debug
 
 # Full build with React UI
-cargo xtask bundle --features webview_editor
+cargo xtask bundle
 
 # Build and install for DAW testing
-cargo xtask bundle --features webview_editor && cargo xtask install
+cargo xtask bundle && cargo xtask install
 
 # Build with AU wrapper (macOS)
 cargo xtask all
@@ -244,7 +244,7 @@ cargo xtask all
 cargo xtask release
 
 # Or step-by-step:
-cargo xtask bundle --release --features webview_editor
+cargo xtask bundle --release
 cargo xtask sign
 cargo xtask notarize --full
 ```
@@ -309,7 +309,7 @@ VstKit uses GitHub Actions for continuous integration and release automation.
 
 **CI Build** (`.github/workflows/ci.yml`):
 - Triggers on push/PR to `main`
-- Builds UI and plugin with `webview_editor` feature
+- Builds UI and plugin with React UI
 - Ad-hoc signs bundles for artifact verification
 - Uploads signed VST3/CLAP artifacts (30-day retention)
 

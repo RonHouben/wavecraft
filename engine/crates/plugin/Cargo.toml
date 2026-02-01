@@ -12,8 +12,6 @@ crate-type = ["cdylib"]
 
 [features]
 default = []
-# Enable WebView-based editor (React UI)
-webview_editor = []
 # Enable runtime allocation detection on audio thread (debug builds)
 assert_process_allocs = ["nih_plug/assert_process_allocs"]
 
@@ -23,7 +21,6 @@ dsp.workspace = true
 metering.workspace = true
 bridge.workspace = true
 nih_plug.workspace = true
-nih_plug_egui.workspace = true
 wry = { version = "0.47", default-features = false, features = ["os-webview"] }
 raw-window-handle = "0.6"
 serde_json = "1.0"

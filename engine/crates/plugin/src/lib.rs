@@ -12,13 +12,8 @@ use dsp::Processor;
 use metering::{MeterConsumer, MeterFrame, MeterProducer, create_meter_channel};
 use nih_plug::prelude::*;
 
-use crate::params::VstKitParams;
-
-#[cfg(feature = "webview_editor")]
 use crate::editor::create_webview_editor;
-
-#[cfg(not(feature = "webview_editor"))]
-use crate::editor::create_editor;
+use crate::params::VstKitParams;
 
 /// Main plugin struct for VstKit.
 pub struct VstKitPlugin {
@@ -31,7 +26,6 @@ pub struct VstKitPlugin {
     /// (editor creation/destruction and meter polling). It is NEVER touched
     /// from the audio thread, which uses `meter_producer` instead.
     /// The mutex protects against concurrent editor open/close operations.
-    #[allow(dead_code)] // Used via clone() in conditional compilation
     meter_consumer: Arc<std::sync::Mutex<MeterConsumer>>,
 }
 
@@ -71,15 +65,7 @@ impl Plugin for VstKitPlugin {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-        #[cfg(feature = "webview_editor")]
-        {
-            create_webview_editor(self.params.clone(), self.meter_consumer.clone())
-        }
-
-        #[cfg(not(feature = "webview_editor"))]
-        {
-            create_editor(self.params.clone(), self.meter_consumer.clone())
-        }
+        create_webview_editor(self.params.clone(), self.meter_consumer.clone())
     }
 
     fn initialize(
