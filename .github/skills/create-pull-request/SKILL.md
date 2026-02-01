@@ -1,13 +1,13 @@
 ---
 name: create-pull-request
-description: Creates a Pull Request using GitHub CLI with a PR description file. Generates PR-description.md in the feature-specs folder to avoid terminal pasting issues.
+description: Creates a Pull Request using GitHub CLI with a PR summary file. Generates PR-summary.md in the feature-specs folder to avoid terminal pasting issues.
 ---
 
 # Create Pull Request Skill
 
 ## Purpose
 
-This skill creates a GitHub Pull Request using the `gh` CLI tool. To avoid issues with pasting large text into the terminal, it first creates a `PR-description.md` file in `/docs/feature-specs/${featureName}/` and then uses this file as the PR body.
+This skill creates a GitHub Pull Request using the `gh` CLI tool. To avoid issues with pasting large text into the terminal, it first creates a `PR-summary.md` file in `/docs/feature-specs/${featureName}/` and then uses this file as the PR body.
 
 ## Prerequisites
 
@@ -71,9 +71,9 @@ Examples:
 - Branch `bugfix/slider-crash` → "Fix slider crash on invalid input"
 - Branch `cs-1234-add-reverb` → "CS-1234: Add reverb effect"
 
-### Step 5: Create PR Description File
+### Step 5: Create PR Summary File
 
-Create the file at `/docs/feature-specs/${featureName}/PR-description.md` using the template from [assets/PR-description-template.md](assets/PR-description-template.md).
+Create the file at `/docs/feature-specs/${featureName}/PR-summary.md` using the template from [assets/PR-summary-template.md](assets/PR-summary-template.md).
 
 Fill in the auto-generated content for each section:
 - **Summary**: Based on commit messages and changed files
@@ -91,10 +91,10 @@ Run the following commands:
 # Ensure branch is pushed
 git push -u origin HEAD
 
-# Create PR using the description file (use relative path from repo root)
+# Create PR using the summary file (use relative path from repo root)
 gh pr create \
   --title "${PR_TITLE}" \
-  --body-file "docs/feature-specs/${featureName}/PR-description.md" \
+  --body-file "docs/feature-specs/${featureName}/PR-summary.md" \
   --base "${BASE_BRANCH}"
 ```
 
@@ -120,13 +120,13 @@ After successful PR creation:
 2. Analyze commits: 3 commits about performance improvements
 3. Check changed files: `ui/src/components/Meter.tsx`, `ui/src/lib/audio-math.ts`
 4. Auto-generate title: "Improve meter performance and accuracy"
-5. Create `docs/feature-specs/meter-improvements/PR-description.md` with auto-generated content
-6. Run: `gh pr create --title "Improve meter performance and accuracy" --body-file "docs/feature-specs/meter-improvements/PR-description.md" --base main`
+5. Create `docs/feature-specs/meter-improvements/PR-summary.md` with auto-generated content
+6. Run: `gh pr create --title "Improve meter performance and accuracy" --body-file "docs/feature-specs/meter-improvements/PR-summary.md" --base main`
 7. Return: "✅ PR created: https://github.com/owner/repo/pull/123"
 
 ## Notes
 
-- The PR description file is committed to the repository for documentation purposes
+- The PR summary file is committed to the repository for documentation purposes
 - If the feature-specs folder doesn't exist for this feature, create it
 - Always use relative paths from the repository root in the `--body-file` argument
 - All PR details (title, description) are auto-generated from branch changes - no user input required
