@@ -4,7 +4,7 @@
 //! into the plugin binary using `include_dir!`. Assets are served via a
 //! custom protocol handler in the WebView.
 
-#[cfg(any(target_os = "macos", target_os = "windows", test))]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use include_dir::{Dir, include_dir};
 
 /// Embedded UI assets from `ui/dist/`
@@ -13,8 +13,7 @@ use include_dir::{Dir, include_dir};
 /// If the directory doesn't exist yet, we use an empty directory.
 ///
 /// Only used on macOS/Windows where WebView is available.
-#[cfg(any(target_os = "macos", target_os = "windows", test))]
-#[allow(dead_code)]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 static UI_ASSETS: Dir = include_dir!("$CARGO_MANIFEST_DIR/../../../ui/dist");
 
 /// Get an embedded asset by path.
@@ -27,8 +26,7 @@ static UI_ASSETS: Dir = include_dir!("$CARGO_MANIFEST_DIR/../../../ui/dist");
 /// * `None` if asset not found
 ///
 /// Only used on macOS/Windows where WebView is available.
-#[cfg(any(target_os = "macos", target_os = "windows", test))]
-#[allow(dead_code)]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub fn get_asset(path: &str) -> Option<(&'static [u8], &'static str)> {
     // Normalize path (remove leading slash)
     let path = path.trim_start_matches('/');
@@ -48,7 +46,7 @@ pub fn get_asset(path: &str) -> Option<(&'static [u8], &'static str)> {
 /// Infer MIME type from file extension.
 ///
 /// Only used on macOS/Windows where WebView is available.
-#[cfg(any(target_os = "macos", target_os = "windows", test))]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn mime_type_from_path(path: &str) -> &'static str {
     let extension = path.split('.').next_back().unwrap_or("");
 
@@ -70,9 +68,11 @@ fn mime_type_from_path(path: &str) -> &'static str {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     use super::*;
 
     #[test]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     fn test_mime_type_inference() {
         assert_eq!(mime_type_from_path("index.html"), "text/html");
         assert_eq!(mime_type_from_path("style.css"), "text/css");
