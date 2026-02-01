@@ -25,39 +25,36 @@ pub fn run_with_features(
     let package_name = package.unwrap_or(PLUGIN_NAME);
     let engine_dir = paths::engine_dir()?;
 
-    // If webview_editor feature is enabled, build the UI assets first
-    if features.contains(&"webview_editor") {
-        print_status("Building React UI assets...");
-        let ui_dir = engine_dir
-            .parent()
-            .ok_or_else(|| anyhow::anyhow!("Could not find workspace root"))?
-            .join("ui");
+    // Build the React UI assets
+    print_status("Building React UI assets...");
+    let ui_dir = engine_dir
+        .parent()
+        .ok_or_else(|| anyhow::anyhow!("Could not find workspace root"))?
+        .join("ui");
 
-        if !ui_dir.exists() {
-            anyhow::bail!("UI directory not found: {}", ui_dir.display());
-        }
-
-        // Read version from workspace Cargo.toml
-        let version =
-            xtask::read_workspace_version().context("Failed to read workspace version")?;
-
-        if verbose {
-            println!("  Plugin version: {}", version);
-        }
-
-        let npm_build = Command::new("npm")
-            .current_dir(&ui_dir)
-            .env("VITE_APP_VERSION", &version)
-            .args(["run", "build"])
-            .status()
-            .context("Failed to run npm build")?;
-
-        if !npm_build.success() {
-            anyhow::bail!("UI build failed");
-        }
-
-        print_success("React UI built successfully");
+    if !ui_dir.exists() {
+        anyhow::bail!("UI directory not found: {}", ui_dir.display());
     }
+
+    // Read version from workspace Cargo.toml
+    let version = xtask::read_workspace_version().context("Failed to read workspace version")?;
+
+    if verbose {
+        println!("  Plugin version: {}", version);
+    }
+
+    let npm_build = Command::new("npm")
+        .current_dir(&ui_dir)
+        .env("VITE_APP_VERSION", &version)
+        .args(["run", "build"])
+        .status()
+        .context("Failed to run npm build")?;
+
+    if !npm_build.success() {
+        anyhow::bail!("UI build failed");
+    }
+
+    print_success("React UI built successfully");
 
     print_status(&format!("Building {} plugin...", package_name));
 

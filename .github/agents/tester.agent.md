@@ -52,16 +52,59 @@ When starting a new testing session:
 2. **Review implementation** by reading relevant code and documentation
 3. **Create test plan** at `docs/feature-specs/{feature}/test-plan.md`
 
-### Phase 2: Execute Tests
+### Phase 2: Run Local CI Pipeline
 
-For each test case:
+**Primary testing method**: Run the full CI pipeline locally using `act`. This ensures exact parity with GitHub Actions.
+
+#### Prerequisites Check
+
+Before running CI, verify Docker is available:
+
+```bash
+docker info > /dev/null 2>&1 && echo "✅ Docker is running" || echo "❌ Start Docker Desktop first"
+```
+
+#### Run Full CI Pipeline
+
+```bash
+act -W .github/workflows/ci.yml \
+    --container-architecture linux/amd64 \
+    -P ubuntu-latest=vstkit-ci:latest \
+    --pull=false \
+    --artifact-server-path /tmp/act-artifacts
+```
+
+This runs all Linux-compatible CI jobs:
+
+| Job | What It Checks |
+|-----|----------------|
+| `check-ui` | Prettier, ESLint, TypeScript |
+| `test-ui` | Vitest unit tests |
+| `prepare-engine` | UI build + Rust compilation |
+| `check-engine` | cargo fmt + clippy |
+| `test-engine` | cargo test |
+
+#### macOS-Only Testing (Cannot Run in Docker)
+
+The `build-plugin` job requires macOS. Test manually:
+
+```bash
+cd /Users/ronhouben/code/private/vstkit/engine
+cargo xtask bundle --release
+cargo xtask sign --adhoc
+cargo xtask sign --verify
+```
+
+### Phase 3: Execute Feature-Specific Tests
+
+For each test case in the test plan:
 
 1. **Announce the test** - Tell the user which test you're running
 2. **Execute commands** - Run terminal commands yourself to verify behavior
 3. **Document results** - Update test-plan.md with PASS/FAIL/BLOCKED status
 4. **Record issues** - Document any failures with detailed information
 
-### Phase 3: Report & Handoff
+### Phase 4: Report & Handoff
 
 After testing is complete:
 
@@ -92,9 +135,9 @@ Create the test plan at `docs/feature-specs/{feature}/test-plan.md`:
 
 ## Prerequisites
 
-- [ ] Build passes: `cargo build --workspace`
-- [ ] Tests pass: `cargo test --workspace`
-- [ ] UI builds: `cd ui && npm run build`
+- [ ] Docker is running: `docker info`
+- [ ] CI image exists: `docker images | grep vstkit-ci`
+- [ ] Local CI passes (see Phase 2)
 
 ## Test Cases
 
@@ -153,46 +196,72 @@ Create the test plan at `docs/feature-specs/{feature}/test-plan.md`:
 
 ## Terminal Command Execution
 
-You have permission to execute terminal commands to verify behavior. Common commands:
+You have permission to execute terminal commands to verify behavior.
+
+### Primary: Local CI Pipeline
 
 ```bash
-# Build verification
-cargo build --workspace
-cargo build --release
+# Check Docker is running
+docker info > /dev/null 2>&1 && echo "✅ Docker running" || echo "❌ Start Docker"
 
-# Run tests
-cargo test --workspace
-cargo test -p {crate_name}
-cargo test {test_name} -- --nocapture
+# Run full CI pipeline (recommended)
+act -W .github/workflows/ci.yml \
+    --container-architecture linux/amd64 \
+    -P ubuntu-latest=vstkit-ci:latest \
+    --pull=false \
+    --artifact-server-path /tmp/act-artifacts
+
+# Run specific job (for debugging failures)
+act -j check-engine -W .github/workflows/ci.yml \
+    --container-architecture linux/amd64 \
+    -P ubuntu-latest=vstkit-ci:latest \
+    --pull=false \
+    --artifact-server-path /tmp/act-artifacts
+```
+
+### Fallback: Individual Commands (for debugging CI failures)
+
+```bash
+# UI checks
+cd ui && npm run format:check   # Prettier
+cd ui && npm run lint           # ESLint
+cd ui && npm run typecheck      # TypeScript
+cd ui && npm test               # Vitest
+
+# Engine checks
+cd engine && cargo fmt --check
+cd engine && cargo clippy --workspace --all-targets -- -D warnings
+cd engine && cargo test --workspace
+```
+
+### macOS-Only (cannot run in Docker)
+
+```bash
+# Plugin bundling and signing
+cd engine && cargo xtask bundle --release
+cd engine && cargo xtask sign --adhoc
+cd engine && cargo xtask sign --verify
 
 # Run the desktop app
-cargo run -p desktop
-
-# Build and check plugins
-cargo xtask bundle
-
-# UI commands
-cd ui && npm run build
-cd ui && npm run dev
-cd ui && npm test
-
-# Check for common issues
-cargo fmt --check
-cargo clippy --workspace
+cd engine && cargo run -p desktop
 ```
 
 ## Guidelines
 
 ### DO:
+- **Run local CI pipeline first** as the primary validation method
+- Use individual commands only to debug CI failures
 - Execute commands yourself to verify behavior
 - Document EVERY test result in test-plan.md
 - Record detailed issue information including command output
 - Update test status immediately after each test
 - Ask the user for input only when manual interaction is required (e.g., UI testing)
 - Track progress using the todo list tool
+- Test macOS-specific jobs (bundle, sign) manually
 
 ### DON'T:
 - **NEVER modify source code** (only test-plan.md)
+- Don't skip the CI pipeline check
 - Don't skip documenting failures
 - Don't assume tests pass without verification
 - Don't make code changes "just to make tests pass"

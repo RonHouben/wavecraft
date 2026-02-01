@@ -33,9 +33,8 @@ use super::webview::{WebViewConfig, WebViewHandle};
 /// Windows WebView handle.
 ///
 /// Holds the WebView2 controller and web view instances.
-#[allow(dead_code)] // Used only when webview_editor feature is enabled
 pub struct WindowsWebView {
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Stored for future window operations (resize, focus management)
     hwnd: HWND,
     _handler: Arc<Mutex<IpcHandler<PluginEditorBridge>>>,
     controller: Arc<Mutex<Option<ICoreWebView2Controller>>>,
@@ -90,7 +89,6 @@ impl WebViewHandle for WindowsWebView {
 }
 
 /// Create a Windows WebView editor.
-#[allow(dead_code)] // Used only when webview_editor feature is enabled
 pub fn create_windows_webview(config: WebViewConfig) -> Result<Box<dyn WebViewHandle>, String> {
     static COM_INIT: Once = Once::new();
     COM_INIT.call_once(|| unsafe {

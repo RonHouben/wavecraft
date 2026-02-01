@@ -154,10 +154,11 @@ This document tracks implementation progress against the milestones defined in t
 | CPU stress testing | ⏳ | |
 | Memory usage optimization | ⏳ | |
 | UX polish | ⏳ | |
+| Resize handle visibility | ⏳ | Handle overlaps scrollbar, low contrast, too small. Improve visibility and usability. |
 | Format-specific feature parity verification | ⏳ | |
 | Cross-engine rendering consistency (WebKit vs Chromium) | ⏳ | |
 | Automated visual regression tests | ⏳ | |
-| Make React UI default (remove feature flag) | ⏳ | Remove `webview` feature flag; React UI should be the default editor. Investigate if old Rust GUI code (`nih-plug` native UI) can be fully removed. |
+| Make React UI default (remove feature flag) | 🚧 | Remove `webview_editor` feature flag; React UI is now the default editor. In testing. |
 | **Semantic versioning** | ✅ | Version extracted from `engine/Cargo.toml` (single source of truth), injected at build time via Vite `define`. VersionBadge component displays version in UI. **Bonus:** Browser dev mode with environment detection and lazy IPC init (partial M6). Completed 2026-01-31. |
 | CI/CD pipeline (GitHub Actions) | ✅ | Redesigned staged pipeline with 6 jobs across 3 stages. Ubuntu for lint/test (cost optimization), macos for build. Branch protection configured. Completed 2026-01-31. |
 | CI pipeline cache optimization | ⏳ | Test Engine job rebuilds instead of using cache from Check Engine (different profiles: check vs test). Consider adding `cargo test --no-run` to prepare-engine job or combining check + test jobs. |

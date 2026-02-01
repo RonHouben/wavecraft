@@ -29,7 +29,6 @@ use super::webview::{WebViewConfig, WebViewHandle};
 /// macOS WebView handle.
 ///
 /// Holds the WKWebView and associated resources.
-#[allow(dead_code)] // Used only when webview_editor feature is enabled
 pub struct MacOSWebView {
     webview: Rc<Mutex<Option<Retained<WKWebView>>>>,
     _handler: Arc<Mutex<IpcHandler<PluginEditorBridge>>>,
@@ -81,7 +80,6 @@ impl WebViewHandle for MacOSWebView {
 }
 
 /// Create a macOS WebView editor.
-#[allow(dead_code)] // Used only when webview_editor feature is enabled
 pub fn create_macos_webview(config: WebViewConfig) -> Result<Box<dyn WebViewHandle>, String> {
     let mtm = MainThreadMarker::new()
         .ok_or_else(|| "WebView creation must happen on main thread".to_string())?;
@@ -257,7 +255,6 @@ fn load_ui(webview: &WKWebView) -> Result<(), String> {
 }
 
 /// Extract NSView from ParentWindowHandle.
-#[allow(dead_code)] // Used only when webview_editor feature is enabled
 unsafe fn get_parent_view(handle: ParentWindowHandle) -> Result<Retained<NSView>, String> {
     match handle {
         ParentWindowHandle::AppKitNsView(ns_view_ptr) => {
@@ -278,7 +275,6 @@ unsafe fn get_parent_view(handle: ParentWindowHandle) -> Result<Retained<NSView>
 }
 
 /// IPC message handler for WKWebView script messages.
-#[allow(dead_code)] // Used only when webview_editor feature is enabled
 struct IpcMessageHandlerIvars {
     handler: Arc<Mutex<IpcHandler<PluginEditorBridge>>>,
     webview: Weak<WKWebView>,
@@ -367,7 +363,6 @@ impl IpcMessageHandler {
 }
 
 /// URL Scheme handler for serving embedded assets.
-#[allow(dead_code)] // Used only when webview_editor feature is enabled
 struct AssetSchemeHandlerIvars {}
 
 declare_class!(

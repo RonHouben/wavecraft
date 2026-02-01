@@ -651,6 +651,38 @@ Linting runs automatically on all PRs via `.github/workflows/lint.yml`:
 
 ## General
 
+### Versioning
+
+**Rule:** Increment the version number during the coding phase of each feature.
+
+The version is defined in `engine/Cargo.toml` under `[workspace.package]` and is the **single source of truth**. It gets injected into the UI at build time via Vite's `define` configuration.
+
+**When to bump:**
+- **Minor version** (0.X.0): Significant features, architectural changes, milestone completions
+- **Patch version** (0.0.X): Small features, bug fixes, polish items, documentation updates
+
+**Examples:**
+- Adding WebSocket IPC bridge → Minor bump (0.2.0 → 0.3.0)
+- Removing a feature flag → Patch bump (0.2.0 → 0.2.1)
+- Performance optimization → Patch bump
+- New UI component → Patch bump (unless it's a major feature)
+
+**Why during coding:**
+- Allows testers to verify the correct version is rendered in the UI
+- Creates clear traceability between builds and features
+- Ensures version is updated before testing, not as an afterthought
+
+**Example:**
+```toml
+# engine/Cargo.toml
+[workspace.package]
+version = "0.2.0"  # Bump this when implementing a new feature
+```
+
+The VersionBadge component in the UI displays this version (e.g., "v0.2.0").
+
+---
+
 ### Comments and Documentation
 
 - Use `///` doc comments for public APIs
