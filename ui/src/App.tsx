@@ -38,7 +38,7 @@ function App(): React.JSX.Element {
         <div className="mx-auto flex max-w-3xl items-center justify-between">
           <div className="flex-1 text-center">
             <h1 className="mb-2 bg-gradient-to-r from-accent to-accent-light bg-clip-text text-2xl text-transparent">
-              VstKit — Plugin UI
+              VstKit — Plugin UI Test
             </h1>
             <p className="text-sm text-gray-400">WebView ↔ Rust IPC Demo</p>
           </div>

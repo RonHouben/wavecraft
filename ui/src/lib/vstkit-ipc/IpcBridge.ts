@@ -63,6 +63,8 @@ export class IpcBridge {
    * Check if the bridge is connected
    */
   public isConnected(): boolean {
+    // Trigger lazy initialization so transport gets created
+    this.initialize();
     return this.transport?.isConnected() ?? false;
   }
 
