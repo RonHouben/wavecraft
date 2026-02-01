@@ -12,7 +12,7 @@ use include_dir::{Dir, include_dir};
 /// If the directory doesn't exist yet, we use an empty directory.
 ///
 /// Only used on macOS/Windows where WebView is available.
-#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 static UI_ASSETS: Dir = include_dir!("$CARGO_MANIFEST_DIR/../../../ui/dist");
 
 /// Get an embedded asset by path.
@@ -25,7 +25,7 @@ static UI_ASSETS: Dir = include_dir!("$CARGO_MANIFEST_DIR/../../../ui/dist");
 /// * `None` if asset not found
 ///
 /// Only used on macOS/Windows where WebView is available.
-#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub fn get_asset(path: &str) -> Option<(&'static [u8], &'static str)> {
     // Normalize path (remove leading slash)
     let path = path.trim_start_matches('/');
@@ -45,7 +45,7 @@ pub fn get_asset(path: &str) -> Option<(&'static [u8], &'static str)> {
 /// Infer MIME type from file extension.
 ///
 /// Only used on macOS/Windows where WebView is available.
-#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 fn mime_type_from_path(path: &str) -> &'static str {
     let extension = path.split('.').next_back().unwrap_or("");
 

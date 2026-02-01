@@ -12,6 +12,7 @@ use nih_plug::prelude::*;
 
 use crate::params::VstKitParams;
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use super::bridge::PluginEditorBridge;
 
 /// Platform-agnostic handle to a WebView instance.

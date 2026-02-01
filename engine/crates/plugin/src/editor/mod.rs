@@ -21,7 +21,11 @@ mod macos;
 #[cfg(target_os = "windows")]
 mod windows;
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub use webview::{WebViewConfig, WebViewHandle, create_webview};
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+pub use webview::WebViewHandle;
 
 /// WebView-based editor for the plugin.
 ///
