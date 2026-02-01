@@ -159,6 +159,7 @@ This document tracks implementation progress against the milestones defined in t
 | Cross-engine rendering consistency (WebKit vs Chromium) | ⏳ | |
 | Automated visual regression tests | ⏳ | |
 | **Make React UI default** | ✅ | Removed `webview_editor` feature flag; React UI is now the only editor. Deleted egui fallback. Version bumped to 0.2.0. Completed 2026-02-01. |
+| **Dead code cleanup** | ⏳ | Remove `#[allow(dead_code)]` suppressions and associated unused code in editor modules (webview.rs, bridge.rs, assets.rs, mod.rs, windows.rs). ~12 instances added as workaround during resize-handle feature. Now that React UI is default, assess what's actually needed vs. deletable. |
 | **Semantic versioning** | ✅ | Version extracted from `engine/Cargo.toml` (single source of truth), injected at build time via Vite `define`. VersionBadge component displays version in UI. **Bonus:** Browser dev mode with environment detection and lazy IPC init (partial M6). Completed 2026-01-31. |
 | CI/CD pipeline (GitHub Actions) | ✅ | Redesigned staged pipeline with 6 jobs across 3 stages. Ubuntu for lint/test (cost optimization), macos for build. Branch protection configured. Completed 2026-01-31. |
 | CI pipeline cache optimization | ⏳ | Test Engine job rebuilds instead of using cache from Check Engine (different profiles: check vs test). Consider adding `cargo test --no-run` to prepare-engine job or combining check + test jobs. |
@@ -193,6 +194,7 @@ Currently, the UI can only communicate with the Rust engine when running inside 
 
 | Date | Update |
 |------|--------|
+| 2026-02-01 | **Added dead code cleanup task**: ~12 `#[allow(dead_code)]` suppressions in editor modules (webview.rs, bridge.rs, assets.rs, mod.rs, windows.rs) need review. Added as workaround during resize-handle feature; now that React UI is default, unused code should be removed. |
 | 2026-02-01 | **React UI default complete**: Removed `webview_editor` feature flag, deleted egui fallback editor, simplified build commands. React UI is now the only editor implementation. Version bumped to 0.2.0. QA approved. Archived to `_archive/react-ui-default/`. |
 | 2026-01-31 | **Semantic versioning complete**: Version extracted from `engine/Cargo.toml` (single source of truth), injected at build time via Vite `define`, displayed in UI via `VersionBadge` component. 8/8 manual tests + 35/35 unit tests passing. **Bonus delivery:** Browser development mode with environment detection and lazy IPC initialization — unblocks browser-based UI testing (partial Milestone 6). QA approved. Archived to `_archive/semantic-versioning/`. |
 | 2026-01-31 | **CI/CD pipeline redesign complete**: New staged pipeline with 6 specialized jobs (typecheck-ui, lint-ui, lint-engine, test-ui, test-engine, build-plugin). Stage 1 (fast feedback) on ubuntu, Stage 2 (tests) on ubuntu, Stage 3 (build) on macos (main only). Concurrency control, artifact sharing, branch protection. PR time <5 min, cost optimized (~90% ubuntu runners). Archived to `_archive/ci-cd-pipeline-redesign/`. |

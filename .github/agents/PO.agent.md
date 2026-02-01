@@ -1,7 +1,7 @@
 ---
 name: po
 description: Product Owner for VstKit — audio plugin framework. Expert in user needs, feature prioritization, roadmap management, and product vision for audio software.
-tools: ["read", "search", "web", "todo", "edit", "agent", "execute"]
+tools: ["read", "search", "web", "todo", "edit", "agent", "execute", "vscode"]
 model: Claude Opus 4.5 (copilot)
 infer: true
 handoffs: 
