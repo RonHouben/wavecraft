@@ -5,6 +5,7 @@ use std::process::Command;
 
 use xtask::BuildMode;
 use xtask::PLUGIN_NAME;
+use xtask::PLUGIN_PACKAGE;
 use xtask::cargo_command;
 use xtask::output::*;
 use xtask::paths;
@@ -23,7 +24,7 @@ pub fn run_with_features(
     features: &[&str],
     verbose: bool,
 ) -> Result<()> {
-    let package_name = package.unwrap_or(PLUGIN_NAME);
+    let package_name = package.unwrap_or(PLUGIN_PACKAGE);
     let engine_dir = paths::engine_dir()?;
 
     // Build the React UI assets
@@ -111,11 +112,13 @@ pub fn run_with_features(
     }
 
     // Call nih_plug_xtask::main_with_args with features
-    if let Err(e) = nih_plug_xtask::main_with_args(package_name, bundle_args) {
+    // Note: nih_plug_xtask expects the binary name (PLUGIN_NAME), not the package name
+    if let Err(e) = nih_plug_xtask::main_with_args(PLUGIN_NAME, bundle_args) {
         anyhow::bail!("Bundle command failed: {}", e);
     }
 
     // Verify bundles were created
+    // Note: nih_plug_xtask creates bundles using the package name (vstkit-core)
     let bundled_dir = paths::bundled_dir()?;
     let vst3_bundle = bundled_dir.join(format!("{}.vst3", package_name));
     let clap_bundle = bundled_dir.join(format!("{}.clap", package_name));
