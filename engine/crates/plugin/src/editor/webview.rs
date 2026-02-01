@@ -3,8 +3,8 @@
 //! Provides a platform-agnostic interface for creating and managing WebViews
 //! across different platforms (macOS, Windows, Linux).
 
-#[cfg(any(target_os = "macos", target_os = "windows"))]
 use std::any::Any;
+
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use std::sync::{Arc, Mutex};
 
