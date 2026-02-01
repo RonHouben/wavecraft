@@ -7,7 +7,7 @@
 use std::sync::{Arc, Mutex};
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-use bridge::{BridgeError, ParameterHost};
+use vstkit_bridge::{BridgeError, ParameterHost};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use metering::MeterConsumer;
 #[cfg(any(target_os = "macos", target_os = "windows"))]

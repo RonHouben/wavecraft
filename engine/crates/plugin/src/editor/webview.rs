@@ -9,7 +9,7 @@ use std::any::Any;
 use std::sync::{Arc, Mutex};
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-use bridge::IpcHandler;
+use vstkit_bridge::IpcHandler;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use metering::MeterConsumer;
 #[cfg(any(target_os = "macos", target_os = "windows"))]

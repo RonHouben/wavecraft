@@ -4,7 +4,7 @@
 //! used by the native WKWebView transport, enabling real-time communication
 //! between a browser-based UI and the Rust engine during development.
 
-use bridge::{IpcHandler, ParameterHost};
+use vstkit_bridge::{IpcHandler, ParameterHost};
 use futures_util::{SinkExt, StreamExt};
 use std::net::SocketAddr;
 use std::sync::Arc;

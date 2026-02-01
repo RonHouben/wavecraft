@@ -5,7 +5,7 @@
 
 use crate::app::AppState;
 use crate::assets;
-use bridge::IpcHandler;
+use vstkit_bridge::IpcHandler;
 use std::borrow::Cow;
 use std::sync::Arc;
 use tao::{

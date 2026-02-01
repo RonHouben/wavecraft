@@ -5,7 +5,7 @@
 
 use std::sync::{Arc, Mutex, Once};
 
-use bridge::IpcHandler;
+use vstkit_bridge::IpcHandler;
 use nih_plug::prelude::*;
 use webview2_com::Microsoft::Web::WebView2::Win32::{
     COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL, ICoreWebView2, ICoreWebView2Controller,

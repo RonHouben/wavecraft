@@ -222,16 +222,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bridge"
-version = "0.3.1"
-dependencies = [
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "vstkit-protocol",
-]
-
-[[package]]
 name = "bumpalo"
 version = "3.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2840,7 +2830,6 @@ name = "standalone"
 version = "0.3.1"
 dependencies = [
  "atomic_float 1.1.0",
- "bridge",
  "clap",
  "futures-util",
  "include_dir",
@@ -2849,6 +2838,7 @@ dependencies = [
  "tao",
  "tokio",
  "tokio-tungstenite",
+ "vstkit-bridge",
  "vstkit-protocol",
  "wry",
 ]
@@ -3343,7 +3333,6 @@ name = "vstkit"
 version = "0.3.1"
 dependencies = [
  "block2 0.5.1",
- "bridge",
  "dsp",
  "include_dir",
  "metering",
@@ -3354,10 +3343,21 @@ dependencies = [
  "objc2-web-kit",
  "raw-window-handle 0.6.2",
  "serde_json",
+ "vstkit-bridge",
  "vstkit-protocol",
  "webview2-com",
  "windows 0.58.0",
  "wry",
+]
+
+[[package]]
+name = "vstkit-bridge"
+version = "0.3.1"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "vstkit-protocol",
 ]
 
 [[package]]

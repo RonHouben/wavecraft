@@ -19,7 +19,7 @@ assert_process_allocs = ["nih_plug/assert_process_allocs"]
 vstkit-protocol.workspace = true
 dsp.workspace = true
 metering.workspace = true
-bridge.workspace = true
+vstkit-bridge.workspace = true
 nih_plug.workspace = true
 wry = { version = "0.47", default-features = false, features = ["os-webview"] }
 raw-window-handle = "0.6"

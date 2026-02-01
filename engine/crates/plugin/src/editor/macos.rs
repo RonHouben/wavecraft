@@ -20,7 +20,7 @@ use objc2_web_kit::{
     WKWebViewConfiguration,
 };
 
-use bridge::IpcHandler;
+use vstkit_bridge::IpcHandler;
 
 use super::assets;
 use super::bridge::PluginEditorBridge;

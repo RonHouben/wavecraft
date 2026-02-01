@@ -4,7 +4,7 @@
 //! demonstrating the pattern that will be used in the actual plugin.
 
 use atomic_float::AtomicF32;
-use bridge::{BridgeError, ParameterHost, ParameterInfo, ParameterType};
+use vstkit_bridge::{BridgeError, ParameterHost, ParameterInfo, ParameterType};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 

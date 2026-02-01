@@ -1,6 +1,6 @@
 //! Latency benchmarks for IPC communication
 
-use bridge::IpcHandler;
+use vstkit_bridge::IpcHandler;
 use vstkit_protocol::{IpcRequest, METHOD_GET_PARAMETER, RequestId};
 use standalone::AppState;
 use std::time::Instant;
