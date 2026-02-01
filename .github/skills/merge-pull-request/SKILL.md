@@ -58,9 +58,6 @@ gh pr merge --squash --delete-branch --subject "feat: Feature title" --body "Des
 # Switch to main and pull
 git checkout main
 git pull origin main
-
-# Prune stale remote tracking branches
-git fetch --prune
 ```
 
 **Note:** Local feature branch is kept for reference. Delete manually with `git branch -d <branch>` when no longer needed.
