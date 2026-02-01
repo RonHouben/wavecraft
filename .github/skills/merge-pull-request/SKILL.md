@@ -12,7 +12,7 @@ Merges an approved Pull Request using `gh pr merge`, cleans up the feature branc
 ## Prerequisites
 
 - GitHub CLI (`gh`) installed and authenticated
-- PR must exist and be approved (or no required reviews)
+- PR must exist and be **approved** (at least one approval required)
 - CI checks must pass
 
 ## Workflow
@@ -29,8 +29,10 @@ gh pr view --json state,reviewDecision,statusCheckRollup
 
 Verify:
 - `state: OPEN`
-- `reviewDecision: APPROVED` (if reviews required)
+- `reviewDecision: APPROVED` (**required** — do not merge without approval)
 - All status checks passing
+
+**If not approved:** Stop and inform the user that the PR needs approval before merging.
 
 ### Step 2: Merge the PR
 
@@ -79,7 +81,7 @@ git log --oneline -5
 | Error | Solution |
 |-------|----------|
 | CI checks failing | Wait for CI or investigate failures |
-| Review required | Request review or get approval |
+| Not approved | **Do not merge.** Inform user PR requires approval first |
 | Merge conflicts | Resolve conflicts locally, push, then merge |
 | Branch protection | Ensure all requirements met |
 
@@ -89,11 +91,12 @@ git log --oneline -5
 
 **Agent workflow:**
 1. Run `gh pr status` to identify current PR
-2. Verify CI passes with `gh pr checks`
-3. Run `gh pr merge --squash --delete-branch`
-4. Switch to main: `git checkout main && git pull`
-5. Clean up: `git branch -d feature/branch-name && git fetch --prune`
-6. Confirm: "✅ PR #123 merged and branch cleaned up"
+2. Check approval: `gh pr view --json reviewDecision` — must be `APPROVED`
+3. Verify CI passes with `gh pr checks`
+4. Run `gh pr merge --squash --delete-branch`
+5. Switch to main: `git checkout main && git pull`
+6. Clean up: `git branch -d feature/branch-name && git fetch --prune`
+7. Confirm: "✅ PR #123 merged and branch cleaned up"
 
 ## Notes
 
