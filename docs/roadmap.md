@@ -272,17 +272,20 @@ Add a WebSocket server to the standalone app that exposes the same IPC protocol 
 
 ## Milestone 8: Developer SDK
 
-**Status: ⏳ Not Started**
+**Status: 🚧 In Progress (Phase 1)**
 
 > **Goal:** Transform VstKit from an internal framework into a reusable development kit that other developers can use to build their own VST/CLAP plugins with Rust + React.
 
 **Strategic Context:**
 VstKit has achieved its internal development goals (Milestones 1–7). The next step is to make it **accessible to other developers** as a proper SDK/toolkit. This requires rethinking packaging, documentation, and developer experience.
 
+**User Stories:** [docs/feature-specs/developer-sdk/user-stories.md](feature-specs/developer-sdk/user-stories.md)
+
 ### Phase 1: Investigation & Architecture
 
 | Task | Status | Notes |
 |------|--------|-------|
+| User stories | ✅ | 6 stories covering research, boundaries, persona, workflow, versioning, docs |
 | **Research & Analysis** | | |
 | Investigate SDK packaging options | ⏳ | Cargo workspace template, CLI scaffolding, binary + source hybrid |
 | Analyze similar Rust plugin frameworks | ⏳ | nih-plug, JUCE (C++), iPlug2 — what works, what doesn't |
@@ -313,6 +316,7 @@ Potential areas:
 
 | Date | Update |
 |------|--------|
+| 2026-02-01 | **Milestone 8 started**: User stories created for Developer SDK (6 stories covering Phase 1 investigation). Target version 0.4.0. Branch: `feature/developer-sdk`. Ready for Architect handoff. |
 | 2026-02-01 | **Milestone 8 created**: Developer SDK initiative. Phase 1 focuses on investigation with architect to define packaging strategy, SDK boundaries, and developer experience. Goal: make VstKit usable by external developers. |
 | 2026-02-01 | **Milestone 7 complete**: Browser-Based Visual Testing infrastructure fully implemented. Playwright @1.41.0 with Chromium installed, 18 test IDs added across all UI components (Meter, ParameterSlider, VersionBadge, ResizeHandle, ConnectionStatus, App root). External baseline storage design (`~/.vstkit/visual-baselines/`). Comprehensive 11KB documentation guide. **Bonus:** Fixed version display — now reads from Cargo.toml in dev mode, improved VersionBadge styling for visibility. 35/35 unit tests, 18/18 feature tests passing. QA approved. Architecture docs updated. Version 0.3.1. Archived to `_archive/browser-visual-testing/`. **ALL COMMITTED MILESTONES COMPLETE!** |
 | 2026-02-01 | **Milestone 6 complete**: WebSocket IPC Bridge fully implemented and tested. Transport abstraction with factory pattern, `WebSocketTransport` with exponential backoff reconnection, `cargo xtask dev` unified development command, graceful degradation UI. 14/14 integration tests, 35 UI tests, 17 Rust tests passing. QA approved, architectural docs updated. Version 0.3.0. Archived to `_archive/websocket-ipc-bridge/`. Ready to merge `feature/websocket-ipc-bridge` branch. |
