@@ -1,4 +1,5 @@
 #[test]
+#[cfg(target_os = "macos")]
 fn trybuild_macros() {
     let t = trybuild::TestCases::new();
     // Use Cargo-based test packages so the test packages can depend on `vstkit-core`
