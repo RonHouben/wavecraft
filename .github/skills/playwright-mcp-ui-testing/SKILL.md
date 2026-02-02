@@ -9,19 +9,48 @@ Use Playwright MCP tools to visually test the VstKit UI during manual testing se
 
 ## Prerequisites
 
-1. **Start dev servers**: `cargo xtask dev` (WebSocket server + Vite)
+1. **Dev servers will be auto-started** by the agent using background process
 2. **Playwright installed**: `cd ui && npm run playwright:install` (first time only)
+
+## Starting Dev Server (Automated)
+
+The agent can start the dev server automatically without user intervention:
+
+```bash
+# Agent runs this in background:
+run_in_terminal(
+  command="cd /Users/ronhouben/code/private/vstkit && cargo run --manifest-path engine/xtask/Cargo.toml --release -- dev",
+  isBackground=true
+)
+# Returns terminal_id for later status checks
+```
+
+**Wait for server startup**:
+```bash
+# Dev server needs ~5 seconds to compile and start Vite
+sleep 5
+# Playwright will handle connection verification
+```
+
+**Stopping the server** (when done testing):
+```bash
+# Kill the background process:
+pkill -f "cargo xtask dev"
+```
 
 ## Quick Workflow
 
 ```
-1. Start dev server:     cargo xtask dev
-2. Navigate to UI:       mcp_playwright_browser_navigate → http://localhost:5173
-3. Wait for load:        mcp_playwright_browser_wait_for → "VstKit" text
-4. Get page state:       mcp_playwright_browser_snapshot
-5. Take screenshot:      mcp_playwright_browser_take_screenshot
-6. Interact:             mcp_playwright_browser_click, _type, etc.
-7. Close when done:      mcp_playwright_browser_close
+1. Start dev server:     run_in_terminal(..., isBackground=true)
+2. Wait for startup:     sleep 5
+3. Navigate to UI:       mcp_playwright_browser_navigate → http://localhost:5173
+                         (Playwright will fail with timeout if server isn't ready)
+4. Wait for load:        mcp_playwright_browser_wait_for → "VstKit" text
+5. Get page state:       mcp_playwright_browser_snapshot
+6. Take screenshot:      mcp_playwright_browser_take_screenshot
+7. Interact:             mcp_playwright_browser_click, _type, etc.
+8. Close browser:        mcp_playwright_browser_close
+9. Stop server:          pkill -f "cargo xtask dev"
 ```
 
 ## MCP Tool Reference

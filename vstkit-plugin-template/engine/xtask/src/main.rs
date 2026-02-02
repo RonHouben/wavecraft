@@ -1,6 +1,5 @@
 use anyhow::Result;
 use clap::Parser;
-use std::path::Path;
 
 #[derive(Parser)]
 #[command(name = "xtask")]
@@ -14,9 +13,9 @@ struct Cli {
 enum Commands {
     /// Bundle the plugin for distribution
     Bundle {
-        /// Install to system plugin directory after bundling
+        /// Build in release mode (default)
         #[arg(long)]
-        install: bool,
+        release: bool,
     },
 }
 
@@ -24,20 +23,23 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Bundle { install } => {
-            let project_root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+        Commands::Bundle { release: _ } => {
+            println!("Building my-plugin plugin...");
             
-            println!("Building plugin...");
-            let mut bundle = nih_plug_xtask::BundleOptions::default();
-            bundle.package = Some("my-plugin");
+            // Build arguments for nih_plug_xtask
+            let mut args = vec!["bundle".to_string(), "my-plugin".to_string()];
             
-            if install {
-                println!("Installing to system plugin directory...");
+            // Always use release mode for bundles
+            args.push("--release".to_string());
+            
+            // Call nih_plug_xtask with the bundle command
+            // This will compile and create VST3/CLAP bundles
+            if let Err(e) = nih_plug_xtask::main_with_args("my_plugin", args) {
+                anyhow::bail!("Bundle command failed: {}", e);
             }
             
-            nih_plug_xtask::bundle(bundle)?;
-            
             println!("✓ Plugin bundled successfully");
+            println!("  Find bundles in: target/bundled/");
             Ok(())
         }
     }
