@@ -20,10 +20,10 @@ cd ui && npm install && cd ..
 cd ui && npm run build && cd ..
 
 # 3. Bundle the plugin
-cd engine && cargo xtask bundle --install
+cd engine && cargo xtask bundle --release
 ```
 
-Your plugin is now installed and ready to use in your DAW! 🎉
+The plugin bundle is now in `engine/target/bundled/`. Copy it to your plugin folder to use in your DAW!
 
 ## Project Structure
 
@@ -93,7 +93,7 @@ impl Processor for GainProcessor {
 Modify `ui/src/App.tsx` to add controls:
 
 ```tsx
-<ParameterSlider id="drive" name="Drive" min={0} max={10} />
+<ParameterSlider id="drive" />
 ```
 
 ### 4. Rebuild and Test
@@ -105,8 +105,8 @@ cd ui && npm run build && cd ..
 # Rebuild plugin
 cd engine && cargo build --release && cd ..
 
-# Bundle and install
-cd engine && cargo xtask bundle --install && cd ..
+# Bundle the plugin
+cd engine && cargo xtask bundle --release && cd ..
 ```
 
 ## Plugin Configuration

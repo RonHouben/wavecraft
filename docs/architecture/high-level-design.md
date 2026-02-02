@@ -219,10 +219,10 @@ pub use crate::util::calculate_stereo_meters;
 
 1. **`Processor`** — Core DSP abstraction that users implement:
    ```rust
-   pub trait Processor: Send {
-       fn prepare(&mut self, sample_rate: f32, max_block_size: usize);
-       fn process(&mut self, transport: &Transport, buffer: &mut Buffer);
-       fn reset(&mut self);
+   pub trait Processor: Send + 'static {
+       fn process(&mut self, buffer: &mut [&mut [f32]], transport: &Transport);
+       fn set_sample_rate(&mut self, _sample_rate: f32) {}
+       fn reset(&mut self) {}
    }
    ```
 

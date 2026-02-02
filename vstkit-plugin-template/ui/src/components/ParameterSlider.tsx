@@ -35,10 +35,10 @@ export function ParameterSlider({ id }: ParameterSliderProps): React.JSX.Element
     });
   };
 
-  // Format display value
-  const unitSuffix = param.unit === '%' ? param.unit : ` ${param.unit}`;
+  // Format display value: show actual parameter value, not normalized * 100
+  // param.value is the actual parameter value (e.g., -12.0 dB, 50 Hz)
   const displayValue = param.unit
-    ? `${(param.value * 100).toFixed(1)}${unitSuffix}`
+    ? `${param.value.toFixed(1)} ${param.unit}`
     : param.value.toFixed(3);
 
   return (
