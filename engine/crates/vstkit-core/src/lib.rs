@@ -19,6 +19,9 @@ pub mod editor;
 pub mod prelude;
 pub mod util;
 
+// Macros (public API)
+pub mod macros;
+
 // Internal modules
 mod params;
 

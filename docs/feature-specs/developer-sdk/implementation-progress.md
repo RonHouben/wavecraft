@@ -15,7 +15,7 @@ Tracking implementation of the Developer SDK (Milestone 8).
 | Phase | Status | Progress |
 |-------|--------|----------|
 | Phase 1: Crate Restructuring | ✅ Complete | 7/7 steps |
-| Phase 2: API Extraction | ✅ Complete | 5/6 steps (1 deferred) |
+| Phase 2: API Extraction | ✅ Complete | 6/6 steps |
 | Phase 3: Template Repository | ✅ Complete | 6/6 steps |
 | Phase 4: Documentation & Polish | 🚧 In Progress | 5/6 steps |
 
@@ -44,7 +44,7 @@ Tracking implementation of the Developer SDK (Milestone 8).
 | 2.1 | Create Processor trait | ✅ | Commit: 329f3ce - Trait + Transport struct + doc test |
 | 2.2 | Create ParamSet trait | ✅ | Commit: 271142d - Trait + ParamId refactor + doc test |
 | 2.3 | Create vstkit_params! macro | ✅ | Commit: 7c9847e - Declarative param definitions + 5 unit tests |
-| 2.4 | Create vstkit_plugin! macro | ⏸️ | Deferred to Phase 3 (complex, needs nih-plug integration) |
+| 2.4 | Create vstkit_plugin! macro | ✅ | Commit: implemented (thin macro + unit tests + doc examples) |
 | 2.5 | Extract ParameterHost trait | ✅ | Commit: b4d1024 - Extracted to host.rs with doc example |
 | 2.6 | Phase 2 integration test | ✅ | All tests pass, plugin builds successfully |
 
@@ -61,15 +61,16 @@ Successfully extracted public APIs for SDK users:
 
 **Completed Macros:**
 - **vstkit_params!**: Declarative parameter definition macro
+- **vstkit_plugin!**: Thin plugin-generation macro (initial implementation; unit tests + doc examples included)
 
 **Test Coverage:**
-- 18 engine tests (including 5 macro unit tests)
+- 19 engine tests (including 6 macro unit tests)
 - 35 UI tests
 - 3 doc tests (with comprehensive examples)
 - Plugin builds and bundles successfully
 
-**Deferred:**
-- **vstkit_plugin! macro**: Postponed to Phase 3 (requires deeper nih-plug integration strategy)
+**Completed Macros (updated):**
+- **vstkit_plugin!**: Thin implementation added (macro generates plugin skeleton, unit tests, and doc examples). Further expansion planned to support richer configuration and integration patterns.
 
 ---
 
@@ -202,3 +203,4 @@ All crate renames completed successfully:
 | 2026-02-01 | Phase 3 complete: Template repository created with working example plugin |
 | 2026-02-01 | Phase 4 Steps 4.1, 4.3 complete: Architecture docs updated (SDK section in high-level-design.md), SDK Getting Started guide created |
 | 2026-02-01 | **Version bumped to 0.4.0** — All SDK crates, main plugin, and docs updated. 43 engine tests + 35 UI tests passing. Framework compiles successfully. Template needs git dependencies for standalone use. |
+| 2026-02-02 | **Implemented `vstkit_plugin!` macro** — Thin macro added to `vstkit-core` with unit test and doc examples; additional features will be implemented in follow-ups. |

@@ -236,6 +236,19 @@ macro_rules! vstkit_plugin {
 }
 ```
 
+**Subtasks (Coder):**
+- [ ] Create `engine/crates/vstkit-core/src/macros.rs` and implement a **thin** `vstkit_plugin!` macro that:
+  - Generates the minimal nih-plug plugin skeleton and descriptor (name/vendor/version/url/email)
+  - Registers parameters from the provided `params` list (uses `vstkit-protocol` ParamSet infrastructure)
+  - Wires the provided `processor` type into the plugin audio callbacks (construct & call in process)
+  - Keeps expansion explicit (prefer generated glue, not hidden behaviour)
+- [ ] Add `trybuild` compile-time tests under `engine/crates/vstkit-core/tests/` that assert macro expands for minimal and full variants
+- [ ] Add runnable doc examples in `macros.rs` (doc tests) showing minimal usage and a full-featured example
+- [ ] Re-export macro in `vstkit-core/src/lib.rs` (e.g., `pub mod macros; pub use macros::vstkit_plugin;`)
+- [ ] Update `vstkit-plugin-template/engine/src/lib.rs` to use the macro and verify the example plugin builds
+- [ ] Update docs (low-level design and implementation plan) to mark the macro implemented and add usage notes
+- [ ] Run `cargo xtask test` and `cargo xtask bundle` and perform a DAW load test to verify end-to-end behavior
+
 | Task | File | Action |
 |------|------|--------|
 | Create macros module | `vstkit-core/src/macros.rs` | Define `vstkit_plugin!` |
@@ -244,7 +257,7 @@ macro_rules! vstkit_plugin {
 
 **Dependencies:** Steps 2.1-2.3  
 **Risk:** High — integrates all components  
-**Verification:** Create minimal plugin using macro
+**Verification:** Create minimal plugin using macro (see subtasks)
 
 ### Step 2.5: Extract ParameterHost Trait
 
