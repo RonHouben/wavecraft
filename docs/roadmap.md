@@ -1,4 +1,4 @@
-# VstKit Roadmap
+# Wavecraft Roadmap
 
 This document tracks implementation progress against the milestones defined in the [High-Level Design](architecture/high-level-design.md).
 
@@ -77,7 +77,7 @@ This document tracks implementation progress against the milestones defined in t
 
 **Lessons Learned:**
 - wry 0.47 requires `ControlFlow::Poll` for continuous IPC response delivery
-- Responses must be sent via `evaluate_script()` calling `window.__VSTKIT_IPC__._receive()`
+- Responses must be sent via `evaluate_script()` calling `window.__WAVECRAFT_IPC__._receive()`
 - Channel-based approach works well for decoupling IPC handler from event loop
 - Windows/Linux untested (no dev machines available) but theoretically supported
 
@@ -249,7 +249,7 @@ Add a WebSocket server to the standalone app that exposes the same IPC protocol 
 
 **Key Deliverables:**
 - 18 test IDs across all UI components for reliable Playwright selection
-- External baseline storage design (`~/.vstkit/visual-baselines/`)
+- External baseline storage design (`~/.wavecraft/visual-baselines/`)
 - Comprehensive documentation with selector examples and test scenarios
 - Version badge now displays correctly in development mode (v0.3.1)
 - High-level design updated with Visual Testing architecture
@@ -264,7 +264,7 @@ Add a WebSocket server to the standalone app that exposes the same IPC protocol 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Automation tool | Playwright MCP | Agent-native, no custom scripts |
-| Baseline storage | External (`~/.vstkit/`) | Keep repo lean |
+| Baseline storage | External (`~/.wavecraft/`) | Keep repo lean |
 | Test orchestration | Agent-driven | On-demand, not CI (avoids screenshot flakiness) |
 | Component targeting | `data-testid` attributes | Stable, framework-agnostic selectors |
 
@@ -274,10 +274,10 @@ Add a WebSocket server to the standalone app that exposes the same IPC protocol 
 
 **Status: ✅ Complete (Phase 1)**
 
-> **Goal:** Transform VstKit from an internal framework into a reusable development kit that other developers can use to build their own VST/CLAP plugins with Rust + React.
+> **Goal:** Transform Wavecraft from an internal framework into a reusable development kit that other developers can use to build their own VST/CLAP plugins with Rust + React.
 
 **Strategic Context:**
-VstKit has achieved its internal development goals (Milestones 1–7). The next step is to make it **accessible to other developers** as a proper SDK/toolkit. This required rethinking packaging, documentation, and developer experience.
+Wavecraft has achieved its internal development goals (Milestones 1–7). The next step is to make it **accessible to other developers** as a proper SDK/toolkit. This required rethinking packaging, documentation, and developer experience.
 
 **User Stories:** [docs/feature-specs/developer-sdk/user-stories.md](feature-specs/developer-sdk/user-stories.md)
 
@@ -290,14 +290,14 @@ VstKit has achieved its internal development goals (Milestones 1–7). The next 
 | Low-level design | ✅ | 5-crate architecture with clear boundaries |
 | Implementation plan | ✅ | 25-step plan across 4 phases |
 | **SDK Crate Restructuring** | | |
-| `vstkit-protocol` — IPC contracts | ✅ | JSON-RPC types, parameter specs |
-| `vstkit-dsp` — Pure audio processing | ✅ | `Processor` trait, no framework deps |
-| `vstkit-bridge` — IPC handling | ✅ | `ParameterHost` trait, handler |
-| `vstkit-metering` — Real-time meters | ✅ | SPSC ring buffer, lock-free |
-| `vstkit-core` — Framework integration | ✅ | `vstkit_plugin!` macro, nih-plug wrapper |
+| `wavecraft-protocol` — IPC contracts | ✅ | JSON-RPC types, parameter specs |
+| `wavecraft-dsp` — Pure audio processing | ✅ | `Processor` trait, no framework deps |
+| `wavecraft-bridge` — IPC handling | ✅ | `ParameterHost` trait, handler |
+| `wavecraft-metering` — Real-time meters | ✅ | SPSC ring buffer, lock-free |
+| `wavecraft-core` — Framework integration | ✅ | `wavecraft_plugin!` macro, nih-plug wrapper |
 | **Developer Experience** | | |
-| `vstkit_plugin!` macro | ✅ | Single-line plugin declaration |
-| Prelude re-exports | ✅ | `use vstkit_core::prelude::*` |
+| `wavecraft_plugin!` macro | ✅ | Single-line plugin declaration |
+| Prelude re-exports | ✅ | `use wavecraft_core::prelude::*` |
 | Plugin template | ✅ | Working example with xtask bundler |
 | **Documentation** | | |
 | SDK Getting Started guide | ✅ | `docs/guides/sdk-getting-started.md` |
@@ -312,8 +312,8 @@ VstKit has achieved its internal development goals (Milestones 1–7). The next 
 
 **Key Deliverables:**
 - **5-crate SDK architecture** with clear domain boundaries
-- **`vstkit_plugin!` macro** for zero-boilerplate plugin declaration
-- **Template project** (`vstkit-plugin-template/`) demonstrating full SDK usage
+- **`wavecraft_plugin!` macro** for zero-boilerplate plugin declaration
+- **Template project** (`wavecraft-plugin-template/`) demonstrating full SDK usage
 - **SDK Getting Started guide** for developers
 - **Version 0.4.0** released
 
@@ -331,7 +331,7 @@ Linting:      All checks passed (cargo fmt, clippy, ESLint, Prettier)
 
 Potential areas:
 - Publish SDK crates to crates.io
-- CLI tool for project scaffolding (`cargo vstkit new my-plugin`)
+- CLI tool for project scaffolding (`cargo wavecraft new my-plugin`)
 - Additional example plugins (EQ, synth starter)
 - Migration guides for SDK updates
 
@@ -341,20 +341,20 @@ Potential areas:
 
 Potential areas:
 - Publish SDK crates to crates.io
-- CLI tool for project scaffolding (`cargo vstkit new my-plugin`)
+- CLI tool for project scaffolding (`cargo wavecraft new my-plugin`)
 - Additional example plugins (EQ, synth starter)
 - Migration guides for SDK updates
 
 ---
 
-## Milestone 9: Project Rename (VstKit → Wavecraft)
+## Milestone 9: Project Rename (Wavecraft → Wavecraft)
 
 **Status: 🚧 In Progress**
 
-> **Goal:** Rename the project from "VstKit" to "Wavecraft" to avoid potential "VST" trademark concerns before public/open-source release.
+> **Goal:** Rename the project from "Wavecraft" to "Wavecraft" to avoid potential "VST" trademark concerns before public/open-source release.
 
 **Rationale:**
-"VST" is a Steinberg trademark. While "VstKit" may be defensible as a toolkit name, rebranding to "Wavecraft" eliminates any trademark risk and establishes a unique, memorable identity for the project.
+"VST" is a Steinberg trademark. While "Wavecraft" may be defensible as a toolkit name, rebranding to "Wavecraft" eliminates any trademark risk and establishes a unique, memorable identity for the project.
 
 **User Stories:** [docs/feature-specs/project-rename-wavecraft/user-stories.md](feature-specs/project-rename-wavecraft/user-stories.md)
 
@@ -362,10 +362,10 @@ Potential areas:
 | Area | Changes Required |
 |------|------------------|
 | GitHub | Repository name, organization (if applicable) |
-| Rust crates | `vstkit-*` → `wavecraft-*` (all 5 SDK crates) |
-| npm packages | `@vstkit/*` → `@wavecraft/*` namespace |
+| Rust crates | `wavecraft-*` → `wavecraft-*` (all 5 SDK crates) |
+| npm packages | `@wavecraft/*` → `@wavecraft/*` namespace |
 | Documentation | All docs, guides, README references |
-| UI | Any user-facing "VstKit" branding |
+| UI | Any user-facing "Wavecraft" branding |
 | Code | Module names, comments, macro names |
 
 ### Pre-Rename Checklist (Verified 2026-02-02)
@@ -385,14 +385,15 @@ Potential areas:
 | Availability checks (GitHub, crates.io, npm, domain) | ✅ | Verified 2026-02-02 |
 | Create user stories | ✅ | 9 user stories created |
 | Create low-level design | ✅ | Comprehensive 13-section design |
+| Create implementation plan | ✅ | 8-phase, 50-step plan |
 | **Implementation** | | |
-| Rename Rust crates | ⏳ | `vstkit-*` → `wavecraft-*` |
+| Rename Rust crates | ⏳ | `wavecraft-*` → `wavecraft-*` |
 | Update `Cargo.toml` workspace | ⏳ | Package names, dependencies |
-| Update `vstkit_plugin!` macro | ⏳ | → `wavecraft_plugin!` |
-| Update npm package names | ⏳ | `@vstkit/*` → `@wavecraft/*` |
+| Update `wavecraft_plugin!` macro | ⏳ | → `wavecraft_plugin!` |
+| Update npm package names | ⏳ | `@wavecraft/*` → `@wavecraft/*` |
 | Update all documentation | ⏳ | README, guides, specs |
 | Update UI branding | ⏳ | Any user-visible references |
-| Update template project | ⏳ | `vstkit-plugin-template` → `wavecraft-plugin-template` |
+| Update template project | ⏳ | `wavecraft-plugin-template` → `wavecraft-plugin-template` |
 | **Migration** | | |
 | GitHub repository rename | ⏳ | (Creates redirect from old name) |
 | Update CI/CD workflows | ⏳ | Any hardcoded references |
@@ -405,10 +406,10 @@ Potential areas:
 | Date | Update |
 |------|--------|
 | 2026-02-02 | **Milestone 9 started**: Verified name availability — Wavecraft available on crates.io, npm (`@wavecraft/*`), and domain (`wavecraft.dev`). GitHub username taken by inactive user; using personal account (`RonHouben/wavecraft`) for now with future task to request username. Created 9 user stories covering Rust crates, npm aliases, documentation, UI, template, CI/CD, and GitHub repo rename. |
-| 2026-02-02 | **Added Milestone 9: Project Rename (VstKit → Wavecraft)**: Rebrand to avoid "VST" trademark concerns before open-source release. Scope includes Rust crates, npm packages, GitHub repo, documentation, and UI branding. Pending availability checks for name. |
-| 2026-02-02 | **Milestone 8 complete**: Developer SDK Phase 1 fully implemented. 5-crate SDK architecture (`vstkit-protocol`, `vstkit-dsp`, `vstkit-bridge`, `vstkit-metering`, `vstkit-core`), `vstkit_plugin!` macro for zero-boilerplate plugins, template project, comprehensive documentation. 111 engine + 35 UI tests passing, 22/22 manual tests. QA approved, architect review complete (added `unwrap()`/`expect()` coding standards). Version 0.4.0. **ALL MILESTONES COMPLETE!** Archived to `_archive/developer-sdk/`. |
-| 2026-02-01 | **Milestone 8 created**: Developer SDK initiative. Phase 1 focuses on investigation with architect to define packaging strategy, SDK boundaries, and developer experience. Goal: make VstKit usable by external developers. |
-| 2026-02-01 | **Milestone 7 complete**: Browser-Based Visual Testing infrastructure fully implemented. Playwright @1.41.0 with Chromium installed, 18 test IDs added across all UI components (Meter, ParameterSlider, VersionBadge, ResizeHandle, ConnectionStatus, App root). External baseline storage design (`~/.vstkit/visual-baselines/`). Comprehensive 11KB documentation guide. **Bonus:** Fixed version display — now reads from Cargo.toml in dev mode, improved VersionBadge styling for visibility. 35/35 unit tests, 18/18 feature tests passing. QA approved. Architecture docs updated. Version 0.3.1. Archived to `_archive/browser-visual-testing/`. **ALL COMMITTED MILESTONES COMPLETE!** |
+| 2026-02-02 | **Added Milestone 9: Project Rename (Wavecraft → Wavecraft)**: Rebrand to avoid "VST" trademark concerns before open-source release. Scope includes Rust crates, npm packages, GitHub repo, documentation, and UI branding. Pending availability checks for name. |
+| 2026-02-02 | **Milestone 8 complete**: Developer SDK Phase 1 fully implemented. 5-crate SDK architecture (`wavecraft-protocol`, `wavecraft-dsp`, `wavecraft-bridge`, `wavecraft-metering`, `wavecraft-core`), `wavecraft_plugin!` macro for zero-boilerplate plugins, template project, comprehensive documentation. 111 engine + 35 UI tests passing, 22/22 manual tests. QA approved, architect review complete (added `unwrap()`/`expect()` coding standards). Version 0.4.0. **ALL MILESTONES COMPLETE!** Archived to `_archive/developer-sdk/`. |
+| 2026-02-01 | **Milestone 8 created**: Developer SDK initiative. Phase 1 focuses on investigation with architect to define packaging strategy, SDK boundaries, and developer experience. Goal: make Wavecraft usable by external developers. |
+| 2026-02-01 | **Milestone 7 complete**: Browser-Based Visual Testing infrastructure fully implemented. Playwright @1.41.0 with Chromium installed, 18 test IDs added across all UI components (Meter, ParameterSlider, VersionBadge, ResizeHandle, ConnectionStatus, App root). External baseline storage design (`~/.wavecraft/visual-baselines/`). Comprehensive 11KB documentation guide. **Bonus:** Fixed version display — now reads from Cargo.toml in dev mode, improved VersionBadge styling for visibility. 35/35 unit tests, 18/18 feature tests passing. QA approved. Architecture docs updated. Version 0.3.1. Archived to `_archive/browser-visual-testing/`. **ALL COMMITTED MILESTONES COMPLETE!** |
 | 2026-02-01 | **Milestone 6 complete**: WebSocket IPC Bridge fully implemented and tested. Transport abstraction with factory pattern, `WebSocketTransport` with exponential backoff reconnection, `cargo xtask dev` unified development command, graceful degradation UI. 14/14 integration tests, 35 UI tests, 17 Rust tests passing. QA approved, architectural docs updated. Version 0.3.0. Archived to `_archive/websocket-ipc-bridge/`. Ready to merge `feature/websocket-ipc-bridge` branch. |
 | 2026-02-01 | **Backlog split from roadmap**: Created separate [backlog.md](backlog.md) for unprioritized future ideas. Removed Milestone 8 from roadmap — committed milestones now end at M7. Backlog contains: CI optimization, performance profiling, platform support, DAW compatibility, AU issues, Apple Developer-dependent items. |
 | 2026-02-01 | **Milestone 5 complete, starting M6**: Marked M5 (Polish & Optimization) as complete. Moved remaining low-priority tasks (CI cache optimization, performance profiling, format-specific parity) to new Milestone 8 (Backlog). Started Milestone 6 (WebSocket IPC Bridge) on `feature/websocket-ipc-bridge` branch. |
@@ -446,7 +447,7 @@ Potential areas:
 
 ## Next Steps
 
-> 🎉 **All committed milestones complete!** VstKit is now a fully functional SDK for building audio plugins with Rust + React.
+> 🎉 **All committed milestones complete!** Wavecraft is now a fully functional SDK for building audio plugins with Rust + React.
 
 ### Completed Milestones
 1. ✅ **Milestone 1**: Plugin Skeleton — Rust plugin with VST3/CLAP export
@@ -460,6 +461,6 @@ Potential areas:
 
 ### What's Next?
 
-**Milestone 9: Project Rename (VstKit → Wavecraft)** — Avoid "VST" trademark concerns for open-source release. See milestone details below.
+**Milestone 9: Project Rename (Wavecraft → Wavecraft)** — Avoid "VST" trademark concerns for open-source release. See milestone details below.
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (platform support, performance, DAW compatibility, etc.)

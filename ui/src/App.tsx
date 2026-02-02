@@ -9,7 +9,7 @@ import { Meter } from './components/Meter';
 import { ResizeHandle } from './components/ResizeHandle';
 import { VersionBadge } from './components/VersionBadge';
 import { ConnectionStatus } from './components/ConnectionStatus';
-import { requestResize } from './lib/vstkit-ipc';
+import { requestResize } from './lib/wavecraft-ipc';
 
 function App(): React.JSX.Element {
   // Handle native window resize

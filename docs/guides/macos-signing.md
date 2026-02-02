@@ -1,6 +1,6 @@
 # macOS Code Signing and Notarization Guide
 
-This guide explains how to set up code signing and notarization for VstKit plugins on macOS.
+This guide explains how to set up code signing and notarization for Wavecraft plugins on macOS.
 
 ## Prerequisites
 
@@ -51,7 +51,7 @@ Add this to your shell profile (`~/.zshrc` or `~/.bash_profile`) for persistence
 1. Go to [appleid.apple.com](https://appleid.apple.com/)
 2. Sign in with your Apple ID
 3. Navigate to **Sign-In and Security** → **App-Specific Passwords**
-4. Generate a new password for "VstKit Notarization"
+4. Generate a new password for "Wavecraft Notarization"
 5. Copy the generated password
 
 ### 2.2 Store Credentials in Keychain (Recommended)
@@ -115,7 +115,7 @@ cargo xtask sign
 Verify the signature:
 
 ```bash
-codesign --verify --deep --strict target/bundled/vstkit.vst3
+codesign --verify --deep --strict target/bundled/wavecraft.vst3
 ```
 
 ### 3.4 Notarization (Two-Step Workflow)
@@ -255,12 +255,12 @@ Solution: Retry signing.
 Check if a bundle is properly notarized:
 
 ```bash
-spctl --assess --type install --verbose target/bundled/vstkit.vst3
+spctl --assess --type install --verbose target/bundled/wavecraft.vst3
 ```
 
 Expected output:
 ```
-target/bundled/vstkit.vst3: accepted
+target/bundled/wavecraft.vst3: accepted
 source=Notarized Developer ID
 ```
 

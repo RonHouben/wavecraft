@@ -1,6 +1,6 @@
-# VstKit SDK — Getting Started
+# Wavecraft SDK — Getting Started
 
-This guide walks you through building your first VST3/CLAP audio plugin using the VstKit SDK.
+This guide walks you through building your first VST3/CLAP audio plugin using the Wavecraft SDK.
 
 ---
 
@@ -17,7 +17,7 @@ This guide walks you through building your first VST3/CLAP audio plugin using th
 ### 1. Clone the Template
 
 ```bash
-git clone https://github.com/vstkit/vstkit-plugin-template my-plugin
+git clone https://github.com/wavecraft/wavecraft-plugin-template my-plugin
 cd my-plugin
 ```
 
@@ -55,7 +55,7 @@ cargo xtask install
 ```
 my-plugin/
 ├── engine/                  # Rust audio engine
-│   ├── Cargo.toml           # Dependencies on vstkit-* crates
+│   ├── Cargo.toml           # Dependencies on wavecraft-* crates
 │   └── src/
 │       ├── lib.rs           # Plugin entry point
 │       └── dsp.rs           # Your DSP implementation
@@ -76,7 +76,7 @@ my-plugin/
 Your audio processing code lives in `engine/src/dsp.rs`. Implement the `Processor` trait:
 
 ```rust
-use vstkit_core::prelude::*;
+use wavecraft_core::prelude::*;
 
 pub struct MyProcessor {
     sample_rate: f32,
@@ -136,12 +136,12 @@ The `process()` method runs on the audio thread. You **must not**:
 
 ## Defining Parameters
 
-Use the `vstkit_params!` macro to declare your parameters:
+Use the `wavecraft_params!` macro to declare your parameters:
 
 ```rust
-use vstkit_core::prelude::*;
+use wavecraft_core::prelude::*;
 
-vstkit_params! {
+wavecraft_params! {
     Gain: { id: 0, name: "Gain", range: -24.0..=24.0, default: 0.0, unit: "dB" },
     Mix: { id: 1, name: "Mix", range: 0.0..=1.0, default: 1.0, unit: "%" },
     Frequency: { id: 2, name: "Frequency", range: 20.0..=20000.0, default: 1000.0, unit: "Hz" },
@@ -162,12 +162,12 @@ vstkit_params! {
 
 ## Customizing the UI
 
-The UI is a React application in the `ui/` folder. VstKit provides ready-to-use components:
+The UI is a React application in the `ui/` folder. Wavecraft provides ready-to-use components:
 
 ### Built-in Components
 
 ```tsx
-import { Meter, ParameterSlider } from '@vstkit/ui';
+import { Meter, ParameterSlider } from '@wavecraft/ui';
 
 function App() {
   return (
@@ -187,7 +187,7 @@ function App() {
 ### Custom Components with Hooks
 
 ```tsx
-import { useParameter } from '@vstkit/ipc';
+import { useParameter } from '@wavecraft/ipc';
 
 function MyKnob({ id }: { id: string }) {
   const { value, setValue, info } = useParameter(id);
@@ -257,14 +257,14 @@ cargo xtask bundle && cargo xtask install
 
 ### Adding a New Parameter
 
-1. Add to `vstkit_params!` in your Rust code
+1. Add to `wavecraft_params!` in your Rust code
 2. Add a `<ParameterSlider id="new-param" />` to your UI
 3. Rebuild: `cargo xtask bundle`
 
 ### Adding Metering to DSP
 
 ```rust
-use vstkit_core::prelude::*;
+use wavecraft_core::prelude::*;
 
 pub struct MyProcessor {
     meter_producer: Option<MeterProducer>,

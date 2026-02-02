@@ -34,7 +34,7 @@ Communication between UI and audio uses lock-free parameter systems and ring buf
 ## Project Structure
 
 ```
-vstkit/
+wavecraft/
 ├── engine/                       # Rust audio engine & plugin
 │   ├── Cargo.toml                # Workspace root
 │   └── crates/
@@ -61,7 +61,7 @@ vstkit/
 
 ## Documentation
 
-- [SDK Getting Started](docs/guides/sdk-getting-started.md) — Build your first plugin with VstKit
+- [SDK Getting Started](docs/guides/sdk-getting-started.md) — Build your first plugin with Wavecraft
 - [High-Level Design](docs/architecture/high-level-design.md) — Architecture overview, component design, data flows, and implementation roadmap
 - [Coding Standards](docs/architecture/coding-standards.md) — TypeScript, Rust, and React conventions
 - [Agent Development Flow](docs/architecture/agent-development-flow.md) — How specialized agents collaborate through the development lifecycle
@@ -131,11 +131,11 @@ After building, plugins are located at:
 
 ```
 engine/target/bundled/
-├── vstkit.vst3    # VST3 plugin
-└── vstkit.clap    # CLAP plugin
+├── wavecraft.vst3    # VST3 plugin
+└── wavecraft.clap    # CLAP plugin
 
 packaging/macos/au-wrapper/build/
-└── VstKit.component    # AU plugin (macOS only)
+└── Wavecraft.component    # AU plugin (macOS only)
 ```
 
 ### Installation Directories

@@ -21,8 +21,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@vstkit/ipc': path.resolve(__dirname, './src/lib/vstkit-ipc'),
-      '@vstkit/ipc/meters': path.resolve(__dirname, './src/lib/vstkit-ipc/meters'),
+      '@wavecraft/ipc': path.resolve(__dirname, './src/lib/wavecraft-ipc'),
+      '@wavecraft/ipc/meters': path.resolve(__dirname, './src/lib/wavecraft-ipc/meters'),
     },
   },
 });

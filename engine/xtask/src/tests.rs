@@ -432,7 +432,7 @@ mod lib_tests {
     #[test]
     fn test_plugin_name_is_defined() {
         assert!(!PLUGIN_NAME.is_empty());
-        assert_eq!(PLUGIN_NAME, "vstkit");
+        assert_eq!(PLUGIN_NAME, "wavecraft");
     }
 }
 
@@ -445,7 +445,7 @@ mod path_tests {
         // This test may fail if run from a different context
         // but should work within cargo test
         if let Ok(root) = paths::project_root() {
-            assert!(root.exists() || root.to_string_lossy().contains("vstkit"));
+            assert!(root.exists() || root.to_string_lossy().contains("wavecraft"));
         }
     }
 

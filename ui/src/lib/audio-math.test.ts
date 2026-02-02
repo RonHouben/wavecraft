@@ -3,10 +3,10 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { linearToDb, dbToLinear } from '@vstkit/ipc/meters';
+import { linearToDb, dbToLinear } from '@wavecraft/ipc/meters';
 
 // Mock the IPC module to avoid WebView dependency
-vi.mock('./vstkit-ipc', () => import('../test/mocks/ipc'));
+vi.mock('./wavecraft-ipc', () => import('../test/mocks/ipc'));
 
 describe('linearToDb', () => {
   it('converts 1.0 to 0 dB', () => {

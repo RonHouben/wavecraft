@@ -1,6 +1,6 @@
-//! VstKit xtask build system.
+//! Wavecraft xtask build system.
 //!
-//! This provides a unified Rust-based build tool for the VstKit audio plugin project.
+//! This provides a unified Rust-based build tool for the Wavecraft audio plugin project.
 //!
 //! # Usage
 //!
@@ -25,7 +25,7 @@ mod commands;
 
 use xtask::{BuildMode, output};
 
-/// VstKit build system - Build, test, and install audio plugins.
+/// Wavecraft build system - Build, test, and install audio plugins.
 #[derive(Parser)]
 #[command(name = "xtask")]
 #[command(author, version, about, long_about = None)]

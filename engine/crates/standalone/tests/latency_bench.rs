@@ -2,8 +2,8 @@
 
 use standalone::AppState;
 use std::time::Instant;
-use vstkit_bridge::IpcHandler;
-use vstkit_protocol::{IpcRequest, METHOD_GET_PARAMETER, RequestId};
+use wavecraft_bridge::IpcHandler;
+use wavecraft_protocol::{IpcRequest, METHOD_GET_PARAMETER, RequestId};
 
 #[test]
 fn bench_ipc_latency() {

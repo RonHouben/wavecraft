@@ -27,8 +27,8 @@
     /* Path aliases */
     "paths": {
       "*": ["./*"],
-      "@vstkit/ipc": ["./src/lib/vstkit-ipc"],
-      "@vstkit/ipc/meters": ["./src/lib/vstkit-ipc/meters"]
+      "@wavecraft/ipc": ["./src/lib/wavecraft-ipc"],
+      "@wavecraft/ipc/meters": ["./src/lib/wavecraft-ipc/meters"]
     }
   },
   "include": ["src"]

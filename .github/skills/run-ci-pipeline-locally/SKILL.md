@@ -11,20 +11,20 @@ Use this skill to test GitHub Actions workflows locally before pushing to GitHub
 
 - **Docker Desktop** must be installed and running
 - **act** must be installed: `brew install act`
-- **VstKit custom CI image** (recommended): See [Building the Custom Image](#building-the-custom-image)
+- **Wavecraft custom CI image** (recommended): See [Building the Custom Image](#building-the-custom-image)
 
-## Quick Start for VstKit
+## Quick Start for Wavecraft
 
-VstKit provides a custom Docker image with all dependencies pre-installed. This is the recommended way to test CI locally:
+Wavecraft provides a custom Docker image with all dependencies pre-installed. This is the recommended way to test CI locally:
 
 ```bash
 # Build the custom image (one-time setup)
-docker build --platform linux/amd64 -t vstkit-ci:latest .github/skills/run-ci-pipeline-locally/
+docker build --platform linux/amd64 -t wavecraft-ci:latest .github/skills/run-ci-pipeline-locally/
 
 # Run a specific job
 act -j check-engine -W .github/workflows/ci.yml \
     --container-architecture linux/amd64 \
-    -P ubuntu-latest=vstkit-ci:latest \
+    -P ubuntu-latest=wavecraft-ci:latest \
     --pull=false \
     --artifact-server-path /tmp/act-artifacts
 ```
@@ -46,7 +46,7 @@ act -j check-engine -W .github/workflows/ci.yml \
 # Run entire CI workflow (except macOS build-plugin)
 act -W .github/workflows/ci.yml \
     --container-architecture linux/amd64 \
-    -P ubuntu-latest=vstkit-ci:latest \
+    -P ubuntu-latest=wavecraft-ci:latest \
     --pull=false \
     --artifact-server-path /tmp/act-artifacts
 ```
@@ -61,11 +61,11 @@ The custom image includes:
 
 ```bash
 # Build for linux/amd64 (required for Apple Silicon Macs)
-docker build --platform linux/amd64 -t vstkit-ci:latest \
+docker build --platform linux/amd64 -t wavecraft-ci:latest \
     .github/skills/run-ci-pipeline-locally/
 
 # Verify the image
-docker images | grep vstkit-ci
+docker images | grep wavecraft-ci
 ```
 
 **Note:** Build takes ~5-10 minutes on first run.
@@ -115,12 +115,12 @@ act -s GITHUB_TOKEN="$(gh auth token)"
 act --secret-file .secrets
 ```
 
-## Key Flags for VstKit
+## Key Flags for Wavecraft
 
 | Flag | Purpose |
 |------|---------|
 | `--container-architecture linux/amd64` | Required on Apple Silicon Macs |
-| `-P ubuntu-latest=vstkit-ci:latest` | Use custom image with dependencies |
+| `-P ubuntu-latest=wavecraft-ci:latest` | Use custom image with dependencies |
 | `--pull=false` | Use local image, don't pull from Docker Hub |
 | `-W .github/workflows/ci.yml` | Specify workflow file |
 | `-j <job-name>` | Run specific job || `--artifact-server-path <dir>` | Enable local artifact upload/download |
@@ -196,5 +196,5 @@ docker exec -it <container-id> bash
 If CI dependencies change (new apt packages, Rust version, etc.):
 
 1. Edit the Dockerfile at `.github/skills/run-ci-pipeline-locally/Dockerfile`
-2. Rebuild: `docker build --platform linux/amd64 -t vstkit-ci:latest .github/skills/run-ci-pipeline-locally/`
+2. Rebuild: `docker build --platform linux/amd64 -t wavecraft-ci:latest .github/skills/run-ci-pipeline-locally/`
 3. Test: `act -j check-engine ... --pull=false`

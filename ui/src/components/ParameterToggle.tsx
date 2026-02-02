@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { useParameter } from '@vstkit/ipc';
+import { useParameter } from '@wavecraft/ipc';
 
 interface ParameterToggleProps {
   readonly id: string;

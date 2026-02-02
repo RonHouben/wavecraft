@@ -8,7 +8,7 @@
 - [Roadmap](../roadmap.md) — Project milestones and implementation plan
 - [macOS Signing Guide](../guides/macos-signing.md) — Code signing and notarization setup
 - [Visual Testing Guide](../guides/visual-testing.md) — Browser-based visual testing with Playwright
-- [SDK Getting Started](../guides/sdk-getting-started.md) — Building plugins with VstKit SDK
+- [SDK Getting Started](../guides/sdk-getting-started.md) — Building plugins with Wavecraft SDK
 
 ⸻
 
@@ -104,7 +104,7 @@ Key: the audio path never blocks on UI; the UI never directly runs audio code.
 
 ## Versioning
 
-VstKit uses semantic versioning (SemVer) with a single source of truth in `engine/Cargo.toml`. The version automatically propagates to plugin metadata and the UI at build time.
+Wavecraft uses semantic versioning (SemVer) with a single source of truth in `engine/Cargo.toml`. The version automatically propagates to plugin metadata and the UI at build time.
 
 ### Version Flow
 
@@ -150,9 +150,9 @@ VstKit uses semantic versioning (SemVer) with a single source of truth in `engin
 
 ⸻
 
-## VstKit SDK Architecture
+## Wavecraft SDK Architecture
 
-VstKit is designed as a **Developer SDK** that enables other developers to build VST3/CLAP audio plugins with Rust + React. The framework provides core infrastructure while exposing clear extension points for user DSP and UI code.
+Wavecraft is designed as a **Developer SDK** that enables other developers to build VST3/CLAP audio plugins with Rust + React. The framework provides core infrastructure while exposing clear extension points for user DSP and UI code.
 
 ### SDK Distribution Model
 
@@ -163,12 +163,12 @@ VstKit is designed as a **Developer SDK** that enables other developers to build
 │                                                                                 │
 │   ┌───────────────────────┐       ┌───────────────────────┐                     │
 │   │  TEMPLATE REPOSITORY  │       │    GIT / CRATES.IO    │                     │
-│   │  vstkit-plugin-template│       │                       │                     │
-│   │                        │       │  vstkit-core          │  ← Framework       │
-│   │  ├── engine/          │──────▶│  vstkit-bridge        │    (user depends)  │
-│   │  │   └── Cargo.toml   │       │  vstkit-protocol      │                     │
-│   │  │                    │       │  vstkit-metering      │                     │
-│   │  ├── ui/              │       │  vstkit-dsp           │                     │
+│   │  wavecraft-plugin-template│       │                       │                     │
+│   │                        │       │  wavecraft-core          │  ← Framework       │
+│   │  ├── engine/          │──────▶│  wavecraft-bridge        │    (user depends)  │
+│   │  │   └── Cargo.toml   │       │  wavecraft-protocol      │                     │
+│   │  │                    │       │  wavecraft-metering      │                     │
+│   │  ├── ui/              │       │  wavecraft-dsp           │                     │
 │   │  │   └── package.json │       │                       │                     │
 │   │  └── README.md        │       └───────────────────────┘                     │
 │   │  
@@ -177,7 +177,7 @@ VstKit is designed as a **Developer SDK** that enables other developers to build
 │              │                                                                  │
 │              │  User customizes:                                                │
 │              │  - DSP code (Processor trait impl)                               │
-│              │  - Parameters (vstkit_params! macro)                             │
+│              │  - Parameters (wavecraft_params! macro)                             │
 │              │  - UI components (React)                                         │
 │              ▼                                                                  │
 │   ┌───────────────────────┐                                                     │
@@ -190,28 +190,28 @@ VstKit is designed as a **Developer SDK** that enables other developers to build
 
 ### SDK Crate Structure
 
-All SDK crates use the `vstkit-*` naming convention for clear identification:
+All SDK crates use the `wavecraft-*` naming convention for clear identification:
 
 | Crate | Purpose | User Interaction |
 |-------|---------|------------------|
-| `vstkit-core` | Main framework: nih-plug integration, WebView editor, plugin macro | Dependency + imports via `prelude` |
-| `vstkit-protocol` | IPC contracts, parameter types, JSON-RPC definitions | Implements `ParamSet` trait |
-| `vstkit-bridge` | IPC handler, `ParameterHost` trait for parameter management | Rarely used directly |
-| `vstkit-metering` | Real-time safe SPSC ring buffer for audio → UI metering | Uses `MeterProducer` in DSP |
-| `vstkit-dsp` | DSP primitives, `Processor` trait, audio utilities | Implements `Processor` trait |
+| `wavecraft-core` | Main framework: nih-plug integration, WebView editor, plugin macro | Dependency + imports via `prelude` |
+| `wavecraft-protocol` | IPC contracts, parameter types, JSON-RPC definitions | Implements `ParamSet` trait |
+| `wavecraft-bridge` | IPC handler, `ParameterHost` trait for parameter management | Rarely used directly |
+| `wavecraft-metering` | Real-time safe SPSC ring buffer for audio → UI metering | Uses `MeterProducer` in DSP |
+| `wavecraft-dsp` | DSP primitives, `Processor` trait, audio utilities | Implements `Processor` trait |
 
 ### Public API Surface
 
-The SDK exposes a minimal, stable API through the `vstkit_core::prelude` module:
+The SDK exposes a minimal, stable API through the `wavecraft_core::prelude` module:
 
 ```rust
-// vstkit_core::prelude re-exports
+// wavecraft_core::prelude re-exports
 pub use nih_plug::prelude::*;
-pub use vstkit_dsp::{Processor, Transport};
-pub use vstkit_protocol::{ParamId, ParameterInfo, ParameterType, db_to_linear};
-pub use vstkit_metering::{MeterConsumer, MeterFrame, MeterProducer, create_meter_channel};
+pub use wavecraft_dsp::{Processor, Transport};
+pub use wavecraft_protocol::{ParamId, ParameterInfo, ParameterType, db_to_linear};
+pub use wavecraft_metering::{MeterConsumer, MeterFrame, MeterProducer, create_meter_channel};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub use crate::editor::VstKitEditor;
+pub use crate::editor::WavecraftEditor;
 pub use crate::util::calculate_stereo_meters;
 ```
 
@@ -226,7 +226,7 @@ pub use crate::util::calculate_stereo_meters;
    }
    ```
 
-2. **`ParamSet`** — Parameter set definition (typically via `vstkit_params!` macro):
+2. **`ParamSet`** — Parameter set definition (typically via `wavecraft_params!` macro):
    ```rust
    pub trait ParamSet: 'static + Send + Sync {
        const COUNT: usize;
@@ -246,9 +246,9 @@ pub use crate::util::calculate_stereo_meters;
 
 **Macros:**
 
-- **`vstkit_params!`** — Declarative parameter definition:
+- **`wavecraft_params!`** — Declarative parameter definition:
   ```rust
-  vstkit_params! {
+  wavecraft_params! {
       Gain: { id: 0, name: "Gain", range: -24.0..=24.0, default: 0.0, unit: "dB" },
       Mix: { id: 1, name: "Mix", range: 0.0..=1.0, default: 1.0, unit: "%" },
   }
@@ -261,13 +261,13 @@ The template provides a standardized project structure:
 ```
 my-plugin/
 ├── engine/
-│   ├── Cargo.toml           ← Depends on vstkit-* crates
+│   ├── Cargo.toml           ← Depends on wavecraft-* crates
 │   └── src/
 │       ├── lib.rs           ← Plugin entry point
 │       └── dsp.rs           ← User's Processor implementation
 │
 ├── ui/
-│   ├── package.json         ← React + @vstkit/ipc
+│   ├── package.json         ← React + @wavecraft/ipc
 │   ├── vite.config.ts
 │   └── src/
 │       ├── App.tsx          ← User's custom UI layout
@@ -284,7 +284,7 @@ my-plugin/
 
 3. **Composition over Inheritance** — Users compose their plugins from framework components rather than subclassing.
 
-4. **Type Safety** — Compile-time guarantees through Rust's type system; generic `VstKitEditor<P: Params>` works with any parameter type.
+4. **Type Safety** — Compile-time guarantees through Rust's type system; generic `WavecraftEditor<P: Params>` works with any parameter type.
 
 5. **Real-Time Safety by Design** — DSP traits enforce the contract; metering uses proven lock-free patterns.
 
@@ -298,7 +298,7 @@ my-plugin/
 
 ## Browser Development Mode
 
-VstKit supports running the UI in a standard browser for rapid development iteration, with **real engine communication** via WebSocket.
+Wavecraft supports running the UI in a standard browser for rapid development iteration, with **real engine communication** via WebSocket.
 
 ### Development Mode Architecture
 
@@ -347,7 +347,7 @@ The IPC system uses a factory pattern to automatically select the appropriate tr
 │                    │NativeTransport│  │WebSocketTransport │     │
 │                    │              │  │                   │     │
 │                    │ postMessage  │  │ ws://127.0.0.1:   │     │
-│                    │ __VSTKIT_IPC__│  │ 9000              │     │
+│                    │ __WAVECRAFT_IPC__│  │ 9000              │     │
 │                    └──────────────┘  └───────────────────┘     │
 └────────────────────────────────────────────────────────────────┘
 ```
@@ -357,7 +357,7 @@ The IPC system uses a factory pattern to automatically select the appropriate tr
 1. **Environment Detection** (`environment.ts`):
    ```typescript
    export function isWebViewEnvironment(): boolean {
-     return globalThis.__VSTKIT_IPC__ !== undefined;
+     return globalThis.__WAVECRAFT_IPC__ !== undefined;
    }
    ```
 
@@ -417,7 +417,7 @@ The environment constant is evaluated at module scope (not inside hooks) to comp
 
 ## Build System & Tooling
 
-VstKit uses a Rust-based build system (`xtask`) that provides a unified interface for building, testing, signing, and distributing plugins.
+Wavecraft uses a Rust-based build system (`xtask`) that provides a unified interface for building, testing, signing, and distributing plugins.
 
 
 ### Available Commands
@@ -473,7 +473,7 @@ cargo xtask notarize --full
 
 ### Code Signing (macOS)
 
-VstKit plugins require code signing for distribution. The build system provides two signing modes:
+Wavecraft plugins require code signing for distribution. The build system provides two signing modes:
 
 **Ad-Hoc Signing** (local development):
 ```bash
@@ -511,7 +511,7 @@ cargo xtask notarize --full     # Submit, wait, and staple
 
 ### Entitlements
 
-VstKit plugins require specific entitlements for the hardened runtime due to WKWebView's JavaScript JIT:
+Wavecraft plugins require specific entitlements for the hardened runtime due to WKWebView's JavaScript JIT:
 
 ```xml
 <!-- engine/signing/entitlements.plist -->
@@ -527,7 +527,7 @@ See [macOS Signing Guide](../guides/macos-signing.md) for complete setup instruc
 
 ### CI/CD Pipelines
 
-VstKit uses GitHub Actions for continuous integration and release automation.
+Wavecraft uses GitHub Actions for continuous integration and release automation.
 
 **CI Build** (`.github/workflows/ci.yml`):
 - Triggers on push/PR to `main`
@@ -556,7 +556,7 @@ VstKit uses GitHub Actions for continuous integration and release automation.
 
 ## Visual Testing
 
-VstKit supports browser-based visual testing using Playwright MCP for agent-driven UI validation.
+Wavecraft supports browser-based visual testing using Playwright MCP for agent-driven UI validation.
 
 ### Architecture
 
@@ -565,7 +565,7 @@ VstKit supports browser-based visual testing using Playwright MCP for agent-driv
   ┌─────────────┐                  ┌─────────────┐           ┌─────────────┐
   │             │ "take screenshot"│             │   CDP     │             │
   │   Copilot   │─────────────────►│  Playwright │──────────►│  Chromium   │
-  │             │                  │  MCP Server │           │  VstKit UI  │
+  │             │                  │  MCP Server │           │  Wavecraft UI  │
   │             │◄─────────────────│             │◄──────────│             │
   └─────────────┘  screenshot.png  └─────────────┘           └──────┬──────┘
         │                                                          │ ws://
@@ -573,7 +573,7 @@ VstKit supports browser-based visual testing using Playwright MCP for agent-driv
   ┌─────────────┐                                           ┌─────────────┐
   │  External   │                                           │    Rust     │
   │  Baselines  │                                           │   Engine    │
-  │ ~/.vstkit/  │                                           │ (xtask dev) │
+  │ ~/.wavecraft/  │                                           │ (xtask dev) │
   └─────────────┘                                           └─────────────┘
 ```
 
@@ -591,7 +591,7 @@ All UI components have `data-testid` attributes for reliable Playwright selectio
 
 ### Baseline Storage
 
-Visual baselines are stored externally (not in git) at `~/.vstkit/visual-baselines/`:
+Visual baselines are stored externally (not in git) at `~/.wavecraft/visual-baselines/`:
 - Keeps repository lean
 - Independent versioning from code
 - Shareable across development machines
@@ -601,7 +601,7 @@ Visual baselines are stored externally (not in git) at `~/.vstkit/visual-baselin
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Automation tool | Playwright MCP | Agent-native, no custom scripts |
-| Baseline location | External (`~/.vstkit/`) | Repository stays lean |
+| Baseline location | External (`~/.wavecraft/`) | Repository stays lean |
 | Test orchestration | Agent-driven | On-demand, not CI |
 | Component targeting | `data-testid` attributes | Stable selectors |
 
@@ -657,12 +657,12 @@ To convert a nih-plug CLAP plugin to AUv2 using clap-wrapper:
 
 ```cmake
 cmake_minimum_required(VERSION 3.15)
-project(vstkit) # <-- your project name
+project(wavecraft) # <-- your project name
 
 # This CMakeLists.txt converts a .clap file into an AUv2 plugin (.component)
 
 # Path to the CLAP plugin built by nih-plug
-set(CLAP_PLUGIN_PATH "${CMAKE_CURRENT_SOURCE_DIR}/VstKit.clap") # <-- adjust path
+set(CLAP_PLUGIN_PATH "${CMAKE_CURRENT_SOURCE_DIR}/Wavecraft.clap") # <-- adjust path
 
 # Required for AU SDK on macOS
 set(CMAKE_CXX_STANDARD 17)
@@ -685,8 +685,8 @@ target_add_auv2_wrapper(
     MACOS_EMBEDDED_CLAP_LOCATION ${CLAP_PLUGIN_PATH}
     
     # AU metadata (must match your plugin)
-    OUTPUT_NAME "VstKit"
-    BUNDLE_IDENTIFIER "com.yourcompany.vstkit"
+    OUTPUT_NAME "Wavecraft"
+    BUNDLE_IDENTIFIER "com.yourcompany.wavecraft"
     BUNDLE_VERSION "1.0"
     MANUFACTURER_NAME "Your Company"
     MANUFACTURER_CODE "VstK"  # 4-char code
@@ -843,9 +843,9 @@ References about real-time constraints and ring buffers: best practices and Rust
 
 ## Packaging & distribution notes
 	•	macOS: notarization and signing required; package VST3 (`.vst3`), CLAP (`.clap`), and AU (`.component` via clap-wrapper); embed React assets into plugin bundle resources.
-		- VST3: `/Library/Audio/Plug-Ins/VST3/VstKit.vst3`
-		- CLAP: `/Library/Audio/Plug-Ins/CLAP/VstKit.clap`
-		- AU: `/Library/Audio/Plug-Ins/Components/VstKit.component` (built via clap-wrapper from CLAP)
+		- VST3: `/Library/Audio/Plug-Ins/VST3/Wavecraft.vst3`
+		- CLAP: `/Library/Audio/Plug-Ins/CLAP/Wavecraft.clap`
+		- AU: `/Library/Audio/Plug-Ins/Components/Wavecraft.component` (built via clap-wrapper from CLAP)
 		- AU requires valid `Info.plist` with `AudioComponents` array (clap-wrapper generates this)
 		- **Signing**: `cargo xtask sign` (or `--adhoc` for local dev)
 		- **Notarization**: `cargo xtask notarize --full` (requires Apple Developer account)

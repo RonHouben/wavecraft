@@ -8,7 +8,7 @@ use xtask::output::*;
 
 /// Run the release command.
 pub fn run(skip_notarize: bool, verbose: bool) -> Result<()> {
-    print_header("VstKit Release Build");
+    print_header("Wavecraft Release Build");
 
     // Step 1: Build release bundles
     print_status("Building release bundles...");

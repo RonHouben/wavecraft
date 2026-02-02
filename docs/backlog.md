@@ -1,4 +1,4 @@
-# VstKit Backlog
+# Wavecraft Backlog
 
 This document contains ideas and tasks for future consideration that haven't been prioritized into a milestone yet.
 
@@ -78,11 +78,11 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 
 ## Project Rename
 
-**Status:** 🚧 In progress — see [Milestone 9](roadmap.md#milestone-9-project-rename-vstkit--wavecraft)
+**Status:** 🚧 In progress — see [Milestone 9](roadmap.md#milestone-9-project-rename-wavecraft--wavecraft)
 
 | Item | Notes |
 |------|-------|
-| ~~Rename VstKit → Wavecraft~~ | ✅ **Moved to Milestone 9** — Active development on `feature/project-rename-wavecraft` branch |
+| ~~Rename Wavecraft → Wavecraft~~ | ✅ **Moved to Milestone 9** — Active development on `feature/project-rename-wavecraft` branch |
 | Request GitHub `wavecraft` username | GitHub username `WaveCraft` is held by an inactive user (no activity since 2020, 1 repo about electronics). Submit request via [GitHub's Name Squatting Policy](https://docs.github.com/en/site-policy/other-site-policies/github-username-policy) after project is stable/public. Current repo: `RonHouben/wavecraft`. |
 | Register `wavecraft.dev` domain | Available at €10.89/yr on Namecheap. Optional — register when ready for public docs site. |
 

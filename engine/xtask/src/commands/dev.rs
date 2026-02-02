@@ -18,7 +18,7 @@ use xtask::paths;
 /// * `port` - WebSocket server port (default: 9000)
 /// * `verbose` - Show detailed output
 pub fn run(port: u16, verbose: bool) -> Result<()> {
-    print_header("VstKit Development Servers");
+    print_header("Wavecraft Development Servers");
 
     // Get paths to engine and UI directories
     let engine_dir = paths::engine_dir()?;

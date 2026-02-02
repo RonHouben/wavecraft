@@ -115,7 +115,7 @@ fn submit(config: &NotarizeConfig) -> Result<()> {
     let request = NotarizationRequest {
         request_id: request_id.clone(),
         submitted_at: chrono::Utc::now().to_rfc3339(),
-        bundles: vec!["vstkit.vst3", "vstkit.clap", "vstkit.component"]
+        bundles: vec!["wavecraft.vst3", "wavecraft.clap", "wavecraft.component"]
             .into_iter()
             .map(String::from)
             .collect(),
@@ -194,7 +194,7 @@ fn status(config: &NotarizeConfig) -> Result<()> {
 fn staple(_config: &NotarizeConfig) -> Result<()> {
     let bundled_dir = paths::bundled_dir()?;
 
-    let bundles = ["vstkit.vst3", "vstkit.clap", "vstkit.component"];
+    let bundles = ["wavecraft.vst3", "wavecraft.clap", "wavecraft.component"];
 
     for bundle_name in bundles {
         let bundle_path = bundled_dir.join(bundle_name);
@@ -365,7 +365,7 @@ mod tests {
         let request = NotarizationRequest {
             request_id: "abc-123".to_string(),
             submitted_at: "2026-01-31T00:00:00Z".to_string(),
-            bundles: vec!["vstkit.vst3".to_string()],
+            bundles: vec!["wavecraft.vst3".to_string()],
         };
 
         let json = serde_json::to_string(&request).unwrap();

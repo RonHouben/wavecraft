@@ -12,7 +12,7 @@ use tao::{
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
-use vstkit_bridge::IpcHandler;
+use wavecraft_bridge::IpcHandler;
 use wry::WebViewBuilder;
 
 /// IPC primitives JavaScript (injected before React loads)
@@ -82,7 +82,7 @@ pub fn run_app(state: Arc<AppState>) -> Result<(), Box<dyn std::error::Error>> {
 
             // Call the internal _receive method that the primitives expose
             let js_code = format!(
-                "globalThis.__VSTKIT_IPC__._receive('{}');",
+                "globalThis.__WAVECRAFT_IPC__._receive('{}');",
                 escaped_response
             );
 

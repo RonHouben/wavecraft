@@ -8,7 +8,7 @@ import { Meter } from './Meter';
 import { setMockMeterFrame } from '../test/mocks/ipc';
 
 // Mock the IPC module
-vi.mock('../lib/vstkit-ipc', () => import('../test/mocks/ipc'));
+vi.mock('../lib/wavecraft-ipc', () => import('../test/mocks/ipc'));
 
 describe('Meter', () => {
   beforeEach(() => {

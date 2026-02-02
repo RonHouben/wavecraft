@@ -27,7 +27,7 @@ pub fn run_all(
     use xtask::Platform;
     use xtask::output::*;
 
-    print_header("VstKit Full Build Pipeline");
+    print_header("Wavecraft Full Build Pipeline");
 
     // Step 1: Run tests
     if !skip_tests {

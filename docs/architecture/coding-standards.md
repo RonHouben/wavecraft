@@ -1,6 +1,6 @@
 # Coding Standards
 
-This document defines the coding standards and conventions for the VstKit project.
+This document defines the coding standards and conventions for the Wavecraft project.
 
 ---
 
@@ -215,7 +215,7 @@ declare const __APP_VERSION__: string;
 ```
 src/
 ├── lib/
-│   └── vstkit-ipc/
+│   └── wavecraft-ipc/
 │       ├── index.ts          # Public exports
 │       ├── types.ts          # Type definitions
 │       ├── environment.ts    # Environment detection (browser vs WKWebView)
@@ -244,31 +244,31 @@ The project defines the following import aliases (configured in `tsconfig.json`,
 
 | Alias | Path | Usage |
 |-------|------|-------|
-| `@vstkit/ipc` | `./src/lib/vstkit-ipc` | IPC client, hooks, and types |
-| `@vstkit/ipc/meters` | `./src/lib/vstkit-ipc/meters` | Pure audio math utilities (no IPC side effects) |
+| `@wavecraft/ipc` | `./src/lib/wavecraft-ipc` | IPC client, hooks, and types |
+| `@wavecraft/ipc/meters` | `./src/lib/wavecraft-ipc/meters` | Pure audio math utilities (no IPC side effects) |
 
 **Do:**
 ```typescript
 // ✅ Use alias for IPC features (in components)
-import { getMeterFrame, MeterFrame, useParameter } from '@vstkit/ipc';
+import { getMeterFrame, MeterFrame, useParameter } from '@wavecraft/ipc';
 
 // ✅ Use subpath alias for pure utilities (especially in tests)
-import { linearToDb, dbToLinear } from '@vstkit/ipc/meters';
+import { linearToDb, dbToLinear } from '@wavecraft/ipc/meters';
 ```
 
 **Don't:**
 ```typescript
 // ❌ Relative imports to shared libraries
-import { getMeterFrame } from '../lib/vstkit-ipc';
-import { useParameter } from '../../lib/vstkit-ipc';
+import { getMeterFrame } from '../lib/wavecraft-ipc';
+import { useParameter } from '../../lib/wavecraft-ipc';
 
 // ❌ Relative imports in test files
-import { linearToDb } from './vstkit-ipc/meters';
+import { linearToDb } from './wavecraft-ipc/meters';
 ```
 
 **Subpath Aliases:**
 
-The `@vstkit/ipc/meters` subpath provides access to pure utility functions (`linearToDb`, `dbToLinear`, `getMeterFrame`) without triggering IPC initialization side effects. Use this subpath:
+The `@wavecraft/ipc/meters` subpath provides access to pure utility functions (`linearToDb`, `dbToLinear`, `getMeterFrame`) without triggering IPC initialization side effects. Use this subpath:
 - In unit tests for pure functions
 - When you only need math utilities, not hooks or clients
 
@@ -290,15 +290,15 @@ This applies to:
 **Do:**
 ```typescript
 // ✅ Use globalThis in TypeScript/JavaScript
-globalThis.vstkit?.invoke('getParameter', { id });
+globalThis.wavecraft?.invoke('getParameter', { id });
 globalThis.addEventListener('message', handler);
 ```
 
 ```rust
 // ✅ Use globalThis in embedded JavaScript (Rust)
 let js = format!(
-    "if (globalThis.__VSTKIT_IPC__ && globalThis.__VSTKIT_IPC__._onParamUpdate) {{ \
-        globalThis.__VSTKIT_IPC__._onParamUpdate({{ id: '{}', value: {} }}); \
+    "if (globalThis.__WAVECRAFT_IPC__ && globalThis.__WAVECRAFT_IPC__._onParamUpdate) {{ \
+        globalThis.__WAVECRAFT_IPC__._onParamUpdate({{ id: '{}', value: {} }}); \
     }}",
     id, value
 );
@@ -308,14 +308,14 @@ webview.evaluate_script(&js);
 **Don't:**
 ```typescript
 // ❌ Using window in TypeScript/JavaScript
-window.vstkit?.invoke('getParameter', { id });
+window.wavecraft?.invoke('getParameter', { id });
 window.addEventListener('message', handler);
 ```
 
 ```rust
 // ❌ Using window in embedded JavaScript (Rust)
 let js = format!(
-    "if (window.__VSTKIT_IPC__) {{ window.__VSTKIT_IPC__._onParamUpdate(...); }}"
+    "if (window.__WAVECRAFT_IPC__) {{ window.__WAVECRAFT_IPC__._onParamUpdate(...); }}"
 );
 ```
 
@@ -524,7 +524,7 @@ engine/xtask/src/
 
 **Rule:** Use `#[cfg(target_os = "...")]` attributes for platform-specific code. Do not use `#[allow(dead_code)]` to suppress warnings for platform-gated items.
 
-VstKit is primarily developed for macOS, with the editor/WebView components being platform-specific. Code that only runs on certain platforms should be properly gated.
+Wavecraft is primarily developed for macOS, with the editor/WebView components being platform-specific. Code that only runs on certain platforms should be properly gated.
 
 **Patterns:**
 
@@ -598,7 +598,7 @@ Code running on the audio thread must:
 
 ## Testing
 
-VstKit uses Vitest and React Testing Library for UI unit testing.
+Wavecraft uses Vitest and React Testing Library for UI unit testing.
 
 ### Running Tests
 
@@ -673,13 +673,13 @@ beforeEach(() => {
 
 **TypeScript Support:**
 - Types: `vitest/globals`, `@testing-library/jest-dom`
-- Aliases: Same as production (`@vstkit/ipc`, `@vstkit/ipc/meters`)
+- Aliases: Same as production (`@wavecraft/ipc`, `@wavecraft/ipc/meters`)
 
 ---
 
 ## Linting & Formatting
 
-VstKit enforces consistent code quality through automated linting.
+Wavecraft enforces consistent code quality through automated linting.
 
 ### Running Linters
 

@@ -8,7 +8,7 @@ import { ParameterSlider } from './ParameterSlider';
 import { setMockParameter } from '../test/mocks/ipc';
 
 // Mock the IPC module
-vi.mock('@vstkit/ipc', () => import('../test/mocks/ipc'));
+vi.mock('@wavecraft/ipc', () => import('../test/mocks/ipc'));
 
 describe('ParameterSlider', () => {
   beforeEach(() => {

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide explains how to use Playwright MCP for visual testing of the VstKit UI during development. Visual testing enables screenshot capture, baseline comparison, and validation of UI components at various states.
+This guide explains how to use Playwright MCP for visual testing of the Wavecraft UI during development. Visual testing enables screenshot capture, baseline comparison, and validation of UI components at various states.
 
 **Requirements:**
 - `cargo xtask dev` running (WebSocket server + Vite)
@@ -88,7 +88,7 @@ Baselines are stored externally in your user directory, not in the git repositor
 ### Directory Structure
 
 ```
-~/.vstkit/
+~/.wavecraft/
 └── visual-baselines/
     ├── manifest.json              # Baseline metadata
     ├── full-page/
@@ -207,7 +207,7 @@ Agent:
 1. Navigates to app
 2. Locates `[data-testid="meter"]`
 3. Captures screenshot of element only
-4. Compares to baseline in ~/.vstkit/visual-baselines/components/meter/
+4. Compares to baseline in ~/.wavecraft/visual-baselines/components/meter/
 ```
 
 ### Compare to Baseline
@@ -217,7 +217,7 @@ User: "Compare the current meter to baseline"
 
 Agent:
 1. Captures current meter screenshot
-2. Loads baseline from ~/.vstkit/visual-baselines/components/meter/default.png
+2. Loads baseline from ~/.wavecraft/visual-baselines/components/meter/default.png
 3. Compares using pixelmatch (0.1% threshold)
 4. Reports: PASS, FAIL (with diff %), or NO_BASELINE
 ```
@@ -229,7 +229,7 @@ User: "Save this as the new baseline for clipping state"
 
 Agent:
 1. Captures current screenshot
-2. Saves to ~/.vstkit/visual-baselines/components/meter/clipping.png
+2. Saves to ~/.wavecraft/visual-baselines/components/meter/clipping.png
 3. Updates manifest.json with metadata
 ```
 
@@ -286,9 +286,9 @@ Message: Visual difference detected in 'components/meter/default'
 Diff: 2.3% pixels differ (threshold: 0.1%)
 
 Files:
-  Baseline: ~/.vstkit/visual-baselines/components/meter/default.png
-  Current:  ~/.vstkit/visual-baselines/.diff/meter_default_current.png
-  Diff:     ~/.vstkit/visual-baselines/.diff/meter_default_diff.png
+  Baseline: ~/.wavecraft/visual-baselines/components/meter/default.png
+  Current:  ~/.wavecraft/visual-baselines/.diff/meter_default_current.png
+  Diff:     ~/.wavecraft/visual-baselines/.diff/meter_default_diff.png
 
 Action: Review diff and either:
   1. Fix regression in code
@@ -362,7 +362,7 @@ await page.evaluate(() => {
 
 **Solution:**
 - First time testing? Save current state as baseline
-- Check `~/.vstkit/visual-baselines/` exists
+- Check `~/.wavecraft/visual-baselines/` exists
 - Verify `manifest.json` is valid JSON
 
 ### Screenshot Differences Too Sensitive

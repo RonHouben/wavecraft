@@ -1,0 +1,36 @@
+[package]
+name = "my-plugin"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "my_plugin"
+crate-type = ["cdylib"]
+
+[dependencies]
+# Wavecraft SDK dependencies (local paths for development)
+# TODO: Switch to git dependencies when published:
+#   wavecraft-core = { git = "https://github.com/YOUR_ORG/vstkit", branch = "main" }
+wavecraft-core = { path = "../../engine/crates/wavecraft-core" }
+wavecraft-protocol = { path = "../../engine/crates/wavecraft-protocol" }
+wavecraft-dsp = { path = "../../engine/crates/wavecraft-dsp" }
+vstkit-bridge = { path = "../../engine/crates/vstkit-bridge" }
+vstkit-metering = { path = "../../engine/crates/vstkit-metering" }
+
+# Note: nih-plug MUST be present for derive macros to work (Params, etc.)
+# Use the EXACT same version as wavecraft-core to avoid type conflicts
+nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28b149ec4d62757d0b448809148a0c3ca6e09a95" }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Logging
+log = "0.4"
+
+[build-dependencies]
+# Note: Use the nih_plug_xtask from wavecraft-core's dependency tree
+# This ensures version consistency with the Wavecraft SDK
+nih_plug_xtask = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28b149ec4d62757d0b448809148a0c3ca6e09a95" }
+

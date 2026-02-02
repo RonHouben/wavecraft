@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useState, useRef } from 'react';
-import { getMeterFrame, linearToDb, useConnectionStatus, type MeterFrame } from '../lib/vstkit-ipc';
+import { getMeterFrame, linearToDb, useConnectionStatus, type MeterFrame } from '../lib/wavecraft-ipc';
 
 const METER_UPDATE_HZ = 30;
 const METER_FLOOR_DB = -60;

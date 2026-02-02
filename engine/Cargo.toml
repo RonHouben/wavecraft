@@ -3,10 +3,10 @@ members = ["crates/*", "xtask"]
 resolver = "2"
 
 [workspace.package]
-version = "0.4.0"
+version = "0.5.0"
 edition = "2024"
 license = "MIT"
-authors = ["VstKit Team"]
+authors = ["Wavecraft Team"]
 
 [workspace.dependencies]
 # nih-plug framework - pinned to specific commit for stability
@@ -14,11 +14,11 @@ nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28b149e
 nih_plug_egui = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28b149ec4d62757d0b448809148a0c3ca6e09a95" }
 
 # Internal crates
-vstkit-protocol = { path = "crates/vstkit-protocol" }
-vstkit-dsp = { path = "crates/vstkit-dsp" }
-vstkit-bridge = { path = "crates/vstkit-bridge" }
+wavecraft-protocol = { path = "crates/wavecraft-protocol" }
+wavecraft-dsp = { path = "crates/wavecraft-dsp" }
+wavecraft-bridge = { path = "crates/wavecraft-bridge" }
 standalone = { path = "crates/standalone" }
-vstkit-metering = { path = "crates/vstkit-metering" }
+wavecraft-metering = { path = "crates/wavecraft-metering" }
 
 [profile.release]
 lto = "thin"

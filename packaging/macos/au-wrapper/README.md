@@ -1,12 +1,12 @@
-# VstKit AU (Audio Unit v2) Wrapper
+# Wavecraft AU (Audio Unit v2) Wrapper
 
-This directory contains the CMake configuration for building the VstKit Audio Unit plugin
+This directory contains the CMake configuration for building the Wavecraft Audio Unit plugin
 using [clap-wrapper](https://github.com/free-audio/clap-wrapper/).
 
 ## Overview
 
 nih-plug does NOT support AU export directly. This wrapper uses the clap-wrapper project
-to convert the VstKit CLAP plugin into an AUv2 plugin for use in:
+to convert the Wavecraft CLAP plugin into an AUv2 plugin for use in:
 - GarageBand
 - Logic Pro
 - Other AU-compatible hosts on macOS
@@ -20,7 +20,7 @@ VST3/CLAP formats display the custom React UI. This is expected behavior.
 - macOS (AU is macOS-only)
 - CMake 3.21+
 - Xcode command line tools (`xcode-select --install`)
-- VstKit CLAP plugin built (`cargo xtask bundle plugin --release` in engine/)
+- Wavecraft CLAP plugin built (`cargo xtask bundle plugin --release` in engine/)
 
 ## Build Instructions
 
@@ -61,8 +61,8 @@ VST3/CLAP formats display the custom React UI. This is expected behavior.
 
 | Property | Value | Notes |
 |----------|-------|-------|
-| Output Name | VstKit | Plugin display name |
-| Bundle ID | dev.vstkit.vstkit | macOS bundle identifier |
+| Output Name | Wavecraft | Plugin display name |
+| Bundle ID | dev.wavecraft.wavecraft | macOS bundle identifier |
 | Manufacturer Code | VstK | 4-char code (should be registered with Apple) |
 | Subtype Code | G0CJ | Auto-generated from CLAP ID hash by clap-wrapper |
 | Type | aufx | Audio effect (use `aumu` for instruments) |
@@ -91,7 +91,7 @@ au-wrapper/
 ├── CMakeLists.txt    # Main build configuration
 ├── README.md         # This file
 └── build/            # Build output (created by cmake)
-    └── VstKit.component/  # The built AU plugin
+    └── Wavecraft.component/  # The built AU plugin
 ```
 
 ## References

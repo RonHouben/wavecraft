@@ -1,7 +1,9 @@
 # build artifacts
 /engine/target/
-/engine/crates/vstkit-core/tests/trybuild/minimal/target/
-/engine/crates/vstkit-core/tests/trybuild/full/target/
+/engine/crates/wavecraft-core/tests/trybuild/minimal/target/
+/engine/crates/wavecraft-core/tests/trybuild/full/target/
+/engine/crates/wavecraft-core/tests/trybuild/full/target/
+
 
 /target/
 /packaging/macos/au-wrapper/build

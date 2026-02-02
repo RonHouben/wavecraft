@@ -104,7 +104,7 @@ Verify boundaries per `high-level-design.md`:
 - [ ] Strict mode enabled in `tsconfig.json`
 - [ ] Classes for services/clients, functional components for UI
 - [ ] Custom hooks bridge classes to React state
-- [ ] Import aliases used (`@vstkit/*` instead of relative paths)
+- [ ] Import aliases used (`@wavecraft/*` instead of relative paths)
 - [ ] No `any` types without justification
 
 ### 4. Security & Bug Patterns
