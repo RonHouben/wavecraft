@@ -5,7 +5,7 @@ use wavecraft_core::prelude::*;
 // Wavecraft SDK components
 use wavecraft_core::{editor::create_webview_editor, util::calculate_stereo_meters};
 use wavecraft_dsp::{Processor as WavecraftProcessor, Transport as WavecraftTransport};
-use vstkit_metering::{create_meter_channel, MeterFrame, MeterProducer, MeterConsumer};
+// Note: MeterFrame, MeterProducer, MeterConsumer, create_meter_channel are in prelude
 
 use std::sync::Arc;
 

@@ -15,8 +15,8 @@ crate-type = ["cdylib"]
 wavecraft-core = { path = "../../engine/crates/wavecraft-core" }
 wavecraft-protocol = { path = "../../engine/crates/wavecraft-protocol" }
 wavecraft-dsp = { path = "../../engine/crates/wavecraft-dsp" }
-vstkit-bridge = { path = "../../engine/crates/vstkit-bridge" }
-vstkit-metering = { path = "../../engine/crates/vstkit-metering" }
+wavecraft-bridge = { path = "../../engine/crates/wavecraft-bridge" }
+wavecraft-metering = { path = "../../engine/crates/wavecraft-metering" }
 
 # Note: nih-plug MUST be present for derive macros to work (Params, etc.)
 # Use the EXACT same version as wavecraft-core to avoid type conflicts

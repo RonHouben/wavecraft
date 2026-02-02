@@ -1,7 +1,7 @@
-//! Prelude module - Common imports for VstKit SDK users.
+//! Prelude module - Common imports for Wavecraft SDK users.
 //!
 //! This module re-exports the most commonly used types and traits for building
-//! plugins with VstKit. Import this to get started quickly:
+//! plugins with Wavecraft. Import this to get started quickly:
 //!
 //! ```rust
 //! use wavecraft_core::prelude::*;
@@ -13,10 +13,10 @@ pub use nih_plug::prelude::*;
 // Re-export nih-plug export macros (needed at crate root)
 pub use nih_plug::{nih_export_clap, nih_export_vst3};
 
-// Re-export VstKit DSP traits
+// Re-export Wavecraft DSP traits
 pub use wavecraft_dsp::{Processor, Transport};
 
-// Re-export VstKit protocol types
+// Re-export Wavecraft protocol types
 pub use wavecraft_protocol::{ParamId, ParameterInfo, ParameterType, db_to_linear};
 
 // Re-export metering
