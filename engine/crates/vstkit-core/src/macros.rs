@@ -72,7 +72,6 @@
 ///         let _ = MacroPlugin::default();
 ///     }
 /// }
-
 /// ```
 #[macro_export]
 macro_rules! vstkit_plugin {
@@ -190,8 +189,8 @@ macro_rules! vstkit_plugin {
             $crate::paste::paste! {
                 #[cfg(not(test))]
                 mod [<__vstkit_exports_ $ident>] {
-                    nih_plug::nih_export_vst3!(crate::$ident);
-                    nih_plug::nih_export_clap!(crate::$ident);
+                    nih_plug::nih_export_vst3!($crate::$ident);
+                    nih_plug::nih_export_clap!($crate::$ident);
                 }
             }
         }
@@ -203,8 +202,17 @@ mod tests {
     // Use the crate-local params and macro in unit tests
 
     struct TestProcessor;
-    impl TestProcessor { fn new() -> Self { Self } fn set_sample_rate(&mut self, _sr: f32) {} }
-    impl Default for TestProcessor { fn default() -> Self { Self::new() } }
+    impl TestProcessor {
+        fn new() -> Self {
+            Self
+        }
+        fn set_sample_rate(&mut self, _sr: f32) {}
+    }
+    impl Default for TestProcessor {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
 
     vstkit_plugin! {
         ident: TestMacroPlugin,
@@ -221,6 +229,9 @@ mod tests {
     #[test]
     fn macro_constructs_plugin() {
         let _p = TestMacroPlugin::default();
-        assert_eq!(<TestMacroPlugin as nih_plug::prelude::Plugin>::NAME, "Test Macro Plugin");
+        assert_eq!(
+            <TestMacroPlugin as nih_plug::prelude::Plugin>::NAME,
+            "Test Macro Plugin"
+        );
     }
 }

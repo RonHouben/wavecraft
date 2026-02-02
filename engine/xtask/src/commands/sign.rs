@@ -320,10 +320,7 @@ mod tests {
 
     #[test]
     fn test_signing_config_new() {
-        let config = SigningConfig::new(
-            "Developer ID Application: Test".to_string(),
-            None,
-        );
+        let config = SigningConfig::new("Developer ID Application: Test".to_string(), None);
         assert_eq!(config.identity, "Developer ID Application: Test");
         assert!(config.entitlements.is_none());
         assert!(!config.verbose);

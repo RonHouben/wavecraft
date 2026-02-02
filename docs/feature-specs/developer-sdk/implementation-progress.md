@@ -17,9 +17,9 @@ Tracking implementation of the Developer SDK (Milestone 8).
 | Phase 1: Crate Restructuring | ✅ Complete | 7/7 steps |
 | Phase 2: API Extraction | ✅ Complete | 6/6 steps |
 | Phase 3: Template Repository | ✅ Complete | 6/6 steps |
-| Phase 4: Documentation & Polish | 🚧 In Progress | 5/6 steps |
+| Phase 4: Documentation & Polish | 🚧 In Progress | 6/6 steps |
 
-**Overall Progress:** 23/25 steps (92%)
+**Overall Progress:** 24/25 steps (96%)
 
 ---
 
@@ -136,7 +136,7 @@ This is expected for Phase 1 of SDK development — we're building the API first
 
 **What's Left for Phase 4:**
 - [ ] 4.4: Update roadmap (PO responsibility)
-- [ ] 4.5: Bump version to 0.4.0 (Coder responsibility - **DONE**)
+- [x] 4.5: Bump version to 0.4.0 (Coder responsibility - **DONE**)
 - [ ] 4.6: Final integration test (Tester responsibility)
 
 ---
@@ -149,7 +149,7 @@ This is expected for Phase 1 of SDK development — we're building the API first
 | 4.2 | Generate API documentation | ✅ | Public exports created (prelude, util, editor) |
 | 4.3 | Create concept guides | ✅ | SDK Getting Started guide at docs/guides/sdk-getting-started.md |
 | 4.4 | Update roadmap | ⏳ | PO responsibility |
-| 4.5 | Version bump to 0.4.0 | ⏳ | Coder responsibility |
+| 4.5 | Version bump to 0.4.0 | ✅ | Version bumped to 0.4.0 in engine/Cargo.toml |
 | 4.6 | Final integration test | ⏳ | Tester responsibility |
 
 ---
@@ -189,6 +189,31 @@ All crate renames completed successfully:
 - ✅ `cargo check --workspace` passes
 - ✅ `cargo xtask test` passes (13 Engine + 35 UI tests)
 - ✅ `cargo xtask bundle` succeeds (creates vstkit-core.vst3 and vstkit-core.clap)
+
+---
+
+## Pre-Handoff Verification Complete (Feb 2, 2026)
+
+All pre-handoff checks passed:
+
+**Linting:**
+- ✅ Rust formatting: PASSED
+- ✅ Clippy: PASSED
+- ✅ ESLint: PASSED
+- ✅ Prettier: PASSED
+
+**Type Checking:**
+- ✅ TypeScript type-checking: PASSED
+
+**Tests:**
+- ✅ UI unit tests: 35 passed (6 test files)
+- ✅ Engine tests: 18 passed (5 unit tests + 13 protocol tests)
+- ✅ Doc tests: 3 passed (1 ignored as expected)
+
+**Version:**
+- ✅ Bumped to 0.4.0 in `engine/Cargo.toml`
+
+**Status:** Ready for Tester handoff (Step 4.6: Final integration test)
 
 ---
 
