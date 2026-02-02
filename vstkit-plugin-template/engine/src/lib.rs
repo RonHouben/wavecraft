@@ -3,9 +3,6 @@ use vstkit_core::util::calculate_stereo_meters;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use vstkit_core::editor::VstKitEditor;
 
-// nih-plug imports
-use nih_plug::prelude::*;
-
 // vstkit imports for types not in prelude
 use vstkit_dsp::{Processor as VstKitProcessor, Transport as VstKitTransport};
 use vstkit_metering::{create_meter_channel, MeterFrame, MeterProducer, MeterConsumer};
