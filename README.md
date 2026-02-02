@@ -1,10 +1,10 @@
-# VSTKit
+# Wavecraft
 
 A cross-platform audio effects plugin framework built with **Rust** and **React**.
 
 ## Overview
 
-VSTKit is an audio effects plugin framework (VST3) for **macOS + Ableton Live**. It combines a real-time safe Rust audio engine with a modern React-based UI.
+Wavecraft is an audio effects plugin framework (VST3) for **macOS + Ableton Live**. It combines a real-time safe Rust audio engine with a modern React-based UI.
 
 > **Note:** Windows and Linux support is deprioritized. The architecture supports cross-platform via wry, but current development focuses exclusively on macOS + Ableton Live.
 
@@ -70,7 +70,7 @@ wavecraft/
 
 ## Building
 
-VSTKit uses a Rust-based `xtask` build system for cross-platform builds.
+Wavecraft uses a Rust-based `xtask` build system for cross-platform builds.
 
 ### Prerequisites
 

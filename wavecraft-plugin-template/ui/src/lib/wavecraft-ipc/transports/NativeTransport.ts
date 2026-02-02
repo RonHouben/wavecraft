@@ -18,19 +18,19 @@ interface PendingRequest {
 /**
  * Native WKWebView transport implementation
  *
- * Uses the __VSTKIT_IPC__ primitives injected by the Rust engine.
+ * Uses the __WAVECRAFT_IPC__ primitives injected by the Rust engine.
  */
 export class NativeTransport implements Transport {
   private readonly pendingRequests = new Map<RequestId, PendingRequest>();
   private readonly notificationCallbacks = new Set<NotificationCallback>();
-  private readonly primitives: typeof globalThis.__VSTKIT_IPC__;
+  private readonly primitives: typeof globalThis.__WAVECRAFT_IPC__;
 
   constructor() {
-    this.primitives = globalThis.__VSTKIT_IPC__;
+    this.primitives = globalThis.__WAVECRAFT_IPC__;
 
     if (!this.primitives) {
       throw new Error(
-        'NativeTransport: __VSTKIT_IPC__ primitives not found. ' +
+        'NativeTransport: __WAVECRAFT_IPC__ primitives not found. ' +
           'Ensure this runs in a WKWebView with injected IPC.'
       );
     }

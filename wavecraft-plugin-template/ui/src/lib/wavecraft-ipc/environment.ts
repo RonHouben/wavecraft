@@ -10,7 +10,7 @@
  * @returns true if globalThis.vstkit IPC primitives are available
  */
 export function isWebViewEnvironment(): boolean {
-  return globalThis.__VSTKIT_IPC__ !== undefined;
+  return globalThis.__WAVECRAFT_IPC__ !== undefined;
 }
 
 /**

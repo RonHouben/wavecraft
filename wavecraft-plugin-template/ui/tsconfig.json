@@ -23,8 +23,8 @@
     /* Path aliases */
     "baseUrl": ".",
     "paths": {
-      "@wavecraft/ipc": ["./src/lib/vstkit-ipc"],
-      "@wavecraft/ipc/*": ["./src/lib/vstkit-ipc/*"]
+      "@wavecraft/ipc": ["./src/lib/wavecraft-ipc"],
+      "@wavecraft/ipc/*": ["./src/lib/wavecraft-ipc/*"]
     }
   },
   "include": ["src"],

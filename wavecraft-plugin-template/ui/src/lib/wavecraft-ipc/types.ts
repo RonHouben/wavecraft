@@ -118,7 +118,7 @@ export interface WavecraftIpcPrimitives {
 }
 
 declare global {
-  var __VSTKIT_IPC__: WavecraftIpcPrimitives | undefined;
+  var __WAVECRAFT_IPC__: WavecraftIpcPrimitives | undefined;
 }
 
 // ============================================================================
