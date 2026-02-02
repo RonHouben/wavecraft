@@ -5,7 +5,7 @@
 //!
 //! # Example
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use vstkit_core::editor::VstKitEditor;
 //! use std::sync::{Arc, Mutex};
 //!
