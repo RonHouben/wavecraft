@@ -186,12 +186,10 @@ macro_rules! vstkit_plugin {
                 const CLAP_FEATURES: &'static [nih_plug::prelude::ClapFeature] = &[nih_plug::prelude::ClapFeature::AudioEffect];
             }
 
-            $crate::paste::paste! {
-                #[cfg(not(test))]
-                mod [<__vstkit_exports_ $ident>] {
-                    nih_plug::nih_export_vst3!($crate::$ident);
-                    nih_plug::nih_export_clap!($crate::$ident);
-                }
+            #[cfg(not(test))]
+            mod [<__vstkit_exports_ $ident>] {
+                nih_plug::nih_export_vst3!(crate::$ident);
+                nih_plug::nih_export_clap!(crate::$ident);
             }
         }
     };
