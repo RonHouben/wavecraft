@@ -76,6 +76,20 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 
 ---
 
+## Project Rename
+
+| Item | Notes |
+|------|-------|
+| Rename VstKit → Wavecraft | Avoid "VST" trademark concerns for open-source release. Scope: repo name, crate names, npm packages, documentation, UI references, README. |
+
+**Pre-rename availability checks:**
+- [ ] **GitHub**: `wavecraft` org or repo name available
+- [ ] **crates.io**: `wavecraft`, `wavecraft-core`, `wavecraft-dsp` available
+- [ ] **npm**: `@wavecraft/*` namespace available
+- [ ] **Domain**: `wavecraft.dev` or `wavecraftaudio.dev` available
+
+---
+
 ## Deferred (Requires Apple Developer Account)
 
 These items are ready to implement but require an Apple Developer Program membership:

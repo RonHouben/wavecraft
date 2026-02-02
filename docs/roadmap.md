@@ -7,15 +7,15 @@ This document tracks implementation progress against the milestones defined in t
 ## Progress Overview
 
 ```
-┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           ✅ M5        ✅ M6            ✅ M7           ⏳ M8       │
-│  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ───── WebSocket ───── Visual Testing ── SDK         │
-│                                                                                                       ▲          │
-│                                                                                              Framework Complete   │
-│                                                                                              Now: Make it usable! │
-│                                                                                                                   │
-│  Progress: [██████████████████████████████████████████████████████████████████████████████████████░░░░░░] ~88%   │
-└───────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           ✅ M5        ✅ M6            ✅ M7           ✅ M8       ⏳ M9   │
+│  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ───── WebSocket ───── Visual Testing ── SDK ─────── Rename │
+│                                                                                                       │          ▲      │
+│                                                                                              Framework Complete   │      │
+│                                                                                              SDK Ready!           │      │
+│                                                                                                                   │      │
+│  Progress: [████████████████████████████████████████████████████████████████████████████████████████████░░░░░░░░] 89%    │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **See also:** [Backlog](backlog.md) — unprioritized ideas for future consideration
@@ -272,40 +272,129 @@ Add a WebSocket server to the standalone app that exposes the same IPC protocol 
 
 ## Milestone 8: Developer SDK
 
-**Status: ⏳ Not Started**
+**Status: ✅ Complete (Phase 1)**
 
 > **Goal:** Transform VstKit from an internal framework into a reusable development kit that other developers can use to build their own VST/CLAP plugins with Rust + React.
 
 **Strategic Context:**
-VstKit has achieved its internal development goals (Milestones 1–7). The next step is to make it **accessible to other developers** as a proper SDK/toolkit. This requires rethinking packaging, documentation, and developer experience.
+VstKit has achieved its internal development goals (Milestones 1–7). The next step is to make it **accessible to other developers** as a proper SDK/toolkit. This required rethinking packaging, documentation, and developer experience.
 
-### Phase 1: Investigation & Architecture
+**User Stories:** [docs/feature-specs/developer-sdk/user-stories.md](feature-specs/developer-sdk/user-stories.md)
+
+### Phase 1: SDK Architecture & Implementation ✅
 
 | Task | Status | Notes |
 |------|--------|-------|
-| **Research & Analysis** | | |
-| Investigate SDK packaging options | ⏳ | Cargo workspace template, CLI scaffolding, binary + source hybrid |
-| Analyze similar Rust plugin frameworks | ⏳ | nih-plug, JUCE (C++), iPlug2 — what works, what doesn't |
-| Define target developer persona | ⏳ | Rust experience level, plugin development background |
-| **Architecture Design** | | |
-| Define SDK boundary (what's framework vs user code) | ⏳ | Which crates are SDK, which are example/template |
-| Design plugin project structure | ⏳ | Where does user DSP code go, UI customization points |
-| Design versioning strategy | ⏳ | How do SDK updates affect user projects |
+| **Research & Planning** | | |
+| User stories | ✅ | 6 stories covering SDK design |
+| Low-level design | ✅ | 5-crate architecture with clear boundaries |
+| Implementation plan | ✅ | 25-step plan across 4 phases |
+| **SDK Crate Restructuring** | | |
+| `vstkit-protocol` — IPC contracts | ✅ | JSON-RPC types, parameter specs |
+| `vstkit-dsp` — Pure audio processing | ✅ | `Processor` trait, no framework deps |
+| `vstkit-bridge` — IPC handling | ✅ | `ParameterHost` trait, handler |
+| `vstkit-metering` — Real-time meters | ✅ | SPSC ring buffer, lock-free |
+| `vstkit-core` — Framework integration | ✅ | `vstkit_plugin!` macro, nih-plug wrapper |
 | **Developer Experience** | | |
-| Document minimum viable workflow | ⏳ | From `cargo vstkit new` to working plugin |
-| Identify documentation requirements | ⏳ | Getting started, API reference, examples |
-| Define tooling requirements | ⏳ | CLI commands, build scripts, debugging tools |
+| `vstkit_plugin!` macro | ✅ | Single-line plugin declaration |
+| Prelude re-exports | ✅ | `use vstkit_core::prelude::*` |
+| Plugin template | ✅ | Working example with xtask bundler |
+| **Documentation** | | |
+| SDK Getting Started guide | ✅ | `docs/guides/sdk-getting-started.md` |
+| High-level design updates | ✅ | SDK architecture documented |
+| Coding standards updates | ✅ | `unwrap()`/`expect()` guidelines added |
+| **Quality Assurance** | | |
+| 111 Engine tests | ✅ | All passing |
+| 35 UI tests | ✅ | All passing |
+| 22 manual tests | ✅ | All passing (incl. visual testing) |
+| Linting | ✅ | Rust + TypeScript clean |
+| Code signing | ✅ | Ad-hoc signing verified |
 
-### Phase 2: Implementation (TBD)
+**Key Deliverables:**
+- **5-crate SDK architecture** with clear domain boundaries
+- **`vstkit_plugin!` macro** for zero-boilerplate plugin declaration
+- **Template project** (`vstkit-plugin-template/`) demonstrating full SDK usage
+- **SDK Getting Started guide** for developers
+- **Version 0.4.0** released
 
-*Scope to be defined after Phase 1 investigation with architect.*
+**Test Results:**
+```
+Engine Tests: 111 passed, 0 failed, 4 ignored (environment-dependent)
+UI Tests:     35 passed, 0 failed
+Manual Tests: 22/22 passed (template compilation, bundling, visual, signing)
+Linting:      All checks passed (cargo fmt, clippy, ESLint, Prettier)
+```
+
+### Phase 2: Publication (Future)
+
+*To be planned when ready to publish to crates.io.*
 
 Potential areas:
+- Publish SDK crates to crates.io
 - CLI tool for project scaffolding (`cargo vstkit new my-plugin`)
-- Template project structure
-- API documentation
-- Example plugins (gain, EQ, synth starter)
-- Versioning and update workflow
+- Additional example plugins (EQ, synth starter)
+- Migration guides for SDK updates
+
+### Phase 2: Publication (Future)
+
+*To be planned when ready to publish to crates.io.*
+
+Potential areas:
+- Publish SDK crates to crates.io
+- CLI tool for project scaffolding (`cargo vstkit new my-plugin`)
+- Additional example plugins (EQ, synth starter)
+- Migration guides for SDK updates
+
+---
+
+## Milestone 9: Project Rename (VstKit → Wavecraft)
+
+**Status: ⏳ Not Started**
+
+> **Goal:** Rename the project from "VstKit" to "Wavecraft" to avoid potential "VST" trademark concerns before public/open-source release.
+
+**Rationale:**
+"VST" is a Steinberg trademark. While "VstKit" may be defensible as a toolkit name, rebranding to "Wavecraft" eliminates any trademark risk and establishes a unique, memorable identity for the project.
+
+**Scope:**
+| Area | Changes Required |
+|------|------------------|
+| GitHub | Repository name, organization (if applicable) |
+| Rust crates | `vstkit-*` → `wavecraft-*` (all 5 SDK crates) |
+| npm packages | `@vstkit/*` → `@wavecraft/*` namespace |
+| Documentation | All docs, guides, README references |
+| UI | Any user-facing "VstKit" branding |
+| Code | Module names, comments, macro names |
+
+### Pre-Rename Checklist
+
+| Check | Status | Notes |
+|-------|--------|-------|
+| GitHub: `wavecraft` available | ⏳ | Check repo/org name availability |
+| crates.io: `wavecraft-*` available | ⏳ | Check `wavecraft`, `wavecraft-core`, `wavecraft-dsp`, etc. |
+| npm: `@wavecraft/*` available | ⏳ | Check namespace availability |
+| Domain: `wavecraft.dev` available | ⏳ | Optional, for future docs site |
+
+### Tasks
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Planning** | | |
+| Availability checks (GitHub, crates.io, npm, domain) | ⏳ | |
+| Create user stories | ⏳ | |
+| Create low-level design | ⏳ | |
+| **Implementation** | | |
+| Rename Rust crates | ⏳ | `vstkit-*` → `wavecraft-*` |
+| Update `Cargo.toml` workspace | ⏳ | Package names, dependencies |
+| Update `vstkit_plugin!` macro | ⏳ | → `wavecraft_plugin!` |
+| Update npm package names | ⏳ | `@vstkit/*` → `@wavecraft/*` |
+| Update all documentation | ⏳ | README, guides, specs |
+| Update UI branding | ⏳ | Any user-visible references |
+| Update template project | ⏳ | `vstkit-plugin-template` → `wavecraft-plugin-template` |
+| **Migration** | | |
+| GitHub repository rename | ⏳ | (Creates redirect from old name) |
+| Update CI/CD workflows | ⏳ | Any hardcoded references |
+| Update external links | ⏳ | If any exist |
 
 ---
 
@@ -313,6 +402,8 @@ Potential areas:
 
 | Date | Update |
 |------|--------|
+| 2026-02-02 | **Added Milestone 9: Project Rename (VstKit → Wavecraft)**: Rebrand to avoid "VST" trademark concerns before open-source release. Scope includes Rust crates, npm packages, GitHub repo, documentation, and UI branding. Pending availability checks for name. |
+| 2026-02-02 | **Milestone 8 complete**: Developer SDK Phase 1 fully implemented. 5-crate SDK architecture (`vstkit-protocol`, `vstkit-dsp`, `vstkit-bridge`, `vstkit-metering`, `vstkit-core`), `vstkit_plugin!` macro for zero-boilerplate plugins, template project, comprehensive documentation. 111 engine + 35 UI tests passing, 22/22 manual tests. QA approved, architect review complete (added `unwrap()`/`expect()` coding standards). Version 0.4.0. **ALL MILESTONES COMPLETE!** Archived to `_archive/developer-sdk/`. |
 | 2026-02-01 | **Milestone 8 created**: Developer SDK initiative. Phase 1 focuses on investigation with architect to define packaging strategy, SDK boundaries, and developer experience. Goal: make VstKit usable by external developers. |
 | 2026-02-01 | **Milestone 7 complete**: Browser-Based Visual Testing infrastructure fully implemented. Playwright @1.41.0 with Chromium installed, 18 test IDs added across all UI components (Meter, ParameterSlider, VersionBadge, ResizeHandle, ConnectionStatus, App root). External baseline storage design (`~/.vstkit/visual-baselines/`). Comprehensive 11KB documentation guide. **Bonus:** Fixed version display — now reads from Cargo.toml in dev mode, improved VersionBadge styling for visibility. 35/35 unit tests, 18/18 feature tests passing. QA approved. Architecture docs updated. Version 0.3.1. Archived to `_archive/browser-visual-testing/`. **ALL COMMITTED MILESTONES COMPLETE!** |
 | 2026-02-01 | **Milestone 6 complete**: WebSocket IPC Bridge fully implemented and tested. Transport abstraction with factory pattern, `WebSocketTransport` with exponential backoff reconnection, `cargo xtask dev` unified development command, graceful degradation UI. 14/14 integration tests, 35 UI tests, 17 Rust tests passing. QA approved, architectural docs updated. Version 0.3.0. Archived to `_archive/websocket-ipc-bridge/`. Ready to merge `feature/websocket-ipc-bridge` branch. |
@@ -352,7 +443,7 @@ Potential areas:
 
 ## Next Steps
 
-> 🚀 **Framework complete!** Now focusing on making VstKit usable for other developers.
+> 🎉 **All committed milestones complete!** VstKit is now a fully functional SDK for building audio plugins with Rust + React.
 
 ### Completed Milestones
 1. ✅ **Milestone 1**: Plugin Skeleton — Rust plugin with VST3/CLAP export
@@ -362,17 +453,10 @@ Potential areas:
 5. ✅ **Milestone 5**: Polish & Optimization — Linting, testing, TailwindCSS, CI/CD
 6. ✅ **Milestone 6**: WebSocket IPC Bridge — Real engine data in browser development
 7. ✅ **Milestone 7**: Browser-Based Visual Testing — Playwright infrastructure with test IDs
+8. ✅ **Milestone 8**: Developer SDK — 5-crate SDK architecture, macro, template, docs
 
-### Current Focus: Milestone 8 — Developer SDK
+### What's Next?
 
-**Goal:** Transform VstKit into a development kit that other developers can use to build their own audio plugins.
-
-**Phase 1 (Investigation):**
-1. Work with **Architect agent** to investigate SDK packaging options
-2. Research similar frameworks (nih-plug, JUCE, iPlug2)
-3. Define SDK boundaries (framework code vs user code)
-4. Design the developer experience (project scaffolding, documentation, tooling)
-
-**To start:** Hand off to Architect agent with: *"Create low level design for VstKit SDK packaging strategy"*
+**Milestone 9: Project Rename (VstKit → Wavecraft)** — Avoid "VST" trademark concerns for open-source release. See milestone details below.
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (platform support, performance, DAW compatibility, etc.)

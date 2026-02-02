@@ -828,3 +828,71 @@ See the docs folder for more information.
 - TypeScript: Use explicit error types, avoid `any`
 - Rust: Use `Result<T, E>` with descriptive error types
 - Always handle errors explicitly; avoid silent failures
+### Rust `unwrap()` and `expect()` Usage
+
+**Rule:** Avoid `unwrap()` in production code. Use `expect()` with descriptive messages or proper error handling.
+
+**Rationale:**
+- `unwrap()` panics without context, making debugging difficult
+- `expect()` provides a message explaining why the operation should succeed
+- Proper error handling with `?` is preferred when errors are recoverable
+
+**Production Code:**
+
+```rust
+// ✅ Use expect() with justification for infallible operations
+// Serialization of well-typed Response structs cannot fail because:
+// - All fields are simple types (strings, numbers, Options)
+// - No custom serializers that could error
+// - serde_json always succeeds for #[derive(Serialize)] types
+serde_json::to_string(&response).expect("Response serialization is infallible")
+
+// ✅ Use ? operator for fallible operations
+let config = SigningConfig::from_env()?;
+let data = serde_json::from_str::<Request>(json)?;
+
+// ✅ Use if-let or match for optional handling
+if let Some(param) = params.get(id) {
+    // use param
+}
+
+// ❌ Avoid bare unwrap() in production
+let value = some_option.unwrap();  // No context if it fails
+let data = serde_json::from_str(json).unwrap();  // Hides parse errors
+```
+
+**Test Code:**
+
+```rust
+// ✅ Prefer expect() with descriptive messages in tests
+let result: GetParameterResult = serde_json::from_value(response.result.clone())
+    .expect("response should contain valid GetParameterResult");
+
+// ✅ Use assert! macros for test assertions
+assert!(response.result.is_some(), "expected successful response");
+assert_eq!(result.value, 0.5, "parameter value should be 0.5");
+
+// ⚠️ unwrap() is acceptable in tests when the intent is obvious
+// but expect() is preferred for better failure messages
+let error = response.error.unwrap();  // Acceptable but not ideal
+```
+
+**When `unwrap()` is Acceptable:**
+
+1. **Infallible operations with documentation**: When an operation mathematically cannot fail and this is documented in a comment
+2. **Test setup code**: Where failure indicates a test bug, not a product bug
+3. **Compile-time constants**: `NonZeroU32::new(2).unwrap()` in const contexts
+
+**Pattern for IPC Response Serialization:**
+
+The `IpcHandler::handle_json()` method uses `unwrap()` for serializing responses. This is acceptable because:
+
+```rust
+// IpcResponse derives Serialize with simple field types:
+// - RequestId (enum of u32/String)
+// - Option<Value> (serde_json::Value, always serializable)
+// - Option<IpcError> (simple struct with String fields)
+//
+// serde_json::to_string() cannot fail for these types.
+serde_json::to_string(&response).expect("IpcResponse serialization is infallible")
+```

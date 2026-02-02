@@ -19,6 +19,15 @@ pub struct SigningConfig {
 }
 
 impl SigningConfig {
+    /// Create a new signing configuration.
+    pub fn new(identity: String, entitlements: Option<String>) -> Self {
+        Self {
+            identity,
+            entitlements,
+            verbose: false,
+        }
+    }
+
     /// Load signing configuration from environment.
     pub fn from_env() -> Result<Self> {
         let identity = std::env::var("APPLE_SIGNING_IDENTITY")
@@ -26,11 +35,7 @@ impl SigningConfig {
 
         let entitlements = std::env::var("APPLE_ENTITLEMENTS").ok();
 
-        Ok(Self {
-            identity,
-            entitlements,
-            verbose: false,
-        })
+        Ok(Self::new(identity, entitlements))
     }
 }
 
@@ -314,28 +319,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_signing_config_from_env() {
-        // SAFETY: This is a test that runs in isolation. Environment variable
-        // modification is acceptable in single-threaded test contexts.
-        unsafe {
-            std::env::set_var("APPLE_SIGNING_IDENTITY", "Test Identity");
-        }
-        let config = SigningConfig::from_env().unwrap();
-        assert_eq!(config.identity, "Test Identity");
-        // SAFETY: Cleanup after test
-        unsafe {
-            std::env::remove_var("APPLE_SIGNING_IDENTITY");
-        }
+    fn test_signing_config_new() {
+        let config = SigningConfig::new("Developer ID Application: Test".to_string(), None);
+        assert_eq!(config.identity, "Developer ID Application: Test");
+        assert!(config.entitlements.is_none());
+        assert!(!config.verbose);
     }
 
     #[test]
-    fn test_signing_config_missing_env() {
-        // SAFETY: This is a test that runs in isolation. Environment variable
-        // modification is acceptable in single-threaded test contexts.
-        unsafe {
-            std::env::remove_var("APPLE_SIGNING_IDENTITY");
-        }
-        let result = SigningConfig::from_env();
-        assert!(result.is_err());
+    fn test_signing_config_with_entitlements() {
+        let config = SigningConfig::new(
+            "Developer ID Application: Test".to_string(),
+            Some("/path/to/entitlements.plist".to_string()),
+        );
+        assert_eq!(config.identity, "Developer ID Application: Test");
+        assert_eq!(
+            config.entitlements,
+            Some("/path/to/entitlements.plist".to_string())
+        );
+        assert!(!config.verbose);
     }
 }

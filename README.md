@@ -61,6 +61,7 @@ vstkit/
 
 ## Documentation
 
+- [SDK Getting Started](docs/guides/sdk-getting-started.md) — Build your first plugin with VstKit
 - [High-Level Design](docs/architecture/high-level-design.md) — Architecture overview, component design, data flows, and implementation roadmap
 - [Coding Standards](docs/architecture/coding-standards.md) — TypeScript, Rust, and React conventions
 - [Agent Development Flow](docs/architecture/agent-development-flow.md) — How specialized agents collaborate through the development lifecycle

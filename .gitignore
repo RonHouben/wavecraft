@@ -1,5 +1,8 @@
 # build artifacts
 /engine/target/
+/engine/crates/vstkit-core/tests/trybuild/minimal/target/
+/engine/crates/vstkit-core/tests/trybuild/full/target/
+
 /target/
 /packaging/macos/au-wrapper/build
 /build
@@ -27,3 +30,6 @@
 *.dll
 *.vst3
 *.component
+
+# vskit-plugin-template specific
+/vstkit-plugin-template/target

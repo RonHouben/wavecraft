@@ -7,6 +7,7 @@ The following are the MOST important guidelines to follow when editing files in 
 - never update files under the `/docs/feature-specs/_archive/` directory. They are kept for historical reference only.
 - ONLY the Product Owner agent is allowed to edit the roadmap file located at `/docs/roadmap.md`! When any other agent needs changes to the roadmap, they must hand off to the Product Owner agent.
 - Before making changes in the code, check the #file:../docs/architecture/coding-standards.md file for relevant coding standards and conventions.
+- Always keep the #tool:todo  list up to date with relevant tasks and their statuses.
 
 ---
 

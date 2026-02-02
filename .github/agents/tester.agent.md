@@ -258,6 +258,19 @@ cd engine && cargo xtask install  # Install to system for DAW testing
 cd engine && cargo run -p desktop
 ```
 
+### Phase 3b: Visual UI Testing (Playwright MCP)
+
+For tests requiring UI interaction or visual verification, use Playwright MCP tools.
+
+**Skill**: Read `.github/skills/playwright-mcp-ui-testing/SKILL.md` for detailed instructions.
+
+**Quick reference:**
+1. Ensure `cargo xtask dev` is running
+2. Use `mcp_playwright_browser_navigate` → `http://localhost:5173`
+3. Use `mcp_playwright_browser_snapshot` to get element refs
+4. Use `mcp_playwright_browser_take_screenshot` for visual capture
+5. Close with `mcp_playwright_browser_close` when done
+
 ## Guidelines
 
 ### DO:

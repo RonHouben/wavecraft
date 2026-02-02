@@ -11,8 +11,8 @@ name = "standalone"
 path = "src/main.rs"
 
 [dependencies]
-bridge = { path = "../bridge" }
-protocol = { path = "../protocol" }
+vstkit-bridge = { path = "../vstkit-bridge" }
+vstkit-protocol = { path = "../vstkit-protocol" }
 wry = "0.47"
 tao = "0.30"
 include_dir = "0.7"

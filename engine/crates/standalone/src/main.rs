@@ -9,7 +9,7 @@ mod webview;
 mod ws_server;
 
 use app::AppState;
-use bridge::IpcHandler;
+use vstkit_bridge::IpcHandler;
 use ws_server::WsServer;
 
 /// VstKit Standalone - Audio plugin UI testing tool
