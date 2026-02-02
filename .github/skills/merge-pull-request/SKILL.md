@@ -14,25 +14,29 @@ Merges an approved Pull Request using `gh pr merge`, cleans up the **remote** fe
 - GitHub CLI (`gh`) installed and authenticated
 - PR must exist and be **approved** (at least one approval required)
 - CI checks must pass
+- All discussions must be **resolved** (no unresolved discussions)
 
 ## Workflow
 
 ### Step 1: Verify PR Status
 
 ```bash
-# Check PR status and CI
-gh pr status
+# Check PR status, reviews, and discussions
+gh pr view <PR_NUMBER> --json state,reviewDecision,statusCheckRollup,reviewThreads
 
-# Or check specific PR
-gh pr view --json state,reviewDecision,statusCheckRollup
+# Or check current PR
+gh pr status
 ```
 
 Verify:
 - `state: OPEN`
 - `reviewDecision: APPROVED` (**required** — do not merge without approval)
 - All status checks passing
+- **No unresolved discussions** — check `reviewThreads` for any with `isResolved: false`
 
 **If not approved:** Stop and inform the user that the PR needs approval before merging.
+
+**If unresolved discussions exist:** Stop and inform the user that all discussions must be resolved before merging.
 
 ### Step 2: Merge the PR
 
@@ -78,6 +82,7 @@ git log --oneline -5
 |-------|----------|
 | CI checks failing | Wait for CI or investigate failures |
 | Not approved | **Do not merge.** Inform user PR requires approval first |
+| Unresolved discussions | **Do not merge.** Inform user all discussions must be resolved first |
 | Merge conflicts | Resolve conflicts locally, push, then merge |
 | Branch protection | Ensure all requirements met |
 
@@ -88,16 +93,18 @@ git log --oneline -5
 **Agent workflow:**
 1. Run `gh pr status` to identify current PR
 2. Check approval: `gh pr view --json reviewDecision` — must be `APPROVED`
-3. Verify CI passes with `gh pr checks`
-4. Run `gh pr merge --squash --delete-branch`
-5. Switch to main: `git checkout main && git pull`
-6. Prune remotes: `git fetch --prune`
-7. Confirm: "✅ PR #123 merged. Local branch kept for reference."
+3. Check discussions: `gh pr view --json reviewThreads` — ensure none have `isResolved: false`
+4. Verify CI passes with `gh pr checks`
+5. Run `gh pr merge --squash --delete-branch`
+6. Switch to main: `git checkout main && git pull`
+7. Prune remotes: `git fetch --prune`
+8. Confirm: "✅ PR #123 merged. Local branch kept for reference."
 
 ## Notes
 
 - Always use `--squash` for cleaner history
 - Always use `--delete-branch` to keep remote clean (local branch is **never** auto-deleted)
+- **Check for unresolved discussions** — GitHub CLI can query `reviewThreads` to find any with `isResolved: false`
 - Sync local repo immediately after merge
 - Local feature branch is preserved for reference; user can delete manually with `git branch -d <branch>` when no longer needed
 - If PR was created from a fork, `--delete-branch` only affects the fork
