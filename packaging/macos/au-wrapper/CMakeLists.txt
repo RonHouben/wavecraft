@@ -1,6 +1,6 @@
-# CMakeLists.txt for VstKit AU (AUv2) wrapper
+# CMakeLists.txt for Wavecraft AU (AUv2) wrapper
 #
-# This uses clap-wrapper to convert the VstKit CLAP plugin to an Audio Unit v2 plugin
+# This uses clap-wrapper to convert the Wavecraft CLAP plugin to an Audio Unit v2 plugin
 # for use in GarageBand, Logic Pro, and other AU-compatible hosts on macOS.
 #
 # Build instructions:
@@ -8,12 +8,12 @@
 #   cmake -B build
 #   cmake --build build
 #
-# The output VstKit.component will be in build/ directory.
+# The output Wavecraft.component will be in build/ directory.
 # Install to ~/Library/Audio/Plug-Ins/Components/ for testing.
 
 cmake_minimum_required(VERSION 3.21)
 
-project(VstKit-AUWrapper
+project(Wavecraft-AUWrapper
     VERSION 0.1.0
     LANGUAGES C CXX OBJC OBJCXX
 )
@@ -37,25 +37,25 @@ endif()
 # --------------------------------------------------------------------------
 
 # Plugin metadata (must match CLAP plugin)
-set(VSTKIT_OUTPUT_NAME "VstKit")
-set(VSTKIT_BUNDLE_IDENTIFIER "dev.vstkit.vstkit")
-set(VSTKIT_BUNDLE_VERSION "0.1.0")
+set(WAVECRAFT_OUTPUT_NAME "Wavecraft")
+set(WAVECRAFT_BUNDLE_IDENTIFIER "dev.wavecraft.wavecraft")
+set(WAVECRAFT_BUNDLE_VERSION "0.5.0")
 
 # AU-specific 4-character codes (must be unique)
 # These are registered with Apple for your organization
-set(VSTKIT_MANUFACTURER_CODE "VstK")  # 4-char manufacturer code
-set(VSTKIT_MANUFACTURER_NAME "VstKit Team")
+set(WAVECRAFT_MANUFACTURER_CODE "Wave")  # 4-char manufacturer code
+set(WAVECRAFT_MANUFACTURER_NAME "Wavecraft Team")
 # Note: When using MACOS_EMBEDDED_CLAP_LOCATION, clap-wrapper auto-generates
 # the subtype code from the CLAP ID hash. The actual subtype will be "G0CJ".
-set(VSTKIT_SUBTYPE_CODE "vsk1")       # 4-char subtype code (overridden by clap-wrapper)
-set(VSTKIT_INSTRUMENT_TYPE "aufx")    # aufx = effect, aumu = instrument
+set(WAVECRAFT_SUBTYPE_CODE "wvc1")       # 4-char subtype code (overridden by clap-wrapper)
+set(WAVECRAFT_INSTRUMENT_TYPE "aufx")    # aufx = effect, aumu = instrument
 
 # Path to the built CLAP plugin (relative to this CMakeLists.txt)
 # Adjust this path based on where cargo xtask bundle outputs the CLAP
-set(VSTKIT_CLAP_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../engine/target/bundled/vstkit.clap")
+set(WAVECRAFT_CLAP_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../engine/target/bundled/wavecraft-core.clap")
 
 # Convert to absolute path
-get_filename_component(VSTKIT_CLAP_PATH_ABS "${VSTKIT_CLAP_PATH}" ABSOLUTE)
+get_filename_component(WAVECRAFT_CLAP_PATH_ABS "${WAVECRAFT_CLAP_PATH}" ABSOLUTE)
 
 # --------------------------------------------------------------------------
 # Fetch clap-wrapper
@@ -84,19 +84,19 @@ FetchContent_MakeAvailable(clap-wrapper)
 # --------------------------------------------------------------------------
 
 # Create a MODULE library for the AU
-add_library(${VSTKIT_OUTPUT_NAME}-au MODULE)
+add_library(${WAVECRAFT_OUTPUT_NAME}-au MODULE)
 
 # Add the AUv2 wrapper
 target_add_auv2_wrapper(
-    TARGET ${VSTKIT_OUTPUT_NAME}-au
-    OUTPUT_NAME "${VSTKIT_OUTPUT_NAME}"
-    BUNDLE_IDENTIFIER "${VSTKIT_BUNDLE_IDENTIFIER}"
-    BUNDLE_VERSION "${VSTKIT_BUNDLE_VERSION}"
-    MANUFACTURER_NAME "${VSTKIT_MANUFACTURER_NAME}"
-    MANUFACTURER_CODE "${VSTKIT_MANUFACTURER_CODE}"
-    SUBTYPE_CODE "${VSTKIT_SUBTYPE_CODE}"
-    INSTRUMENT_TYPE "${VSTKIT_INSTRUMENT_TYPE}"
-    MACOS_EMBEDDED_CLAP_LOCATION "${VSTKIT_CLAP_PATH_ABS}"
+    TARGET ${WAVECRAFT_OUTPUT_NAME}-au
+    OUTPUT_NAME "${WAVECRAFT_OUTPUT_NAME}"
+    BUNDLE_IDENTIFIER "${WAVECRAFT_BUNDLE_IDENTIFIER}"
+    BUNDLE_VERSION "${WAVECRAFT_BUNDLE_VERSION}"
+    MANUFACTURER_NAME "${WAVECRAFT_MANUFACTURER_NAME}"
+    MANUFACTURER_CODE "${WAVECRAFT_MANUFACTURER_CODE}"
+    SUBTYPE_CODE "${WAVECRAFT_SUBTYPE_CODE}"
+    INSTRUMENT_TYPE "${WAVECRAFT_INSTRUMENT_TYPE}"
+    MACOS_EMBEDDED_CLAP_LOCATION "${WAVECRAFT_CLAP_PATH_ABS}"
 )
 
 # --------------------------------------------------------------------------
@@ -107,12 +107,12 @@ target_add_auv2_wrapper(
 set(AU_INSTALL_DIR "$ENV{HOME}/Library/Audio/Plug-Ins/Components")
 
 add_custom_target(install-au
-    COMMAND ${CMAKE_COMMAND} -E echo "Installing ${VSTKIT_OUTPUT_NAME}.component to ${AU_INSTALL_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E echo "Installing ${WAVECRAFT_OUTPUT_NAME}.component to ${AU_INSTALL_DIR}"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "$<TARGET_BUNDLE_DIR:${VSTKIT_OUTPUT_NAME}-au>"
-        "${AU_INSTALL_DIR}/${VSTKIT_OUTPUT_NAME}.component"
+        "$<TARGET_BUNDLE_DIR:${WAVECRAFT_OUTPUT_NAME}-au>"
+        "${AU_INSTALL_DIR}/${WAVECRAFT_OUTPUT_NAME}.component"
     COMMAND killall -9 AudioComponentRegistrar || true
-    DEPENDS ${VSTKIT_OUTPUT_NAME}-au
+    DEPENDS ${WAVECRAFT_OUTPUT_NAME}-au
     COMMENT "Installing AU plugin and refreshing macOS plugin cache"
 )
 
@@ -124,7 +124,7 @@ add_custom_target(install-au
 # This is expected behavior when using MACOS_EMBEDDED_CLAP_LOCATION
 add_custom_target(validate-au
     COMMAND ${CMAKE_COMMAND} -E echo "Running auval validation..."
-    COMMAND auval -v ${VSTKIT_INSTRUMENT_TYPE} G0CJ ${VSTKIT_MANUFACTURER_CODE}
+    COMMAND auval -v ${WAVECRAFT_INSTRUMENT_TYPE} G0CJ ${WAVECRAFT_MANUFACTURER_CODE}
     DEPENDS install-au
     COMMENT "Validating AU plugin with auval"
 )
@@ -134,18 +134,18 @@ add_custom_target(validate-au
 # --------------------------------------------------------------------------
 
 message(STATUS "")
-message(STATUS "=== VstKit AU Wrapper Configuration ===")
-message(STATUS "Output Name:        ${VSTKIT_OUTPUT_NAME}")
-message(STATUS "Bundle ID:          ${VSTKIT_BUNDLE_IDENTIFIER}")
-message(STATUS "Bundle Version:     ${VSTKIT_BUNDLE_VERSION}")
-message(STATUS "Manufacturer:       ${VSTKIT_MANUFACTURER_NAME} (${VSTKIT_MANUFACTURER_CODE})")
-message(STATUS "Subtype:            ${VSTKIT_SUBTYPE_CODE}")
-message(STATUS "Type:               ${VSTKIT_INSTRUMENT_TYPE}")
-message(STATUS "CLAP Source:        ${VSTKIT_CLAP_PATH_ABS}")
+message(STATUS "=== Wavecraft AU Wrapper Configuration ===")
+message(STATUS "Output Name:        ${WAVECRAFT_OUTPUT_NAME}")
+message(STATUS "Bundle ID:          ${WAVECRAFT_BUNDLE_IDENTIFIER}")
+message(STATUS "Bundle Version:     ${WAVECRAFT_BUNDLE_VERSION}")
+message(STATUS "Manufacturer:       ${WAVECRAFT_MANUFACTURER_NAME} (${WAVECRAFT_MANUFACTURER_CODE})")
+message(STATUS "Subtype:            ${WAVECRAFT_SUBTYPE_CODE}")
+message(STATUS "Type:               ${WAVECRAFT_INSTRUMENT_TYPE}")
+message(STATUS "CLAP Source:        ${WAVECRAFT_CLAP_PATH_ABS}")
 message(STATUS "")
 message(STATUS "Build with:         cmake --build build")
 message(STATUS "Install with:       cmake --build build --target install-au")
 message(STATUS "Validate with:      cmake --build build --target validate-au")
-message(STATUS "  or manually:      auval -v aufx G0CJ VstK (subtype auto-generated from CLAP ID)")
+message(STATUS "  or manually:      auval -v aufx G0CJ Wave (subtype auto-generated from CLAP ID)")
 message(STATUS "========================================")
 message(STATUS "")
