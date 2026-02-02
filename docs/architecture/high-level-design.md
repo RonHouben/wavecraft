@@ -97,7 +97,8 @@ Key: the audio path never blocks on UI; the UI never directly runs audio code.
 	7.	Build & Packaging
 	•	Rust build (Cargo) for core; CMake or a small shim for packaging VST3 (SDK). Bundle the React build output as plugin resources (embed as bytes or serve them via an in-process file server).
 	•	AU builds require macOS; produce `.component` bundles for `/Library/Audio/Plug-Ins/Components/`.
-	•	Code signing and notarization for macOS via `cargo xtask sign` and `cargo xtask notarize`. See [Build System & Tooling](#build-system--tooling) section for details.
+  • Code signing and notarization for macOS via `cargo xtask sign` and `cargo xtask notarize`. The `xtask sign` flow accepts a `SigningConfig` (constructed from env in production via `SigningConfig::from_env()` or built directly for tests via `SigningConfig::new()`).
+  • Note: ad-hoc signing is suitable for local testing and CI artifacts; production signing requires Developer ID certificates and notarization via Apple.
 
 ⸻
 
@@ -170,6 +171,8 @@ VstKit is designed as a **Developer SDK** that enables other developers to build
 │   │  ├── ui/              │       │  vstkit-dsp           │                     │
 │   │  │   └── package.json │       │                       │                     │
 │   │  └── README.md        │       └───────────────────────┘                     │
+│   │  
+│   │  NOTE: In Phase 1 the template uses local path dependencies to the monorepo's `engine/crates/` directories. This makes the template easy to develop within the monorepo but prevents standalone compilation; in Phase 2 these will be updated to published crates (crates.io or git dependencies).
 │   └───────────────────────┘                                                     │
 │              │                                                                  │
 │              │  User customizes:                                                │
@@ -203,10 +206,12 @@ The SDK exposes a minimal, stable API through the `vstkit_core::prelude` module:
 
 ```rust
 // vstkit_core::prelude re-exports
+pub use nih_plug::prelude::*;
 pub use vstkit_dsp::{Processor, Transport};
-pub use vstkit_protocol::{ParamSet, ParamId};
-pub use vstkit_metering::{MeterProducer, MeterFrame};
-pub use crate::editor::create_webview_editor;
+pub use vstkit_protocol::{ParamId, ParameterInfo, ParameterType, db_to_linear};
+pub use vstkit_metering::{MeterConsumer, MeterFrame, MeterProducer, create_meter_channel};
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub use crate::editor::VstKitEditor;
 pub use crate::util::calculate_stereo_meters;
 ```
 
@@ -282,6 +287,12 @@ my-plugin/
 4. **Type Safety** — Compile-time guarantees through Rust's type system; generic `VstKitEditor<P: Params>` works with any parameter type.
 
 5. **Real-Time Safety by Design** — DSP traits enforce the contract; metering uses proven lock-free patterns.
+
+### Testability & Environment
+
+- Avoid tests that manipulate global state (e.g., environment variables) directly. Code that depends on environment configuration should separate construction from environment reading to make it testable (example: `SigningConfig::new()` + `SigningConfig::from_env()`).
+- Tests should prefer dependency injection and pure constructors to remain deterministic and parallelizable; use of test-only serialisation (e.g., `serial_test`) is discouraged as a primary fix for global-state tests.
+- The `xtask::sign` commands accept a `SigningConfig` to allow production behavior (`from_env()`) while enabling pure, side-effect-free unit tests via `new()`.
 
 ⸻
 
