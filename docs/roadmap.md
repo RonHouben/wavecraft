@@ -8,7 +8,7 @@ This document tracks implementation progress against the milestones defined in t
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           ✅ M5        ✅ M6            ✅ M7           ✅ M8       ⏳ M9   │
+│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           ✅ M5        ✅ M6            ✅ M7           ✅ M8       🚧 M9   │
 │  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ───── WebSocket ───── Visual Testing ── SDK ─────── Rename │
 │                                                                                                       │          ▲      │
 │                                                                                              Framework Complete   │      │
@@ -349,12 +349,14 @@ Potential areas:
 
 ## Milestone 9: Project Rename (VstKit → Wavecraft)
 
-**Status: ⏳ Not Started**
+**Status: 🚧 In Progress**
 
 > **Goal:** Rename the project from "VstKit" to "Wavecraft" to avoid potential "VST" trademark concerns before public/open-source release.
 
 **Rationale:**
 "VST" is a Steinberg trademark. While "VstKit" may be defensible as a toolkit name, rebranding to "Wavecraft" eliminates any trademark risk and establishes a unique, memorable identity for the project.
+
+**User Stories:** [docs/feature-specs/project-rename-wavecraft/user-stories.md](feature-specs/project-rename-wavecraft/user-stories.md)
 
 **Scope:**
 | Area | Changes Required |
@@ -366,22 +368,22 @@ Potential areas:
 | UI | Any user-facing "VstKit" branding |
 | Code | Module names, comments, macro names |
 
-### Pre-Rename Checklist
+### Pre-Rename Checklist (Verified 2026-02-02)
 
 | Check | Status | Notes |
 |-------|--------|-------|
-| GitHub: `wavecraft` available | ⏳ | Check repo/org name availability |
-| crates.io: `wavecraft-*` available | ⏳ | Check `wavecraft`, `wavecraft-core`, `wavecraft-dsp`, etc. |
-| npm: `@wavecraft/*` available | ⏳ | Check namespace availability |
-| Domain: `wavecraft.dev` available | ⏳ | Optional, for future docs site |
+| GitHub: `wavecraft` available | ⚠️ | User exists (inactive since 2020). Using `RonHouben/wavecraft` for now. |
+| crates.io: `wavecraft-*` available | ✅ | All names available (`wavecraft`, `wavecraft-core`, etc.) |
+| npm: `@wavecraft/*` available | ✅ | Namespace available |
+| Domain: `wavecraft.dev` available | ✅ | Available at €10.89/yr (optional, not registering now) |
 
 ### Tasks
 
 | Task | Status | Notes |
 |------|--------|-------|
 | **Planning** | | |
-| Availability checks (GitHub, crates.io, npm, domain) | ⏳ | |
-| Create user stories | ⏳ | |
+| Availability checks (GitHub, crates.io, npm, domain) | ✅ | Verified 2026-02-02 |
+| Create user stories | ✅ | 9 user stories created |
 | Create low-level design | ⏳ | |
 | **Implementation** | | |
 | Rename Rust crates | ⏳ | `vstkit-*` → `wavecraft-*` |
@@ -402,6 +404,7 @@ Potential areas:
 
 | Date | Update |
 |------|--------|
+| 2026-02-02 | **Milestone 9 started**: Verified name availability — Wavecraft available on crates.io, npm (`@wavecraft/*`), and domain (`wavecraft.dev`). GitHub username taken by inactive user; using personal account (`RonHouben/wavecraft`) for now with future task to request username. Created 9 user stories covering Rust crates, npm aliases, documentation, UI, template, CI/CD, and GitHub repo rename. |
 | 2026-02-02 | **Added Milestone 9: Project Rename (VstKit → Wavecraft)**: Rebrand to avoid "VST" trademark concerns before open-source release. Scope includes Rust crates, npm packages, GitHub repo, documentation, and UI branding. Pending availability checks for name. |
 | 2026-02-02 | **Milestone 8 complete**: Developer SDK Phase 1 fully implemented. 5-crate SDK architecture (`vstkit-protocol`, `vstkit-dsp`, `vstkit-bridge`, `vstkit-metering`, `vstkit-core`), `vstkit_plugin!` macro for zero-boilerplate plugins, template project, comprehensive documentation. 111 engine + 35 UI tests passing, 22/22 manual tests. QA approved, architect review complete (added `unwrap()`/`expect()` coding standards). Version 0.4.0. **ALL MILESTONES COMPLETE!** Archived to `_archive/developer-sdk/`. |
 | 2026-02-01 | **Milestone 8 created**: Developer SDK initiative. Phase 1 focuses on investigation with architect to define packaging strategy, SDK boundaries, and developer experience. Goal: make VstKit usable by external developers. |
