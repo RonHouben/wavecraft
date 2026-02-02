@@ -158,7 +158,7 @@ Wavecraft is designed as a **Developer SDK** that enables other developers to bu
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                           VSTKIT SDK DISTRIBUTION                               │
+│                         WAVECRAFT SDK DISTRIBUTION                              │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                 │
 │   ┌───────────────────────┐       ┌───────────────────────┐                     │
