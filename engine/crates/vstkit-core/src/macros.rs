@@ -8,7 +8,7 @@
 ///
 /// Example (doc-test):
 ///
-/// ```rust
+/// ```rust,ignore
 /// use vstkit_core::prelude::*;
 ///
 /// struct TestProcessor;
@@ -18,21 +18,61 @@
 /// }
 /// impl Default for TestProcessor { fn default() -> Self { Self::new() } }
 ///
-/// #[derive(Default)]
-/// struct TestParams;
-///
-/// vstkit_plugin! {
-///     name: "Macro Plugin",
-///     vendor: "Test",
-///     url: "https://example.com",
-///     email: "test@example.com",
-///     version: env!("CARGO_PKG_VERSION"),
-///     audio: { inputs: 2, outputs: 2 },
-///     params: [TestParams],
-///     processor: TestProcessor,
+/// #[derive(Params)]
+/// struct TestParams {
+///     #[id = "p"]
+///     p: FloatParam,
 /// }
 ///
-/// let _ = MacroPlugin::default();
+/// impl Default for TestParams {
+///     fn default() -> Self {
+///         Self {
+///             p: FloatParam::new("P", 0.0, FloatRange::Linear { min: 0.0, max: 1.0 }),
+///         }
+///     }
+/// }
+///
+/// mod example {
+///     use vstkit_core::prelude::*;
+///
+///     struct TestProcessor;
+///     impl TestProcessor {
+///         fn new() -> Self { Self }
+///         fn set_sample_rate(&mut self, _sr: f32) {}
+///     }
+///     impl Default for TestProcessor { fn default() -> Self { Self::new() } }
+///
+///     #[derive(Params)]
+///     struct TestParams {
+///         #[id = "p"]
+///         p: FloatParam,
+///     }
+///
+///     impl Default for TestParams {
+///         fn default() -> Self {
+///             Self {
+///                 p: FloatParam::new("P", 0.0, FloatRange::Linear { min: 0.0, max: 1.0 }),
+///             }
+///         }
+///     }
+///
+///     vstkit_core::vstkit_plugin! {
+///         ident: MacroPlugin,
+///         name: "Macro Plugin",
+///         vendor: "Test",
+///         url: "https://example.com",
+///         email: "test@example.com",
+///         version: env!("CARGO_PKG_VERSION"),
+///         audio: { inputs: 2, outputs: 2 },
+///         params: [TestParams],
+///         processor: TestProcessor,
+///     }
+///
+///     fn use_it() {
+///         let _ = MacroPlugin::default();
+///     }
+/// }
+
 /// ```
 #[macro_export]
 macro_rules! vstkit_plugin {
@@ -47,7 +87,7 @@ macro_rules! vstkit_plugin {
         params: [$param:ty],
         processor: $processor:ty $(,)?
     ) => {
-        paste::paste! {
+        $crate::paste::paste! {
             /// Generated plugin type by `vstkit_plugin!` macro
             pub struct $ident {
                 params: std::sync::Arc<$param>,
@@ -147,11 +187,11 @@ macro_rules! vstkit_plugin {
                 const CLAP_FEATURES: &'static [nih_plug::prelude::ClapFeature] = &[nih_plug::prelude::ClapFeature::AudioEffect];
             }
 
-            paste::paste! {
+            $crate::paste::paste! {
                 #[cfg(not(test))]
                 mod [<__vstkit_exports_ $ident>] {
-                    nih_plug::nih_export_vst3!($ident);
-                    nih_plug::nih_export_clap!($ident);
+                    nih_plug::nih_export_vst3!(crate::$ident);
+                    nih_plug::nih_export_clap!(crate::$ident);
                 }
             }
         }

@@ -22,6 +22,9 @@ pub mod util;
 // Macros (public API)
 pub mod macros;
 
+// Re-export helper crates used by macros so they work when invoked from other crates
+pub use paste;
+
 // Internal modules
 mod params;
 
