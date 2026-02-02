@@ -7,15 +7,15 @@ This document tracks implementation progress against the milestones defined in t
 ## Progress Overview
 
 ```
-┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           ✅ M5        ✅ M6            ✅ M7           ✅ M8       │
-│  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ───── WebSocket ───── Visual Testing ── SDK         │
-│                                                                                                       ▲          │
-│                                                                                              Framework Complete   │
-│                                                                                              SDK Ready!           │
-│                                                                                                                   │
-│  Progress: [████████████████████████████████████████████████████████████████████████████████████████████] 100%   │
-└───────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           ✅ M5        ✅ M6            ✅ M7           ✅ M8       ⏳ M9   │
+│  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ───── WebSocket ───── Visual Testing ── SDK ─────── Rename │
+│                                                                                                       │          ▲      │
+│                                                                                              Framework Complete   │      │
+│                                                                                              SDK Ready!           │      │
+│                                                                                                                   │      │
+│  Progress: [████████████████████████████████████████████████████████████████████████████████████████████░░░░░░░░] 89%    │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **See also:** [Backlog](backlog.md) — unprioritized ideas for future consideration
@@ -347,10 +347,62 @@ Potential areas:
 
 ---
 
+## Milestone 9: Project Rename (VstKit → Wavecraft)
+
+**Status: ⏳ Not Started**
+
+> **Goal:** Rename the project from "VstKit" to "Wavecraft" to avoid potential "VST" trademark concerns before public/open-source release.
+
+**Rationale:**
+"VST" is a Steinberg trademark. While "VstKit" may be defensible as a toolkit name, rebranding to "Wavecraft" eliminates any trademark risk and establishes a unique, memorable identity for the project.
+
+**Scope:**
+| Area | Changes Required |
+|------|------------------|
+| GitHub | Repository name, organization (if applicable) |
+| Rust crates | `vstkit-*` → `wavecraft-*` (all 5 SDK crates) |
+| npm packages | `@vstkit/*` → `@wavecraft/*` namespace |
+| Documentation | All docs, guides, README references |
+| UI | Any user-facing "VstKit" branding |
+| Code | Module names, comments, macro names |
+
+### Pre-Rename Checklist
+
+| Check | Status | Notes |
+|-------|--------|-------|
+| GitHub: `wavecraft` available | ⏳ | Check repo/org name availability |
+| crates.io: `wavecraft-*` available | ⏳ | Check `wavecraft`, `wavecraft-core`, `wavecraft-dsp`, etc. |
+| npm: `@wavecraft/*` available | ⏳ | Check namespace availability |
+| Domain: `wavecraft.dev` available | ⏳ | Optional, for future docs site |
+
+### Tasks
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Planning** | | |
+| Availability checks (GitHub, crates.io, npm, domain) | ⏳ | |
+| Create user stories | ⏳ | |
+| Create low-level design | ⏳ | |
+| **Implementation** | | |
+| Rename Rust crates | ⏳ | `vstkit-*` → `wavecraft-*` |
+| Update `Cargo.toml` workspace | ⏳ | Package names, dependencies |
+| Update `vstkit_plugin!` macro | ⏳ | → `wavecraft_plugin!` |
+| Update npm package names | ⏳ | `@vstkit/*` → `@wavecraft/*` |
+| Update all documentation | ⏳ | README, guides, specs |
+| Update UI branding | ⏳ | Any user-visible references |
+| Update template project | ⏳ | `vstkit-plugin-template` → `wavecraft-plugin-template` |
+| **Migration** | | |
+| GitHub repository rename | ⏳ | (Creates redirect from old name) |
+| Update CI/CD workflows | ⏳ | Any hardcoded references |
+| Update external links | ⏳ | If any exist |
+
+---
+
 ## Changelog
 
 | Date | Update |
 |------|--------|
+| 2026-02-02 | **Added Milestone 9: Project Rename (VstKit → Wavecraft)**: Rebrand to avoid "VST" trademark concerns before open-source release. Scope includes Rust crates, npm packages, GitHub repo, documentation, and UI branding. Pending availability checks for name. |
 | 2026-02-02 | **Milestone 8 complete**: Developer SDK Phase 1 fully implemented. 5-crate SDK architecture (`vstkit-protocol`, `vstkit-dsp`, `vstkit-bridge`, `vstkit-metering`, `vstkit-core`), `vstkit_plugin!` macro for zero-boilerplate plugins, template project, comprehensive documentation. 111 engine + 35 UI tests passing, 22/22 manual tests. QA approved, architect review complete (added `unwrap()`/`expect()` coding standards). Version 0.4.0. **ALL MILESTONES COMPLETE!** Archived to `_archive/developer-sdk/`. |
 | 2026-02-01 | **Milestone 8 created**: Developer SDK initiative. Phase 1 focuses on investigation with architect to define packaging strategy, SDK boundaries, and developer experience. Goal: make VstKit usable by external developers. |
 | 2026-02-01 | **Milestone 7 complete**: Browser-Based Visual Testing infrastructure fully implemented. Playwright @1.41.0 with Chromium installed, 18 test IDs added across all UI components (Meter, ParameterSlider, VersionBadge, ResizeHandle, ConnectionStatus, App root). External baseline storage design (`~/.vstkit/visual-baselines/`). Comprehensive 11KB documentation guide. **Bonus:** Fixed version display — now reads from Cargo.toml in dev mode, improved VersionBadge styling for visibility. 35/35 unit tests, 18/18 feature tests passing. QA approved. Architecture docs updated. Version 0.3.1. Archived to `_archive/browser-visual-testing/`. **ALL COMMITTED MILESTONES COMPLETE!** |
@@ -405,11 +457,6 @@ Potential areas:
 
 ### What's Next?
 
-VstKit v0.4.0 is a **production-ready SDK** for building audio plugins. Future development will focus on:
-
-1. **Publication** — Publish SDK crates to crates.io when ready for public release
-2. **CLI Tooling** — `cargo vstkit new my-plugin` scaffolding command
-3. **Additional Examples** — EQ, synth, and other plugin templates
-4. **Community** — Documentation, tutorials, community plugins
+**Milestone 9: Project Rename (VstKit → Wavecraft)** — Avoid "VST" trademark concerns for open-source release. See milestone details below.
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (platform support, performance, DAW compatibility, etc.)
