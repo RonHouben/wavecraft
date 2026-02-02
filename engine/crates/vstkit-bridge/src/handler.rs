@@ -55,15 +55,18 @@ impl<H: ParameterHost> IpcHandler<H> {
                     RequestId::Number(0),
                     vstkit_protocol::IpcError::parse_error(),
                 );
-                return serde_json::to_string(&response).unwrap();
+                // IpcResponse serialization is infallible: all fields are simple types
+                // (RequestId, Option<Value>, Option<IpcError>) that serde_json always handles
+                return serde_json::to_string(&response)
+                    .expect("IpcResponse serialization is infallible");
             }
         };
 
         // Handle request
         let response = self.handle_request(request);
 
-        // Serialize response
-        serde_json::to_string(&response).unwrap()
+        // Serialize response - infallible for well-typed IpcResponse
+        serde_json::to_string(&response).expect("IpcResponse serialization is infallible")
     }
 
     // ------------------------------------------------------------------------
