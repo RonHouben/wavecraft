@@ -207,8 +207,15 @@ All pre-handoff checks passed:
 
 **Tests:**
 - ✅ UI unit tests: 35 passed (6 test files)
-- ✅ Engine tests: 18 passed (5 unit tests + 13 protocol tests)
-- ✅ Doc tests: 3 passed (1 ignored as expected)
+- ✅ Engine tests: 111 passed (all workspace crates)
+  - standalone: 23 tests (unit + integration + benchmarks)
+  - vstkit-bridge: 9 unit tests
+  - vstkit-core: 4 unit tests + trybuild macro tests
+  - vstkit-dsp: 5 unit tests
+  - vstkit-metering: 5 unit tests
+  - vstkit-protocol: 13 unit tests
+  - xtask: 46 unit tests
+- ✅ Doc tests: 8 passed (5 ignored as expected)
 
 **Version:**
 - ✅ Bumped to 0.4.0 in `engine/Cargo.toml`
