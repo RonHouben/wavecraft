@@ -804,19 +804,15 @@ wavecraft-macros = { path = "../wavecraft-macros" }
 
 ---
 
-## Open Questions
+## Decisions
 
-1. **Parallel combinator**: Include in initial release or defer?
-   - Recommendation: Defer to keep scope manageable
+1. **Parallel combinator**: **Deferred** — Not included in initial release. Chain covers most use cases.
 
-2. **Enum parameters**: Support for filter type enums?
-   - Recommendation: Include, common use case
+2. **Enum parameters**: **Included** — Support for enum params like `FilterType::LowPass`.
 
-3. **Parameter groups**: Nest params in UI?
-   - Recommendation: Defer, requires UI changes
+3. **Parameter groups in UI**: **Included** — Params grouped by processor in collapsible UI sections.
 
-4. **Preset compatibility**: How to handle param ID changes across versions?
-   - Recommendation: Document that changing processor names breaks presets
+4. **Preset compatibility**: **Documented as breaking** — Renaming processors changes param IDs and breaks presets. This is documented behavior.
 
 ---
 

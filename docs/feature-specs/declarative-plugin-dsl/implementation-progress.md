@@ -19,9 +19,10 @@ This document tracks the implementation progress of the Declarative Plugin DSL f
 | Phase 5: wavecraft_processor! Macro | 🔲 Not Started | 0/3 |
 | Phase 6: wavecraft_plugin! Macro | 🔲 Not Started | 0/6 |
 | Phase 7: Integration & Template | 🔲 Not Started | 0/4 |
-| Phase 8: Documentation | 🔲 Not Started | 0/4 |
+| Phase 8: Documentation | 🔲 Not Started | 0/5 |
+| Phase 9: UI Parameter Groups | 🔲 Not Started | 0/5 |
 
-**Overall Progress:** 0/34 steps (0%)
+**Overall Progress:** 0/40 steps (0%)
 
 ---
 
@@ -96,6 +97,17 @@ This document tracks the implementation progress of the Declarative Plugin DSL f
 - [ ] **8.2** Create Custom DSP Guide
 - [ ] **8.3** Create DSP Chains Guide
 - [ ] **8.4** Update High-Level Design
+- [ ] **8.5** Document Preset Breaking Changes
+
+---
+
+## Phase 9: UI Parameter Groups
+
+- [ ] **9.1** Update IPC Protocol with Group Metadata
+- [ ] **9.2** Generate Group Metadata in Macro
+- [ ] **9.3** Create ParameterGroup UI Component
+- [ ] **9.4** Create useParameterGroups Hook
+- [ ] **9.5** Update Template UI with Groups
 
 ---
 

@@ -566,6 +566,111 @@ wavecraft_plugin! {
 - **Dependencies:** Phase 7 complete
 - **Risk:** Low
 
+### Step 8.5: Document Preset Breaking Changes
+
+**File:** `docs/guides/sdk-getting-started.md` (add section)
+
+- **Action:** Add warning about processor renaming breaking presets
+- **Why:** Users need to know param IDs derive from processor names
+- **Dependencies:** Step 8.1
+- **Risk:** Low
+
+---
+
+## Phase 9: UI Parameter Groups
+
+**Goal:** Display parameters grouped by processor in the UI.
+
+### Step 9.1: Update IPC Protocol with Group Metadata
+
+**File:** `engine/crates/wavecraft-protocol/src/lib.rs`
+
+- **Action:** Add `group` field to parameter info response
+- **Why:** UI needs to know which processor each param belongs to
+- **Dependencies:** Phase 6 complete
+- **Risk:** Low
+
+**Updated response:**
+```rust
+pub struct ParameterInfo {
+    pub id: String,
+    pub name: String,
+    pub value: f64,
+    pub min: f64,
+    pub max: f64,
+    pub group: Option<String>,  // NEW: e.g., "input_gain", "high_pass"
+}
+```
+
+### Step 9.2: Generate Group Metadata in Macro
+
+**File:** `engine/crates/wavecraft-macros/src/plugin.rs`
+
+- **Action:** Include processor name as group in generated param code
+- **Why:** Links params to their source processor
+- **Dependencies:** Step 9.1
+- **Risk:** Low
+
+### Step 9.3: Create ParameterGroup UI Component
+
+**File:** `ui/src/components/ParameterGroup.tsx` (NEW)
+
+- **Action:** Create collapsible group component
+- **Why:** Visual grouping of related params
+- **Dependencies:** None (parallel with Steps 9.1-9.2)
+- **Risk:** Medium
+
+**Component:**
+```tsx
+interface ParameterGroupProps {
+  name: string;        // e.g., "Input Gain"
+  paramIds: string[];  // params in this group
+  defaultOpen?: boolean;
+}
+
+export function ParameterGroup({ name, paramIds, defaultOpen = true }: ParameterGroupProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  
+  return (
+    <div className="border border-plugin-border rounded-lg">
+      <button onClick={() => setIsOpen(!isOpen)} className="...">
+        {name} {isOpen ? '▼' : '▶'}
+      </button>
+      {isOpen && (
+        <div className="p-2">
+          {paramIds.map(id => <ParameterSlider key={id} id={id} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+### Step 9.4: Create useParameterGroups Hook
+
+**File:** `ui/src/lib/wavecraft-ipc/hooks.ts`
+
+- **Action:** Add hook that groups params by processor
+- **Why:** Fetch all params and organize by group
+- **Dependencies:** Step 9.1
+- **Risk:** Low
+
+```tsx
+export function useParameterGroups(): Map<string, ParameterInfo[]> {
+  const params = useAllParameters();
+  // Group by `group` field, convert snake_case to Title Case for display
+}
+```
+
+### Step 9.5: Update Template UI with Groups
+
+**File:** `wavecraft-plugin-template/ui/src/App.tsx`
+
+- **Action:** Use ParameterGroup components instead of flat list
+- **Why:** Demonstrate grouped UI
+- **Dependencies:** Steps 9.3, 9.4
+- **Risk:** Low
+
 ---
 
 ## Risks & Mitigations
@@ -582,14 +687,16 @@ wavecraft_plugin! {
 
 ## Success Criteria
 
-- [ ] Simple gain plugin compiles in < 10 lines
+- [ ] Simple gain plugin compiles in < 12 lines
 - [ ] Chained plugins work correctly
 - [ ] Generated param IDs match expected format
 - [ ] Plugin loads in DAW without errors
 - [ ] Parameter automation works
 - [ ] Meters display correctly
+- [ ] Enum parameters work (e.g., FilterType)
+- [ ] UI shows params grouped by processor
 - [ ] Template updated and builds
-- [ ] Documentation complete
+- [ ] Documentation complete (incl. preset breaking change warning)
 
 ---
 
@@ -608,9 +715,11 @@ Phase 1 (Traits)
                         │
                         └──► Phase 6 (wavecraft_plugin!)
                                   │
-                                  └──► Phase 7 (Integration)
-                                            │
-                                            └──► Phase 8 (Docs)
+                                  ├──► Phase 7 (Integration)
+                                  │         │
+                                  │         └──► Phase 8 (Docs)
+                                  │
+                                  └──► Phase 9 (UI Param Groups)
 ```
 
 ---
@@ -627,5 +736,6 @@ Phase 1 (Traits)
 | Phase 6: wavecraft_plugin! | 4 days | Day 11 |
 | Phase 7: Integration | 2 days | Day 13 |
 | Phase 8: Documentation | 1 day | Day 14 |
+| Phase 9: UI Parameter Groups | 2 days | Day 16 |
 
-**Total: ~14 days**
+**Total: ~16 days**
