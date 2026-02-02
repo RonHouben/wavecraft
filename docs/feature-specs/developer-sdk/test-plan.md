@@ -10,11 +10,11 @@
 
 | Status | Count |
 |--------|-------|
-| ✅ PASS | 13 |
+| ✅ PASS | 16 |
 | 🔄 IN PROGRESS | 0 |
-| ❌ FAIL | 0 |
+| ❌ FAIL | 1 |
 | ⏸️ BLOCKED | 0 |
-| ⬜ NOT RUN | 2 |
+| ⬜ NOT RUN | 3 |
 
 ## Prerequisites
 
@@ -399,6 +399,110 @@ Refactored `SigningConfig` to separate construction from environment reading. Ad
 
 ---
 
+### TC-016: Complete Workspace Test Suite
+
+**Description**: Verify ALL workspace tests pass (not just default subset)
+
+**Preconditions**:
+- Workspace compiles (TC-003)
+
+**Steps**:
+1. Run complete test suite: `cd /Users/ronhouben/code/private/vstkit/engine && cargo xtask test --all`
+
+**Expected Result**: All 111 engine tests + 35 UI tests pass
+
+**Status**: ✅ PASS
+
+**Actual Result**: All tests passed:
+- Engine: 111 tests passed
+  - standalone: 23 (8+8+6+3)
+  - vstkit-bridge: 9
+  - vstkit-core: 4 + trybuild
+  - vstkit-dsp: 5
+  - vstkit-metering: 5
+  - vstkit-protocol: 13
+  - xtask: 46 (42+4)
+- UI: 35 tests passed (6 test files)
+- Doc tests: 8 passed (5 ignored as expected)
+
+**Notes**: Full workspace test suite passes. No failures detected. 
+
+---
+
+### TC-017: vstkit_plugin! Macro Functionality
+
+**Description**: Verify the vstkit_plugin! macro generates correct plugin code
+
+**Preconditions**:
+- vstkit-core compiles (TC-003)
+
+**Steps**:
+1. Run macro tests: `cd /Users/ronhouben/code/private/vstkit/engine && cargo test -p vstkit-core --test trybuild`
+2. Verify trybuild tests pass (minimal and full plugin examples)
+
+**Expected Result**: Macro trybuild tests pass, demonstrating correct code generation
+
+**Status**: ✅ PASS
+
+**Actual Result**: All trybuild macro tests passed:
+- tests/trybuild/minimal/src/main.rs: ok
+- tests/trybuild/full/src/main.rs: ok
+- Test completed in 10.91s
+
+**Notes**: vstkit_plugin! macro correctly generates plugin code for both minimal and full configurations. Export paths fixed to use crate::$ident. 
+
+---
+
+### TC-019: Template Compilation with Local Paths
+
+**Description**: Verify the template plugin compiles successfully using local path dependencies
+
+**Preconditions**:
+- Template structure verified (TC-009)
+- SDK crates compile (TC-003)
+
+**Steps**:
+1. Navigate to template: `cd /Users/ronhouben/code/private/vstkit/vstkit-plugin-template/engine`
+2. Check template: `cargo check`
+
+**Expected Result**: Template compiles successfully (within vstkit repo context)
+
+**Status**: ❌ FAIL
+
+**Actual Result**: Compilation fails with 45 errors - all E0659 "ambiguous" errors due to duplicate imports:
+- Template imports both `vstkit_core::prelude::*` (which re-exports `nih_plug::prelude::*`) AND `nih_plug::prelude::*` directly
+- This creates ambiguous names like `Params`, `FloatParam`, `Plugin`, etc.
+
+**Notes**: Issue documented as Issue #3. Template needs to remove direct `nih_plug::prelude::*` import since it's already included in `vstkit_core::prelude`.
+
+---
+
+### TC-018: Version Display in UI
+
+**Description**: Verify version 0.4.0 is displayed in the plugin UI
+
+**Preconditions**:
+- Plugin built and installed (TC-015)
+
+**Steps**:
+1. Open a DAW (Ableton Live, Reaper, etc.)
+2. Load the VstKit plugin
+3. Check the version badge in the bottom-left corner of the UI
+
+**Expected Result**: Version badge shows "v0.4.0"
+
+**Status**: ⬜ NOT RUN (Manual DAW test required)
+
+**Actual Result**: To verify, user must:
+1. Build and install plugin: `cd /Users/ronhouben/code/private/vstkit/engine && cargo xtask bundle && cargo xtask install`
+2. Open DAW (Ableton Live, Reaper, etc.)
+3. Load VstKit plugin
+4. Check version badge in bottom-left corner
+
+**Notes**: Version confirmed as 0.4.0 in Cargo.toml. Build system (vite.config.ts) reads version from workspace package and injects via __APP_VERSION__ constant. Requires manual DAW testing to verify UI rendering. 
+
+---
+
 ### TC-015: Plugin Functionality (DAW Test)
 
 **Description**: Verify the renamed plugin still works correctly in a DAW
@@ -491,6 +595,39 @@ Refactored `SigningConfig` to separate construction from environment reading. Ad
 
 ---
 
+### Issue #3: Template Has Ambiguous Imports (FOUND)
+
+- **Severity**: High
+- **Test Case**: TC-019
+- **Description**: Template fails to compile due to ambiguous imports
+- **Expected**: Template should compile successfully with local path dependencies
+- **Actual**: 45 compilation errors - all E0659 "is ambiguous" errors
+- **Root Cause**: Template imports both:
+  1. `vstkit_core::prelude::*` (which includes `nih_plug::prelude::*`)
+  2. `nih_plug::prelude::*` directly
+  
+  This creates duplicate imports of all nih-plug types (`Params`, `FloatParam`, `Plugin`, etc.)
+  
+- **Steps to Reproduce**:
+  1. cd vstkit-plugin-template/engine
+  2. cargo check
+  3. Observe 45 ambiguous name errors
+- **Evidence**: 
+  ```
+  error[E0659]: `Params` is ambiguous
+  error[E0659]: `FloatParam` is ambiguous
+  error[E0659]: `Plugin` is ambiguous
+  ... (42 more similar errors)
+  ```
+- **Suggested Fix**: Remove line 7 from `vstkit-plugin-template/engine/src/lib.rs`:
+  ```rust
+  // Remove this line:
+  use nih_plug::prelude::*;
+  ```
+  The template should only use `vstkit_core::prelude::*` which already includes all nih-plug types.
+
+---
+
 ##Testing Notes
 
 ### Phase 1: CI Pipeline ✅
@@ -529,42 +666,51 @@ All manual tests passed:
 - ✅ TC-013: Documentation completeness verified
 
 ### Summary
-**13/15 tests passed**, 2 not run. All critical SDK functionality validated.
+**16/20 tests passed**, 3 not run (manual/skipped), 1 failure requiring fix.
 
 **Test Results:**
-- ✅ CI Pipeline: All 101 tests pass
+- ✅ CI Pipeline: All 111 engine + 35 UI tests pass
 - ✅ SDK Structure: All 5 crates renamed and functional
 - ✅ Plugin Bundles: VST3 and CLAP build successfully
 - ✅ SDK API: Prelude exports all essential types
 - ✅ Documentation: Complete SDK guides and architecture docs
-- ✅ Manual DAW Testing: Verified in Ableton Live
+- ✅ Manual DAW Testing: Verified in Ableton Live (TC-015)
+- ✅ Workspace Tests: All 111 engine tests pass (TC-016)
+- ✅ vstkit_plugin! Macro: Trybuild tests pass (TC-017)
+- ❌ Template Compilation: Fails due to ambiguous imports (TC-019) - **REQUIRES FIX**
 
-**Skipped Tests:**
-- TC-011, TC-012: Template UI build and bundle - Expected Phase 1 limitation (local path dependencies)
+**Issues Found:**
+1. ✅ RESOLVED: Formatting violations (60+ issues) - Fixed with `cargo fmt`
+2. ✅ RESOLVED: xtask test failure - Fixed with test refactoring
+3. ❌ OPEN: Template has duplicate imports causing 45 compilation errors - **NEEDS FIX**
+
+**Skipped/Manual Tests:**
+- TC-011, TC-012: Template UI build and bundle - Blocked by TC-019 (template doesn't compile)
 - TC-007: Production code signing - Requires Developer ID certificates
+- TC-018: Version badge display - Requires manual DAW testing
 
-**Developer SDK Phase 1 is COMPLETE and ready for release.**
+**Developer SDK Phase 1 Status: BLOCKED - Template Fix Required**
 
 ---
 
 ## Sign-off
 
-- [x] All critical tests pass
-- [x] All high-priority tests pass  
-- [x] Issues documented and resolved
-- [x] Manual DAW testing complete
-- [x] Ready for release: **YES** ✅
+- [x] All critical tests pass (core SDK functionality verified)
+- [x] All high-priority tests pass (CI, builds, API exports)
+- [ ] **Issues found requiring coder fix** (Template import ambiguity)
+- [x] Manual DAW testing complete (version 0.3.x tested, 0.4.0 pending DAW retest)
+- [ ] Ready for release: **NO** - Template must compile
 
-**Testing Complete:**
-- All 101 engine tests pass (CI validated)
-- All 35 UI tests pass
-- Plugin bundles build successfully (VST3 + CLAP)
-- SDK API properly exported via prelude
-- Documentation complete and linked
-- Manual validation successful in Ableton Live
+**Testing Status:**
+- ✅ Core SDK: All 111 engine tests + 35 UI tests pass
+- ✅ Plugin builds: VST3 + CLAP bundles build successfully
+- ✅ SDK API: Properly exported via prelude
+- ✅ Documentation: Complete
+- ❌ **BLOCKER**: Template fails to compile due to ambiguous imports
 
-**Developer SDK Phase 1 is approved for release.**
-
-Next steps:
-- Hand off to Product Owner to update roadmap and archive feature spec
-- Product Owner can then merge the PR
+**Next Steps:**
+1. **Coder**: Fix template imports (remove `nih_plug::prelude::*` line)
+2. **Tester**: Re-test TC-019 after fix
+3. **Tester**: Complete TC-018 (verify v0.4.0 displays in DAW)
+4. **Tester**: Re-run TC-011, TC-012 (template UI build and bundle)
+5. Hand off to Product Owner for roadmap update and PR merge
