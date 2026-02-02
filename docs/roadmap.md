@@ -7,15 +7,15 @@ This document tracks implementation progress against the milestones defined in t
 ## Progress Overview
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           ✅ M5        ✅ M6            ✅ M7           ✅ M8       ✅ M9   │
-│  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ───── WebSocket ───── Visual Testing ── SDK ─────── Rename │
-│                                                                                                                   │      │
-│                                                                                                        Wavecraft v0.5.0 │
-│                                                                                                        Ready for OSS!   │
-│                                                                                                                          │
-│  Progress: [████████████████████████████████████████████████████████████████████████████████████████████████████████] 100%│
-└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           ✅ M5        ✅ M6            ✅ M7           ✅ M8       ✅ M9       ⏳ M10  │
+│  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ───── WebSocket ───── Visual Testing ── SDK ─────── Rename ─── Quality │
+│                                                                                                                              │       │
+│                                                                                                                   Wavecraft v0.5.0  │
+│                                                                                                                   OSS Prep          │
+│                                                                                                                                      │
+│  Progress: [██████████████████████████████████████████████████████████████████████████████████████████████████████████████░░░░░] 95% │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **See also:** [Backlog](backlog.md) — unprioritized ideas for future consideration
@@ -423,10 +423,36 @@ Manual Tests: 24/24 passed
 
 ---
 
+## Milestone 10: Code Quality & OSS Prep ⏳
+
+> **Goal:** Polish codebase for open-source release — proper logging, code quality fixes, CI optimization.
+
+**Branch:** `feature/code-quality-polish` (not started)  
+**Target Version:** `0.5.1` (patch — polish, no new features)
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Code Quality** | | |
+| Disable horizontal scroll wiggle | ⏳ | Annoying UX bug, ~30 min fix |
+| Logger class for UI | ⏳ | Replace console.log with structured logging (2-4 hrs) |
+| Log/tracing crate for Engine | ⏳ | Proper Rust logging infrastructure (2-4 hrs) |
+| **CI/CD Optimization** | | |
+| CI cache optimization | ⏳ | Reduce build times (half day) |
+| **Open Source Prep** | | |
+| License review | ⏳ | Verify all dependencies are OSS-compatible |
+| Contributing guidelines | ⏳ | CONTRIBUTING.md for external contributors |
+| Issue templates | ⏳ | GitHub issue/PR templates |
+| README polish | ⏳ | Final review for public-facing documentation |
+
+**Estimated Effort:** 2-3 days
+
+---
+
 ## Changelog
 
 | Date | Update |
 |------|--------|
+| 2026-02-02 | **Milestone 10 created**: Code Quality & OSS Prep. Focus on polish before open-source release: logging infrastructure (UI Logger class, Engine tracing crate), horizontal scroll fix, CI cache optimization, open-source readiness (license review, CONTRIBUTING.md, issue templates). Target version 0.5.1. |
 | 2026-02-02 | **Milestone 9 complete**: Project renamed from VstKit to Wavecraft (v0.5.0). 156 files changed across 7 implementation phases. 5 SDK crates renamed (`wavecraft-*`), `wavecraft_plugin!` macro, `@wavecraft/*` npm aliases, `__WAVECRAFT_IPC__` global, AU wrapper updated. 24/24 manual tests, all automated checks passing, all QA findings resolved. Architecture docs updated. Ready for open-source release. Archived to `_archive/project-rename-wavecraft/`. |
 | 2026-02-02 | **Added Milestone 9: Project Rename (Wavecraft → Wavecraft)**: Rebrand to avoid "VST" trademark concerns before open-source release. Scope includes Rust crates, npm packages, GitHub repo, documentation, and UI branding. Pending availability checks for name. |
 | 2026-02-02 | **Milestone 8 complete**: Developer SDK Phase 1 fully implemented. 5-crate SDK architecture (`wavecraft-protocol`, `wavecraft-dsp`, `wavecraft-bridge`, `wavecraft-metering`, `wavecraft-core`), `wavecraft_plugin!` macro for zero-boilerplate plugins, template project, comprehensive documentation. 111 engine + 35 UI tests passing, 22/22 manual tests. QA approved, architect review complete (added `unwrap()`/`expect()` coding standards). Version 0.4.0. **ALL MILESTONES COMPLETE!** Archived to `_archive/developer-sdk/`. |
@@ -469,7 +495,7 @@ Manual Tests: 24/24 passed
 
 ## Next Steps
 
-> 🎉 **ALL MILESTONES COMPLETE!** Wavecraft v0.5.0 is ready for open-source release.
+> 🚀 **Preparing for open-source release** — Code quality and polish milestone next.
 
 ### Completed Milestones
 1. ✅ **Milestone 1**: Plugin Skeleton — Rust plugin with VST3/CLAP export
@@ -482,11 +508,12 @@ Manual Tests: 24/24 passed
 8. ✅ **Milestone 8**: Developer SDK — 5-crate SDK architecture, macro, template, docs
 9. ✅ **Milestone 9**: Project Rename — VstKit → Wavecraft (v0.5.0)
 
-### What's Next?
+### Up Next
+10. ⏳ **Milestone 10**: Code Quality & OSS Prep — Logging, CI optimization, open-source readiness
 
-**Immediate:**
-1. ✅ Archive feature spec to `_archive/project-rename-wavecraft/`
-2. ⏳ Merge PR to main branch
-3. ⏳ Rename GitHub repository (optional, creates redirect)
+### Immediate Tasks
+1. ⏳ Merge PR #17 (project rename) — waiting for CI
+2. ⏳ Rename GitHub repository `vstkit` → `wavecraft`
+3. ⏳ Start Milestone 10
 
-**Future ideas:** See [backlog.md](backlog.md) for unprioritized items (platform support, performance, DAW compatibility, crates.io publication, etc.)
+**Future ideas:** See [backlog.md](backlog.md) for unprioritized items (SDK publication, CLI tool, crates.io, etc.)
