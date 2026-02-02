@@ -14,6 +14,9 @@
 //! // Your plugin implementation here
 //! ```
 
+// The vstkit_plugin! macro uses crate:: to refer to the user's plugin crate, not vstkit-core
+#![allow(clippy::crate_in_macro_def)]
+
 // Public modules for SDK users
 pub mod editor;
 pub mod prelude;

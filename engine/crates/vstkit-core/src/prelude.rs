@@ -10,6 +10,9 @@
 // Re-export nih-plug essentials (everything from nih_plug::prelude)
 pub use nih_plug::prelude::*;
 
+// Re-export nih-plug export macros (needed at crate root)
+pub use nih_plug::{nih_export_clap, nih_export_vst3};
+
 // Re-export VstKit DSP traits
 pub use vstkit_dsp::{Processor, Transport};
 

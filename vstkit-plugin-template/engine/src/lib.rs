@@ -1,9 +1,9 @@
+// Import everything from VstKit SDK
+// This re-exports nih-plug types, so you don't need to depend on nih-plug directly
 use vstkit_core::prelude::*;
-use vstkit_core::util::calculate_stereo_meters;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-use vstkit_core::editor::VstKitEditor;
 
-// vstkit imports for types not in prelude
+// VstKit SDK components
+use vstkit_core::{editor::create_webview_editor, util::calculate_stereo_meters};
 use vstkit_dsp::{Processor as VstKitProcessor, Transport as VstKitTransport};
 use vstkit_metering::{create_meter_channel, MeterFrame, MeterProducer, MeterConsumer};
 
@@ -126,7 +126,7 @@ impl Plugin for MyPlugin {
 
         // Calculate and push meter data (after processing)
         if buffer.channels() >= 2 {
-            let (peak_l, peak_r, rms_l, rms_r) = calculate_stereo_meters(buffer);
+            let (peak_l, peak_r, rms_l, rms_r) = calculate_stereo_meters(&*buffer);
             self.meter_producer.push(MeterFrame {
                 peak_l,
                 peak_r,
@@ -140,16 +140,7 @@ impl Plugin for MyPlugin {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-        #[cfg(any(target_os = "macos", target_os = "windows"))]
-        {
-            Some(Box::new(VstKitEditor::new(
-                self.params.clone(),
-                self.meter_consumer.clone(),
-            )))
-        }
-
-        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-        None
+        create_webview_editor(self.params.clone(), self.meter_consumer.clone())
     }
 }
 #[derive(Default)]
@@ -194,5 +185,5 @@ impl Vst3Plugin for MyPlugin {
     ];
 }
 
-nih_plug::nih_export_clap!(MyPlugin);
-nih_plug::nih_export_vst3!(MyPlugin);
+nih_export_clap!(MyPlugin);
+nih_export_vst3!(MyPlugin);
