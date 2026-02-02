@@ -8,13 +8,13 @@ This document tracks implementation progress against the milestones defined in t
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           ✅ M5        ✅ M6            ✅ M7           ✅ M8       🚧 M9   │
+│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           ✅ M5        ✅ M6            ✅ M7           ✅ M8       ✅ M9   │
 │  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ───── WebSocket ───── Visual Testing ── SDK ─────── Rename │
-│                                                                                                       │          ▲      │
-│                                                                                              Framework Complete   │      │
-│                                                                                              SDK Ready!           │      │
 │                                                                                                                   │      │
-│  Progress: [████████████████████████████████████████████████████████████████████████████████████████████░░░░░░░░] 89%    │
+│                                                                                                        Wavecraft v0.5.0 │
+│                                                                                                        Ready for OSS!   │
+│                                                                                                                          │
+│  Progress: [████████████████████████████████████████████████████████████████████████████████████████████████████████] 100%│
 └──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -347,14 +347,14 @@ Potential areas:
 
 ---
 
-## Milestone 9: Project Rename (Wavecraft → Wavecraft)
+## Milestone 9: Project Rename (VstKit → Wavecraft)
 
-**Status: 🚧 In Progress**
+**Status: ✅ Complete**
 
-> **Goal:** Rename the project from "Wavecraft" to "Wavecraft" to avoid potential "VST" trademark concerns before public/open-source release.
+> **Goal:** Rename the project from "VstKit" to "Wavecraft" to avoid potential "VST" trademark concerns before public/open-source release.
 
 **Rationale:**
-"VST" is a Steinberg trademark. While "Wavecraft" may be defensible as a toolkit name, rebranding to "Wavecraft" eliminates any trademark risk and establishes a unique, memorable identity for the project.
+"VST" is a Steinberg trademark. While "VstKit" may be defensible as a toolkit name, rebranding to "Wavecraft" eliminates any trademark risk and establishes a unique, memorable identity for the project.
 
 **User Stories:** [docs/feature-specs/project-rename-wavecraft/user-stories.md](feature-specs/project-rename-wavecraft/user-stories.md)
 
@@ -387,17 +387,39 @@ Potential areas:
 | Create low-level design | ✅ | Comprehensive 13-section design |
 | Create implementation plan | ✅ | 8-phase, 50-step plan |
 | **Implementation** | | |
-| Rename Rust crates | ⏳ | `wavecraft-*` → `wavecraft-*` |
-| Update `Cargo.toml` workspace | ⏳ | Package names, dependencies |
-| Update `wavecraft_plugin!` macro | ⏳ | → `wavecraft_plugin!` |
-| Update npm package names | ⏳ | `@wavecraft/*` → `@wavecraft/*` |
-| Update all documentation | ⏳ | README, guides, specs |
-| Update UI branding | ⏳ | Any user-visible references |
-| Update template project | ⏳ | `wavecraft-plugin-template` → `wavecraft-plugin-template` |
-| **Migration** | | |
-| GitHub repository rename | ⏳ | (Creates redirect from old name) |
-| Update CI/CD workflows | ⏳ | Any hardcoded references |
-| Update external links | ⏳ | If any exist |
+| Rename Rust crates | ✅ | `vstkit-*` → `wavecraft-*` (5 crates) |
+| Update `Cargo.toml` workspace | ✅ | Package names, dependencies, authors |
+| Update `vstkit_plugin!` macro | ✅ | → `wavecraft_plugin!` |
+| Update npm package names | ✅ | `@vstkit/*` → `@wavecraft/*` |
+| Update all documentation | ✅ | README, guides, architecture docs |
+| Update UI branding | ✅ | IPC global `__WAVECRAFT_IPC__` |
+| Update template project | ✅ | Full `wavecraft-plugin-template` |
+| Update AU wrapper | ✅ | CMakeLists.txt with Wavecraft naming |
+| **CI/CD** | | |
+| Update GitHub Actions workflows | ✅ | Artifact names: `wavecraft-*` |
+| Update bundle paths | ✅ | `wavecraft-core.vst3`, `wavecraft-core.clap` |
+| **Testing & QA** | | |
+| Manual testing (24 test cases) | ✅ | All passing |
+| QA review | ✅ | Approved, all findings resolved |
+| Architect review | ✅ | Architectural docs updated |
+| **Migration (Deferred)** | | |
+| GitHub repository rename | ⏳ | Post-merge task (creates redirect) |
+
+**Key Deliverables:**
+- **156 files changed** in initial rename commit
+- **Version 0.5.0** (breaking change, minor version bump)
+- **5 SDK crates renamed**: `wavecraft-protocol`, `wavecraft-dsp`, `wavecraft-bridge`, `wavecraft-metering`, `wavecraft-core`
+- **Template fully updated**: `wavecraft-plugin-template` with correct dependencies and IPC
+- **24/24 manual tests passing**, all automated checks clean
+- **All QA findings resolved** (5 issues fixed including AU wrapper)
+
+**Test Results:**
+```
+Engine Tests: All passing (cargo test --workspace)
+UI Tests:     35 passed, 0 failed (Vitest)
+Linting:      All checks passed (Clippy, ESLint, Prettier, TypeScript)
+Manual Tests: 24/24 passed
+```
 
 ---
 
@@ -405,7 +427,7 @@ Potential areas:
 
 | Date | Update |
 |------|--------|
-| 2026-02-02 | **Milestone 9 started**: Verified name availability — Wavecraft available on crates.io, npm (`@wavecraft/*`), and domain (`wavecraft.dev`). GitHub username taken by inactive user; using personal account (`RonHouben/wavecraft`) for now with future task to request username. Created 9 user stories covering Rust crates, npm aliases, documentation, UI, template, CI/CD, and GitHub repo rename. |
+| 2026-02-02 | **Milestone 9 complete**: Project renamed from VstKit to Wavecraft (v0.5.0). 156 files changed across 7 implementation phases. 5 SDK crates renamed (`wavecraft-*`), `wavecraft_plugin!` macro, `@wavecraft/*` npm aliases, `__WAVECRAFT_IPC__` global, AU wrapper updated. 24/24 manual tests, all automated checks passing, all QA findings resolved. Architecture docs updated. Ready for open-source release. Archived to `_archive/project-rename-wavecraft/`. |
 | 2026-02-02 | **Added Milestone 9: Project Rename (Wavecraft → Wavecraft)**: Rebrand to avoid "VST" trademark concerns before open-source release. Scope includes Rust crates, npm packages, GitHub repo, documentation, and UI branding. Pending availability checks for name. |
 | 2026-02-02 | **Milestone 8 complete**: Developer SDK Phase 1 fully implemented. 5-crate SDK architecture (`wavecraft-protocol`, `wavecraft-dsp`, `wavecraft-bridge`, `wavecraft-metering`, `wavecraft-core`), `wavecraft_plugin!` macro for zero-boilerplate plugins, template project, comprehensive documentation. 111 engine + 35 UI tests passing, 22/22 manual tests. QA approved, architect review complete (added `unwrap()`/`expect()` coding standards). Version 0.4.0. **ALL MILESTONES COMPLETE!** Archived to `_archive/developer-sdk/`. |
 | 2026-02-01 | **Milestone 8 created**: Developer SDK initiative. Phase 1 focuses on investigation with architect to define packaging strategy, SDK boundaries, and developer experience. Goal: make Wavecraft usable by external developers. |
@@ -447,7 +469,7 @@ Potential areas:
 
 ## Next Steps
 
-> 🎉 **All committed milestones complete!** Wavecraft is now a fully functional SDK for building audio plugins with Rust + React.
+> 🎉 **ALL MILESTONES COMPLETE!** Wavecraft v0.5.0 is ready for open-source release.
 
 ### Completed Milestones
 1. ✅ **Milestone 1**: Plugin Skeleton — Rust plugin with VST3/CLAP export
@@ -458,9 +480,13 @@ Potential areas:
 6. ✅ **Milestone 6**: WebSocket IPC Bridge — Real engine data in browser development
 7. ✅ **Milestone 7**: Browser-Based Visual Testing — Playwright infrastructure with test IDs
 8. ✅ **Milestone 8**: Developer SDK — 5-crate SDK architecture, macro, template, docs
+9. ✅ **Milestone 9**: Project Rename — VstKit → Wavecraft (v0.5.0)
 
 ### What's Next?
 
-**Milestone 9: Project Rename (Wavecraft → Wavecraft)** — Avoid "VST" trademark concerns for open-source release. See milestone details below.
+**Immediate:**
+1. ✅ Archive feature spec to `_archive/project-rename-wavecraft/`
+2. ⏳ Merge PR to main branch
+3. ⏳ Rename GitHub repository (optional, creates redirect)
 
-**Future ideas:** See [backlog.md](backlog.md) for unprioritized items (platform support, performance, DAW compatibility, etc.)
+**Future ideas:** See [backlog.md](backlog.md) for unprioritized items (platform support, performance, DAW compatibility, crates.io publication, etc.)
