@@ -12,6 +12,7 @@ use tao::{
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
+use tracing::{debug, error, warn};
 use wavecraft_bridge::IpcHandler;
 use wry::WebViewBuilder;
 
@@ -55,8 +56,8 @@ pub fn run_app(state: Arc<AppState>) -> Result<(), Box<dyn std::error::Error>> {
             let response = handler.handle_json(message);
 
             // Log for debugging
-            eprintln!("[IPC] Request: {}", message);
-            eprintln!("[IPC] Response: {}", response);
+            debug!("IPC Request: {}", message);
+            debug!("IPC Response: {}", response);
 
             // Send response through channel to be delivered in event loop
             let _ = response_tx.send(response);
@@ -87,7 +88,7 @@ pub fn run_app(state: Arc<AppState>) -> Result<(), Box<dyn std::error::Error>> {
             );
 
             if let Err(e) = webview.evaluate_script(&js_code) {
-                eprintln!("[IPC] Failed to send response to UI: {}", e);
+                error!("Failed to send response to UI: {}", e);
             }
         }
 
@@ -115,7 +116,7 @@ fn handle_asset_request(
             .body(Cow::Borrowed(content))
             .unwrap(),
         None => {
-            eprintln!("[Assets] Not found: {}", path);
+            warn!("Asset not found: {}", path);
             wry::http::Response::builder()
                 .status(404)
                 .body(Cow::Borrowed(b"Not Found" as &[u8]))

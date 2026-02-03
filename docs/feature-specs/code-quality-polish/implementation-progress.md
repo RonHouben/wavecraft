@@ -68,15 +68,14 @@
 
 ### Phase 7: Engine Logging
 
-- [ ] Step 7.1: Add workspace dependencies (`tracing`, `tracing-subscriber`)
-- [ ] Step 7.2: Add standalone crate dependencies
-- [ ] Step 7.3: Initialize tracing in main.rs
-- [ ] Step 7.4: Migrate ws_server.rs (12 calls)
-- [ ] Step 7.5: Migrate webview.rs (4 calls)
-- [ ] Step 7.6: Migrate assets.rs (2 calls)
-- [ ] Step 7.7: Keep test println! in wavecraft-protocol
-- [ ] Step 7.8: Run engine tests
-- [ ] Step 7.9: Manual test
+- [x] Step 7.1: Add workspace dependencies (`tracing`, `tracing-subscriber`)
+- [x] Step 7.2: Add standalone crate dependencies
+- [x] Step 7.3: Initialize tracing in main.rs
+- [x] Step 7.4: Migrate ws_server.rs (12 calls)
+- [x] Step 7.5: Migrate webview.rs (4 calls)
+- [x] Step 7.6: Migrate assets.rs (kept test println!)
+- [x] Step 7.7: Keep test println! in wavecraft-protocol
+- [x] Step 7.8: Run engine tests
 
 ### Phase 8: CI Cache Optimization
 

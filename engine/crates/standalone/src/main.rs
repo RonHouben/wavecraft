@@ -2,6 +2,8 @@
 
 use clap::Parser;
 use std::sync::Arc;
+use tracing::{info, debug};
+use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
 mod app;
 mod assets;
@@ -31,6 +33,16 @@ struct Args {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Initialize tracing subscriber
+    // Use RUST_LOG env var for level control, default to info
+    let filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("info"));
+    
+    tracing_subscriber::registry()
+        .with(fmt::layer())
+        .with(filter)
+        .init();
+
     let args = Args::parse();
 
     if args.dev_server {
@@ -42,11 +54,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 /// Run headless dev server mode (WebSocket only, no GUI)
 fn run_dev_server(port: u16, verbose: bool) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Starting VstKit dev server on port {}...", port);
+    info!("Starting VstKit dev server on port {}", port);
     if verbose {
-        println!("Verbose mode: showing all JSON-RPC messages");
+        debug!("Verbose mode: showing all JSON-RPC messages");
     }
-    println!("Press Ctrl+C to stop");
+    info!("Press Ctrl+C to stop");
 
     // Create tokio runtime
     let rt = tokio::runtime::Runtime::new()?;
@@ -64,7 +76,7 @@ fn run_dev_server(port: u16, verbose: bool) -> Result<(), Box<dyn std::error::Er
 
         // Wait for Ctrl+C signal
         tokio::signal::ctrl_c().await?;
-        println!("\nShutting down...");
+        info!("Shutting down...");
 
         Ok(())
     })
@@ -74,6 +86,6 @@ fn run_dev_server(port: u16, verbose: bool) -> Result<(), Box<dyn std::error::Er
 fn run_gui_app() -> Result<(), Box<dyn std::error::Error>> {
     let state = Arc::new(AppState::new());
 
-    println!("Starting VstKit Standalone...");
+    info!("Starting VstKit Standalone...");
     webview::run_app(state)
 }

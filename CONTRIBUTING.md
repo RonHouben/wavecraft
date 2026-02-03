@@ -2,10 +2,6 @@
 
 Thank you for your interest in contributing to Wavecraft! This document provides guidelines for contributing to the project.
 
-## Code of Conduct
-
-Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md). We are committed to providing a welcoming and inclusive environment for all contributors.
-
 ## Development Setup
 
 ### Prerequisites
