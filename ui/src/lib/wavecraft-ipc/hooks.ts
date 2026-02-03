@@ -1,24 +1,16 @@
 /**
  * React Hooks - High-level React integration for parameter management
  *
- * Environment-aware: In browser mode (development), these hooks return
- * mock data without attempting IPC. In WKWebView mode (production), they
- * use real IPC.
+ * The hooks use the ParameterClient which automatically selects the correct
+ * transport (WebSocket for browser dev, Native for WKWebView production).
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { ParameterClient } from './ParameterClient';
 import { IpcBridge } from './IpcBridge';
 import type { ParameterInfo } from './types';
-import { isBrowserEnvironment } from './environment';
 
-// Detect environment once at module load time.
-// Must be evaluated at module scope (not inside hooks) to comply with React's
-// Rules of Hooks - conditional hook calls based on runtime checks inside hook
-// bodies would violate hook call order consistency.
-const IS_BROWSER = isBrowserEnvironment();
-
-// Lazy client initialization - only create if in WebView mode
+// Lazy client initialization
 let client: ParameterClient | null = null;
 function getClient(): ParameterClient {
   client ??= ParameterClient.getInstance();
@@ -37,22 +29,12 @@ export interface UseParameterResult {
 }
 
 export function useParameter(id: string): UseParameterResult {
-  // Default mock data for browser mode
-  const mockParam: ParameterInfo = {
-    id,
-    name: id.charAt(0).toUpperCase() + id.slice(1),
-    value: 0.5,
-    default: 0.5,
-    type: 'float',
-  };
-
-  const [param, setParam] = useState<ParameterInfo | null>(IS_BROWSER ? mockParam : null);
-  const [isLoading, setIsLoading] = useState(!IS_BROWSER);
+  const [param, setParam] = useState<ParameterInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  // Load initial parameter value (skip in browser mode)
+  // Load initial parameter value
   useEffect(() => {
-    if (IS_BROWSER) return;
 
     let isMounted = true;
 
@@ -90,10 +72,8 @@ export function useParameter(id: string): UseParameterResult {
     };
   }, [id]);
 
-  // Subscribe to parameter changes (skip in browser mode)
+  // Subscribe to parameter changes
   useEffect(() => {
-    if (IS_BROWSER) return;
-
     const unsubscribe = getClient().onParameterChanged((changedId, value) => {
       if (changedId === id) {
         setParam((prev) => (prev ? { ...prev, value } : null));
@@ -106,12 +86,6 @@ export function useParameter(id: string): UseParameterResult {
   // Set parameter value
   const setValue = useCallback(
     async (value: number) => {
-      if (IS_BROWSER) {
-        // In browser mode, just update local state
-        setParam((prev) => (prev ? { ...prev, value } : null));
-        return;
-      }
-
       try {
         await getClient().setParameter(id, value);
         // Optimistically update local state
@@ -140,15 +114,10 @@ export interface UseAllParametersResult {
 
 export function useAllParameters(): UseAllParametersResult {
   const [params, setParams] = useState<ParameterInfo[]>([]);
-  const [isLoading, setIsLoading] = useState(!IS_BROWSER);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   const reload = useCallback(async () => {
-    if (IS_BROWSER) {
-      // In browser mode, no-op
-      return;
-    }
-
     try {
       setIsLoading(true);
       setError(null);
@@ -161,15 +130,13 @@ export function useAllParameters(): UseAllParametersResult {
     }
   }, []);
 
-  // Load on mount (skip in browser mode)
+  // Load on mount
   useEffect(() => {
-    if (IS_BROWSER) return;
     reload();
   }, [reload]);
 
-  // Subscribe to parameter changes (skip in browser mode)
+  // Subscribe to parameter changes
   useEffect(() => {
-    if (IS_BROWSER) return;
 
     // Note: Nesting depth warning accepted here - inline mapper is idiomatic React pattern
     const handleParamChange = (changedId: string, value: number): void => {
@@ -201,11 +168,6 @@ export function useLatencyMonitor(intervalMs = 1000): UseLatencyMonitorResult {
   const bridge = IpcBridge.getInstance();
 
   useEffect(() => {
-    if (IS_BROWSER) {
-      // In browser mode, return mock data
-      return;
-    }
-
     let isMounted = true;
 
     async function measure(): Promise<void> {
