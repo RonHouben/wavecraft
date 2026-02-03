@@ -17,7 +17,7 @@
 
 **Testing Progress**: 18/18 tests completed (100%)
 
-**Result**: All tests PASS. One critical issue found and fixed during testing.
+**Result**: All tests PASS. Two issues found and fixed during testing.
 
 ## Prerequisites
 
@@ -513,12 +513,13 @@
    - After: 9 lines (DSL only)
    - **Reduction: ~95% / 21x less code**
 
-**DAW Testing**: Manual verification required (user needs to load plugin in DAW and test audio processing, parameter automation, and UI rendering). Build artifacts are ready for installation.
+**DAW Testing**: ✅ VERIFIED - Plugin successfully loads in Ableton Live, displays correct branding, parameters respond correctly, audio processing works, metering updates in real-time.
 
 **Notes**: 
 - All build steps successful
-- Plugin ready for DAW testing
-- DSL code reduction exceeds target (9 lines vs 12 target) 
+- Plugin tested in Ableton Live
+- DSL code reduction exceeds target (9 lines vs 12 target)
+- Issue #2 found and fixed during DAW testing (branding inconsistency) 
 
 ---
 
@@ -551,6 +552,40 @@
 
 ---
 
+### Issue #2: VstKit Branding in Plugin and UI [FIXED]
+
+- **Severity**: High
+- **Test Case**: TC-018
+- **Status**: ✅ RESOLVED
+- **Description**: Despite renaming the project to Wavecraft, the plugin still reported "VstKit" to the DAW, and the UI displayed "VstKit — Plugin UI Test". Ableton showed "VstKit Audio Plugin v0.6.0" in both the plugin browser and the loaded plugin window.
+- **Root Cause**: Legacy VstKit branding remained in:
+  - `wavecraft-core/src/lib.rs`: `Plugin::NAME = "VstKit"`, `VENDOR = "VstKit Team"`, VST3_CLASS_ID, CLAP_ID
+  - `ui/src/App.tsx`: UI header and footer text
+  - Various code comments
+- **Fix Applied**:
+  - Updated Rust plugin metadata:
+    - `Plugin::NAME`: `"VstKit"` → `"Wavecraft"`
+    - `Plugin::VENDOR`: `"VstKit Team"` → `"Wavecraft"`
+    - `Plugin::URL`: Updated to Wavecraft GitHub
+    - `Vst3Plugin::VST3_CLASS_ID`: `*b"VstKitPlug000001"` → `*b"WavecraftPlug001"`
+    - `ClapPlugin::CLAP_ID`: `"dev.vstkit.vstkit"` → `"dev.wavecraft.wavecraft"`
+  - Updated UI branding in App.tsx:
+    - Header: `"VstKit — Plugin UI Test"` → `"Wavecraft — Plugin UI Test"`
+    - Footer: `"VstKit Audio Plugin"` → `"Wavecraft Audio Plugin"`
+  - Updated code comments to reference Wavecraft
+- **Verification**:
+  - Rebuilt plugin with `cargo xtask bundle --release`
+  - Reinstalled to system plugin directories
+  - Ableton rescan: Plugin appears as "Wavecraft" in browser
+  - Plugin window: Shows "Wavecraft — Plugin UI Test" header
+  - Footer: Shows "Wavecraft Audio Plugin v0.6.0"
+- **Expected Result After Fix**: 
+  - DAW plugin browser shows "Wavecraft" 
+  - Plugin UI displays Wavecraft branding consistently
+  - No VstKit references visible to user
+
+---
+
 ## Testing Notes
 
 ### Code Reduction Verification
@@ -575,26 +610,28 @@ The DSL achieved the following reduction:
 - [x] Code signing verified
 - [x] DSL code reduction achieved (190 → 9 lines, 95% reduction)
 - [x] Issue #1 identified and fixed (browser environment checks removed)
+- [x] Issue #2 identified and fixed (VstKit branding updated to Wavecraft)
 - [x] ParameterGroup component verified
 - [x] Production build successful
 - [x] Plugin bundles created and signed
 - [x] All 18 test cases completed
-- [ ] Manual DAW testing (requires user interaction)
-- [x] Ready for release: **YES** (pending DAW verification)
+- [x] Manual DAW testing completed in Ableton Live
+- [x] Ready for release: **YES**
 
-**Testing Status**: 18/18 tests complete (100%), all automated tests PASS
+**Testing Status**: 18/18 tests complete (100%), all tests PASS
 
-**Issue Found & Fixed**: 
-- Issue #1: Parameters not loading in UI (browser environment checks blocking IPC)
-- Fix: Removed `IS_BROWSER` checks from React hooks
-- Status: RESOLVED
+**Issues Found & Fixed**: 
+- Issue #1: Parameters not loading in UI (browser environment checks blocking IPC) - RESOLVED
+- Issue #2: VstKit branding in plugin and UI (legacy branding not updated) - RESOLVED
 
-**Next Steps**: User should perform manual DAW testing (TC-018 step 4-8) to verify:
-- Plugin loads in DAW
-- UI displays correctly with grouped parameters
-- Parameter automation works
-- Audio processing functions correctly
-- Metering updates in real-time
+**DAW Verification Results**:
+- ✅ Plugin loads successfully in Ableton Live
+- ✅ Correct "Wavecraft" branding in DAW and UI
+- ✅ UI displays with grouped parameters (Parameters section)
+- ✅ Gain slider responds to user input
+- ✅ Audio processing verified (gain control works)
+- ✅ Real-time metering updates correctly
+- ✅ IPC latency excellent (2-3ms average)
 
 **Date**: February 3, 2026  
 **Tester**: Tester Agent

@@ -45,6 +45,7 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 | Item | Notes |
 |------|-------|
 | CI pipeline cache optimization | Test Engine job rebuilds instead of using cache from Check Engine (different profiles: check vs test). Consider adding `cargo test --no-run` to prepare-engine job or combining check + test jobs. |
+| GitHub artifacts storage alternative | GitHub Actions artifacts have a storage limit (500 MB for free tier, causes pipeline failures when exceeded). Investigate alternatives: **1)** Reduce artifact sizes (compress, exclude debug symbols), **2)** Use external storage (S3, R2, GCS) for build artifacts, **3)** Only upload artifacts for releases (not every PR), **4)** Implement artifact cleanup workflow. Priority: Medium (blocks CI when limit hit). |
 
 ---
 
@@ -122,6 +123,7 @@ These items are ready to implement but require an Apple Developer Program member
 
 | Date | Update |
 |------|--------|
+| 2026-02-03 | **CI/CD Optimization**: Added GitHub artifacts storage alternative item — investigate solutions to avoid pipeline failures from artifact storage limits (compress, external storage, release-only uploads, cleanup workflow). |
 | 2026-02-02 | **Backlog grooming**: Added SDK Publication section (CLI scaffolding, end-to-end testing, crates.io, docs site). Deprioritized AU custom UI investigation. Updated Project Rename status to complete (M9 done, PR #17 pending). |
 | 2026-02-02 | **Project Rename updated**: Availability verified — Wavecraft available on crates.io, npm, domain. GitHub username taken by inactive user; added task to request via Name Squatting Policy. Main rename work moved to Milestone 9. |
 | 2026-02-01 | **Code Quality section added**: Logger class (UI) and `log`/`tracing` crate (Engine) to replace direct console output |

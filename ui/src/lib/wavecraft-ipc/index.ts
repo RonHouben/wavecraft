@@ -1,5 +1,5 @@
 /**
- * @wavecraft/ipc - IPC library for VstKit WebView ↔ Rust communication
+ * @wavecraft/ipc - IPC library for Wavecraft WebView ↔ Rust communication
  *
  * Public exports for application code.
  */
