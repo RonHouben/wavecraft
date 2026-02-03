@@ -13,7 +13,7 @@
 | ✅ PASS | 7 |
 | ❌ FAIL | 0 |
 | ⏸️ BLOCKED | 0 |
-| ⬜ NOT RUN | 0 |
+| ⬜ NOT RUN | 7 |
 
 ## Prerequisites
 
@@ -267,8 +267,323 @@ Found in `docs/backlog.md` under "CI/CD Optimization":
 - [x] All critical tests pass
 - [x] All high-priority tests pass
 - [x] No issues found
-- [x] Ready for QA: **YES**
-- [ ] All critical tests pass
-- [ ] All high-priority tests pass
-- [ ] Issues documented for coder agent (if any)
-- [ ] Ready for QA: NO (testing not started)
+- [ ] Performance testing complete
+- [ ] Ready for QA: **PENDING PERFORMANCE TESTS**
+
+---
+
+## Performance Testing
+
+### Overview
+
+Compare CI pipeline execution times between the OLD setup (without test pre-compilation) and the NEW setup (with test pre-compilation) across different cache states to validate the expected time savings.
+
+**Test Matrix:**
+
+| Scenario | Cache State | OLD Setup | NEW Setup |
+|----------|-------------|-----------|-----------|
+| First PR run | Cold (empty) | PT-001 | PT-002 |
+| Subsequent PR run | Warm (populated) | PT-003 | PT-004 |
+
+---
+
+## Cold Cache Tests (First PR Run Simulation)
+
+### PT-001: OLD Setup - Cold Cache
+
+**Description**: Measure CI execution times with the OLD setup (no test pre-compilation) starting from empty cache
+
+**Preconditions**:
+- Docker running with wavecraft-ci:latest image
+- Clean state (no cached artifacts)
+
+**Steps**:
+1. Checkout main branch (or temporarily remove pre-compilation step):
+   ```bash
+   git stash  # Save current changes temporarily
+   ```
+2. Comment out the "Pre-compile test binaries" step in `.github/workflows/ci.yml`
+3. Clear local act cache:
+   ```bash
+   rm -rf ~/.cache/act
+   rm -rf /tmp/act-artifacts
+   ```
+4. Run full CI pipeline with timing:
+   ```bash
+   time act -W .github/workflows/ci.yml \
+     --container-architecture linux/amd64 \
+     -P ubuntu-latest=wavecraft-ci:latest \
+     --pull=false \
+     --artifact-server-path /tmp/act-artifacts 2>&1 | tee /tmp/ci-old-cold.log
+   ```
+5. Extract job timings:
+   ```bash
+   grep -E "Success.*\[.*s\]" /tmp/ci-old-cold.log | grep -E "(Prepare Engine|Check Engine|Test Engine)"
+   ```
+
+**Expected Result**: 
+- prepare-engine: ~3-4 min (clippy only, no pre-compilation)
+- test-engine: ~5-7 min (full compilation + test execution)
+- All jobs pass
+
+**Status**: ⬜ NOT RUN
+
+**Actual Result**: 
+
+| Job | Step | Duration |
+|-----|------|----------|
+| prepare-engine | Build with clippy | |
+| prepare-engine | **Total** | |
+| check-engine | Clippy | |
+| check-engine | **Total** | |
+| test-engine | Run tests (compile + run) | |
+| test-engine | **Total** | |
+| **Pipeline Total** | | |
+
+**Notes**: 
+
+---
+
+### PT-002: NEW Setup - Cold Cache
+
+**Description**: Measure CI execution times with the NEW setup (with test pre-compilation) starting from empty cache
+
+**Preconditions**:
+- Feature branch checked out with all changes
+- Docker running with wavecraft-ci:latest image
+- Clean state (no cached artifacts)
+
+**Steps**:
+1. Restore feature branch changes:
+   ```bash
+   git stash pop  # Restore new setup changes
+   ```
+2. Clear local act cache:
+   ```bash
+   rm -rf ~/.cache/act
+   rm -rf /tmp/act-artifacts
+   ```
+3. Run full CI pipeline with timing:
+   ```bash
+   time act -W .github/workflows/ci.yml \
+     --container-architecture linux/amd64 \
+     -P ubuntu-latest=wavecraft-ci:latest \
+     --pull=false \
+     --artifact-server-path /tmp/act-artifacts 2>&1 | tee /tmp/ci-new-cold.log
+   ```
+4. Extract job timings:
+   ```bash
+   grep -E "Success.*\[.*s\]" /tmp/ci-new-cold.log | grep -E "(Prepare Engine|Check Engine|Test Engine)"
+   ```
+
+**Expected Result**: 
+- prepare-engine: ~4-6 min (clippy + test pre-compilation)
+- test-engine: ~1-2 min (uses cached test binaries, run only)
+- All jobs pass
+
+**Status**: ⬜ NOT RUN
+
+**Actual Result**: 
+
+| Job | Step | Duration |
+|-----|------|----------|
+| prepare-engine | Build with clippy | |
+| prepare-engine | Pre-compile test binaries | |
+| prepare-engine | **Total** | |
+| check-engine | Clippy | |
+| check-engine | **Total** | |
+| test-engine | Run tests | |
+| test-engine | **Total** | |
+| **Pipeline Total** | | |
+
+**Notes**: 
+
+---
+
+## Warm Cache Tests (Subsequent PR Run Simulation)
+
+### PT-003: OLD Setup - Warm Cache
+
+**Description**: Measure CI execution times with OLD setup when caches are already populated (simulates subsequent PR runs)
+
+**Preconditions**:
+- PT-001 completed (cache now populated)
+- Old setup still configured (no pre-compilation step)
+
+**Steps**:
+1. Ensure old setup is configured (pre-compilation step removed/commented)
+2. Do NOT clear cache (use cache from PT-001)
+3. Run full CI pipeline with timing:
+   ```bash
+   time act -W .github/workflows/ci.yml \
+     --container-architecture linux/amd64 \
+     -P ubuntu-latest=wavecraft-ci:latest \
+     --pull=false \
+     --artifact-server-path /tmp/act-artifacts 2>&1 | tee /tmp/ci-old-warm.log
+   ```
+4. Extract job timings
+
+**Expected Result**: 
+- prepare-engine: faster (dependencies cached)
+- test-engine: still needs recompilation (test profile not cached by check profile)
+- Improvement over cold cache, but test-engine still slow
+
+**Status**: ⬜ NOT RUN
+
+**Actual Result**: 
+
+| Job | Step | Duration |
+|-----|------|----------|
+| prepare-engine | Build with clippy | |
+| prepare-engine | **Total** | |
+| check-engine | Clippy | |
+| check-engine | **Total** | |
+| test-engine | Run tests (compile + run) | |
+| test-engine | **Total** | |
+| **Pipeline Total** | | |
+
+**Notes**: 
+
+---
+
+### PT-004: NEW Setup - Warm Cache
+
+**Description**: Measure CI execution times with NEW setup when caches are already populated (simulates subsequent PR runs)
+
+**Preconditions**:
+- PT-002 completed (cache now populated with test binaries)
+- New setup configured (with pre-compilation step)
+
+**Steps**:
+1. Restore feature branch changes if needed
+2. Do NOT clear cache (use cache from PT-002)
+3. Run full CI pipeline with timing:
+   ```bash
+   time act -W .github/workflows/ci.yml \
+     --container-architecture linux/amd64 \
+     -P ubuntu-latest=wavecraft-ci:latest \
+     --pull=false \
+     --artifact-server-path /tmp/act-artifacts 2>&1 | tee /tmp/ci-new-warm.log
+   ```
+4. Extract job timings
+
+**Expected Result**: 
+- prepare-engine: fast (cache hit on clippy + test binaries)
+- test-engine: very fast (cache hit, run only)
+- Maximum benefit of the optimization
+
+**Status**: ⬜ NOT RUN
+
+**Actual Result**: 
+
+| Job | Step | Duration |
+|-----|------|----------|
+| prepare-engine | Build with clippy | |
+| prepare-engine | Pre-compile test binaries | |
+| prepare-engine | **Total** | |
+| check-engine | Clippy | |
+| check-engine | **Total** | |
+| test-engine | Run tests | |
+| test-engine | **Total** | |
+| **Pipeline Total** | | |
+
+**Notes**: 
+
+---
+
+## Performance Analysis
+
+### PT-005: Cold Cache Comparison
+
+**Description**: Compare OLD vs NEW setup with cold cache (first PR run)
+
+**Preconditions**:
+- PT-001 (OLD cold) completed
+- PT-002 (NEW cold) completed
+
+**Expected Result**: 
+- prepare-engine: NEW is ~1-2 min slower (pre-compilation overhead)
+- test-engine: NEW is ~3-5 min faster (no recompilation)
+- Net savings: ~2-3 minutes
+
+**Status**: ⬜ NOT RUN
+
+**Actual Result**: 
+
+| Metric | OLD (Cold) | NEW (Cold) | Difference | % Change |
+|--------|------------|------------|------------|----------|
+| prepare-engine | | | | |
+| test-engine | | | | |
+| **Total** | | | | |
+
+**Conclusion**: 
+
+---
+
+### PT-006: Warm Cache Comparison
+
+**Description**: Compare OLD vs NEW setup with warm cache (subsequent PR runs)
+
+**Preconditions**:
+- PT-003 (OLD warm) completed
+- PT-004 (NEW warm) completed
+
+**Expected Result**: 
+- prepare-engine: Similar (both benefit from dependency cache)
+- test-engine: NEW significantly faster (test binaries cached)
+- Maximum optimization benefit visible
+
+**Status**: ⬜ NOT RUN
+
+**Actual Result**: 
+
+| Metric | OLD (Warm) | NEW (Warm) | Difference | % Change |
+|--------|------------|------------|------------|----------|
+| prepare-engine | | | | |
+| test-engine | | | | |
+| **Total** | | | | |
+
+**Conclusion**: 
+
+---
+
+### PT-007: Overall Performance Summary
+
+**Description**: Comprehensive summary of all performance test results
+
+**Status**: ⬜ NOT RUN
+
+**Summary Table**:
+
+| Scenario | OLD Setup | NEW Setup | Time Saved | Notes |
+|----------|-----------|-----------|------------|-------|
+| Cold Cache (First PR) | | | | |
+| Warm Cache (Subsequent PRs) | | | | |
+
+**Key Findings**:
+1. 
+2. 
+3. 
+
+**Recommendation**: 
+
+---
+
+### Performance Testing Limitations
+
+1. **Local `act` environment**: Container isolation means caches aren't shared between jobs the same way as GitHub Actions. Each job runs in a separate container.
+2. **Cache key differences**: `act` uses local filesystem caching which may behave differently than GitHub's cache service
+3. **Hardware variance**: Local machine performance may vary; focus on relative differences, not absolute times
+4. **Network factors**: Crate downloads may affect timing; warm cache tests mitigate this
+5. **Profile differences**: The key insight is that `cargo clippy` (check profile) doesn't cache test binaries (test profile), which is why pre-compilation helps
+
+### Testing Order
+
+For accurate results, execute tests in this order:
+
+1. **PT-001** (OLD cold) → clears cache, runs old setup
+2. **PT-003** (OLD warm) → immediately after, uses PT-001's cache
+3. Clear cache, switch to new setup
+4. **PT-002** (NEW cold) → clears cache, runs new setup
+5. **PT-004** (NEW warm) → immediately after, uses PT-002's cache
+6. **PT-005, PT-006, PT-007** → analysis
