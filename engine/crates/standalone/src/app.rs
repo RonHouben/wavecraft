@@ -44,6 +44,7 @@ impl ParameterHost for AppState {
                 value: self.gain.load(Ordering::Relaxed),
                 default: 0.7,
                 unit: Some("dB".to_string()),
+                group: None,
             }),
             "bypass" => Some(ParameterInfo {
                 id: "bypass".to_string(),
@@ -56,6 +57,7 @@ impl ParameterHost for AppState {
                 },
                 default: 0.0,
                 unit: None,
+                group: None,
             }),
             "mix" => Some(ParameterInfo {
                 id: "mix".to_string(),
@@ -64,6 +66,7 @@ impl ParameterHost for AppState {
                 value: self.mix.load(Ordering::Relaxed),
                 default: 1.0,
                 unit: Some("%".to_string()),
+                group: None,
             }),
             _ => None,
         }

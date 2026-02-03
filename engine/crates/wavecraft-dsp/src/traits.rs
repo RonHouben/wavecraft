@@ -47,6 +47,9 @@ pub struct ParamSpec {
     
     /// Unit string (e.g., "dB", "Hz", "%").
     pub unit: &'static str,
+    
+    /// Optional group name for UI organization (e.g., "Input", "Processing", "Output").
+    pub group: Option<&'static str>,
 }
 
 /// Parameter value range definition.

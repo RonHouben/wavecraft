@@ -76,6 +76,12 @@ impl<P: Params> ParameterHost for PluginEditorBridge<P> {
                     } else {
                         Some(unit_str.to_string())
                     },
+                    // Use group from param_map (third element of tuple)
+                    group: if _group.is_empty() {
+                        None
+                    } else {
+                        Some(_group.to_string())
+                    },
                 })
             } else {
                 None
@@ -123,6 +129,12 @@ impl<P: Params> ParameterHost for PluginEditorBridge<P> {
                         None
                     } else {
                         Some(unit_str.to_string())
+                    },
+                    // Use group from param_map (third element of tuple)
+                    group: if _group.is_empty() {
+                        None
+                    } else {
+                        Some(_group.to_string())
                     },
                 }
             })

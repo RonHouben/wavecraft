@@ -19,10 +19,11 @@ This document tracks the implementation progress of the Declarative Plugin DSL f
 | Phase 5: wavecraft_processor! Macro | ✅ Complete | 3/3 |
 | Phase 6: wavecraft_plugin! Macro | ✅ Complete | 6/6 |
 | Phase 7: Integration & Template | ✅ Complete | 4/4 |
-| Phase 8: Documentation | 🔲 Not Started | 0/5 |
+| Phase 8: Documentation | � Deferred to Architect | 0/5 |
 | Phase 9: UI Parameter Groups | 🔲 Not Started | 0/5 |
 
-**Overall Progress:** 30/40 steps (75%)**
+**Coder Progress:** 31/35 implementation steps (88.6%)
+**Overall Progress:** 31/40 total steps (77.5%)**
 
 ---
 
@@ -134,21 +135,34 @@ wavecraft_plugin! {
 
 ## Phase 8: Documentation
 
-- [ ] **8.1** Update SDK Getting Started
-- [ ] **8.2** Create Custom DSP Guide
-- [ ] **8.3** Create DSP Chains Guide
-- [ ] **8.4** Update High-Level Design
-- [ ] **8.5** Document Preset Breaking Changes
+**Status:** 🔄 Deferred to Architect Agent
+
+This phase involves architectural documentation updates:
+- [ ] **8.1** Update SDK Getting Started guide
+- [ ] **8.2** Create Custom DSP guide  
+- [ ] **8.3** Create DSP Chains guide
+- [ ] **8.4** Update High-Level Design document
+- [ ] **8.5** Document preset-breaking changes
+
+**Note:** Documentation is an architectural responsibility. The architect will handle this phase to ensure consistency with the overall system design and coding standards.
 
 ---
 
 ## Phase 9: UI Parameter Groups
 
-- [ ] **9.1** Update IPC Protocol with Group Metadata
+- [x] **9.1** Update IPC Protocol with Group Metadata
 - [ ] **9.2** Generate Group Metadata in Macro
 - [ ] **9.3** Create ParameterGroup UI Component
 - [ ] **9.4** Create useParameterGroups Hook
 - [ ] **9.5** Update Template UI with Groups
+
+**Status:** 🔄 In Progress (1/5)
+
+**Step 9.1 Complete:** Added optional `group` field to:
+- `ParameterInfo` in wavecraft-protocol (IPC layer)
+- `ParamSpec` in wavecraft-dsp (DSP layer)
+- Bridge implementations pass through nih-plug's group metadata
+- All tests updated and passing
 
 ---
 

@@ -24,6 +24,7 @@ impl ProcessorParams for GainParams {
                 },
                 default: 1.0,
                 unit: "x",
+                group: None,
             },
         ];
         &SPECS

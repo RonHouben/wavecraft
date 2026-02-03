@@ -169,6 +169,9 @@ pub struct ParameterInfo {
     /// Unit suffix for display (e.g., "dB", "%", "Hz")
     #[serde(skip_serializing_if = "Option::is_none")]
     pub unit: Option<String>,
+    /// Group name for UI organization (e.g., "Input", "Processing", "Output")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub group: Option<String>,
 }
 
 /// Parameter type discriminator

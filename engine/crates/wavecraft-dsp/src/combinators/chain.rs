@@ -70,6 +70,7 @@ where
                     range: spec.range.clone(),
                     default: spec.default,
                     unit: spec.unit,
+                    group: spec.group,
                 });
             }
             
@@ -81,6 +82,7 @@ where
                     range: spec.range.clone(),
                     default: spec.default,
                     unit: spec.unit,
+                    group: spec.group,
                 });
             }
             
