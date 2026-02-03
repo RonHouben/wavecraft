@@ -6,7 +6,7 @@
  */
 
 import React, { useCallback, useRef, useState } from 'react';
-import { useRequestResize } from '../lib/wavecraft-ipc';
+import { useRequestResize, logger } from '../lib/wavecraft-ipc';
 
 export function ResizeHandle(): React.JSX.Element {
   const requestResize = useRequestResize();
@@ -35,7 +35,7 @@ export function ResizeHandle(): React.JSX.Element {
 
         // Request resize from host
         requestResize(newWidth, newHeight).catch((err) => {
-          console.error('Resize request failed:', err);
+          logger.error('Resize request failed', { error: err, width: newWidth, height: newHeight });
         });
       };
 

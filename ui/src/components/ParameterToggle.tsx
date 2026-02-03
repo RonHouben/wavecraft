@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { useParameter } from '@wavecraft/ipc';
+import { useParameter, logger } from '@wavecraft/ipc';
 
 interface ParameterToggleProps {
   readonly id: string;
@@ -33,7 +33,7 @@ export function ParameterToggle({ id }: ParameterToggleProps): React.JSX.Element
   const handleToggle = (): void => {
     const newValue = isOn ? 0 : 1;
     setValue(newValue).catch((err) => {
-      console.error('Failed to set parameter:', err);
+      logger.error('Failed to set parameter', { error: err, parameterId: id });
     });
   };
 

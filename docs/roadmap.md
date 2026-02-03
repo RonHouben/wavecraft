@@ -7,15 +7,15 @@ This document tracks implementation progress against the milestones defined in t
 ## Progress Overview
 
 ```
-┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│  ✅ M1        ✅ M2        ✅ M3        ✅ M4           ✅ M5        ✅ M6            ✅ M7           ✅ M8       ✅ M9       ✅ M10      │
-│  Skeleton ─── WebView ─── Plugin UI ─── macOS ─────── Polish ───── WebSocket ───── Visual Testing ── SDK ─────── Rename ─── DSL         │
-│                                                                                                                                           │
-│                                                                                                                        Wavecraft v0.6.0  │
-│                                                                                                                        10/11 Milestones  │
-│                                                                                                                                           │
-│  Progress: [██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████] 100% │
-└───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────┐
+│  WAVECRAFT ROADMAP           v0.6.1 | 85%  │
+├─────────────────────────────────────────────┤
+│  ✅ M1-M11   Foundation → OSS Ready        │
+│  ⏳ M12      User Testing                  │
+│  ⏳ M13      V1.0 Release                  │
+├─────────────────────────────────────────────┤
+│  [██████████████████████████░░░░░] 11/13   │
+└─────────────────────────────────────────────┘
 ```
 
 **See also:** [Backlog](backlog.md) — unprioritized ideas for future consideration
@@ -471,28 +471,140 @@ Linting:      All checks passed (cargo fmt, clippy, ESLint, Prettier)
 
 ---
 
-## Milestone 11: Code Quality & OSS Prep ⏳
+## Milestone 11: Code Quality & OSS Prep ✅
 
 > **Goal:** Polish codebase for open-source release — proper logging, code quality fixes, CI optimization.
 
-**Branch:** `feature/code-quality-polish` (not started)  
-**Target Version:** `0.6.1` (patch — polish, no new features)
+**Branch:** `feature/code-quality-polish`  
+**Version:** `0.6.1` (patch — polish, no new features)
+
+**User Stories:** [docs/feature-specs/_archive/code-quality-polish/user-stories.md](feature-specs/_archive/code-quality-polish/user-stories.md)
 
 | Task | Status | Notes |
 |------|--------|-------|
 | **Code Quality** | | |
-| Disable horizontal scroll wiggle | ⏳ | Annoying UX bug, ~30 min fix |
-| Logger class for UI | ⏳ | Replace console.log with structured logging (2-4 hrs) |
-| Log/tracing crate for Engine | ⏳ | Proper Rust logging infrastructure (2-4 hrs) |
+| Disable horizontal scroll wiggle | ✅ | CSS `overflow-x: hidden` on `#root` |
+| Logger class for UI | ✅ | `Logger` in `@wavecraft/ipc` with severity levels |
+| Log/tracing crate for Engine | ✅ | `tracing` crate in standalone, 24 calls migrated |
 | **CI/CD Optimization** | | |
-| CI cache optimization | ⏳ | Reduce build times (half day) |
+| CI cache optimization | ➡️ | Deferred — already well-optimized |
 | **Open Source Prep** | | |
-| License review | ⏳ | Verify all dependencies are OSS-compatible |
-| Contributing guidelines | ⏳ | CONTRIBUTING.md for external contributors |
-| Issue templates | ⏳ | GitHub issue/PR templates |
-| README polish | ⏳ | Final review for public-facing documentation |
+| LICENSE file | ✅ | MIT License added to root and template |
+| Contributing guidelines | ✅ | CONTRIBUTING.md with development workflow |
+| Code of Conduct | ✅ | CODE_OF_CONDUCT.md (Contributor Covenant) |
+| Issue templates | ✅ | Bug report and feature request templates |
+| PR template | ✅ | Pull request template with checklist |
+| README polish | ✅ | Status badges, updated structure, docs links |
+| Version bump | ✅ | `0.6.1` (Cargo.toml) |
 
-**Estimated Effort:** 2-3 days
+**Key Deliverables:**
+- **UI Logger** — `Logger` class with `debug/info/warn/error` methods, exported from `@wavecraft/ipc`
+- **Engine logging** — `tracing` crate replacing `println!` in standalone crate (24 calls migrated)
+- **Open source infrastructure** — LICENSE, CONTRIBUTING.md, CODE_OF_CONDUCT.md, issue/PR templates
+- **Template synchronization** — Logger and CSS fixes propagated to `wavecraft-plugin-template`
+- **Documentation updates** — Logging standards added to coding-standards.md, IPC exports documented in high-level-design.md
+
+**Test Results:**
+```
+Engine Tests: 110+ passed, 0 failed
+UI Tests:     43 passed, 0 failed
+Manual Tests: 19/19 passed
+Linting:      All checks passed (cargo fmt, clippy, ESLint, Prettier)
+QA:           5 findings (1 Critical, 4 Medium) — all resolved
+```
+
+---
+
+## Milestone 12: User Testing ⏳
+
+> **Goal:** Validate Wavecraft with real plugin developers before V1 release. Gather feedback on SDK usability, documentation quality, and overall developer experience.
+
+**Depends on:** Milestone 11 (Code Quality & OSS Prep) — codebase should be polished before external testers use it.
+
+**Target Version:** `0.7.0` (minor — pre-release milestone with potential breaking changes from feedback)
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Recruitment & Planning** | | |
+| Define target user profiles | ⏳ | Rust devs, audio plugin devs, React devs |
+| Recruit 3-5 beta testers | ⏳ | Personal network, audio dev communities |
+| Create testing guide | ⏳ | Step-by-step instructions for testers |
+| Set up feedback collection | ⏳ | GitHub Discussions or form |
+| **Testing Protocol** | | |
+| Tester builds plugin from template | ⏳ | "Getting Started" guide test |
+| Tester modifies parameters | ⏳ | DSL usability test |
+| Tester customizes UI | ⏳ | React + TailwindCSS workflow test |
+| Tester bundles for DAW | ⏳ | `cargo xtask bundle` workflow test |
+| Tester loads in DAW | ⏳ | End-to-end validation |
+| **Feedback Analysis** | | |
+| Collect feedback from all testers | ⏳ | Structured questionnaire + open feedback |
+| Categorize issues (bugs, UX, docs) | ⏳ | Prioritize by severity and frequency |
+| Create action items | ⏳ | Triage into fix-now vs V1.1 |
+| **Iteration** | | |
+| Address critical feedback | ⏳ | Bugs, breaking issues, doc gaps |
+| Update documentation | ⏳ | Based on common questions |
+| Final tester validation | ⏳ | Confirm fixes address concerns |
+
+**Success Criteria:**
+- [ ] At least 3 testers successfully build a plugin from template
+- [ ] At least 3 testers successfully load their plugin in a DAW
+- [ ] No critical/blocking issues remain unresolved
+- [ ] Documentation rated "clear" by majority of testers
+- [ ] SDK usability rated "good" or "excellent" by majority
+
+**Estimated Effort:** 2-3 weeks (including tester recruitment and iteration time)
+
+---
+
+## Milestone 13: V1.0 Release 🎯
+
+> **Goal:** Ship Wavecraft 1.0 — the first stable, production-ready release of the Rust + React audio plugin framework.
+
+**Depends on:** Milestone 12 (User Testing) — all critical feedback addressed.
+
+**Target Version:** `1.0.0` (major — first stable release)
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Release Prep** | | |
+| Final code review | ⏳ | Full codebase review for V1 quality |
+| Version bump to 1.0.0 | ⏳ | Cargo.toml, package.json |
+| Update all version references | ⏳ | README badges, docs, UI |
+| **Documentation Polish** | | |
+| README final review | ⏳ | Hero section, quick start, badges |
+| Architecture docs final review | ⏳ | High-level design, coding standards |
+| Guides final review | ⏳ | Getting started, signing, CI pipeline |
+| **Release Artifacts** | | |
+| Create GitHub Release | ⏳ | Tag v1.0.0 with changelog |
+| Build release bundles | ⏳ | VST3/CLAP for macOS |
+| Publish to crates.io (optional) | ⏳ | If ready for public consumption |
+| **Announcement** | | |
+| Write announcement blog post | ⏳ | Features, getting started, roadmap |
+| Social media posts | ⏳ | Twitter/X, LinkedIn, Reddit |
+| Audio dev community posts | ⏳ | KVR, JUCE forum, Rust Audio Discord |
+| **Post-Release** | | |
+| Monitor issues | ⏳ | First 48 hours critical response |
+| Plan V1.1 roadmap | ⏳ | Based on user feedback and backlog |
+
+**V1.0 Feature Set:**
+- ✅ Cross-platform audio plugin framework (macOS primary, Windows theoretical)
+- ✅ VST3 and CLAP format support
+- ✅ React-based UI with TailwindCSS
+- ✅ <1ms IPC latency (native) / WebSocket bridge (dev)
+- ✅ Declarative DSL with 95% code reduction
+- ✅ Real-time metering (peak/RMS)
+- ✅ Code signing and notarization infrastructure
+- ✅ Comprehensive documentation and SDK
+- ✅ User-tested and validated
+
+**Success Criteria:**
+- [ ] Clean build with no warnings
+- [ ] All tests passing (engine + UI)
+- [ ] All documentation up-to-date
+- [ ] GitHub Release published with artifacts
+- [ ] At least one external user successfully uses V1.0
+
+**Estimated Effort:** 1 week
 
 ---
 
@@ -500,6 +612,8 @@ Linting:      All checks passed (cargo fmt, clippy, ESLint, Prettier)
 
 | Date | Update |
 |------|--------|
+| 2026-02-03 | **Milestone 11 complete**: Code Quality & OSS Prep fully implemented. UI Logger (`Logger` class in `@wavecraft/ipc` with debug/info/warn/error methods), Engine logging (`tracing` crate, 24 println! calls migrated), open source infrastructure (LICENSE, CONTRIBUTING.md, CODE_OF_CONDUCT.md, issue/PR templates), README polish. Horizontal scroll fix applied. Template project synchronized. 110+ engine tests, 43 UI tests, 19/19 manual tests passing. QA approved (5 findings resolved). Logging standards documented in coding-standards.md. Version 0.6.1. Archived to `_archive/code-quality-polish/`. |
+| 2026-02-03 | **Added Milestones 12 & 13**: User Testing (v0.7.0) and V1.0 Release (v1.0.0). User Testing focuses on validating SDK with 3-5 beta testers before stable release. V1.0 is the final milestone marking first production-ready release. Updated progress to 77% (10/13 milestones complete). |
 | 2026-02-03 | **Milestone 10 complete**: Declarative Plugin DSL fully implemented. 95% code reduction (190 lines → 9 lines), `wavecraft_plugin!` macro for zero-boilerplate plugins, `#[derive(ProcessorParams)]` with `#[param(...)]` attributes, `wavecraft_processor!` for named wrappers, `Chain!` combinator for signal chains. Built-in processors (Gain, Passthrough). UI parameter groups (`ParameterGroup` component, `useParameterGroups` hook). 63 tests (28 engine + 35 UI), 18/18 manual tests, all linting clean. DAW verified in Ableton Live. VstKit branding updated to Wavecraft. ProcessorParams `group` field fixed. QA approved. Version 0.6.0. Archived to `_archive/declarative-plugin-dsl/`. |
 | 2026-02-03 | **Milestone reprioritization**: Declarative Plugin DSL promoted to Milestone 10 (was unscheduled). Code Quality & OSS Prep moved to Milestone 11. Rationale: DSL significantly improves DX and is a key differentiator before open-source release. Planning complete (user stories, low-level design, implementation plan with 40 steps across 9 phases). |
 | 2026-02-03 | **Project rename fully deployed**: PR #17 merged to main, GitHub repository renamed `vstkit` → `wavecraft`. All source code references updated. Milestone 9 complete and in production. |
@@ -546,7 +660,7 @@ Linting:      All checks passed (cargo fmt, clippy, ESLint, Prettier)
 
 ## Next Steps
 
-> 🚀 **Preparing for open-source release** — Code quality and polish milestone next.
+> 🚀 **Road to V1** — User testing followed by stable release.
 
 ### Completed Milestones
 1. ✅ **Milestone 1**: Plugin Skeleton — Rust plugin with VST3/CLAP export
@@ -559,12 +673,14 @@ Linting:      All checks passed (cargo fmt, clippy, ESLint, Prettier)
 8. ✅ **Milestone 8**: Developer SDK — 5-crate SDK architecture, macro, template, docs
 9. ✅ **Milestone 9**: Project Rename — VstKit → Wavecraft (v0.5.0)
 10. ✅ **Milestone 10**: Declarative Plugin DSL — Macro-based DSL for 95% code reduction (v0.6.0)
+11. ✅ **Milestone 11**: Code Quality & OSS Prep — Logging, open-source readiness (v0.6.1)
 
 ### Up Next
-11. ⏳ **Milestone 11**: Code Quality & OSS Prep — Logging, CI optimization, open-source readiness (v0.6.1)
+12. ⏳ **Milestone 12**: User Testing — Beta testing with real plugin developers (v0.7.0)
+13. ⏳ **Milestone 13**: V1.0 Release — First stable production release (v1.0.0)
 
 ### Immediate Tasks
-1. ✅ Merge Declarative Plugin DSL PR — Complete (2026-02-03)
-2. ⏳ Start Milestone 11 (Code Quality & OSS Prep)
+1. ✅ Merge Code Quality & OSS Prep PR — Pending
+2. ⏳ Recruit beta testers for Milestone 12
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (SDK publication, CLI tool, crates.io, etc.)

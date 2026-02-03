@@ -8,6 +8,7 @@
 import type { Transport, NotificationCallback } from './Transport';
 import type { IpcResponse, IpcNotification, RequestId } from '../types';
 import { isIpcResponse, isIpcNotification } from '../types';
+import { logger } from '@wavecraft/ipc';
 
 interface PendingRequest {
   resolve: (response: string) => void;
@@ -128,7 +129,7 @@ export class NativeTransport implements Transport {
         this.handleNotification(parsed);
       }
     } catch (error) {
-      console.error('Failed to parse incoming message:', error);
+      logger.error('NativeTransport failed to parse incoming message', { error, message });
     }
   }
 
@@ -155,7 +156,7 @@ export class NativeTransport implements Transport {
       try {
         callback(notificationJson);
       } catch (error) {
-        console.error('Error in notification callback:', error);
+        logger.error('NativeTransport notification callback error', { error });
       }
     }
   }

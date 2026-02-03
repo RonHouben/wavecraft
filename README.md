@@ -1,5 +1,8 @@
 # Wavecraft
 
+[![CI](https://github.com/RonHouben/wavecraft/actions/workflows/ci.yml/badge.svg)](https://github.com/RonHouben/wavecraft/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A cross-platform audio effects plugin framework built with **Rust** and **React**.
 
 ## Overview
@@ -38,25 +41,20 @@ wavecraft/
 ├── engine/                       # Rust audio engine & plugin
 │   ├── Cargo.toml                # Workspace root
 │   └── crates/
-│       ├── dsp/                  # Pure DSP (no plugin deps)
-│       ├── plugin/               # nih-plug host integration
-│       ├── bridge/               # UI ↔ Audio IPC
-│       └── protocol/             # Shared contracts (param IDs, ranges)
+│       ├── wavecraft-core/       # Framework integration (macros, nih-plug wrapper)
+│       ├── wavecraft-dsp/        # Pure DSP (Processor trait, built-in processors)
+│       ├── wavecraft-bridge/     # UI ↔ Audio IPC (ParameterHost trait)
+│       ├── wavecraft-protocol/   # Shared contracts (param IDs, JSON-RPC types)
+│       ├── wavecraft-metering/   # SPSC ring buffer for real-time meters
+│       └── standalone/           # Standalone dev server (WebSocket, WebView)
 │
 ├── ui/                           # React SPA (Vite + TypeScript)
 │   ├── src/
 │   └── dist/                     # Build output (embedded in plugin)
 │
+├── wavecraft-plugin-template/    # Template project for SDK users
 ├── docs/                         # Architecture & specs
-├── scripts/                      # Build & CI helpers
-├── packaging/                    # Platform installers
-│   ├── macos/
-│   ├── windows/
-│   └── linux/
-│
-└── tests/
-    ├── integration/              # Host-in-the-loop tests
-    └── dsp/                      # Offline DSP correctness tests
+└── packaging/                    # Platform installers
 ```
 
 ## Documentation
@@ -146,6 +144,10 @@ packaging/macos/au-wrapper/build/
 | Windows | `C:\Program Files\Common Files\VST3\` | `C:\Program Files\Common Files\CLAP\` | N/A |
 | Linux | `~/.vst3/` | `~/.clap/` | N/A |
 
+## Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
 ## License
 
-TBD
+Wavecraft is released under the [MIT License](LICENSE).

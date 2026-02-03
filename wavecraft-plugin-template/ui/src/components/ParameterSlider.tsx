@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { useParameter } from '@wavecraft/ipc';
+import { useParameter, logger } from '@wavecraft/ipc';
 
 interface ParameterSliderProps {
   readonly id: string;
@@ -31,7 +31,7 @@ export function ParameterSlider({ id }: ParameterSliderProps): React.JSX.Element
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const value = Number.parseFloat(e.target.value);
     setValue(value).catch((err) => {
-      console.error('Failed to set parameter:', err);
+      logger.error('Failed to set parameter', { error: err, parameterId: id });
     });
   };
 

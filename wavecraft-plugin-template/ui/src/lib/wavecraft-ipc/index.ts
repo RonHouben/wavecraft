@@ -59,6 +59,10 @@ export type { RequestResizeParams, RequestResizeResult } from './resize';
 export { getMeterFrame, linearToDb, dbToLinear } from './meters';
 export type { MeterFrame, GetMeterFrameResult } from './meters';
 
+// Logger - Structured logging utility
+export { logger, Logger, LogLevel } from './logger/Logger';
+export type { LogContext } from './logger/Logger';
+
 // Transports (advanced use)
 export type { Transport, NotificationCallback } from './transports';
 export { WebSocketTransport, NativeTransport } from './transports';

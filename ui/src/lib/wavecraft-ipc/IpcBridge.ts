@@ -9,6 +9,7 @@ import type { IpcRequest, IpcResponse, IpcNotification } from './types';
 import { isIpcNotification } from './types';
 import type { Transport } from './transports';
 import { getTransport } from './transports';
+import { logger } from './logger/Logger';
 
 type EventCallback<T> = (data: T) => void;
 
@@ -44,7 +45,7 @@ export class IpcBridge {
           this.handleNotification(parsed);
         }
       } catch (error) {
-        console.error('[IpcBridge] Failed to parse notification:', error);
+        logger.error('Failed to parse notification', { error });
       }
     });
 
@@ -79,9 +80,7 @@ export class IpcBridge {
       // Rate-limit disconnect warnings to avoid console spam
       const now = Date.now();
       if (now - this.lastDisconnectWarning > this.DISCONNECT_WARNING_INTERVAL_MS) {
-        console.warn(
-          '[IpcBridge] Transport not connected, call will fail. Waiting for reconnection...'
-        );
+        logger.warn('Transport not connected, call will fail. Waiting for reconnection...');
         this.lastDisconnectWarning = now;
       }
       throw new Error('IpcBridge: Transport not connected');
@@ -148,7 +147,7 @@ export class IpcBridge {
       try {
         listener(notification.params);
       } catch (error) {
-        console.error('[IpcBridge] Error in event listener:', error);
+        logger.error('Error in event listener', { event: notification.method, error });
       }
     }
   }

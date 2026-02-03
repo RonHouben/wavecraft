@@ -82,6 +82,11 @@ Key: the audio path never blocks on UI; the UI never directly runs audio code.
 	•	**Transport Abstraction**: The IPC layer uses a pluggable transport system:
 		- `NativeTransport`: postMessage-based communication in WKWebView (production)
 		- `WebSocketTransport`: WebSocket-based communication in browser (development)
+	•	**Library Exports** (`@wavecraft/ipc`):
+		- IPC: `IpcBridge`, `ParameterClient`, `MeterClient`
+		- Hooks: `useParameter`, `useConnectionStatus`, `useMeterFrame`
+		- Logging: `logger`, `Logger`, `LogLevel` — structured logging with severity levels
+		- Types: `ParameterInfo`, `MeterFrame`, `IpcError`
 	•	JSON-RPC 2.0 message format with request/response correlation. Expose a minimal API:
 		- `setParameter(id, value)`
 		- `getParameter(id)`

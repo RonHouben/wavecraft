@@ -9,7 +9,7 @@ import { Meter } from './components/Meter';
 import { ResizeHandle } from './components/ResizeHandle';
 import { VersionBadge } from './components/VersionBadge';
 import { ConnectionStatus } from './components/ConnectionStatus';
-import { requestResize, useAllParameters, useParameterGroups } from './lib/wavecraft-ipc';
+import { requestResize, useAllParameters, useParameterGroups, logger } from './lib/wavecraft-ipc';
 
 function App(): React.JSX.Element {
   // Fetch all parameters and organize into groups
@@ -24,7 +24,7 @@ function App(): React.JSX.Element {
 
       // Notify host of the new size
       requestResize(width, height).catch((err) => {
-        console.error('Failed to notify host of resize:', err);
+        logger.error('Failed to notify host of resize', { error: err, width, height });
       });
     };
 

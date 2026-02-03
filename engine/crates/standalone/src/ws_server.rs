@@ -10,6 +10,7 @@ use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::broadcast;
 use tokio_tungstenite::{accept_async, tungstenite::protocol::Message};
+use tracing::{debug, error, info, warn};
 use wavecraft_bridge::{IpcHandler, ParameterHost};
 
 /// WebSocket server for browser-based UI development
@@ -41,7 +42,7 @@ impl<H: ParameterHost + 'static> WsServer<H> {
         let addr: SocketAddr = format!("127.0.0.1:{}", self.port).parse()?;
         let listener = TcpListener::bind(&addr).await?;
 
-        println!("[WebSocket] Server listening on ws://{}", addr);
+        info!("Server listening on ws://{}", addr);
 
         let handler = Arc::clone(&self.handler);
         let mut shutdown_rx = self.shutdown_tx.subscribe();
@@ -53,17 +54,17 @@ impl<H: ParameterHost + 'static> WsServer<H> {
                     result = listener.accept() => {
                         match result {
                             Ok((stream, addr)) => {
-                                println!("[WebSocket] Client connected: {}", addr);
+                                info!("Client connected: {}", addr);
                                 let handler = Arc::clone(&handler);
                                 tokio::spawn(handle_connection(handler, stream, addr, verbose));
                             }
                             Err(e) => {
-                                eprintln!("[WebSocket] Accept error: {}", e);
+                                error!("Accept error: {}", e);
                             }
                         }
                     }
                     _ = shutdown_rx.recv() => {
-                        println!("[WebSocket] Server shutting down");
+                        info!("Server shutting down");
                         break;
                     }
                 }
@@ -92,12 +93,12 @@ async fn handle_connection<H: ParameterHost>(
     let ws_stream = match accept_async(stream).await {
         Ok(ws) => ws,
         Err(e) => {
-            eprintln!("[WebSocket] Error during handshake with {}: {}", addr, e);
+            error!("Error during handshake with {}: {}", addr, e);
             return;
         }
     };
 
-    println!("[WebSocket] WebSocket connection established: {}", addr);
+    info!("WebSocket connection established: {}", addr);
 
     let (mut write, mut read) = ws_stream.split();
 
@@ -106,7 +107,7 @@ async fn handle_connection<H: ParameterHost>(
             Ok(Message::Text(json)) => {
                 // Log incoming message (verbose only)
                 if verbose {
-                    println!("[WebSocket] Received from {}: {}", addr, json);
+                    debug!("Received from {}: {}", addr, json);
                 }
 
                 // Route through existing IpcHandler
@@ -114,36 +115,36 @@ async fn handle_connection<H: ParameterHost>(
 
                 // Log outgoing response (verbose only)
                 if verbose {
-                    println!("[WebSocket] Sending to {}: {}", addr, response);
+                    debug!("Sending to {}: {}", addr, response);
                 }
 
                 // Send response back to client
                 if let Err(e) = write.send(Message::Text(response)).await {
-                    eprintln!("[WebSocket] Error sending response to {}: {}", addr, e);
+                    error!("Error sending response to {}: {}", addr, e);
                     break;
                 }
             }
             Ok(Message::Close(_)) => {
-                println!("[WebSocket] Client closed connection: {}", addr);
+                info!("Client closed connection: {}", addr);
                 break;
             }
             Ok(Message::Ping(_)) | Ok(Message::Pong(_)) => {
                 // Ignore ping/pong frames (automatically handled)
             }
             Ok(Message::Binary(_)) => {
-                eprintln!("[WebSocket] Unexpected binary message from {}", addr);
+                warn!("Unexpected binary message from {}", addr);
             }
             Ok(Message::Frame(_)) => {
                 // Raw frames shouldn't appear at this level
             }
             Err(e) => {
-                eprintln!("[WebSocket] Error receiving from {}: {}", addr, e);
+                error!("Error receiving from {}: {}", addr, e);
                 break;
             }
         }
     }
 
-    println!("[WebSocket] Connection closed: {}", addr);
+    info!("Connection closed: {}", addr);
 }
 
 #[cfg(test)]

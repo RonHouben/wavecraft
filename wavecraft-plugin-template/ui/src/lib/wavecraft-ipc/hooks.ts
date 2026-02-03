@@ -221,7 +221,7 @@ export function useLatencyMonitor(intervalMs = 1000): UseLatencyMonitorResult {
           setMeasurements((prev) => [...prev.slice(-99), ms]); // Keep last 100
         }
       } catch (err) {
-        console.error('[LatencyMonitor] Ping failed:', err);
+        logger.error('LatencyMonitor ping failed', { error: err });
       }
     }
 

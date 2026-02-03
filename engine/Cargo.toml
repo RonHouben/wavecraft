@@ -3,7 +3,7 @@ members = ["crates/*", "xtask"]
 resolver = "2"
 
 [workspace.package]
-version = "0.6.0"
+version = "0.6.1"
 edition = "2024"
 license = "MIT"
 authors = ["Wavecraft Team"]
@@ -12,6 +12,10 @@ authors = ["Wavecraft Team"]
 # nih-plug framework - pinned to specific commit for stability
 nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28b149ec4d62757d0b448809148a0c3ca6e09a95" }
 nih_plug_egui = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28b149ec4d62757d0b448809148a0c3ca6e09a95" }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 
 # Internal crates
 wavecraft-protocol = { path = "crates/wavecraft-protocol" }

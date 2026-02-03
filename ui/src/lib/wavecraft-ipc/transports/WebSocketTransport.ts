@@ -8,6 +8,7 @@
 import type { Transport, NotificationCallback } from './Transport';
 import type { IpcResponse, IpcNotification, RequestId } from '../types';
 import { isIpcResponse, isIpcNotification } from '../types';
+import { logger } from '../logger/Logger';
 
 interface PendingRequest {
   resolve: (response: string) => void;
@@ -150,7 +151,7 @@ export class WebSocketTransport implements Transport {
       this.ws.onopen = (): void => {
         this.isConnecting = false;
         this.reconnectAttempts = 0;
-        console.log(`WebSocketTransport: Connected to ${this.url}`);
+        logger.info('WebSocketTransport connected', { url: this.url });
       };
 
       this.ws.onmessage = (event: MessageEvent): void => {
@@ -158,7 +159,7 @@ export class WebSocketTransport implements Transport {
       };
 
       this.ws.onerror = (error: Event): void => {
-        console.error('WebSocketTransport: Connection error:', error);
+        logger.error('WebSocketTransport connection error', { error });
       };
 
       this.ws.onclose = (): void => {
@@ -171,7 +172,7 @@ export class WebSocketTransport implements Transport {
       };
     } catch (error) {
       this.isConnecting = false;
-      console.error('WebSocketTransport: Failed to create WebSocket:', error);
+      logger.error('WebSocketTransport failed to create WebSocket', { error, url: this.url });
       this.scheduleReconnect();
     }
   }
@@ -186,9 +187,9 @@ export class WebSocketTransport implements Transport {
 
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       this.maxAttemptsReached = true;
-      console.error(
-        `WebSocketTransport: Max reconnect attempts (${this.maxReconnectAttempts}) reached`
-      );
+      logger.error('WebSocketTransport max reconnect attempts reached', {
+        maxAttempts: this.maxReconnectAttempts,
+      });
       // Close the WebSocket to stop browser reconnection attempts
       if (this.ws) {
         this.ws.close();
@@ -200,9 +201,11 @@ export class WebSocketTransport implements Transport {
     this.reconnectAttempts++;
     const delay = this.reconnectDelayMs * Math.pow(2, this.reconnectAttempts - 1); // Exponential backoff
 
-    console.log(
-      `WebSocketTransport: Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`
-    );
+    logger.debug('WebSocketTransport reconnecting', {
+      delayMs: delay,
+      attempt: this.reconnectAttempts,
+      maxAttempts: this.maxReconnectAttempts,
+    });
 
     this.reconnectTimeoutId = setTimeout(() => {
       this.reconnectTimeoutId = null;
@@ -223,7 +226,7 @@ export class WebSocketTransport implements Transport {
         this.handleNotification(parsed);
       }
     } catch (error) {
-      console.error('WebSocketTransport: Failed to parse incoming message:', error);
+      logger.error('WebSocketTransport failed to parse incoming message', { error, message });
     }
   }
 
@@ -250,7 +253,10 @@ export class WebSocketTransport implements Transport {
       try {
         callback(notificationJson);
       } catch (error) {
-        console.error('WebSocketTransport: Error in notification callback:', error);
+        logger.error('WebSocketTransport notification callback error', {
+          error,
+          method: notification.method,
+        });
       }
     }
   }
