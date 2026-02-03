@@ -2896,7 +2896,7 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 
 [[package]]
 name = "standalone"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "atomic_float 1.1.0",
  "clap",
@@ -3586,7 +3586,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-bridge"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -3596,7 +3596,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-core"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "block2 0.5.1",
  "include_dir",
@@ -3621,7 +3621,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-dsp"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "wavecraft-macros",
  "wavecraft-protocol",
@@ -3629,7 +3629,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-macros"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "convert_case 0.6.0",
  "proc-macro2",
@@ -3640,14 +3640,14 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-metering"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "rtrb",
 ]
 
 [[package]]
 name = "wavecraft-protocol"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "paste",
  "serde",

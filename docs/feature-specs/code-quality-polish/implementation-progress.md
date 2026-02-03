@@ -79,15 +79,17 @@
 
 ### Phase 8: CI Cache Optimization
 
-- [ ] Step 8.1: Add shared-key to rust-cache (4 jobs)
-- [ ] Step 8.2: Document caching strategy
-- [ ] Step 8.3: Measure improvement
+- [-] Step 8.1: Add shared-key to rust-cache (4 jobs) - DEFERRED: Already well-optimized
+- [-] Step 8.2: Document caching strategy - DEFERRED
+- [-] Step 8.3: Measure improvement - DEFERRED
+
+**Note**: CI is already using rust-cache@v2, NPM cache, and APT cache. No additional optimization needed per low-level design review.
 
 ### Phase 9: Version Bump
 
-- [ ] Step 9.1: Bump version to 0.6.1
-- [ ] Step 9.2: Run full test suite
-- [ ] Step 9.3: Manual verification
+- [x] Step 9.1: Bump version to 0.6.1
+- [x] Step 9.2: Run full test suite
+- [x] Step 9.3: Manual verification
 
 ---
 
