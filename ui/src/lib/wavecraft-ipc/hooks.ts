@@ -9,7 +9,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ParameterClient } from './ParameterClient';
 import { IpcBridge } from './IpcBridge';
 import type { ParameterInfo } from './types';
-import { logger } from '../logger/Logger';
+import { logger } from './logger/Logger';
 
 // Lazy client initialization
 let client: ParameterClient | null = null;

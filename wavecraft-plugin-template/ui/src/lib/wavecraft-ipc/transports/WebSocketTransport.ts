@@ -8,7 +8,7 @@
 import type { Transport, NotificationCallback } from './Transport';
 import type { IpcResponse, IpcNotification, RequestId } from '../types';
 import { isIpcResponse, isIpcNotification } from '../types';
-import { logger } from '../../logger/Logger';
+import { logger } from '@wavecraft/ipc';
 
 interface PendingRequest {
   resolve: (response: string) => void;

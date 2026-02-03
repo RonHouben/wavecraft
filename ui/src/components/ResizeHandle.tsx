@@ -6,8 +6,7 @@
  */
 
 import React, { useCallback, useRef, useState } from 'react';
-import { useRequestResize } from '../lib/wavecraft-ipc';
-import { logger } from '../lib/logger/Logger';
+import { useRequestResize, logger } from '../lib/wavecraft-ipc';
 
 export function ResizeHandle(): React.JSX.Element {
   const requestResize = useRequestResize();

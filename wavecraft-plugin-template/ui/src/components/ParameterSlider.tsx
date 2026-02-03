@@ -3,8 +3,7 @@
  */
 
 import React from 'react';
-import { useParameter } from '@wavecraft/ipc';
-import { logger } from '../lib/logger/Logger';
+import { useParameter, logger } from '@wavecraft/ipc';
 
 interface ParameterSliderProps {
   readonly id: string;

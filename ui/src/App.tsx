@@ -9,8 +9,7 @@ import { Meter } from './components/Meter';
 import { ResizeHandle } from './components/ResizeHandle';
 import { VersionBadge } from './components/VersionBadge';
 import { ConnectionStatus } from './components/ConnectionStatus';
-import { requestResize, useAllParameters, useParameterGroups } from './lib/wavecraft-ipc';
-import { logger } from './lib/logger/Logger';
+import { requestResize, useAllParameters, useParameterGroups, logger } from './lib/wavecraft-ipc';
 
 function App(): React.JSX.Element {
   // Fetch all parameters and organize into groups
