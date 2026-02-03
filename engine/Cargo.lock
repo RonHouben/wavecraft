@@ -454,6 +454,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
 
 [[package]]
+name = "convert_case"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec182b0ca2f35d8fc196cf3404988fd8b8c739a4d270ff118a398feb0cbec1ca"
+dependencies = [
+ "unicode-segmentation",
+]
+
+[[package]]
 name = "cookie"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -647,7 +656,7 @@ version = "0.99.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6edb4b64a43d977b8e99788fe3a04d483834fba1215a7e02caa415b626497f7f"
 dependencies = [
- "convert_case",
+ "convert_case 0.4.0",
  "proc-macro2",
  "quote",
  "rustc_version",
@@ -2834,7 +2843,7 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 
 [[package]]
 name = "standalone"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "atomic_float 1.1.0",
  "clap",
@@ -3446,7 +3455,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-bridge"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -3456,7 +3465,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-core"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "block2 0.5.1",
  "include_dir",
@@ -3480,21 +3489,33 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-dsp"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
+ "wavecraft-macros",
  "wavecraft-protocol",
 ]
 
 [[package]]
+name = "wavecraft-macros"
+version = "0.6.0"
+dependencies = [
+ "convert_case 0.6.0",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.114",
+ "wavecraft-dsp",
+]
+
+[[package]]
 name = "wavecraft-metering"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "rtrb",
 ]
 
 [[package]]
 name = "wavecraft-protocol"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "paste",
  "serde",

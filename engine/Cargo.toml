@@ -3,7 +3,7 @@ members = ["crates/*", "xtask"]
 resolver = "2"
 
 [workspace.package]
-version = "0.5.0"
+version = "0.6.0"
 edition = "2024"
 license = "MIT"
 authors = ["Wavecraft Team"]
@@ -17,6 +17,7 @@ nih_plug_egui = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28
 wavecraft-protocol = { path = "crates/wavecraft-protocol" }
 wavecraft-dsp = { path = "crates/wavecraft-dsp" }
 wavecraft-bridge = { path = "crates/wavecraft-bridge" }
+wavecraft-macros = { path = "crates/wavecraft-macros" }
 standalone = { path = "crates/standalone" }
 wavecraft-metering = { path = "crates/wavecraft-metering" }
 

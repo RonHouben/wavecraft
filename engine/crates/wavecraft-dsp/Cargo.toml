@@ -8,3 +8,4 @@ description = "Pure DSP algorithms for Wavecraft - no plugin framework dependenc
 
 [dependencies]
 wavecraft-protocol.workspace = true
+wavecraft-macros.workspace = true

@@ -1,7 +1,7 @@
 //! Core DSP traits for user-implemented audio processors.
 //!
 //! This module defines the primary extension points for users building plugins
-//! with VstKit. The `Processor` trait is the main interface for custom DSP code.
+//! with Wavecraft. The `Processor` trait is the main interface for custom DSP code.
 
 /// Transport information for timing-aware DSP.
 ///
@@ -18,6 +18,58 @@ pub struct Transport {
     pub playing: bool,
 }
 
+/// Trait for defining processor parameters.
+///
+/// This trait provides metadata about a processor's parameters,
+/// enabling automatic UI generation and nih-plug integration.
+///
+/// Typically implemented via `#[derive(ProcessorParams)]` rather than manually.
+pub trait ProcessorParams: Default + Send + Sync + 'static {
+    /// Returns the parameter specifications for this processor.
+    fn param_specs() -> &'static [ParamSpec];
+}
+
+/// Specification for a single parameter.
+#[derive(Debug, Clone)]
+pub struct ParamSpec {
+    /// Display name of the parameter (e.g., "Frequency").
+    pub name: &'static str,
+    
+    /// ID suffix for this parameter (e.g., "frequency").
+    /// Full ID will be prefixed with processor name: "my_filter_frequency"
+    pub id_suffix: &'static str,
+    
+    /// Value range for this parameter.
+    pub range: ParamRange,
+    
+    /// Default value.
+    pub default: f64,
+    
+    /// Unit string (e.g., "dB", "Hz", "%").
+    pub unit: &'static str,
+}
+
+/// Parameter value range definition.
+#[derive(Debug, Clone)]
+pub enum ParamRange {
+    /// Linear range from min to max.
+    Linear { min: f64, max: f64 },
+    
+    /// Skewed range with exponential/logarithmic scaling.
+    /// Factor > 1.0 = logarithmic, factor < 1.0 = exponential.
+    Skewed { min: f64, max: f64, factor: f64 },
+    
+    /// Integer stepped range (for enums, switches).
+    Stepped { min: i32, max: i32 },
+}
+
+/// Unit type has no parameters.
+impl ProcessorParams for () {
+    fn param_specs() -> &'static [ParamSpec] {
+        &[]
+    }
+}
+
 /// Trait for user-implemented DSP processors.
 ///
 /// Implement this trait to define custom audio processing logic.
@@ -25,24 +77,38 @@ pub struct Transport {
 ///
 /// # Example
 ///
-/// ```rust
-/// use wavecraft_dsp::{Processor, Transport};
+/// ```rust,ignore
+/// use wavecraft_dsp::{Processor, ProcessorParams, Transport};
+///
+/// #[derive(ProcessorParams, Default)]
+/// struct MyGainParams {
+///     #[param(range = 0.0..=2.0, default = 1.0)]
+///     level: f32,
+/// }
 ///
 /// struct MyGain {
-///     gain: f32,
+///     sample_rate: f32,
 /// }
 ///
 /// impl Processor for MyGain {
-///     fn process(&mut self, buffer: &mut [&mut [f32]], _transport: &Transport) {
+///     type Params = MyGainParams;
+///     
+///     fn process(&mut self, buffer: &mut [&mut [f32]], _transport: &Transport, params: &Self::Params) {
 ///         for channel in buffer.iter_mut() {
 ///             for sample in channel.iter_mut() {
-///                 *sample *= self.gain;
+///                 *sample *= params.level;
 ///             }
 ///         }
 ///     }
 /// }
 /// ```
 pub trait Processor: Send + 'static {
+    /// Associated parameter type for this processor.
+    ///
+    /// Use `()` for processors with no parameters, or define a struct
+    /// with `#[derive(ProcessorParams)]`.
+    type Params: ProcessorParams + Default + Send + Sync + 'static;
+    
     /// Process a buffer of audio samples.
     ///
     /// The buffer is provided as a slice of mutable slices, one per channel.
@@ -51,6 +117,7 @@ pub trait Processor: Send + 'static {
     /// # Arguments
     /// * `buffer` - Audio channels as `[L, R, ...]` where each channel is `[samples]`
     /// * `transport` - Playback timing information
+    /// * `params` - Current parameter values
     ///
     /// # Real-Time Safety
     /// This method is called on the audio thread. It MUST be real-time safe:
@@ -58,7 +125,7 @@ pub trait Processor: Send + 'static {
     /// - No locks (`Mutex`, `RwLock`)
     /// - No syscalls (file I/O, logging, network)
     /// - No panics (use `debug_assert!` only)
-    fn process(&mut self, buffer: &mut [&mut [f32]], transport: &Transport);
+    fn process(&mut self, buffer: &mut [&mut [f32]], transport: &Transport, params: &Self::Params);
 
     /// Called when the sample rate changes.
     ///
