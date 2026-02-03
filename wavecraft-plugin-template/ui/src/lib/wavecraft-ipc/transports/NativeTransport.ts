@@ -129,7 +129,7 @@ export class NativeTransport implements Transport {
         this.handleNotification(parsed);
       }
     } catch (error) {
-      logger.error('NativeTransport failed to parse incoming message', { error, messageJson });
+      logger.error('NativeTransport failed to parse incoming message', { error, message });
     }
   }
 
