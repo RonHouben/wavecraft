@@ -203,6 +203,22 @@ enum Commands {
         #[arg(long, default_value = "9000")]
         port: u16,
     },
+
+    /// Pre-push validation (fast local CI simulation)
+    #[command(about = "Pre-push validation - runs linting and automated tests")]
+    Check {
+        /// Auto-fix linting issues where possible
+        #[arg(long)]
+        fix: bool,
+
+        /// Skip linting
+        #[arg(long)]
+        skip_lint: bool,
+
+        /// Skip automated tests
+        #[arg(long)]
+        skip_tests: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -331,6 +347,19 @@ fn main() -> Result<()> {
             commands::lint::run(targets, cli.verbose)
         }
         Some(Commands::Dev { port }) => commands::dev::run(port, cli.verbose),
+        Some(Commands::Check {
+            fix,
+            skip_lint,
+            skip_tests,
+        }) => {
+            let config = commands::check::CheckConfig {
+                fix,
+                skip_lint,
+                skip_tests,
+                verbose: cli.verbose,
+            };
+            commands::check::run(config)
+        }
         None => {
             // Default behavior: run nih_plug_xtask for backward compatibility
             // This handles `cargo xtask bundle wavecraft --release` style invocations
