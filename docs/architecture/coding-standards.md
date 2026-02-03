@@ -869,6 +869,82 @@ All project documentation (README, specs, design docs) must include links to rel
 See the docs folder for more information.
 ```
 
+### Logging
+
+**Rule:** Use structured logging instead of direct console calls or println!.
+
+**UI Logging (TypeScript):**
+
+Use the `Logger` class from `@wavecraft/ipc` for all UI logging. Direct `console.*` calls are prohibited in production code.
+
+```typescript
+// ✅ Import and use the logger
+import { logger } from '@wavecraft/ipc';
+
+logger.debug('Verbose tracing info', { requestId: 123 });
+logger.info('Connection established', { transport: 'WebSocket' });
+logger.warn('Reconnecting...', { attempt: 3 });
+logger.error('Request failed', { method: 'setParameter', error });
+
+// ❌ Direct console calls
+console.log('Connected');
+console.error('Failed:', error);
+```
+
+**Log Levels:**
+
+| Level | Usage | Production |
+|-------|-------|------------|
+| `DEBUG` | Verbose tracing, request/response details | Hidden |
+| `INFO` | Significant events (connection, init) | Visible |
+| `WARN` | Recoverable issues, degraded operation | Visible |
+| `ERROR` | Failures requiring attention | Visible |
+
+**Structured Context:**
+
+Always pass structured context objects instead of string interpolation:
+
+```typescript
+// ✅ Structured context
+logger.error('Parameter update failed', { 
+  parameterId: 'gain', 
+  value: 0.5, 
+  error 
+});
+
+// ❌ String interpolation
+logger.error(`Parameter ${id} update failed: ${error.message}`);
+```
+
+**Engine Logging (Rust):**
+
+Use the `tracing` crate for all engine logging. Direct `println!`/`eprintln!` are prohibited except in CLI output (xtask commands).
+
+```rust
+// ✅ Use tracing macros
+use tracing::{debug, info, warn, error};
+
+info!("WebSocket server started on port {}", port);
+debug!(client_id = %id, "Client connected");
+warn!(reconnect_attempt = attempts, "Connection lost, reconnecting...");
+error!(?err, "Failed to parse message");
+
+// ❌ Direct println (except in xtask CLI commands)
+println!("Server started on port {}", port);
+eprintln!("Error: {}", err);
+```
+
+**Exceptions (println! allowed):**
+
+- `xtask` CLI commands — these are intentional user-facing output
+- Benchmark/test output — `println!` is acceptable for test diagnostics
+
+**Rationale:**
+- Structured logging enables filtering, searching, and analysis
+- Consistent log format across UI and Engine
+- Production builds can adjust log levels without code changes
+- Context objects preserve machine-parseable data
+
 ### Error Handling
 
 - TypeScript: Use explicit error types, avoid `any`
