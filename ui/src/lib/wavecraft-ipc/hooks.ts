@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ParameterClient } from './ParameterClient';
 import { IpcBridge } from './IpcBridge';
 import type { ParameterInfo } from './types';
+import { logger } from '../logger/Logger';
 
 // Lazy client initialization
 let client: ParameterClient | null = null;
@@ -181,7 +182,7 @@ export function useLatencyMonitor(intervalMs = 1000): UseLatencyMonitorResult {
           setMeasurements((prev) => [...prev.slice(-99), ms]); // Keep last 100
         }
       } catch (err) {
-        console.error('[LatencyMonitor] Ping failed:', err);
+        logger.debug('Ping failed', { error: err });
       }
     }
 

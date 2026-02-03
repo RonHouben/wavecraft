@@ -59,12 +59,12 @@
 
 ### Phase 6: UI Logger
 
-- [ ] Step 6.1: Create Logger class (`ui/src/lib/logger/Logger.ts`)
-- [ ] Step 6.2: Create barrel export (`ui/src/lib/logger/index.ts`)
-- [ ] Step 6.3: Add Logger tests
-- [ ] Step 6.4: Migrate WebSocketTransport.ts
+- [x] Step 6.1: Create Logger class (`ui/src/lib/logger/Logger.ts`)
+- [x] Step 6.2: Create barrel export (`ui/src/lib/logger/index.ts`)
+- [x] Step 6.3: Add Logger tests
+- [x] Step 6.4: Migrate IpcBridge.ts, hooks.ts, NativeTransport.ts
 - [ ] Step 6.5: Update template project
-- [ ] Step 6.6: Run tests
+- [x] Step 6.6: Run tests
 
 ### Phase 7: Engine Logging
 
