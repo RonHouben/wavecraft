@@ -477,7 +477,7 @@ Linting:      All checks passed (cargo fmt, clippy, ESLint, Prettier)
 > **Goal:** Polish codebase for open-source release — proper logging, code quality fixes, CI optimization.
 
 **Branch:** `feature/code-quality-polish`  
-**Version:** `0.6.1` (patch — polish, no new features)
+**Version:** `0.6.2` (patch — polish, CI optimization, no new features)
 
 **User Stories:** [docs/feature-specs/_archive/code-quality-polish/user-stories.md](feature-specs/_archive/code-quality-polish/user-stories.md)
 
