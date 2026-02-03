@@ -194,11 +194,12 @@ All SDK crates use the `wavecraft-*` naming convention for clear identification:
 
 | Crate | Purpose | User Interaction |
 |-------|---------|------------------|
-| `wavecraft-core` | Main framework: nih-plug integration, WebView editor, plugin macro | Dependency + imports via `prelude` |
+| `wavecraft-core` | Main framework: nih-plug integration, WebView editor, declarative macros | Dependency + `prelude` imports + macros |
+| `wavecraft-macros` | Procedural macros: `ProcessorParams` derive, `wavecraft_plugin!` proc-macro | Used indirectly via `wavecraft-core` |
 | `wavecraft-protocol` | IPC contracts, parameter types, JSON-RPC definitions | Implements `ParamSet` trait |
 | `wavecraft-bridge` | IPC handler, `ParameterHost` trait for parameter management | Rarely used directly |
 | `wavecraft-metering` | Real-time safe SPSC ring buffer for audio → UI metering | Uses `MeterProducer` in DSP |
-| `wavecraft-dsp` | DSP primitives, `Processor` trait, audio utilities | Implements `Processor` trait |
+| `wavecraft-dsp` | DSP primitives, `Processor` trait, built-in processors, audio utilities | Implements `Processor` trait |
 
 ### Public API Surface
 
@@ -207,31 +208,34 @@ The SDK exposes a minimal, stable API through the `wavecraft_core::prelude` modu
 ```rust
 // wavecraft_core::prelude re-exports
 pub use nih_plug::prelude::*;
-pub use wavecraft_dsp::{Processor, Transport};
+pub use wavecraft_dsp::{Processor, ProcessorParams, Transport, builtins};
 pub use wavecraft_protocol::{ParamId, ParameterInfo, ParameterType, db_to_linear};
 pub use wavecraft_metering::{MeterConsumer, MeterFrame, MeterProducer, create_meter_channel};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub use crate::editor::WavecraftEditor;
 pub use crate::util::calculate_stereo_meters;
+
+// Declarative macros
+pub use crate::{wavecraft_processor, wavecraft_plugin};
 ```
 
 **Key Traits:**
 
-1. **`Processor`** — Core DSP abstraction that users implement:
+1. **`Processor`** — Core DSP abstraction for audio processing:
    ```rust
    pub trait Processor: Send + 'static {
-       fn process(&mut self, buffer: &mut [&mut [f32]], transport: &Transport);
+       type Params: ProcessorParams + Default + Send + Sync + 'static;
+       
+       fn process(&mut self, buffer: &mut [&mut [f32]], transport: &Transport, params: &Self::Params);
        fn set_sample_rate(&mut self, _sample_rate: f32) {}
        fn reset(&mut self) {}
    }
    ```
 
-2. **`ParamSet`** — Parameter set definition (typically via `wavecraft_params!` macro):
+2. **`ProcessorParams`** — Parameter metadata for runtime discovery (typically via `#[derive(ProcessorParams)]`):
    ```rust
-   pub trait ParamSet: 'static + Send + Sync {
-       const COUNT: usize;
-       fn spec(id: ParamId) -> Option<&'static ParamSpec>;
-       fn iter() -> impl Iterator<Item = &'static ParamSpec>;
+   pub trait ProcessorParams: Default + Send + Sync + 'static {
+       fn param_specs() -> &'static [ParamSpec];
    }
    ```
 
@@ -246,7 +250,31 @@ pub use crate::util::calculate_stereo_meters;
 
 **Macros:**
 
-- **`wavecraft_params!`** — Declarative parameter definition:
+- **`wavecraft_processor!`** — Creates named wrappers around built-in DSP processors:
+  ```rust
+  wavecraft_processor!(InputGain => Gain);
+  wavecraft_processor!(OutputGain => Gain);
+  ```
+
+- **`wavecraft_plugin!`** — Generates complete plugin implementation from minimal DSL:
+  ```rust
+  wavecraft_plugin! {
+      name: "My Plugin",
+      vendor: "Wavecraft",
+      signal: InputGain,
+  }
+  ```
+
+- **`#[derive(ProcessorParams)]`** — Auto-generates parameter metadata from struct definition:
+  ```rust
+  #[derive(ProcessorParams, Default)]
+  struct MyParams {
+      #[param(range = "-60.0..=24.0", default = 0.0, unit = "dB")]
+      gain: f32,
+  }
+  ```
+
+- **`wavecraft_params!`** — Declarative parameter definition (legacy, prefer derive macro):
   ```rust
   wavecraft_params! {
       Gain: { id: 0, name: "Gain", range: -24.0..=24.0, default: 0.0, unit: "dB" },
@@ -293,6 +321,141 @@ my-plugin/
 - Avoid tests that manipulate global state (e.g., environment variables) directly. Code that depends on environment configuration should separate construction from environment reading to make it testable (example: `SigningConfig::new()` + `SigningConfig::from_env()`).
 - Tests should prefer dependency injection and pure constructors to remain deterministic and parallelizable; use of test-only serialisation (e.g., `serial_test`) is discouraged as a primary fix for global-state tests.
 - The `xtask::sign` commands accept a `SigningConfig` to allow production behavior (`from_env()`) while enabling pure, side-effect-free unit tests via `new()`.
+
+⸻
+
+## Declarative Plugin DSL
+
+Wavecraft provides a declarative domain-specific language (DSL) for defining plugins with minimal boilerplate. The DSL reduces plugin definitions from ~190 lines of manual implementation to ~9 lines.
+
+### DSL Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                          DECLARATIVE PLUGIN DSL                                 │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│   User Code (9 lines)              Generated Code (~400 lines)                  │
+│   ────────────────────             ────────────────────────────                 │
+│                                                                                 │
+│   wavecraft_processor!(            → Plugin struct with metering                │
+│       InputGain => Gain            → Default impl with meter channel            │
+│   );                               → Plugin trait impl (name, vendor, I/O)      │
+│                                    → Params struct via ProcessorParams          │
+│   wavecraft_plugin! {              → process() with DSP routing                 │
+│       name: "My Plugin",           → VST3Plugin impl (class ID)                 │
+│       vendor: "Wavecraft",         → ClapPlugin impl (CLAP ID)                  │
+│       signal: InputGain,           → nih_export_vst3!() macro                   │
+│   }                                → nih_export_clap!() macro                   │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Macro System
+
+The DSL uses a two-layer macro system:
+
+1. **`wavecraft_processor!`** (declarative macro) — Wraps built-in DSP processors:
+   ```rust
+   wavecraft_processor!(InputGain => Gain);
+   wavecraft_processor!(Bypass => Passthrough);
+   ```
+   - Creates newtype wrappers around built-in processors
+   - Delegates `Processor` trait implementation
+   - Maintains type distinction for compile-time safety
+
+2. **`wavecraft_plugin!`** (proc-macro) — Generates complete plugin implementation:
+   ```rust
+   wavecraft_plugin! {
+       name: "My Plugin",
+       vendor: "Wavecraft",
+       url: "https://example.com",    // optional
+       email: "info@example.com",     // optional
+       signal: InputGain,
+   }
+   ```
+
+3. **`#[derive(ProcessorParams)]`** — Auto-generates parameter metadata:
+   ```rust
+   #[derive(ProcessorParams, Default)]
+   struct GainParams {
+       #[param(range = "-60.0..=24.0", default = 0.0, unit = "dB", group = "Input")]
+       gain: f32,
+   }
+   ```
+
+### Parameter Runtime Discovery
+
+The DSL supports runtime parameter discovery via the `ProcessorParams` trait:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                       RUNTIME PARAMETER DISCOVERY                               │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│   #[derive(ProcessorParams)]          ProcessorParams::param_specs()            │
+│   struct GainParams {                 ──────────────────────────────►           │
+│       #[param(range="...", unit="dB")]    &'static [ParamSpec]                  │
+│       gain: f32,                                                                │
+│   }                                   ┌──────────────────────────┐              │
+│                                       │ ParamSpec {              │              │
+│                                       │   name: "Gain",          │              │
+│                                       │   id_suffix: "gain",     │              │
+│                                       │   range: Linear {...},   │              │
+│                                       │   default: 0.0,          │              │
+│                                       │   unit: "dB",            │              │
+│                                       │   group: Some("Input"),  │              │
+│                                       │ }                        │              │
+│                                       └──────────────────────────┘              │
+│                                                   │                             │
+│                                                   ▼                             │
+│                                       ┌──────────────────────────┐              │
+│                                       │ IPC: getAllParameters    │              │
+│                                       │ → ParameterInfo[]        │              │
+│                                       │ → React UI renders       │              │
+│                                       │   grouped parameters     │              │
+│                                       └──────────────────────────┘              │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### UI Parameter Grouping
+
+Parameters can be organized into groups for UI organization:
+
+```typescript
+// React hook: useParameterGroups()
+const { groupedParams, ungroupedParams } = useParameterGroups();
+
+// Renders ParameterGroup components for each group
+// Ungrouped parameters appear in default "Parameters" section
+```
+
+The `ParameterGroup` component renders parameters within a named section, improving UI organization for plugins with many parameters.
+
+### Design Decisions
+
+1. **Compile-Time Code Generation** — All boilerplate is generated at compile time, not runtime. This means zero runtime overhead and full IDE support for generated types.
+
+2. **Deterministic VST3 IDs** — The macro generates VST3 class IDs by hashing the plugin name and vendor. This ensures consistent IDs without manual management.
+
+3. **Type-Safe Signal Routing** — The `signal` field accepts any type implementing `Processor`. This enables future composition via `Chain![]` or custom processor types.
+
+4. **Optional Group Field** — The `group` parameter attribute is optional, maintaining backward compatibility while enabling UI organization.
+
+5. **Runtime Discovery over Static Embedding** — Parameters are discovered at runtime via trait methods rather than embedded in static metadata. This simplifies the macro implementation and enables dynamic parameter sets.
+
+### Achieved Code Reduction
+
+| Before (Manual) | After (DSL) | Reduction |
+|-----------------|-------------|-----------|
+| Plugin struct | Generated | -20 lines |
+| Default impl | Generated | -15 lines |
+| Plugin trait impl | Generated | -80 lines |
+| Params struct | Generated | -40 lines |
+| VST3/CLAP impls | Generated | -20 lines |
+| Export macros | Generated | -5 lines |
+| **Total: ~190 lines** | **~9 lines** | **95%** |
 
 ⸻
 
