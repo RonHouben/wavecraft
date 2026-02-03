@@ -170,9 +170,40 @@ on:
 
 ## Local Testing
 
-The CI pipeline can be tested locally using `act` and a custom Docker image with all dependencies pre-installed.
+### Fast Local Validation (Recommended)
 
-### Quick Start
+Use `cargo xtask check` for fast pre-push validation that simulates CI checks locally:
+
+```bash
+# Run all checks (~52 seconds)
+cargo xtask check
+
+# Auto-fix linting issues
+cargo xtask check --fix
+
+# Skip phases
+cargo xtask check --skip-lint
+cargo xtask check --skip-tests
+```
+
+**Why use `cargo xtask check`:**
+- **26x faster** than Docker-based CI testing (~52s vs ~9-12 min)
+- Runs natively on your machine (no Docker overhead)
+- Same checks as CI pipeline (lint + tests)
+- Recommended before every push
+
+**Visual testing** is done separately via the `playwright-mcp-ui-testing` skill:
+```bash
+cargo xtask dev  # Start dev servers
+# Then use Playwright MCP for browser-based testing
+```
+
+### Docker-Based Testing (For CI Workflow Debugging)
+
+The CI pipeline can also be tested locally using `act` and a custom Docker image. This is slower but useful for:
+- Debugging GitHub Actions workflow YAML changes
+- Testing artifact upload/download between jobs
+- Validating container-specific issues
 
 ```bash
 # Build the custom image (one-time)

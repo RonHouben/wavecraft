@@ -592,6 +592,7 @@ Wavecraft uses a Rust-based build system (`xtask`) that provides a unified inter
 
 | Command | Description |
 |---------|-------------|
+| `cargo xtask check` | **Pre-push validation** — Run lint + tests locally (~52s, 26x faster than Docker CI) |
 | `cargo xtask dev` | Start WebSocket + Vite dev servers for browser development |
 | `cargo xtask bundle` | Build and bundle VST3/CLAP plugins |
 | `cargo xtask test` | Run all tests (Engine + UI) |
@@ -610,6 +611,10 @@ Wavecraft uses a Rust-based build system (`xtask`) that provides a unified inter
 ### Development Workflow
 
 ```bash
+# Pre-push validation (recommended before every push)
+cargo xtask check            # Run lint + tests (~52s)
+cargo xtask check --fix      # Auto-fix linting issues
+
 # Browser-based UI development (recommended for UI work)
 cargo xtask dev              # Starts WebSocket server + Vite
 cargo xtask dev --verbose    # With detailed IPC logging
@@ -625,6 +630,21 @@ cargo xtask bundle && cargo xtask install
 
 # Build with AU wrapper (macOS)
 cargo xtask all
+```
+
+### Visual Testing Workflow
+
+Visual testing is done separately from automated checks using the Playwright MCP skill:
+
+```bash
+# 1. Start dev servers
+cargo xtask dev
+
+# 2. Use Playwright MCP skill for browser-based testing
+#    (handled by Tester agent via "playwright-mcp-ui-testing" skill)
+
+# 3. Stop servers when done
+pkill -f "cargo xtask dev"
 ```
 
 ### Release Workflow
