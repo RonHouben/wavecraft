@@ -116,6 +116,11 @@ jobs:
         run: cargo clippy --workspace --all-targets --no-deps
         working-directory: engine
 
+      # Pre-compile test binaries so test-engine doesn't rebuild
+      - name: Pre-compile test binaries
+        run: cargo test --workspace --no-run
+        working-directory: engine
+
       - name: Upload UI dist
         uses: actions/upload-artifact@v4
         with:
@@ -207,7 +212,7 @@ jobs:
     name: Build Plugin
     runs-on: macos-latest
     needs: [test-ui, test-engine]
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v4
 
@@ -242,11 +247,11 @@ jobs:
         with:
           name: wavecraft-vst3-adhoc-signed
           path: engine/target/bundled/wavecraft.vst3
-          retention-days: 30
+          retention-days: ${{ startsWith(github.ref, 'refs/tags/v') && 90 || 7 }}
 
       - name: Upload CLAP
         uses: actions/upload-artifact@v4
         with:
           name: wavecraft-clap-adhoc-signed
           path: engine/target/bundled/wavecraft.clap
-          retention-days: 30
+          retention-days: ${{ startsWith(github.ref, 'refs/tags/v') && 90 || 7 }}

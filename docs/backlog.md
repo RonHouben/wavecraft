@@ -44,8 +44,8 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 
 | Item | Notes |
 |------|-------|
-| CI pipeline cache optimization | Test Engine job rebuilds instead of using cache from Check Engine (different profiles: check vs test). Consider adding `cargo test --no-run` to prepare-engine job or combining check + test jobs. |
-| GitHub artifacts storage alternative | GitHub Actions artifacts have a storage limit (500 MB for free tier, causes pipeline failures when exceeded). Investigate alternatives: **1)** Reduce artifact sizes (compress, exclude debug symbols), **2)** Use external storage (S3, R2, GCS) for build artifacts, **3)** Only upload artifacts for releases (not every PR), **4)** Implement artifact cleanup workflow. Priority: Medium (blocks CI when limit hit). |
+| ~~CI pipeline cache optimization~~ | ✅ **Addressed** in v0.6.2 — `prepare-engine` job now pre-compiles test binaries with `cargo test --no-run`, eliminating rebuild in `test-engine` (~3-5 min savings per PR). |
+| ~~GitHub artifacts storage alternative~~ | ✅ **Partially addressed** in v0.6.2 — Implemented tiered retention (7 days main / 90 days tags), reducing storage by ~75-80%. External storage (R2/S3) deferred unless limits become critical again. |
 
 ---
 
