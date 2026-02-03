@@ -10,7 +10,7 @@ use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::broadcast;
 use tokio_tungstenite::{accept_async, tungstenite::protocol::Message};
-use tracing::{info, debug, error, warn};
+use tracing::{debug, error, info, warn};
 use wavecraft_bridge::{IpcHandler, ParameterHost};
 
 /// WebSocket server for browser-based UI development
@@ -120,7 +120,7 @@ async fn handle_connection<H: ParameterHost>(
 
                 // Send response back to client
                 if let Err(e) = write.send(Message::Text(response)).await {
-                        error!("Error sending response to {}: {}", addr, e);
+                    error!("Error sending response to {}: {}", addr, e);
                     break;
                 }
             }

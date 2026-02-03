@@ -2,7 +2,7 @@
 
 use clap::Parser;
 use std::sync::Arc;
-use tracing::{info, debug};
+use tracing::{debug, info};
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
 mod app;
@@ -35,9 +35,8 @@ struct Args {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize tracing subscriber
     // Use RUST_LOG env var for level control, default to info
-    let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info"));
-    
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+
     tracing_subscriber::registry()
         .with(fmt::layer())
         .with(filter)
