@@ -471,12 +471,14 @@ Linting:      All checks passed (cargo fmt, clippy, ESLint, Prettier)
 
 ---
 
-## Milestone 11: Code Quality & OSS Prep ⏳
+## Milestone 11: Code Quality & OSS Prep 🚧
 
 > **Goal:** Polish codebase for open-source release — proper logging, code quality fixes, CI optimization.
 
-**Branch:** `feature/code-quality-polish` (not started)  
+**Branch:** `feature/code-quality-polish`  
 **Target Version:** `0.6.1` (patch — polish, no new features)
+
+**User Stories:** [docs/feature-specs/code-quality-polish/user-stories.md](feature-specs/code-quality-polish/user-stories.md)
 
 | Task | Status | Notes |
 |------|--------|-------|
