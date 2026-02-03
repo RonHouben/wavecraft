@@ -44,7 +44,7 @@ export class IpcBridge {
           this.handleNotification(parsed);
         }
       } catch (error) {
-        console.error('[IpcBridge] Failed to parse notification:', error);
+        logger.error('IpcBridge failed to parse notification', { error, notificationJson });
       }
     });
 
@@ -79,9 +79,7 @@ export class IpcBridge {
       // Rate-limit disconnect warnings to avoid console spam
       const now = Date.now();
       if (now - this.lastDisconnectWarning > this.DISCONNECT_WARNING_INTERVAL_MS) {
-        console.warn(
-          '[IpcBridge] Transport not connected, call will fail. Waiting for reconnection...'
-        );
+        logger.warn('IpcBridge transport not connected', { method });
         this.lastDisconnectWarning = now;
       }
       throw new Error('IpcBridge: Transport not connected');
@@ -148,7 +146,7 @@ export class IpcBridge {
       try {
         listener(notification.params);
       } catch (error) {
-        console.error('[IpcBridge] Error in event listener:', error);
+        logger.error('IpcBridge error in event listener', { error, method: notification.method });
       }
     }
   }

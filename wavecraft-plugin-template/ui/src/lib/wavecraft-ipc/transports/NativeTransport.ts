@@ -155,7 +155,7 @@ export class NativeTransport implements Transport {
       try {
         callback(notificationJson);
       } catch (error) {
-        console.error('Error in notification callback:', error);
+        logger.error('NativeTransport notification callback error', { error });
       }
     }
   }
