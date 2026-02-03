@@ -48,7 +48,7 @@ mod tests {
 
     #[test]
     fn test_passthrough() {
-        let mut processor = PassthroughDsp::default();
+        let mut processor = PassthroughDsp;
         let original = [0.5, -0.5, 0.25, -0.25];
         let mut data = original;
         let mut buffer = [&mut data[..]];

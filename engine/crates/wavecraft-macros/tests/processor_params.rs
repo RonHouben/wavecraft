@@ -6,6 +6,7 @@ use wavecraft_macros::ProcessorParams;
 #[derive(ProcessorParams, Default)]
 struct SimpleParams {
     #[param(range = "0.0..=1.0", default = 0.5)]
+    #[allow(dead_code)]
     value: f32,
 }
 
@@ -30,9 +31,11 @@ fn test_simple_param_specs() {
 #[derive(ProcessorParams, Default)]
 struct MultiParamStruct {
     #[param(range = "-24.0..=24.0", default = 0.0, unit = "dB")]
+    #[allow(dead_code)]
     gain: f32,
 
-    #[param(range = "20.0..=20000.0", factor = 2.5, unit = "Hz")]
+    #[param(range = "20.0..=20000.0", default = 1000.0, unit = "Hz", factor = 2.5)]
+    #[allow(dead_code)]
     frequency: f32,
 }
 
@@ -66,6 +69,7 @@ fn test_multiple_params() {
 #[derive(ProcessorParams, Default)]
 struct NoDefaultParam {
     #[param(range = "0.0..=10.0")]
+    #[allow(dead_code)]
     level: f32,
 }
 
