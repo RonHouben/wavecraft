@@ -15,8 +15,8 @@
 | 1 | Horizontal Scroll Fix | ✅ Complete | 388982e |
 | 2 | LICENSE File | ✅ Complete | 888f534 |
 | 3 | GitHub Issue Templates | ✅ Complete | deb4607 |
-| 4 | Contributing Guidelines | ✅ Complete | — |
-| 5 | README Polish | ⏳ Not Started | — |
+| 4 | Contributing Guidelines | ✅ Complete | 5515177 |
+| 5 | README Polish | ✅ Complete | — |
 | 6 | UI Logger | ⏳ Not Started | — |
 | 7 | Engine Logging | ⏳ Not Started | — |
 | 8 | CI Cache Optimization | ⏳ Not Started | — |
@@ -51,11 +51,11 @@
 
 ### Phase 5: README Polish
 
-- [ ] Step 5.1: Add status badges
-- [ ] Step 5.2: Update license section
-- [ ] Step 5.3: Update project structure diagram
-- [ ] Step 5.4: Add contributing link
-- [ ] Step 5.5: Capture UI screenshot (optional)
+- [x] Step 5.1: Add status badges
+- [x] Step 5.2: Update license section
+- [x] Step 5.3: Update project structure diagram
+- [x] Step 5.4: Add contributing link
+- [ ] Step 5.5: Capture UI screenshot (optional, deferred)
 
 ### Phase 6: UI Logger
 
