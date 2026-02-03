@@ -14,8 +14,8 @@
 |-------|-------------|--------|--------|
 | 1 | Horizontal Scroll Fix | ✅ Complete | 388982e |
 | 2 | LICENSE File | ✅ Complete | 888f534 |
-| 3 | GitHub Issue Templates | ✅ Complete | — |
-| 4 | Contributing Guidelines | ⏳ Not Started | — |
+| 3 | GitHub Issue Templates | ✅ Complete | deb4607 |
+| 4 | Contributing Guidelines | ✅ Complete | — |
 | 5 | README Polish | ⏳ Not Started | — |
 | 6 | UI Logger | ⏳ Not Started | — |
 | 7 | Engine Logging | ⏳ Not Started | — |
@@ -46,8 +46,8 @@
 
 ### Phase 4: Contributing Guidelines
 
-- [ ] Step 4.1: Create CONTRIBUTING.md
-- [ ] Step 4.2: Create CODE_OF_CONDUCT.md
+- [x] Step 4.1: Create CONTRIBUTING.md
+- [x] Step 4.2: Create CODE_OF_CONDUCT.md
 
 ### Phase 5: README Polish
 
