@@ -12,7 +12,7 @@
 
 | Phase | Description | Status | Commit |
 |-------|-------------|--------|--------|
-| 1 | Horizontal Scroll Fix | ⏳ Not Started | — |
+| 1 | Horizontal Scroll Fix | ✅ Complete | b33ae52 |
 | 2 | LICENSE File | ⏳ Not Started | — |
 | 3 | GitHub Issue Templates | ⏳ Not Started | — |
 | 4 | Contributing Guidelines | ⏳ Not Started | — |
@@ -28,8 +28,8 @@
 
 ### Phase 1: Horizontal Scroll Fix
 
-- [ ] Step 1.1: Fix CSS overflow in `ui/src/index.css`
-- [ ] Step 1.2: Update template project
+- [x] Step 1.1: Fix CSS overflow in `ui/src/index.css`
+- [x] Step 1.2: Update template project
 - [ ] Step 1.3: Manual test (browser + dev server)
 
 ### Phase 2: LICENSE File
