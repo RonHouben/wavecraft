@@ -18,11 +18,11 @@ This document tracks the implementation progress of the Declarative Plugin DSL f
 | Phase 4: Chain Combinator | ✅ Complete | 4/4 |
 | Phase 5: wavecraft_processor! Macro | ✅ Complete | 3/3 |
 | Phase 6: wavecraft_plugin! Macro | ✅ Complete | 6/6 |
-| Phase 7: Integration & Template | 🔲 Not Started | 0/4 |
+| Phase 7: Integration & Template | � In Progress | 3/4 |
 | Phase 8: Documentation | 🔲 Not Started | 0/5 |
 | Phase 9: UI Parameter Groups | 🔲 Not Started | 0/5 |
 
-**Overall Progress:** 26/40 steps (65%)
+**Overall Progress:** 29/40 steps (72.5%)
 
 ---
 
@@ -91,10 +91,36 @@ This document tracks the implementation progress of the Declarative Plugin DSL f
 
 ## Phase 7: Integration & Template
 
-- [ ] **7.1** Update prelude exports
-- [ ] **7.2** Update plugin template
-- [ ] **7.3** Verify template builds
+- [x] **7.1** Update prelude exports
+- [x] **7.2** Update plugin template
+- [x] **7.3** Verify template builds
 - [ ] **7.4** Test plugin in DAW
+
+**Status:** 🔄 Template updated and building successfully!
+
+**Code Reduction:** The plugin template went from **190 lines** to just **12 lines** of DSL:
+
+```rust
+// Before: 190 lines of boilerplate
+// After:
+use wavecraft_core::prelude::*;
+
+wavecraft_processor!(MyGain => Gain);
+
+wavecraft_plugin! {
+    name: "My Plugin",
+    vendor: "My Company",
+    url: "https://example.com",
+    email: "contact@example.com",
+    signal: MyGain,
+}
+```
+
+**Files Modified:**
+- `engine/crates/wavecraft-core/src/prelude.rs` — Added DSL exports (Chain, ProcessorParams, built-ins, macros)
+- `wavecraft-plugin-template/engine/src/lib.rs` — Replaced with DSL (190 → 12 lines)
+
+**Build Status:** ✅ VST3 and CLAP bundles created successfully
 
 ---
 
