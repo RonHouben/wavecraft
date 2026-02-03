@@ -3,7 +3,6 @@
 //! This tests the simplified syntax with automatic parameter generation.
 
 use wavecraft_core::wavecraft_processor;
-use wavecraft_dsp::Chain;
 
 // Define a custom processor type wrapping the built-in Gain
 wavecraft_processor!(TestGain => Gain);
