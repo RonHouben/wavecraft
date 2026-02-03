@@ -8,7 +8,7 @@ use xtask::output::*;
 use xtask::paths;
 
 /// Default crates to test when no specific package is requested.
-const DEFAULT_TEST_CRATES: &[&str] = &["vstkit-dsp", "vstkit-protocol"];
+const DEFAULT_TEST_CRATES: &[&str] = &["wavecraft-dsp", "wavecraft-protocol"];
 
 /// Run the test command.
 ///

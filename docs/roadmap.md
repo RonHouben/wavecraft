@@ -452,6 +452,7 @@ Manual Tests: 24/24 passed
 
 | Date | Update |
 |------|--------|
+| 2026-02-03 | **Project rename fully deployed**: PR #17 merged to main, GitHub repository renamed `vstkit` → `wavecraft`. All source code references updated. Milestone 9 complete and in production. |
 | 2026-02-02 | **Milestone 10 created**: Code Quality & OSS Prep. Focus on polish before open-source release: logging infrastructure (UI Logger class, Engine tracing crate), horizontal scroll fix, CI cache optimization, open-source readiness (license review, CONTRIBUTING.md, issue templates). Target version 0.5.1. |
 | 2026-02-02 | **Milestone 9 complete**: Project renamed from VstKit to Wavecraft (v0.5.0). 156 files changed across 7 implementation phases. 5 SDK crates renamed (`wavecraft-*`), `wavecraft_plugin!` macro, `@wavecraft/*` npm aliases, `__WAVECRAFT_IPC__` global, AU wrapper updated. 24/24 manual tests, all automated checks passing, all QA findings resolved. Architecture docs updated. Ready for open-source release. Archived to `_archive/project-rename-wavecraft/`. |
 | 2026-02-02 | **Added Milestone 9: Project Rename (Wavecraft → Wavecraft)**: Rebrand to avoid "VST" trademark concerns before open-source release. Scope includes Rust crates, npm packages, GitHub repo, documentation, and UI branding. Pending availability checks for name. |
@@ -512,8 +513,8 @@ Manual Tests: 24/24 passed
 10. ⏳ **Milestone 10**: Code Quality & OSS Prep — Logging, CI optimization, open-source readiness
 
 ### Immediate Tasks
-1. ⏳ Merge PR #17 (project rename) — waiting for CI
-2. ⏳ Rename GitHub repository `vstkit` → `wavecraft`
+1. ✅ Merge PR #17 (project rename) — Complete (2026-02-03)
+2. ✅ Rename GitHub repository `vstkit` → `wavecraft` — Complete (2026-02-03)
 3. ⏳ Start Milestone 10
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (SDK publication, CLI tool, crates.io, etc.)

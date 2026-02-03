@@ -55,7 +55,7 @@ enum Commands {
     /// Build and bundle VST3/CLAP plugins
     #[command(about = "Build and bundle VST3/CLAP plugins")]
     Bundle {
-        /// Package name to bundle (default: vstkit)
+        /// Package name to bundle (default: wavecraft)
         #[arg(short, long)]
         package: Option<String>,
 
@@ -333,7 +333,7 @@ fn main() -> Result<()> {
         Some(Commands::Dev { port }) => commands::dev::run(port, cli.verbose),
         None => {
             // Default behavior: run nih_plug_xtask for backward compatibility
-            // This handles `cargo xtask bundle vstkit --release` style invocations
+            // This handles `cargo xtask bundle wavecraft --release` style invocations
             nih_plug_xtask::main()
         }
     };

@@ -48,7 +48,7 @@ pub fn run_all(
     print_status("Step 2/4: Building and bundling plugins...");
     if dry_run {
         println!(
-            "  [dry-run] Would run: cargo xtask bundle vstkit {}",
+            "  [dry-run] Would run: cargo xtask bundle wavecraft {}",
             mode.cargo_flag().unwrap_or("")
         );
     } else {

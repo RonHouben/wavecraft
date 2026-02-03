@@ -75,7 +75,7 @@ fn submit(config: &NotarizeConfig) -> Result<()> {
     let engine_dir = paths::engine_dir()?;
 
     // Create a ZIP of all bundles
-    let zip_path = engine_dir.join("target").join("vstkit-notarize.zip");
+    let zip_path = engine_dir.join("target").join("wavecraft-notarize.zip");
 
     print_status("Creating submission archive...");
     create_submission_zip(&bundled_dir, &zip_path)?;

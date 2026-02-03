@@ -104,7 +104,7 @@ impl Plugin for MyPlugin {
 
         // Get transport info
         let transport_info = context.transport();
-        let vstkit_transport = WavecraftTransport {
+        let wavecraft_transport = WavecraftTransport {
             tempo: transport_info.tempo,
             playing: transport_info.playing,
             pos_samples: transport_info.pos_samples().unwrap_or(0),
@@ -115,7 +115,7 @@ impl Plugin for MyPlugin {
         let mut channel_ptrs: Vec<&mut [f32]> = channels.iter_mut().map(|c| &mut c[..]).collect();
         
         // Process audio using Wavecraft processor trait
-        self.processor.process(&mut channel_ptrs, &vstkit_transport);
+        self.processor.process(&mut channel_ptrs, &wavecraft_transport);
 
         // Apply gain
         for sample in buffer.iter_samples() {
