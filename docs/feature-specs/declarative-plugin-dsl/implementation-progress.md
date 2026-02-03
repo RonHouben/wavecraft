@@ -17,12 +17,12 @@ This document tracks the implementation progress of the Declarative Plugin DSL f
 | Phase 3: Built-in Processors | ✅ Complete | 5/5 |
 | Phase 4: Chain Combinator | ✅ Complete | 4/4 |
 | Phase 5: wavecraft_processor! Macro | ✅ Complete | 3/3 |
-| Phase 6: wavecraft_plugin! Macro | 🔄 In Progress | 0/6 |
+| Phase 6: wavecraft_plugin! Macro | 🔄 In Progress | 1/6 |
 | Phase 7: Integration & Template | 🔲 Not Started | 0/4 |
 | Phase 8: Documentation | 🔲 Not Started | 0/5 |
 | Phase 9: UI Parameter Groups | 🔲 Not Started | 0/5 |
 
-**Overall Progress:** 20/40 steps (50%)
+**Overall Progress:** 21/40 steps (52.5%)
 
 ---
 
@@ -73,12 +73,14 @@ This document tracks the implementation progress of the Declarative Plugin DSL f
 
 ## Phase 6: wavecraft_plugin! Macro
 
-- [ ] **6.1** Design macro input parsing
+- [x] **6.1** Design macro input parsing (basic structure created)
 - [ ] **6.2** Generate Plugin struct
 - [ ] **6.3** Generate Params struct
 - [ ] **6.4** Generate Plugin trait impl
 - [ ] **6.5** Generate format impls & exports
 - [ ] **6.6** Add error messages
+
+**Note:** Phase 6 is complex and requires significant design work. Initial proc-macro structure created but needs refinement to properly handle signal chain parsing and parameter generation.
 
 ---
 
