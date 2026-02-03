@@ -11,7 +11,7 @@ crate-type = ["cdylib"]
 [dependencies]
 # Wavecraft SDK dependencies (local paths for development)
 # TODO: Switch to git dependencies when published:
-#   wavecraft-core = { git = "https://github.com/YOUR_ORG/vstkit", branch = "main" }
+#   wavecraft-core = { git = "https://github.com/YOUR_ORG/wavecraft", branch = "main" }
 wavecraft-core = { path = "../../engine/crates/wavecraft-core" }
 wavecraft-protocol = { path = "../../engine/crates/wavecraft-protocol" }
 wavecraft-dsp = { path = "../../engine/crates/wavecraft-dsp" }

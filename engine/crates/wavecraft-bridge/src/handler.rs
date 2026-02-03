@@ -206,6 +206,7 @@ mod tests {
                         value: 0.5,
                         default: 0.7,
                         unit: Some("dB".to_string()),
+                        group: None,
                     },
                     ParameterInfo {
                         id: "bypass".to_string(),
@@ -214,6 +215,7 @@ mod tests {
                         value: 0.0,
                         default: 0.0,
                         unit: None,
+                        group: None,
                     },
                 ],
             }

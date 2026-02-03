@@ -61,6 +61,7 @@ export interface ParameterInfo {
   value: number;
   default: number;
   unit?: string;
+  group?: string;
 }
 
 // ============================================================================
@@ -109,7 +110,7 @@ export const NOTIFICATION_PARAMETER_CHANGED = 'parameterChanged';
 // Injected IPC Primitives (from Rust)
 // ============================================================================
 
-export interface VstKitIpcPrimitives {
+export interface WavecraftIpcPrimitives {
   postMessage: (message: string) => void;
   setReceiveCallback: (callback: (message: string) => void) => void;
   onParamUpdate?: (listener: (notification: unknown) => void) => () => void;
@@ -118,7 +119,7 @@ export interface VstKitIpcPrimitives {
 }
 
 declare global {
-  var __WAVECRAFT_IPC__: VstKitIpcPrimitives | undefined;
+  var __WAVECRAFT_IPC__: WavecraftIpcPrimitives | undefined;
 }
 
 // ============================================================================

@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
 /**
- * Additional type definitions for VstKit
+ * Additional type definitions for Wavecraft
  */
 
 interface Window {

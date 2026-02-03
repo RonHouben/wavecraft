@@ -1,6 +1,6 @@
-# Custom Docker image for running VstKit CI locally with `act`
-# Build: docker build -t vstkit-ci:latest .github/act/
-# Use:   act -P ubuntu-latest=vstkit-ci:latest --container-architecture linux/amd64
+# Custom Docker image for running Wavecraft CI locally with `act`
+# Build: docker build -t wavecraft-ci:latest .github/act/
+# Use:   act -P ubuntu-latest=wavecraft-ci:latest --container-architecture linux/amd64
 
 FROM ubuntu:22.04
 
@@ -42,5 +42,5 @@ RUN node --version && npm --version && rustc --version && cargo --version
 WORKDIR /workspace
 
 # Label for documentation
-LABEL org.opencontainers.image.source="https://github.com/RonHouben/vstkit"
-LABEL org.opencontainers.image.description="CI image for VstKit local testing with act"
+LABEL org.opencontainers.image.source="https://github.com/RonHouben/wavecraft"
+LABEL org.opencontainers.image.description="CI image for Wavecraft local testing with act"

@@ -1,3 +1,94 @@
+//! Declarative macros for defining Wavecraft plugins.
+
+/// `wavecraft_processor!` — creates a named wrapper around a built-in DSP processor.
+///
+/// This macro generates a newtype struct that wraps a built-in processor type and
+/// delegates the `Processor` trait implementation to the inner type.
+///
+/// # Syntax
+///
+/// ```ignore
+/// wavecraft_processor!(MyGain => Gain);
+/// ```
+///
+/// # Generated Code
+///
+/// ```ignore
+/// pub struct MyGain(wavecraft_dsp::builtins::GainDsp);
+///
+/// impl Default for MyGain {
+///     fn default() -> Self {
+///         Self(wavecraft_dsp::builtins::GainDsp::default())
+///     }
+/// }
+///
+/// impl wavecraft_dsp::Processor for MyGain {
+///     type Params = <wavecraft_dsp::builtins::GainDsp as wavecraft_dsp::Processor>::Params;
+///
+///     fn process(&mut self, buffer: &mut [&mut [f32]], transport: &wavecraft_dsp::Transport, params: &Self::Params) {
+///         self.0.process(buffer, transport, params)
+///     }
+/// }
+/// ```
+///
+/// # Built-in Processor Types
+///
+/// - `Gain` → `wavecraft_dsp::builtins::GainDsp`
+/// - `Passthrough` → `wavecraft_dsp::builtins::PassthroughDsp`
+///
+/// # Example
+///
+/// ```ignore
+/// use wavecraft_core::wavecraft_processor;
+/// use wavecraft_dsp::{Processor, Transport};
+///
+/// wavecraft_processor!(InputGain => Gain);
+/// wavecraft_processor!(OutputGain => Gain);
+///
+/// let mut input = InputGain::default();
+/// let mut output = OutputGain::default();
+/// ```
+#[macro_export]
+macro_rules! wavecraft_processor {
+    ($name:ident => Gain) => {
+        #[derive(Default)]
+        pub struct $name(::wavecraft_dsp::builtins::GainDsp);
+
+        impl ::wavecraft_dsp::Processor for $name {
+            type Params =
+                <::wavecraft_dsp::builtins::GainDsp as ::wavecraft_dsp::Processor>::Params;
+
+            fn process(
+                &mut self,
+                buffer: &mut [&mut [f32]],
+                transport: &::wavecraft_dsp::Transport,
+                params: &Self::Params,
+            ) {
+                self.0.process(buffer, transport, params)
+            }
+        }
+    };
+
+    ($name:ident => Passthrough) => {
+        #[derive(Default)]
+        pub struct $name(::wavecraft_dsp::builtins::PassthroughDsp);
+
+        impl ::wavecraft_dsp::Processor for $name {
+            type Params =
+                <::wavecraft_dsp::builtins::PassthroughDsp as ::wavecraft_dsp::Processor>::Params;
+
+            fn process(
+                &mut self,
+                buffer: &mut [&mut [f32]],
+                transport: &::wavecraft_dsp::Transport,
+                params: &Self::Params,
+            ) {
+                self.0.process(buffer, transport, params)
+            }
+        }
+    };
+}
+
 /// `wavecraft_plugin!` — thin macro to generate a minimal plugin skeleton.
 ///
 /// The macro is intentionally minimal: it generates a plugin struct with

@@ -3,12 +3,20 @@
 //! This crate contains all DSP logic without any plugin framework dependencies,
 //! making it fully testable in isolation.
 
+pub mod builtins;
+pub mod combinators;
 pub mod gain;
 pub mod processor;
 pub mod traits;
 
 // Re-export the core trait for user implementations
-pub use traits::{Processor, Transport};
+pub use traits::{ParamRange, ParamSpec, Processor, ProcessorParams, Transport};
 
-// Re-export the concrete gain processor
+// Re-export the concrete gain processor (legacy)
 pub use processor::GainProcessor;
+
+// Re-export built-in processors
+pub use builtins::*;
+
+// Re-export combinators
+pub use combinators::Chain;

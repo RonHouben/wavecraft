@@ -7,7 +7,7 @@
 
 /**
  * Check if running in a WKWebView environment (production)
- * @returns true if globalThis.vstkit IPC primitives are available
+ * @returns true if globalThis.__WAVECRAFT_IPC__ IPC primitives are available
  */
 export function isWebViewEnvironment(): boolean {
   return globalThis.__WAVECRAFT_IPC__ !== undefined;

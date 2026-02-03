@@ -470,12 +470,58 @@ No `.css` files should exist in `src/components/`.
 ### Module Organization
 
 Follow the existing crate structure:
-- `protocol` — Shared contracts and types
-- `dsp` — Pure DSP code (no framework dependencies)
-- `plugin` — nih-plug integration
-- `bridge` — IPC handling
-- `desktop` — Standalone desktop app for testing
-- `metering` — SPSC ring buffer for audio → UI metering
+- `wavecraft-core` — Main framework: nih-plug integration, WebView editor, declarative macros
+- `wavecraft-macros` — Procedural macros: `ProcessorParams` derive, `wavecraft_plugin!`
+- `wavecraft-protocol` — Shared contracts and types
+- `wavecraft-dsp` — Pure DSP code, `Processor` trait, built-in processors
+- `wavecraft-bridge` — IPC handling
+- `wavecraft-metering` — SPSC ring buffer for audio → UI metering
+- `standalone` — Standalone desktop app for browser-based development
+
+### Declarative Plugin DSL
+
+**Rule:** Use the declarative DSL macros for new plugin definitions. Manual `Plugin` implementations should be avoided unless necessary for advanced use cases.
+
+**Processor Wrapper Macro:**
+```rust
+// ✅ Use wavecraft_processor! for named processor wrappers
+wavecraft_processor!(InputGain => Gain);
+wavecraft_processor!(OutputStage => Passthrough);
+```
+
+**Plugin Definition Macro:**
+```rust
+// ✅ Use wavecraft_plugin! for complete plugin generation
+wavecraft_plugin! {
+    name: "My Plugin",
+    vendor: "My Company",
+    url: "https://example.com",      // optional
+    email: "info@example.com",       // optional
+    signal: InputGain,
+}
+```
+
+**Parameter Definition:**
+```rust
+// ✅ Use #[derive(ProcessorParams)] for parameter structs
+#[derive(ProcessorParams, Default)]
+struct GainParams {
+    #[param(range = "-60.0..=24.0", default = 0.0, unit = "dB")]
+    gain: f32,
+    
+    #[param(range = "0.0..=1.0", default = 1.0, unit = "%", group = "Output")]
+    mix: f32,
+}
+```
+
+**Param Attribute Options:**
+| Attribute | Required | Description | Example |
+|-----------|----------|-------------|---------|
+| `range` | Yes | Value range as `"MIN..=MAX"` | `range = "-60.0..=24.0"` |
+| `default` | No | Default value (defaults to midpoint) | `default = 0.0` |
+| `unit` | No | Unit string for display | `unit = "dB"` |
+| `factor` | No | Skew factor (>1 = log, <1 = exp) | `factor = 2.5` |
+| `group` | No | UI grouping name | `group = "Input"` |
 
 ### xtask Commands
 

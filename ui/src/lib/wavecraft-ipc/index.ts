@@ -1,5 +1,5 @@
 /**
- * @wavecraft/ipc - IPC library for VstKit WebView ↔ Rust communication
+ * @wavecraft/ipc - IPC library for Wavecraft WebView ↔ Rust communication
  *
  * Public exports for application code.
  */
@@ -46,6 +46,10 @@ export { ParameterClient } from './ParameterClient';
 // React hooks (primary API)
 export { useParameter, useAllParameters, useLatencyMonitor } from './hooks';
 export type { UseParameterResult, UseAllParametersResult, UseLatencyMonitorResult } from './hooks';
+
+// Parameter grouping hook
+export { useParameterGroups } from './useParameterGroups';
+export type { ParameterGroup } from './useParameterGroups';
 
 // Connection status hook
 export { useConnectionStatus } from './useConnectionStatus';

@@ -1,6 +1,6 @@
-//! VstKit Core - Audio plugin framework
+//! Wavecraft Core - Audio plugin framework
 //!
-//! This crate provides the main plugin framework for VstKit, including:
+//! This crate provides the main plugin framework for Wavecraft, including:
 //! - nih-plug integration (VST3/CLAP/AU export)
 //! - WebView-based UI editor
 //! - Parameter management
@@ -44,7 +44,7 @@ use crate::editor::create_webview_editor;
 use crate::params::WavecraftParams;
 use crate::util::calculate_stereo_meters;
 
-/// Main plugin struct for VstKit.
+/// Main plugin struct for Wavecraft.
 pub struct WavecraftPlugin {
     params: Arc<WavecraftParams>,
     processor: GainProcessor,
@@ -73,10 +73,10 @@ impl Default for WavecraftPlugin {
 }
 
 impl Plugin for WavecraftPlugin {
-    const NAME: &'static str = "VstKit";
-    const VENDOR: &'static str = "VstKit Team";
-    const URL: &'static str = "https://github.com/vstkit/vstkit";
-    const EMAIL: &'static str = "contact@vstkit.dev";
+    const NAME: &'static str = "Wavecraft";
+    const VENDOR: &'static str = "Wavecraft";
+    const URL: &'static str = "https://github.com/RonHouben/wavecraft";
+    const EMAIL: &'static str = "contact@wavecraft.dev";
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
     const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[AudioIOLayout {
@@ -150,14 +150,14 @@ impl Plugin for WavecraftPlugin {
 }
 
 impl Vst3Plugin for WavecraftPlugin {
-    const VST3_CLASS_ID: [u8; 16] = *b"VstKitPlug000001";
+    const VST3_CLASS_ID: [u8; 16] = *b"WavecraftPlug001";
     const VST3_SUBCATEGORIES: &'static [Vst3SubCategory] =
         &[Vst3SubCategory::Fx, Vst3SubCategory::Tools];
 }
 
 impl ClapPlugin for WavecraftPlugin {
-    const CLAP_ID: &'static str = "dev.vstkit.vstkit";
-    const CLAP_DESCRIPTION: Option<&'static str> = Some("VstKit audio plugin framework");
+    const CLAP_ID: &'static str = "dev.wavecraft.wavecraft";
+    const CLAP_DESCRIPTION: Option<&'static str> = Some("Wavecraft audio plugin framework");
     const CLAP_MANUAL_URL: Option<&'static str> = Some(Self::URL);
     const CLAP_SUPPORT_URL: Option<&'static str> = Some(Self::URL);
     const CLAP_FEATURES: &'static [ClapFeature] = &[ClapFeature::AudioEffect, ClapFeature::Utility];
