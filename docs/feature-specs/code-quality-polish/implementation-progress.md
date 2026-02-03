@@ -12,8 +12,8 @@
 
 | Phase | Description | Status | Commit |
 |-------|-------------|--------|--------|
-| 1 | Horizontal Scroll Fix | ✅ Complete | b33ae52 |
-| 2 | LICENSE File | ⏳ Not Started | — |
+| 1 | Horizontal Scroll Fix | ✅ Complete | 388982e |
+| 2 | LICENSE File | ✅ Complete | — |
 | 3 | GitHub Issue Templates | ⏳ Not Started | — |
 | 4 | Contributing Guidelines | ⏳ Not Started | — |
 | 5 | README Polish | ⏳ Not Started | — |
@@ -34,8 +34,8 @@
 
 ### Phase 2: LICENSE File
 
-- [ ] Step 2.1: Create MIT LICENSE file
-- [ ] Step 2.2: Add LICENSE to template project
+- [x] Step 2.1: Create MIT LICENSE file
+- [x] Step 2.2: Add LICENSE to template project (already exists)
 
 ### Phase 3: GitHub Issue Templates
 
