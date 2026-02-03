@@ -423,12 +423,41 @@ Manual Tests: 24/24 passed
 
 ---
 
-## Milestone 10: Code Quality & OSS Prep ⏳
+## Milestone 10: Declarative Plugin DSL ⏳
+
+> **Goal:** Introduce macro-based DSL to dramatically simplify plugin creation — reduce boilerplate from ~120 lines to ~12 lines.
+
+**Branch:** `feature/declarative-plugin-dsl` (planning complete, not started)  
+**Target Version:** `0.6.0` (minor — new public API, significant DX improvement)
+
+**User Stories:** [docs/feature-specs/declarative-plugin-dsl/user-stories.md](feature-specs/declarative-plugin-dsl/user-stories.md)  
+**Low-Level Design:** [docs/feature-specs/declarative-plugin-dsl/low-level-design-declarative-plugin-dsl.md](feature-specs/declarative-plugin-dsl/low-level-design-declarative-plugin-dsl.md)  
+**Implementation Plan:** [docs/feature-specs/declarative-plugin-dsl/implementation-plan.md](feature-specs/declarative-plugin-dsl/implementation-plan.md)
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Phase 1: Core Traits** | ⏳ | ProcessorParams trait, Processor::Params associated type |
+| **Phase 2: Derive Macro** | ⏳ | #[derive(ProcessorParams)] with #[param] attributes |
+| **Phase 3: Built-in Processors** | ⏳ | Gain, Filter, Compressor, Limiter |
+| **Phase 4: Chain Combinator** | ⏳ | Type-safe signal chain composition |
+| **Phase 5: wavecraft_processor!** | ⏳ | User-defined processor types |
+| **Phase 6: wavecraft_plugin!** | ⏳ | Top-level plugin declaration macro |
+| **Phase 7: Integration** | ⏳ | Template project update, examples |
+| **Phase 8: Documentation** | ⏳ | Macro docs, cookbook, migration guide |
+| **Phase 9: UI Parameter Groups** | ⏳ | UI hints for grouping/organization |
+
+**Estimated Effort:** 5-7 days (40 implementation steps across 9 phases)
+
+**Rationale:** This significantly improves developer experience and is a differentiator for Wavecraft. Completing this before open-source release makes the SDK much more appealing to early adopters.
+
+---
+
+## Milestone 11: Code Quality & OSS Prep ⏳
 
 > **Goal:** Polish codebase for open-source release — proper logging, code quality fixes, CI optimization.
 
 **Branch:** `feature/code-quality-polish` (not started)  
-**Target Version:** `0.5.1` (patch — polish, no new features)
+**Target Version:** `0.6.1` (patch — polish, no new features)
 
 | Task | Status | Notes |
 |------|--------|-------|
@@ -452,6 +481,7 @@ Manual Tests: 24/24 passed
 
 | Date | Update |
 |------|--------|
+| 2026-02-03 | **Milestone reprioritization**: Declarative Plugin DSL promoted to Milestone 10 (was unscheduled). Code Quality & OSS Prep moved to Milestone 11. Rationale: DSL significantly improves DX and is a key differentiator before open-source release. Planning complete (user stories, low-level design, implementation plan with 40 steps across 9 phases). |
 | 2026-02-03 | **Project rename fully deployed**: PR #17 merged to main, GitHub repository renamed `vstkit` → `wavecraft`. All source code references updated. Milestone 9 complete and in production. |
 | 2026-02-02 | **Milestone 10 created**: Code Quality & OSS Prep. Focus on polish before open-source release: logging infrastructure (UI Logger class, Engine tracing crate), horizontal scroll fix, CI cache optimization, open-source readiness (license review, CONTRIBUTING.md, issue templates). Target version 0.5.1. |
 | 2026-02-02 | **Milestone 9 complete**: Project renamed from VstKit to Wavecraft (v0.5.0). 156 files changed across 7 implementation phases. 5 SDK crates renamed (`wavecraft-*`), `wavecraft_plugin!` macro, `@wavecraft/*` npm aliases, `__WAVECRAFT_IPC__` global, AU wrapper updated. 24/24 manual tests, all automated checks passing, all QA findings resolved. Architecture docs updated. Ready for open-source release. Archived to `_archive/project-rename-wavecraft/`. |
@@ -510,11 +540,12 @@ Manual Tests: 24/24 passed
 9. ✅ **Milestone 9**: Project Rename — VstKit → Wavecraft (v0.5.0)
 
 ### Up Next
-10. ⏳ **Milestone 10**: Code Quality & OSS Prep — Logging, CI optimization, open-source readiness
+10. ⏳ **Milestone 10**: Declarative Plugin DSL — Macro-based DSL for zero-boilerplate plugins (v0.6.0)
+11. ⏳ **Milestone 11**: Code Quality & OSS Prep — Logging, CI optimization, open-source readiness (v0.6.1)
 
 ### Immediate Tasks
 1. ✅ Merge PR #17 (project rename) — Complete (2026-02-03)
 2. ✅ Rename GitHub repository `vstkit` → `wavecraft` — Complete (2026-02-03)
-3. ⏳ Start Milestone 10
+3. ⏳ Start Milestone 10 (Declarative Plugin DSL)
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (SDK publication, CLI tool, crates.io, etc.)
