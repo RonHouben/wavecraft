@@ -27,7 +27,7 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 
 | Item | Notes |
 |------|-------|
-| Disable horizontal scroll/wiggle | macOS elastic scrolling causes visual "wiggle" on horizontal scroll. Block with `overflow-x: hidden` on body/root. Low effort, improves feel. |
+| ~~Disable horizontal scroll/wiggle~~ | ✅ **Complete** in v0.6.1 — CSS `overflow-x: hidden` on `#root` prevents macOS elastic scrolling wiggle. |
 
 ---
 
@@ -35,8 +35,8 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 
 | Item | Notes |
 |------|-------|
-| Replace console.log with Logger class (UI) | Create a centralized Logger class instead of using `console.log` directly. Enables log levels (debug/info/warn/error), consistent formatting, and easier filtering/disabling in production builds. |
-| Use `log` or `tracing` crate (Engine) | Replace direct `println!`/`eprintln!` in runtime crates with the `log` facade or `tracing`. Enables log levels, consistent formatting, and runtime filtering. Note: `xtask` CLI commands can keep `println!` for user-facing output. |
+| ~~Replace console.log with Logger class (UI)~~ | ✅ **Complete** in v0.6.1 — `Logger` class in `@wavecraft/ipc` with `debug/info/warn/error` methods. Documented in coding-standards.md. |
+| ~~Use `log` or `tracing` crate (Engine)~~ | ✅ **Complete** in v0.6.1 — `tracing` crate in standalone crate (24 calls migrated). `xtask` CLI keeps `println!` for user-facing output as intended. |
 
 ---
 
@@ -44,8 +44,9 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 
 | Item | Notes |
 |------|-------|
-| CI pipeline cache optimization | Test Engine job rebuilds instead of using cache from Check Engine (different profiles: check vs test). Consider adding `cargo test --no-run` to prepare-engine job or combining check + test jobs. |
-| GitHub artifacts storage alternative | GitHub Actions artifacts have a storage limit (500 MB for free tier, causes pipeline failures when exceeded). Investigate alternatives: **1)** Reduce artifact sizes (compress, exclude debug symbols), **2)** Use external storage (S3, R2, GCS) for build artifacts, **3)** Only upload artifacts for releases (not every PR), **4)** Implement artifact cleanup workflow. Priority: Medium (blocks CI when limit hit). |
+| ~~CI pipeline cache optimization~~ | ✅ **Addressed** in v0.6.2 — `prepare-engine` job now pre-compiles test binaries with `cargo test --no-run`, eliminating rebuild in `test-engine` (~3-5 min savings per PR). |
+| ~~GitHub artifacts storage alternative~~ | ✅ **Partially addressed** in v0.6.2 — Implemented tiered retention (7 days main / 90 days tags), reducing storage by ~75-80%. External storage (R2/S3) deferred unless limits become critical again. |
+| ~~Local CI validation command~~ | ✅ **Complete** in v0.6.2 — `cargo xtask check` command runs lint + tests locally in ~52s (26x faster than Docker CI). Tester agent workflow updated to use this as primary validation method. |
 
 ---
 
@@ -123,6 +124,9 @@ These items are ready to implement but require an Apple Developer Program member
 
 | Date | Update |
 |------|--------|
+| 2026-02-03 | **CI/CD Optimization complete**: Marked all three CI items as complete — cache optimization, tiered artifact retention, and new `cargo xtask check` command for fast local validation (~52s). |
+| 2026-02-03 | **Code Quality complete**: Marked Logger class (UI) and `tracing` crate (Engine) as complete — both implemented in v0.6.1. |
+| 2026-02-03 | **UI Polish complete**: Marked horizontal scroll fix as complete — implemented in v0.6.1. |
 | 2026-02-03 | **CI/CD Optimization**: Added GitHub artifacts storage alternative item — investigate solutions to avoid pipeline failures from artifact storage limits (compress, external storage, release-only uploads, cleanup workflow). |
 | 2026-02-02 | **Backlog grooming**: Added SDK Publication section (CLI scaffolding, end-to-end testing, crates.io, docs site). Deprioritized AU custom UI investigation. Updated Project Rename status to complete (M9 done, PR #17 pending). |
 | 2026-02-02 | **Project Rename updated**: Availability verified — Wavecraft available on crates.io, npm, domain. GitHub username taken by inactive user; added task to request via Name Squatting Policy. Main rename work moved to Milestone 9. |

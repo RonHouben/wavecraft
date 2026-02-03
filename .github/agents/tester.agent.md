@@ -57,41 +57,31 @@ When starting a new testing session:
 2. **Review implementation** by reading relevant code and documentation
 3. **Create test plan** at `docs/feature-specs/{feature}/test-plan.md`
 
-### Phase 2: Run Local CI Pipeline
+### Phase 2: Run Automated Checks
 
-**Primary testing method**: Run the full CI pipeline locally using `act`. This ensures exact parity with GitHub Actions.
+**Primary testing method**: Run `cargo xtask check` for fast local validation (~52 seconds).
 
-#### Prerequisites Check
+This command runs all the checks that would run in the CI pipeline:
+- Linting (ESLint, Prettier, cargo fmt, clippy)
+- Automated tests (Engine + UI)
 
-Before running CI, verify Docker is available:
-
-```bash
-docker info > /dev/null 2>&1 && echo "✅ Docker is running" || echo "❌ Start Docker Desktop first"
-```
-
-#### Run Full CI Pipeline
+#### Run All Checks
 
 ```bash
-act -W .github/workflows/ci.yml \
-    --container-architecture linux/amd64 \
-    -P ubuntu-latest=wavecraft-ci:latest \
-    --pull=false \
-    --artifact-server-path /tmp/act-artifacts
+# Run all checks (~52 seconds)
+cargo xtask check
+
+# Auto-fix linting issues
+cargo xtask check --fix
+
+# Skip phases if needed
+cargo xtask check --skip-lint
+cargo xtask check --skip-tests
 ```
 
-This runs all Linux-compatible CI jobs:
+#### macOS-Only Testing (Plugin Build & Signing)
 
-| Job | What It Checks |
-|-----|----------------|
-| `check-ui` | Prettier, ESLint, TypeScript |
-| `test-ui` | Vitest unit tests |
-| `prepare-engine` | UI build + Rust compilation |
-| `check-engine` | cargo fmt + clippy |
-| `test-engine` | cargo test |
-
-#### macOS-Only Testing (Cannot Run in Docker)
-
-The `build-plugin` job requires macOS. Test manually:
+The plugin bundling and signing requires macOS. Test manually:
 
 ```bash
 cd /Users/ronhouben/code/private/wavecraft/engine
@@ -146,9 +136,8 @@ Create the test plan at `docs/feature-specs/{feature}/test-plan.md`:
 
 ## Prerequisites
 
-- [ ] Docker is running: `docker info`
-- [ ] CI image exists: `docker images | grep wavecraft-ci`
-- [ ] Local CI passes (see Phase 2)
+- [ ] `cargo xtask check` passes (all lint + tests)
+- [ ] macOS-only checks pass (if applicable): bundle, sign, install
 
 ## Test Cases
 
@@ -209,28 +198,21 @@ Create the test plan at `docs/feature-specs/{feature}/test-plan.md`:
 
 You have permission to execute terminal commands to verify behavior.
 
-### Primary: Local CI Pipeline
+### Primary: cargo xtask check (Recommended)
 
 ```bash
-# Check Docker is running
-docker info > /dev/null 2>&1 && echo "✅ Docker running" || echo "❌ Start Docker"
+# Run all checks (~52 seconds) - RECOMMENDED
+cargo xtask check
 
-# Run full CI pipeline (recommended)
-act -W .github/workflows/ci.yml \
-    --container-architecture linux/amd64 \
-    -P ubuntu-latest=wavecraft-ci:latest \
-    --pull=false \
-    --artifact-server-path /tmp/act-artifacts
+# Auto-fix linting issues
+cargo xtask check --fix
 
-# Run specific job (for debugging failures)
-act -j check-engine -W .github/workflows/ci.yml \
-    --container-architecture linux/amd64 \
-    -P ubuntu-latest=wavecraft-ci:latest \
-    --pull=false \
-    --artifact-server-path /tmp/act-artifacts
+# Skip phases if needed
+cargo xtask check --skip-lint
+cargo xtask check --skip-tests
 ```
 
-### Fallback: Individual Commands (for debugging CI failures)
+### Fallback: Individual Commands (for debugging failures)
 
 ```bash
 # UI checks
@@ -245,7 +227,7 @@ cd engine && cargo clippy --workspace --all-targets -- -D warnings
 cd engine && cargo test --workspace
 ```
 
-### macOS-Only (cannot run in Docker)
+### macOS-Only (plugin build & signing)
 
 ```bash
 # Plugin bundling, signing, and installation
@@ -256,6 +238,22 @@ cd engine && cargo xtask install  # Install to system for DAW testing
 
 # Run the desktop app
 cd engine && cargo run -p desktop
+```
+
+### Docker-Based CI (for debugging GitHub Actions)
+
+Only needed when debugging CI workflow YAML changes:
+
+```bash
+# Check Docker is running
+docker info > /dev/null 2>&1 && echo "✅ Docker running" || echo "❌ Start Docker"
+
+# Run full CI pipeline via Docker
+act -W .github/workflows/ci.yml \
+    --container-architecture linux/amd64 \
+    -P ubuntu-latest=wavecraft-ci:latest \
+    --pull=false \
+    --artifact-server-path /tmp/act-artifacts
 ```
 
 ### Phase 3b: Visual UI Testing (Playwright MCP)
@@ -274,8 +272,8 @@ For tests requiring UI interaction or visual verification, use Playwright MCP to
 ## Guidelines
 
 ### DO:
-- **Run local CI pipeline first** as the primary validation method
-- Use individual commands only to debug CI failures
+- **Run `cargo xtask check` first** as the primary validation method (~52s)
+- Use individual commands only to debug failures
 - Execute commands yourself to verify behavior
 - Document EVERY test result in test-plan.md
 - Record detailed issue information including command output
@@ -287,7 +285,7 @@ For tests requiring UI interaction or visual verification, use Playwright MCP to
 ### DON'T:
 - **NEVER modify source code** — not even "quick fixes" or "obvious bugs"
 - **NEVER fix bugs yourself** — always hand off to the coder agent
-- Don't skip the CI pipeline check
+- Don't skip the `cargo xtask check` validation
 - Don't skip documenting failures
 - Don't assume tests pass without verification
 - Don't make code changes "just to make tests pass"

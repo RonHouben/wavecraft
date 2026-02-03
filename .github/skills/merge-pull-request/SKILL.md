@@ -1,13 +1,13 @@
 ---
 name: merge-pull-request
-description: Merges a Pull Request using GitHub CLI after verifying CI passes. Handles squash merge, remote branch cleanup, and local sync. Local branch is preserved. Use when user wants to merge a PR or asks to complete/finish a feature.
+description: Merges a Pull Request using GitHub CLI after verifying CI passes. Handles squash merge, remote branch cleanup, and local sync. Local branch is ALWAYS preserved (never auto-deleted). Use when user wants to merge a PR or asks to complete/finish a feature.
 ---
 
 # Merge Pull Request Skill
 
 ## Purpose
 
-Merges an approved Pull Request using `gh pr merge`, cleans up the **remote** feature branch (keeps local), and syncs the local repository.
+Merges an approved Pull Request using `gh pr merge`, cleans up the **remote** feature branch only, and syncs the local repository. **Local branch is NEVER deleted.**
 
 ## Prerequisites
 
@@ -43,18 +43,19 @@ Verify:
 Use squash merge (default for this project):
 
 ```bash
-# Squash merge with auto-generated commit message
-gh pr merge --squash --delete-branch
+# Squash merge — remote branch deleted, local branch PRESERVED
+gh pr merge <PR_NUMBER> --squash
 
-# Or with custom commit message
-gh pr merge --squash --delete-branch --subject "feat: Feature title" --body "Description"
+# Then delete ONLY the remote branch manually
+git push origin --delete <feature-branch>
 ```
+
+**IMPORTANT:** Do NOT use `--delete-branch` flag — it deletes both remote AND local branches.
 
 **Merge options:**
 - `--squash` — Combines all commits into one (preferred)
 - `--rebase` — Rebases commits onto base branch
 - `--merge` — Creates merge commit
-- `--delete-branch` — Deletes **remote** branch after merge (local branch is preserved)
 
 ### Step 3: Sync Local Repository
 
@@ -95,16 +96,18 @@ git log --oneline -5
 2. Check approval: `gh pr view --json reviewDecision` — must be `APPROVED`
 3. Check discussions: `gh pr view --json reviewThreads` — ensure none have `isResolved: false`
 4. Verify CI passes with `gh pr checks`
-5. Run `gh pr merge --squash --delete-branch`
-6. Switch to main: `git checkout main && git pull`
-7. Prune remotes: `git fetch --prune`
-8. Confirm: "✅ PR #123 merged. Local branch kept for reference."
+5. Run `gh pr merge <PR_NUMBER> --squash`
+6. Delete remote branch: `git push origin --delete <feature-branch>`
+7. Switch to main: `git checkout main && git pull`
+8. Prune remotes: `git fetch --prune`
+9. Confirm: "✅ PR #123 merged. Remote branch deleted. Local branch preserved."
 
 ## Notes
 
 - Always use `--squash` for cleaner history
-- Always use `--delete-branch` to keep remote clean (local branch is **never** auto-deleted)
+- **NEVER use `--delete-branch`** — it deletes both remote AND local branches
+- Delete remote branch manually with `git push origin --delete <branch>`
 - **Check for unresolved discussions** — GitHub CLI can query `reviewThreads` to find any with `isResolved: false`
 - Sync local repo immediately after merge
-- Local feature branch is preserved for reference; user can delete manually with `git branch -d <branch>` when no longer needed
-- If PR was created from a fork, `--delete-branch` only affects the fork
+- Local feature branch is **always preserved** for reference; user can delete manually with `git branch -d <branch>` when no longer needed
+- If PR was created from a fork, remote branch deletion only affects the fork

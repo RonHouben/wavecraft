@@ -132,5 +132,65 @@ On completion, PO archives the entire feature folder to `docs/feature-specs/_arc
 - **Use Architect** when: Design decisions needed, architectural review, defining boundaries
 - **Use Planner** when: Complex feature needs breakdown, multi-step implementation
 - **Use Coder** when: Ready to implement, bug fixes, code changes
-- **Use Tester** when: Feature ready for testing, runs local CI pipeline first, then manual testing
+- **Use Tester** when: Feature ready for testing, runs `cargo xtask check` first, then manual testing
 - **Use QA** when: Code review needed, static analysis, quality verification
+
+## Testing Workflow
+
+The Tester agent uses the following workflow for feature validation:
+
+### Primary Testing Method: `cargo xtask check`
+
+```bash
+# Run all checks locally (fast, ~1 minute)
+cargo xtask check
+
+# Run with auto-fix for linting issues
+cargo xtask check --fix
+
+# Skip certain phases
+cargo xtask check --skip-lint
+cargo xtask check --skip-tests
+```
+
+This command runs:
+1. **Linting** (with optional --fix): ESLint, Prettier, cargo fmt, clippy
+2. **Automated Tests**: Engine (Rust) and UI (Vitest) tests
+
+### Visual Testing with Playwright MCP
+
+Visual testing is done separately using the **playwright-mcp-ui-testing** skill:
+
+```bash
+# 1. Start the dev servers
+cargo xtask dev
+
+# 2. Tester agent uses Playwright MCP tools to:
+#    - Navigate to http://localhost:5173
+#    - Take screenshots
+#    - Validate UI appearance
+#    - Compare against baselines
+
+# 3. Stop servers when done
+pkill -f "cargo xtask dev"
+```
+
+**When to use visual testing:**
+- UI component changes
+- Styling updates
+- Layout modifications
+- New visual features
+
+### Why Not Docker/act?
+
+The `cargo xtask check` approach is **~26x faster** than running the full CI pipeline via Docker:
+
+| Method | Time | Use Case |
+|--------|------|----------|
+| `cargo xtask check` | ~52s | Daily testing, pre-push validation |
+| `act` (Docker CI) | ~9-12 min | CI performance comparison, debugging GitHub Actions |
+
+Docker-based testing is only needed for:
+- Validating CI workflow YAML changes
+- Performance benchmarking CI pipeline itself
+- Debugging container-specific issues

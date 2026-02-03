@@ -8,13 +8,14 @@ This document tracks implementation progress against the milestones defined in t
 
 ```
 ┌─────────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP           v0.6.1 | 85%  │
+│  WAVECRAFT ROADMAP           v0.6.2 | 79%  │
 ├─────────────────────────────────────────────┤
 │  ✅ M1-M11   Foundation → OSS Ready        │
-│  ⏳ M12      User Testing                  │
-│  ⏳ M13      V1.0 Release                  │
+│  ⏳ M12      Internal Testing               │
+│  ⏳ M13      User Testing                   │
+│  ⏳ M14      V1.0 Release                   │
 ├─────────────────────────────────────────────┤
-│  [██████████████████████████░░░░░] 11/13   │
+│  [████████████████████████░░░░░░░] 11/14   │
 └─────────────────────────────────────────────┘
 ```
 
@@ -158,7 +159,7 @@ This document tracks implementation progress against the milestones defined in t
 | **Dead code cleanup** | ✅ | Platform-gating pattern established for macOS/Windows-only code. Reduced `#[allow(dead_code)]` suppressions from 14 to 3 (79% reduction). Remaining 3 are valid (trait methods called by platform impls). Patterns documented in coding-standards.md. Completed 2026-02-01. |
 | **Semantic versioning** | ✅ | Version extracted from `engine/Cargo.toml` (single source of truth), injected at build time via Vite `define`. VersionBadge component displays version in UI. **Bonus:** Browser dev mode with environment detection and lazy IPC init (partial M6). Completed 2026-01-31. |
 | CI/CD pipeline (GitHub Actions) | ✅ | Redesigned staged pipeline with 6 jobs across 3 stages. Ubuntu for lint/test (cost optimization), macos for build. Branch protection configured. Completed 2026-01-31. |
-| CI pipeline cache optimization | ➡️ | Moved to Milestone 8 (Backlog). |
+| CI pipeline optimization | ✅ | v0.6.2 — `cargo xtask check` command for fast local validation (~52s vs ~9-12min Docker). Pre-compile test binaries. Tiered artifact retention (7d main / 90d tags). Documentation updated. Completed 2026-02-03. |
 | Performance profiling | ➡️ | Moved to Milestone 8 (Backlog). |
 | Format-specific feature parity | ➡️ | Moved to Milestone 8 (Backlog). |
 
@@ -476,7 +477,7 @@ Linting:      All checks passed (cargo fmt, clippy, ESLint, Prettier)
 > **Goal:** Polish codebase for open-source release — proper logging, code quality fixes, CI optimization.
 
 **Branch:** `feature/code-quality-polish`  
-**Version:** `0.6.1` (patch — polish, no new features)
+**Version:** `0.6.2` (patch — polish, CI optimization, no new features)
 
 **User Stories:** [docs/feature-specs/_archive/code-quality-polish/user-stories.md](feature-specs/_archive/code-quality-polish/user-stories.md)
 
@@ -487,7 +488,10 @@ Linting:      All checks passed (cargo fmt, clippy, ESLint, Prettier)
 | Logger class for UI | ✅ | `Logger` in `@wavecraft/ipc` with severity levels |
 | Log/tracing crate for Engine | ✅ | `tracing` crate in standalone, 24 calls migrated |
 | **CI/CD Optimization** | | |
-| CI cache optimization | ➡️ | Deferred — already well-optimized |
+| `cargo xtask check` command | ✅ | Fast local validation (~52s, 26x faster than Docker CI) |
+| Pre-compile test binaries | ✅ | `cargo test --no-run` in prepare-engine job |
+| Tiered artifact retention | ✅ | 7 days (main) / 90 days (tags), ~75-80% storage reduction |
+| Agent documentation updates | ✅ | Tester, QA, coder agent docs updated for new workflow |
 | **Open Source Prep** | | |
 | LICENSE file | ✅ | MIT License added to root and template |
 | Contributing guidelines | ✅ | CONTRIBUTING.md with development workflow |
@@ -500,9 +504,10 @@ Linting:      All checks passed (cargo fmt, clippy, ESLint, Prettier)
 **Key Deliverables:**
 - **UI Logger** — `Logger` class with `debug/info/warn/error` methods, exported from `@wavecraft/ipc`
 - **Engine logging** — `tracing` crate replacing `println!` in standalone crate (24 calls migrated)
+- **CI optimization** — `cargo xtask check` command for 26x faster local validation, pre-compiled test binaries, tiered artifact retention
 - **Open source infrastructure** — LICENSE, CONTRIBUTING.md, CODE_OF_CONDUCT.md, issue/PR templates
 - **Template synchronization** — Logger and CSS fixes propagated to `wavecraft-plugin-template`
-- **Documentation updates** — Logging standards added to coding-standards.md, IPC exports documented in high-level-design.md
+- **Documentation updates** — Logging standards added to coding-standards.md, IPC exports documented in high-level-design.md, agent workflows updated
 
 **Test Results:**
 ```
@@ -515,11 +520,58 @@ QA:           5 findings (1 Critical, 4 Medium) — all resolved
 
 ---
 
-## Milestone 12: User Testing ⏳
+## Milestone 12: Internal Testing ⏳
+
+> **Goal:** Comprehensive internal validation of the complete SDK workflow before external beta testing. Catch issues that would frustrate external testers.
+
+**Depends on:** Milestone 11 (Code Quality & OSS Prep)
+
+**Target Version:** `0.6.3` (patch — bug fixes and polish from internal testing)
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **SDK Workflow Validation** | | |
+| Fresh clone & setup | ⏳ | Clone template, follow Getting Started guide exactly |
+| Build plugin from template | ⏳ | `cargo xtask bundle` succeeds without errors |
+| Load in Ableton Live | ⏳ | Plugin loads, UI renders, no crashes |
+| Parameter sync test | ⏳ | UI ↔ DAW automation works correctly |
+| State persistence test | ⏳ | Save/load project preserves plugin state |
+| Multi-instance test | ⏳ | Multiple plugin instances work correctly |
+| **Documentation Walkthrough** | | |
+| SDK Getting Started guide | ⏳ | Follow as new user, note confusing parts |
+| High-level design review | ⏳ | Architecture docs accurate and current |
+| Coding standards review | ⏳ | All standards documented and followed |
+| CI pipeline guide review | ⏳ | Local testing instructions work |
+| **Regression Testing** | | |
+| All `cargo xtask check` passes | ⏳ | Lint + tests clean |
+| Visual testing with Playwright | ⏳ | UI renders correctly in browser |
+| Desktop app (`cargo xtask dev`) | ⏳ | WebSocket bridge works |
+| Signing workflow | ⏳ | Ad-hoc signing succeeds |
+| **Template Project Validation** | | |
+| Template builds standalone | ⏳ | No monorepo dependencies leak |
+| Template xtask commands work | ⏳ | bundle, dev, install |
+| Template README accurate | ⏳ | Instructions match reality |
+| **Edge Cases & Stress Testing** | | |
+| Low buffer sizes (32/64 samples) | ⏳ | No audio glitches |
+| Rapid parameter changes | ⏳ | No UI lag or crashes |
+| DAW project with many tracks | ⏳ | Performance acceptable |
+
+**Success Criteria:**
+- [ ] Complete SDK workflow works end-to-end
+- [ ] All documentation is accurate and followable
+- [ ] No regressions from previous milestones
+- [ ] Template project works independently
+- [ ] No critical bugs discovered
+
+**Estimated Effort:** 1 week
+
+---
+
+## Milestone 13: User Testing ⏳
 
 > **Goal:** Validate Wavecraft with real plugin developers before V1 release. Gather feedback on SDK usability, documentation quality, and overall developer experience.
 
-**Depends on:** Milestone 11 (Code Quality & OSS Prep) — codebase should be polished before external testers use it.
+**Depends on:** Milestone 12 (Internal Testing) — codebase should be thoroughly tested internally before external testers use it.
 
 **Target Version:** `0.7.0` (minor — pre-release milestone with potential breaking changes from feedback)
 
@@ -556,11 +608,11 @@ QA:           5 findings (1 Critical, 4 Medium) — all resolved
 
 ---
 
-## Milestone 13: V1.0 Release 🎯
+## Milestone 14: V1.0 Release 🎯
 
 > **Goal:** Ship Wavecraft 1.0 — the first stable, production-ready release of the Rust + React audio plugin framework.
 
-**Depends on:** Milestone 12 (User Testing) — all critical feedback addressed.
+**Depends on:** Milestone 13 (User Testing) — all critical feedback addressed.
 
 **Target Version:** `1.0.0` (major — first stable release)
 
@@ -612,8 +664,11 @@ QA:           5 findings (1 Critical, 4 Medium) — all resolved
 
 | Date | Update |
 |------|--------|
+| 2026-02-03 | **CI Pipeline Optimization complete**: Added `cargo xtask check` command for fast local validation (~52s, 26x faster than Docker CI). Pre-compile test binaries in CI with `cargo test --no-run`. Tiered artifact retention (7 days main / 90 days tags, ~75-80% storage reduction). Updated agent documentation (Tester uses `cargo xtask check`, QA focuses on manual review). Architecture docs updated (high-level-design.md, ci-pipeline.md, coding-standards.md). Version 0.6.2. |
 | 2026-02-03 | **Milestone 11 complete**: Code Quality & OSS Prep fully implemented. UI Logger (`Logger` class in `@wavecraft/ipc` with debug/info/warn/error methods), Engine logging (`tracing` crate, 24 println! calls migrated), open source infrastructure (LICENSE, CONTRIBUTING.md, CODE_OF_CONDUCT.md, issue/PR templates), README polish. Horizontal scroll fix applied. Template project synchronized. 110+ engine tests, 43 UI tests, 19/19 manual tests passing. QA approved (5 findings resolved). Logging standards documented in coding-standards.md. Version 0.6.1. Archived to `_archive/code-quality-polish/`. |
 | 2026-02-03 | **Added Milestones 12 & 13**: User Testing (v0.7.0) and V1.0 Release (v1.0.0). User Testing focuses on validating SDK with 3-5 beta testers before stable release. V1.0 is the final milestone marking first production-ready release. Updated progress to 77% (10/13 milestones complete). |
+| 2026-02-04 | **Added Milestone 12: Internal Testing**: Inserted comprehensive internal validation milestone before User Testing. Ensures polished experience before external beta testers. Tasks include: fresh clone setup, template plugin build, DAW loading, parameter sync, state persistence, multi-instance, documentation walkthrough, regression testing, template validation, edge cases. Renumbered User Testing (M12→M13) and V1.0 Release (M13→M14). Progress now 79% (11/14 milestones). |
+| 2026-02-03 | **CI optimization complete (v0.6.2)**: Pre-push validation with `cargo xtask check` (~52s, 26x faster than Docker). Pre-compile test binaries with `--no-run`. Tiered artifact retention (7d main / 90d tags). Archived to `_archive/ci-optimization/`. |
 | 2026-02-03 | **Milestone 10 complete**: Declarative Plugin DSL fully implemented. 95% code reduction (190 lines → 9 lines), `wavecraft_plugin!` macro for zero-boilerplate plugins, `#[derive(ProcessorParams)]` with `#[param(...)]` attributes, `wavecraft_processor!` for named wrappers, `Chain!` combinator for signal chains. Built-in processors (Gain, Passthrough). UI parameter groups (`ParameterGroup` component, `useParameterGroups` hook). 63 tests (28 engine + 35 UI), 18/18 manual tests, all linting clean. DAW verified in Ableton Live. VstKit branding updated to Wavecraft. ProcessorParams `group` field fixed. QA approved. Version 0.6.0. Archived to `_archive/declarative-plugin-dsl/`. |
 | 2026-02-03 | **Milestone reprioritization**: Declarative Plugin DSL promoted to Milestone 10 (was unscheduled). Code Quality & OSS Prep moved to Milestone 11. Rationale: DSL significantly improves DX and is a key differentiator before open-source release. Planning complete (user stories, low-level design, implementation plan with 40 steps across 9 phases). |
 | 2026-02-03 | **Project rename fully deployed**: PR #17 merged to main, GitHub repository renamed `vstkit` → `wavecraft`. All source code references updated. Milestone 9 complete and in production. |
@@ -660,7 +715,7 @@ QA:           5 findings (1 Critical, 4 Medium) — all resolved
 
 ## Next Steps
 
-> 🚀 **Road to V1** — User testing followed by stable release.
+> 🚀 **Road to V1** — Internal testing, user testing, then stable release.
 
 ### Completed Milestones
 1. ✅ **Milestone 1**: Plugin Skeleton — Rust plugin with VST3/CLAP export
@@ -673,14 +728,16 @@ QA:           5 findings (1 Critical, 4 Medium) — all resolved
 8. ✅ **Milestone 8**: Developer SDK — 5-crate SDK architecture, macro, template, docs
 9. ✅ **Milestone 9**: Project Rename — VstKit → Wavecraft (v0.5.0)
 10. ✅ **Milestone 10**: Declarative Plugin DSL — Macro-based DSL for 95% code reduction (v0.6.0)
-11. ✅ **Milestone 11**: Code Quality & OSS Prep — Logging, open-source readiness (v0.6.1)
+11. ✅ **Milestone 11**: Code Quality & OSS Prep — Logging, CI optimization, open-source readiness (v0.6.2)
 
 ### Up Next
-12. ⏳ **Milestone 12**: User Testing — Beta testing with real plugin developers (v0.7.0)
-13. ⏳ **Milestone 13**: V1.0 Release — First stable production release (v1.0.0)
+12. ⏳ **Milestone 12**: Internal Testing — Comprehensive internal validation (v0.6.3)
+13. ⏳ **Milestone 13**: User Testing — Beta testing with real plugin developers (v0.7.0)
+14. ⏳ **Milestone 14**: V1.0 Release — First stable production release (v1.0.0)
 
 ### Immediate Tasks
-1. ✅ Merge Code Quality & OSS Prep PR — Pending
-2. ⏳ Recruit beta testers for Milestone 12
+1. ✅ Merge Code Quality & OSS Prep PR — CI optimization (v0.6.2) ready for merge
+2. ✅ Archive ci-optimization feature spec — Moved to `_archive/ci-optimization/`
+3. ⏳ Start Milestone 12: Internal Testing
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (SDK publication, CLI tool, crates.io, etc.)
