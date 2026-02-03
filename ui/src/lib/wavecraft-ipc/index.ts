@@ -47,6 +47,10 @@ export { ParameterClient } from './ParameterClient';
 export { useParameter, useAllParameters, useLatencyMonitor } from './hooks';
 export type { UseParameterResult, UseAllParametersResult, UseLatencyMonitorResult } from './hooks';
 
+// Parameter grouping hook
+export { useParameterGroups } from './useParameterGroups';
+export type { ParameterGroup } from './useParameterGroups';
+
 // Connection status hook
 export { useConnectionStatus } from './useConnectionStatus';
 export type { ConnectionStatus, TransportType } from './useConnectionStatus';

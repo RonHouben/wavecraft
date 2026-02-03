@@ -61,6 +61,7 @@ export interface ParameterInfo {
   value: number;
   default: number;
   unit?: string;
+  group?: string;
 }
 
 // ============================================================================
