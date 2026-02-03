@@ -3,15 +3,19 @@
  */
 
 import React, { useEffect } from 'react';
-import { ParameterSlider } from './components/ParameterSlider';
+import { ParameterGroup } from './components/ParameterGroup';
 import { LatencyMonitor } from './components/LatencyMonitor';
 import { Meter } from './components/Meter';
 import { ResizeHandle } from './components/ResizeHandle';
 import { VersionBadge } from './components/VersionBadge';
 import { ConnectionStatus } from './components/ConnectionStatus';
-import { requestResize } from './lib/wavecraft-ipc';
+import { requestResize, useAllParameters, useParameterGroups } from './lib/wavecraft-ipc';
 
 function App(): React.JSX.Element {
+  // Fetch all parameters and organize into groups
+  const { params, isLoading } = useAllParameters();
+  const groups = useParameterGroups(params);
+
   // Handle native window resize
   useEffect(() => {
     const handleResize = (): void => {
@@ -51,7 +55,15 @@ function App(): React.JSX.Element {
           <h2 className="mb-4 border-b-2 border-plugin-border pb-2 text-xl text-gray-100">
             Parameters
           </h2>
-          <ParameterSlider id="gain" />
+          {isLoading ? (
+            <p className="italic text-gray-500">Loading parameters...</p>
+          ) : (
+            <div className="space-y-6">
+              {groups.map((group) => (
+                <ParameterGroup key={group.name} group={group} />
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="mb-8">
