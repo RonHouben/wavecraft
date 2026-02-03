@@ -55,7 +55,8 @@ macro_rules! wavecraft_processor {
         pub struct $name(::wavecraft_dsp::builtins::GainDsp);
 
         impl ::wavecraft_dsp::Processor for $name {
-            type Params = <::wavecraft_dsp::builtins::GainDsp as ::wavecraft_dsp::Processor>::Params;
+            type Params =
+                <::wavecraft_dsp::builtins::GainDsp as ::wavecraft_dsp::Processor>::Params;
 
             fn process(
                 &mut self,
@@ -73,7 +74,8 @@ macro_rules! wavecraft_processor {
         pub struct $name(::wavecraft_dsp::builtins::PassthroughDsp);
 
         impl ::wavecraft_dsp::Processor for $name {
-            type Params = <::wavecraft_dsp::builtins::PassthroughDsp as ::wavecraft_dsp::Processor>::Params;
+            type Params =
+                <::wavecraft_dsp::builtins::PassthroughDsp as ::wavecraft_dsp::Processor>::Params;
 
             fn process(
                 &mut self,

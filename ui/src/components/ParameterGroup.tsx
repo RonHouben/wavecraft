@@ -35,9 +35,7 @@ export function ParameterGroup({ group }: Readonly<ParameterGroupProps>): React.
   return (
     <div className="space-y-2">
       {/* Group header */}
-      <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400">
-        {group.name}
-      </h3>
+      <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400">{group.name}</h3>
 
       {/* Parameter list */}
       <div className="space-y-3">

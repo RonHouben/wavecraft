@@ -14,9 +14,7 @@ pub use nih_plug::prelude::*;
 pub use nih_plug::{nih_export_clap, nih_export_vst3};
 
 // Re-export Wavecraft DSP traits and types
-pub use wavecraft_dsp::{
-    Chain, ParamRange, ParamSpec, Processor, ProcessorParams, Transport,
-};
+pub use wavecraft_dsp::{Chain, ParamRange, ParamSpec, Processor, ProcessorParams, Transport};
 
 // Re-export built-in processors
 pub use wavecraft_dsp::builtins::{GainDsp, PassthroughDsp};
@@ -35,7 +33,7 @@ pub use crate::editor::WavecraftEditor;
 pub use crate::util::calculate_stereo_meters;
 
 // Re-export DSL macros
-pub use wavecraft_macros::{wavecraft_plugin, ProcessorParams as DeriveProcessorParams};
+pub use wavecraft_macros::{ProcessorParams as DeriveProcessorParams, wavecraft_plugin};
 
 // Re-export wavecraft_processor! declarative macro (exported at crate root due to #[macro_export])
 pub use crate::wavecraft_processor;

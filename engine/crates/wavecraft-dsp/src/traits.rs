@@ -34,20 +34,20 @@ pub trait ProcessorParams: Default + Send + Sync + 'static {
 pub struct ParamSpec {
     /// Display name of the parameter (e.g., "Frequency").
     pub name: &'static str,
-    
+
     /// ID suffix for this parameter (e.g., "frequency").
     /// Full ID will be prefixed with processor name: "my_filter_frequency"
     pub id_suffix: &'static str,
-    
+
     /// Value range for this parameter.
     pub range: ParamRange,
-    
+
     /// Default value.
     pub default: f64,
-    
+
     /// Unit string (e.g., "dB", "Hz", "%").
     pub unit: &'static str,
-    
+
     /// Optional group name for UI organization (e.g., "Input", "Processing", "Output").
     pub group: Option<&'static str>,
 }
@@ -57,11 +57,11 @@ pub struct ParamSpec {
 pub enum ParamRange {
     /// Linear range from min to max.
     Linear { min: f64, max: f64 },
-    
+
     /// Skewed range with exponential/logarithmic scaling.
     /// Factor > 1.0 = logarithmic, factor < 1.0 = exponential.
     Skewed { min: f64, max: f64, factor: f64 },
-    
+
     /// Integer stepped range (for enums, switches).
     Stepped { min: i32, max: i32 },
 }
@@ -111,7 +111,7 @@ pub trait Processor: Send + 'static {
     /// Use `()` for processors with no parameters, or define a struct
     /// with `#[derive(ProcessorParams)]`.
     type Params: ProcessorParams + Default + Send + Sync + 'static;
-    
+
     /// Process a buffer of audio samples.
     ///
     /// The buffer is provided as a slice of mutable slices, one per channel.

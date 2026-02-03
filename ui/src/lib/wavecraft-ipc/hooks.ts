@@ -35,7 +35,6 @@ export function useParameter(id: string): UseParameterResult {
 
   // Load initial parameter value
   useEffect(() => {
-
     let isMounted = true;
 
     async function loadParameter(): Promise<void> {
@@ -137,7 +136,6 @@ export function useAllParameters(): UseAllParametersResult {
 
   // Subscribe to parameter changes
   useEffect(() => {
-
     // Note: Nesting depth warning accepted here - inline mapper is idiomatic React pattern
     const handleParamChange = (changedId: string, value: number): void => {
       setParams((prev) => prev.map((p) => (p.id === changedId ? { ...p, value } : p)));

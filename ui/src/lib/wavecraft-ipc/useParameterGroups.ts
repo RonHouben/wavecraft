@@ -34,9 +34,7 @@ export interface ParameterGroup {
  * );
  * ```
  */
-export function useParameterGroups(
-  parameters: ParameterInfo[]
-): ParameterGroup[] {
+export function useParameterGroups(parameters: ParameterInfo[]): ParameterGroup[] {
   return useMemo(() => {
     // Group parameters by their group field
     const grouped = new Map<string, ParameterInfo[]>();

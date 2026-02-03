@@ -17,7 +17,7 @@ fn test_simple_param_specs() {
     assert_eq!(specs[0].id_suffix, "value");
     assert_eq!(specs[0].default, 0.5);
     assert_eq!(specs[0].unit, "");
-    
+
     match &specs[0].range {
         ParamRange::Linear { min, max } => {
             assert!((min - 0.0).abs() < 1e-6);
@@ -31,7 +31,7 @@ fn test_simple_param_specs() {
 struct MultiParamStruct {
     #[param(range = "-24.0..=24.0", default = 0.0, unit = "dB")]
     gain: f32,
-    
+
     #[param(range = "20.0..=20000.0", factor = 2.5, unit = "Hz")]
     frequency: f32,
 }
@@ -40,18 +40,18 @@ struct MultiParamStruct {
 fn test_multiple_params() {
     let specs = MultiParamStruct::param_specs();
     assert_eq!(specs.len(), 2);
-    
+
     // Check first param (gain)
     assert_eq!(specs[0].name, "Gain");
     assert_eq!(specs[0].id_suffix, "gain");
     assert_eq!(specs[0].unit, "dB");
     assert_eq!(specs[0].default, 0.0);
-    
+
     // Check second param (frequency)
     assert_eq!(specs[1].name, "Frequency");
     assert_eq!(specs[1].id_suffix, "frequency");
     assert_eq!(specs[1].unit, "Hz");
-    
+
     // Should have skewed range due to factor
     match &specs[1].range {
         ParamRange::Skewed { min, max, factor } => {

@@ -41,7 +41,7 @@ mod tests {
     fn test_plugin_has_params() {
         let plugin = __WavecraftPlugin::default();
         let params = plugin.params();
-        
+
         // Should have parameters from the Gain processor
         assert!(!params.param_map().is_empty());
     }

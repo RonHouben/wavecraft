@@ -1,6 +1,6 @@
 //! Chain combinator for serial processor composition.
 
-use crate::traits::{Processor, ProcessorParams, Transport, ParamSpec};
+use crate::traits::{ParamSpec, Processor, ProcessorParams, Transport};
 
 /// Combines two processors in series: A → B.
 ///
@@ -53,15 +53,15 @@ where
     fn param_specs() -> &'static [ParamSpec] {
         // Allocate merged specs at initialization time (not audio thread)
         use std::sync::OnceLock;
-        
+
         static MERGED_SPECS: OnceLock<Vec<ParamSpec>> = OnceLock::new();
-        
+
         MERGED_SPECS.get_or_init(|| {
             let first_specs = PA::param_specs();
             let second_specs = PB::param_specs();
-            
+
             let mut merged = Vec::with_capacity(first_specs.len() + second_specs.len());
-            
+
             // Add first processor's params with "a_" prefix
             for spec in first_specs {
                 merged.push(ParamSpec {
@@ -73,7 +73,7 @@ where
                     group: spec.group,
                 });
             }
-            
+
             // Add second processor's params with "b_" prefix
             for spec in second_specs {
                 merged.push(ParamSpec {
@@ -85,7 +85,7 @@ where
                     group: spec.group,
                 });
             }
-            
+
             merged
         })
     }
@@ -116,19 +116,19 @@ mod tests {
             first: GainDsp::default(),
             second: GainDsp::default(),
         };
-        
+
         let mut left = [1.0_f32, 1.0_f32];
         let mut right = [1.0_f32, 1.0_f32];
         let mut buffer = [&mut left[..], &mut right[..]];
-        
+
         let transport = Transport::default();
         let params = ChainParams {
             first: GainParams { level: 0.5 },
             second: GainParams { level: 2.0 },
         };
-        
+
         chain.process(&mut buffer, &transport, &params);
-        
+
         // Expected: 1.0 * 0.5 * 2.0 = 1.0
         assert!((buffer[0][0] - 1.0_f32).abs() < 1e-6);
         assert!((buffer[1][0] - 1.0_f32).abs() < 1e-6);
@@ -140,19 +140,19 @@ mod tests {
             first: PassthroughDsp,
             second: GainDsp::default(),
         };
-        
+
         let mut left = [2.0_f32, 2.0_f32];
         let mut right = [2.0_f32, 2.0_f32];
         let mut buffer = [&mut left[..], &mut right[..]];
-        
+
         let transport = Transport::default();
         let params = ChainParams {
             first: PassthroughParams,
             second: GainParams { level: 0.5 },
         };
-        
+
         chain.process(&mut buffer, &transport, &params);
-        
+
         // Expected: 2.0 * 1.0 * 0.5 = 1.0
         assert!((buffer[0][0] - 1.0_f32).abs() < 1e-6);
     }
@@ -161,7 +161,7 @@ mod tests {
     fn test_chain_params_merge() {
         let specs = <ChainParams<GainParams, GainParams>>::param_specs();
         assert_eq!(specs.len(), 2); // Both gain params
-        
+
         // Both should have "Level" name
         assert_eq!(specs[0].name, "Level");
         assert_eq!(specs[1].name, "Level");
