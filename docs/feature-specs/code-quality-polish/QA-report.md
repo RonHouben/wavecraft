@@ -2,24 +2,63 @@
 
 **Date**: 2026-02-03  
 **Reviewer**: QA Agent  
-**Status**: PASS ✅
+**Status**: ❌ **FAIL**
+
+CI pipeline execution revealed a **critical test failure** that blocks merge.
 
 ## Summary
 
 | Severity | Count |
 |----------|-------|
-| Critical | 0 |
+| Critical | 1 |
 | High | 0 |
 | Medium | 3 |
 | Low | 0 |
 
-**Overall**: **PASS** ✅ (No Critical/High issues)
+**Overall**: ❌ **FAIL** (1 Critical issue blocking merge)
 
-All automated checks passing. Minor findings documented for future improvement. Implementation meets quality standards for merge.
+CI pipeline revealed linker errors in `wavecraft-core` tests. Must be fixed before merge.
 
 ---
 
-## Automated Check Results
+## CI Pipeline Execution
+
+**Command**: `act -W .github/workflows/ci.yml --container-architecture linux/amd64 -P ubuntu-latest=wavecraft-ci:latest --pull=false --artifact-server-path /tmp/act-artifacts`
+
+**Results Summary**:
+- ✅ Check UI (cargo fmt, ESLint, Prettier)
+- ✅ Test UI (43 tests passing)
+- ✅ Check Engine (cargo fmt, clippy)
+- ❌ **Test Engine FAILED**
+
+### Critical Failure: Test Engine
+
+**Job**: Test Engine  
+**Exit Code**: 101  
+**Failure**: `wavecraft-core` integration test `dsl_plugin_macro` failed with duplicate symbol linker errors
+
+**Linker Errors**:
+```
+rust-lld: error: duplicate symbol: GetPluginFactory
+>>> defined at vst3.rs:186 (nih-plug wrapper)
+>>>            dsl_plugin_macro test
+>>> defined at vst3.rs:186 (nih-plug wrapper)
+>>>            wavecraft_core.rlib
+
+rust-lld: error: duplicate symbol: ModuleEntry
+rust-lld: error: duplicate symbol: ModuleExit
+rust-lld: error: duplicate symbol: clap_entry
+>>> defined at dsl_plugin_macro.rs:12
+>>> defined at lib.rs:167 (wavecraft-core)
+```
+
+**Root Cause**: The `wavecraft_plugin!` macro generates plugin entry points (VST3/CLAP symbols). The test file `engine/crates/wavecraft-core/tests/dsl_plugin_macro.rs` uses this macro, but the library crate itself (`wavecraft-core/src/lib.rs:167`) also exports these symbols. This creates duplicate symbols during test linking.
+
+**Impact**: Engine tests cannot run. This is a **blocker** for CI and must be fixed before merge.
+
+---
+
+## Automated Check Results (Local)
 
 ### cargo xtask lint
 ✅ **PASSED** (after auto-fix in commit 273b22e)
@@ -185,6 +224,17 @@ Total: 119 tests passed
 
 ---
 
+## Findings
+
+| ID | Severity | Category | Description | Location | Recommendation |
+|----|----------|----------|-------------|----------|----------------|
+| QA-1 | **Critical** | Test Failure | `wavecraft-core` test `dsl_plugin_macro` fails with duplicate symbol linker errors (GetPluginFactory, ModuleEntry, ModuleExit, clap_entry) | [engine/crates/wavecraft-core/tests/dsl_plugin_macro.rs](../../../engine/crates/wavecraft-core/tests/dsl_plugin_macro.rs), [engine/crates/wavecraft-core/src/lib.rs](../../../engine/crates/wavecraft-core/src/lib.rs#L167) | The test file uses `wavecraft_plugin!` which generates plugin entry points, but the library itself also exports these symbols. **Fix**: Either remove the test, move it to a separate binary crate, or conditionally compile the lib.rs exports. This is a **blocker** - engine tests cannot pass. |
+| QA-2 | Medium | Code Migration | Not all console.* calls migrated to Logger | [ui/src/components/ParameterSlider.tsx](../../../ui/src/components/ParameterSlider.tsx), [ResizeHandle.tsx](../../../ui/src/components/ResizeHandle.tsx), [ParameterToggle.tsx](../../../ui/src/components/ParameterToggle.tsx), [App.tsx](../../../ui/src/App.tsx) | 4 React components still use console.error directly. Low priority: Components intentionally left for incremental migration. |
+| QA-3 | Medium | Code Migration | WebSocketTransport not migrated to Logger | [ui/src/lib/wavecraft-ipc/transports/WebSocketTransport.ts](../../../ui/src/lib/wavecraft-ipc/transports/WebSocketTransport.ts) | 7 console calls remain (debug, warn, error). Non-blocking: Transport is for standalone dev mode only. |
+| QA-4 | Medium | Template Alignment | Template project not updated with new logging | wavecraft-plugin-template/ | Template still uses old patterns. Non-blocking: Can be synced in separate PR. |
+
+---
+
 ## Performance & Resource Usage
 
 ✅ **N/A** - No performance-critical changes in this milestone. Logger is UI-only and tracing is in non-realtime standalone app.
@@ -193,9 +243,18 @@ Total: 119 tests passed
 
 ## Architectural Concerns
 
-> ⚠️ **None** - No architectural issues require architect review.
+> ⚠️ **Critical: Test Architecture Issue**
 
-Implementation follows existing patterns. No new abstractions or design trade-offs introduced.
+**Finding QA-1** requires architectural decision:
+
+**Problem**: The `wavecraft-core` crate exports plugin entry points (for use as a library), but integration tests also need to instantiate plugins using `wavecraft_plugin!`, which generates the same symbols.
+
+**Options**:
+1. **Delete the test** - Remove `dsl_plugin_macro.rs` test (loses validation coverage)
+2. **Move test to binary** - Create a separate test binary in `examples/` or `xtask/` (proper isolation)
+3. **Conditional compilation** - Use `#[cfg(not(test))]` on lib.rs exports (fragile, hard to maintain)
+
+**Recommendation**: Move integration test to a separate example binary that demonstrates DSL usage. This provides both testing and documentation value.
 
 ---
 
@@ -211,7 +270,8 @@ Implementation follows existing patterns. No new abstractions or design trade-of
 
 ### Engine Logging
 - ✅ Standalone app: Manual testing shows correct output ✅
-- ✅ All existing tests still pass (119 tests) ✅
+- ❌ **Engine tests FAILING** - `wavecraft-core` test `dsl_plugin_macro` has linker errors ❌
+- ⚠️ Cannot verify all 119 tests pass due to test failure
 - ✅ Log levels used appropriately:
   - `info!` for lifecycle events ✅
   - `debug!` for verbose tracing ✅
@@ -223,11 +283,16 @@ Implementation follows existing patterns. No new abstractions or design trade-of
 - ✅ README verified (badges, links) ✅
 - ✅ CONTRIBUTING checked (all sections present) ✅
 
-**Overall Coverage**: Excellent
+**Overall Coverage**: Blocked by critical test failure
 
 ---
 
 ## Recommendations for Future Work
+
+### Immediate (Required for merge)
+1. **Fix QA-1: Test linker errors** (CRITICAL)
+   - Decision needed: Delete test, move to binary, or conditional compilation
+   - Must be resolved before CI can pass
 
 ### Short-term (Optional improvements for this PR)
 1. **Migrate remaining console calls** (Medium priority)
@@ -243,6 +308,25 @@ Implementation follows existing patterns. No new abstractions or design trade-of
 
 2. **Template updates**
    - Keep template in sync with main project Logger usage
+
+---
+
+## Handoff Decision
+
+**Target Agent**: `coder` + `architect`  
+**Priority**: 🔴 **CRITICAL**
+
+**Immediate Action Required**:
+1. **Architect** must decide on approach for QA-1 (test architecture)
+2. **Coder** implements the chosen fix
+3. Re-run CI pipeline to verify all tests pass
+
+**Reasoning**:  
+The duplicate symbol error in `wavecraft-core` tests is an architectural issue requiring design decision before implementation. This is a **blocker** - PR cannot be merged until resolved. The architect should evaluate the three options (delete test, move to binary, conditional compilation) and decide on the best approach that balances test coverage with maintainability.
+
+Once the approach is decided, the coder implements the fix and re-runs `cargo test -p wavecraft-core` to verify resolution. Then the full CI pipeline should be re-executed to confirm all jobs pass before final architect review and PO merge.
+
+**Medium findings (QA-2 through QA-4)** are non-blocking and can be addressed in future PRs.
    - Add Logger usage examples to template README
 
 ---
