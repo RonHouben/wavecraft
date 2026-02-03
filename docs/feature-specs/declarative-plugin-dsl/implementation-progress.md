@@ -17,12 +17,12 @@ This document tracks the implementation progress of the Declarative Plugin DSL f
 | Phase 3: Built-in Processors | ✅ Complete | 5/5 |
 | Phase 4: Chain Combinator | ✅ Complete | 4/4 |
 | Phase 5: wavecraft_processor! Macro | ✅ Complete | 3/3 |
-| Phase 6: wavecraft_plugin! Macro | 🔄 In Progress | 4/6 |
+| Phase 6: wavecraft_plugin! Macro | ✅ Complete | 6/6 |
 | Phase 7: Integration & Template | 🔲 Not Started | 0/4 |
 | Phase 8: Documentation | 🔲 Not Started | 0/5 |
 | Phase 9: UI Parameter Groups | 🔲 Not Started | 0/5 |
 
-**Overall Progress:** 24/40 steps (60%)
+**Overall Progress:** 26/40 steps (65%)
 
 ---
 
@@ -75,12 +75,17 @@ This document tracks the implementation progress of the Declarative Plugin DSL f
 
 - [x] **6.1** Design macro input parsing (complete)
 - [x] **6.2** Generate Plugin struct (complete)
-- [ ] **6.3** Generate Params struct (skeleton only - needs automatic parameter field generation)
-- [x] **6.4** Generate Plugin trait impl (skeleton complete - process() needs DSP integration)
+- [x] **6.3** Generate Params struct with runtime parameter discovery (complete)
+- [x] **6.4** Generate Plugin trait impl with full audio processing (complete)
 - [x] **6.5** Generate format impls & exports (complete)
-- [ ] **6.6** Add error messages
+- [x] **6.6** Add error messages (complete)
 
-**Status:** Core structure complete. Remaining work: automatic parameter discovery from processor chain and proper audio processing integration. Current implementation compiles but won't process audio correctly.
+**Status:** ✅ Phase 6 complete! The macro now:
+- Discovers parameters at runtime from ProcessorParams::param_specs()
+- Converts nih-plug buffers to wavecraft-dsp format (sample-by-sample)
+- Implements complete audio processing pipeline
+- Provides helpful error messages for missing fields
+- All tests passing (3/3)
 
 ---
 

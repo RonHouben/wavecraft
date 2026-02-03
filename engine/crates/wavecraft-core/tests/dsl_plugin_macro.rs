@@ -1,47 +1,48 @@
 //! Tests for the new DSL-based wavecraft_plugin! macro (Phase 6).
 //!
-//! This tests the simplified syntax:
-//! ```ignore
-//! wavecraft_plugin! {
-//!     name: "My Plugin",
-//!     vendor: "My Company",
-//!     signal: Chain![MyGain { level: 0.0 }],
-//! }
-//! ```
+//! This tests the simplified syntax with automatic parameter generation.
 
-// Note: This test file will initially fail to compile as we build out Phase 6.
-// We'll gradually make it work by implementing the macro.
+use wavecraft_core::wavecraft_processor;
+use wavecraft_dsp::Chain;
+
+// Define a custom processor type wrapping the built-in Gain
+wavecraft_processor!(TestGain => Gain);
+
+// Use the new wavecraft_plugin! macro from wavecraft_macros
+// Note: This uses the proc-macro version, not the old declarative macro
+wavecraft_macros::wavecraft_plugin! {
+    name: "Test DSL Plugin",
+    vendor: "Test Vendor",
+    url: "https://example.com",
+    email: "test@example.com",
+    signal: TestGain,
+}
 
 #[cfg(test)]
 mod tests {
-    // These tests are commented out until Phase 6 is implemented
-    
-    /*
-    use wavecraft_core::wavecraft_processor;
-    use wavecraft_dsp::Chain;
-
-    wavecraft_processor!(TestGain => Gain);
-
-    // Minimal plugin definition
-    wavecraft_plugin! {
-        name: "Test Plugin",
-        vendor: "Test Vendor",
-        signal: Chain![
-            TestGain { level: 0.0 },
-        ],
-    }
+    use super::*;
+    use nih_plug::prelude::Plugin;
 
     #[test]
     fn test_plugin_compiles() {
-        // Just verify the macro generates compilable code
-        let _plugin = TestPlugin::default();
+        // Verify the macro generates compilable code
+        let _plugin = __WavecraftPlugin::default();
     }
 
     #[test]
-    fn test_plugin_name() {
-        use nih_plug::prelude::Plugin;
-        assert_eq!(TestPlugin::NAME, "Test Plugin");
-        assert_eq!(TestPlugin::VENDOR, "Test Vendor");
+    fn test_plugin_metadata() {
+        assert_eq!(__WavecraftPlugin::NAME, "Test DSL Plugin");
+        assert_eq!(__WavecraftPlugin::VENDOR, "Test Vendor");
+        assert_eq!(__WavecraftPlugin::URL, "https://example.com");
+        assert_eq!(__WavecraftPlugin::EMAIL, "test@example.com");
     }
-    */
+
+    #[test]
+    fn test_plugin_has_params() {
+        let plugin = __WavecraftPlugin::default();
+        let params = plugin.params();
+        
+        // Should have parameters from the Gain processor
+        assert!(!params.param_map().is_empty());
+    }
 }

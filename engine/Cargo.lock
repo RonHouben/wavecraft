@@ -3480,6 +3480,7 @@ dependencies = [
  "trybuild",
  "wavecraft-bridge",
  "wavecraft-dsp",
+ "wavecraft-macros",
  "wavecraft-metering",
  "wavecraft-protocol",
  "webview2-com",
