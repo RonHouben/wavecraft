@@ -1,6 +1,6 @@
 # CI/CD Pipeline
 
-This document describes the CI/CD pipeline architecture for VstKit.
+This document describes the CI/CD pipeline architecture for Wavecraft.
 
 ## Overview
 
@@ -112,8 +112,8 @@ Downstream jobs (`check-engine`, `test-engine`) download these artifacts to avoi
 
 | Artifact | Description |
 |----------|-------------|
-| `vstkit-vst3-adhoc-signed` | VST3 plugin bundle (ad-hoc signed) |
-| `vstkit-clap-adhoc-signed` | CLAP plugin bundle (ad-hoc signed) |
+| `wavecraft-vst3-adhoc-signed` | VST3 plugin bundle (ad-hoc signed) |
+| `wavecraft-clap-adhoc-signed` | CLAP plugin bundle (ad-hoc signed) |
 
 ## Concurrency
 
@@ -176,13 +176,13 @@ The CI pipeline can be tested locally using `act` and a custom Docker image with
 
 ```bash
 # Build the custom image (one-time)
-docker build --platform linux/amd64 -t vstkit-ci:latest \
+docker build --platform linux/amd64 -t wavecraft-ci:latest \
     .github/skills/run-ci-pipeline-locally/
 
 # Run a specific job
 act -j check-engine -W .github/workflows/ci.yml \
     --container-architecture linux/amd64 \
-    -P ubuntu-latest=vstkit-ci:latest \
+    -P ubuntu-latest=wavecraft-ci:latest \
     --pull=false \
     --artifact-server-path /tmp/act-artifacts
 ```

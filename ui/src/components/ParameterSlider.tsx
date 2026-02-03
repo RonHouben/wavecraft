@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { useParameter } from '@vstkit/ipc';
+import { useParameter } from '@wavecraft/ipc';
 
 interface ParameterSliderProps {
   readonly id: string;

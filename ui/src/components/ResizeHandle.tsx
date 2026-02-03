@@ -6,7 +6,7 @@
  */
 
 import React, { useCallback, useRef, useState } from 'react';
-import { useRequestResize } from '../lib/vstkit-ipc';
+import { useRequestResize } from '../lib/wavecraft-ipc';
 
 export function ResizeHandle(): React.JSX.Element {
   const requestResize = useRequestResize();

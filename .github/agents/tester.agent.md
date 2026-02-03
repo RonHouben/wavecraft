@@ -74,7 +74,7 @@ docker info > /dev/null 2>&1 && echo "✅ Docker is running" || echo "❌ Start 
 ```bash
 act -W .github/workflows/ci.yml \
     --container-architecture linux/amd64 \
-    -P ubuntu-latest=vstkit-ci:latest \
+    -P ubuntu-latest=wavecraft-ci:latest \
     --pull=false \
     --artifact-server-path /tmp/act-artifacts
 ```
@@ -94,7 +94,7 @@ This runs all Linux-compatible CI jobs:
 The `build-plugin` job requires macOS. Test manually:
 
 ```bash
-cd /Users/ronhouben/code/private/vstkit/engine
+cd /Users/ronhouben/code/private/wavecraft/engine
 cargo xtask bundle --release
 cargo xtask sign --adhoc
 cargo xtask sign --verify
@@ -147,7 +147,7 @@ Create the test plan at `docs/feature-specs/{feature}/test-plan.md`:
 ## Prerequisites
 
 - [ ] Docker is running: `docker info`
-- [ ] CI image exists: `docker images | grep vstkit-ci`
+- [ ] CI image exists: `docker images | grep wavecraft-ci`
 - [ ] Local CI passes (see Phase 2)
 
 ## Test Cases
@@ -218,14 +218,14 @@ docker info > /dev/null 2>&1 && echo "✅ Docker running" || echo "❌ Start Doc
 # Run full CI pipeline (recommended)
 act -W .github/workflows/ci.yml \
     --container-architecture linux/amd64 \
-    -P ubuntu-latest=vstkit-ci:latest \
+    -P ubuntu-latest=wavecraft-ci:latest \
     --pull=false \
     --artifact-server-path /tmp/act-artifacts
 
 # Run specific job (for debugging failures)
 act -j check-engine -W .github/workflows/ci.yml \
     --container-architecture linux/amd64 \
-    -P ubuntu-latest=vstkit-ci:latest \
+    -P ubuntu-latest=wavecraft-ci:latest \
     --pull=false \
     --artifact-server-path /tmp/act-artifacts
 ```

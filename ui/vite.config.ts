@@ -33,8 +33,8 @@ export default defineConfig({
   base: './', // Use relative paths for embedded assets
   resolve: {
     alias: {
-      '@vstkit/ipc': path.resolve(__dirname, './src/lib/vstkit-ipc'),
-      '@vstkit/ipc/meters': path.resolve(__dirname, './src/lib/vstkit-ipc/meters'),
+      '@wavecraft/ipc': path.resolve(__dirname, './src/lib/wavecraft-ipc'),
+      '@wavecraft/ipc/meters': path.resolve(__dirname, './src/lib/wavecraft-ipc/meters'),
     },
   },
   define: {

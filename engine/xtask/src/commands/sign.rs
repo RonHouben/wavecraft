@@ -50,9 +50,9 @@ pub fn run(config: SigningConfig) -> Result<()> {
 
     // Sign each bundle type
     let bundles = [
-        ("vstkit.vst3", "VST3"),
-        ("vstkit.clap", "CLAP"),
-        ("vstkit.component", "AU"),
+        ("wavecraft.vst3", "VST3"),
+        ("wavecraft.clap", "CLAP"),
+        ("wavecraft.component", "AU"),
     ];
 
     for (bundle_name, format) in bundles {
@@ -154,7 +154,7 @@ pub fn run_adhoc() -> Result<()> {
         .join("signing")
         .join("entitlements.plist");
 
-    let bundles = ["vstkit.vst3", "vstkit.clap", "vstkit.component"];
+    let bundles = ["wavecraft.vst3", "wavecraft.clap", "wavecraft.component"];
 
     for bundle_name in bundles {
         let bundle_path = bundled_dir.join(bundle_name);
@@ -194,9 +194,9 @@ pub fn run_verify(verbose: bool) -> Result<()> {
     let bundled_dir = paths::bundled_dir()?;
 
     let bundles = [
-        ("vstkit.vst3", "VST3"),
-        ("vstkit.clap", "CLAP"),
-        ("vstkit.component", "AU"),
+        ("wavecraft.vst3", "VST3"),
+        ("wavecraft.clap", "CLAP"),
+        ("wavecraft.component", "AU"),
     ];
 
     print_status("Verifying bundle signatures...");

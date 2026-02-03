@@ -27,7 +27,7 @@ impl Default for LintTargets {
 
 /// Run the lint command.
 pub fn run(targets: LintTargets, verbose: bool) -> Result<()> {
-    print_header("VstKit Linting");
+    print_header("Wavecraft Linting");
 
     let mut ui_result = Ok(());
     let mut engine_result = Ok(());

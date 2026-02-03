@@ -3,7 +3,7 @@
  */
 
 import React, { useState } from 'react';
-import { useRequestResize } from '../lib/vstkit-ipc';
+import { useRequestResize } from '../lib/wavecraft-ipc';
 
 const PRESET_SIZES = [
   { name: 'Small', width: 600, height: 400 },

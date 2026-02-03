@@ -6,7 +6,7 @@
 use atomic_float::AtomicF32;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use vstkit_bridge::{BridgeError, ParameterHost, ParameterInfo, ParameterType};
+use wavecraft_bridge::{BridgeError, ParameterHost, ParameterInfo, ParameterType};
 
 /// Application state with simulated plugin parameters
 #[derive(Clone)]
@@ -103,7 +103,7 @@ impl ParameterHost for AppState {
         ]
     }
 
-    fn get_meter_frame(&self) -> Option<vstkit_protocol::MeterFrame> {
+    fn get_meter_frame(&self) -> Option<wavecraft_protocol::MeterFrame> {
         // Desktop POC doesn't have metering yet
         None
     }

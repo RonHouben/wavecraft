@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { useConnectionStatus } from '@vstkit/ipc';
+import { useConnectionStatus } from '@wavecraft/ipc';
 
 export function ConnectionStatus(): React.JSX.Element {
   const { connected, transport } = useConnectionStatus();

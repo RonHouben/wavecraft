@@ -240,13 +240,13 @@ jobs:
       - name: Upload VST3
         uses: actions/upload-artifact@v4
         with:
-          name: vstkit-vst3-adhoc-signed
-          path: engine/target/bundled/vstkit.vst3
+          name: wavecraft-vst3-adhoc-signed
+          path: engine/target/bundled/wavecraft.vst3
           retention-days: 30
 
       - name: Upload CLAP
         uses: actions/upload-artifact@v4
         with:
-          name: vstkit-clap-adhoc-signed
-          path: engine/target/bundled/vstkit.clap
+          name: wavecraft-clap-adhoc-signed
+          path: engine/target/bundled/wavecraft.clap
           retention-days: 30

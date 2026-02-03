@@ -12,7 +12,7 @@ import type {
   UseParameterResult,
   UseAllParametersResult,
   ConnectionStatus,
-} from '@vstkit/ipc';
+} from '@wavecraft/ipc';
 
 // Re-export types
 export type {
@@ -22,7 +22,7 @@ export type {
   UseParameterResult,
   UseAllParametersResult,
   ConnectionStatus,
-} from '@vstkit/ipc';
+} from '@wavecraft/ipc';
 
 // ============================================================================
 // Mock State

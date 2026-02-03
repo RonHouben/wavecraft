@@ -1,8 +1,8 @@
-# VstKit Desktop POC
+# Wavecraft Desktop POC
 
 **Status:** ✅ Complete
 
-A standalone desktop application demonstrating WebView ↔ Rust IPC communication for the VstKit plugin framework.
+A standalone desktop application demonstrating WebView ↔ Rust IPC communication for the Wavecraft plugin framework.
 
 ## Features
 
@@ -21,7 +21,7 @@ A standalone desktop application demonstrating WebView ↔ Rust IPC communicatio
 │   - ParameterSlider components      │
 │   - ParameterToggle components      │
 │   - LatencyMonitor                  │
-│   - @vstkit/ipc library             │
+│   - @wavecraft/ipc library             │
 └──────────────┬──────────────────────┘
                │ JSON-RPC IPC
 ┌──────────────▼──────────────────────┐
@@ -114,7 +114,7 @@ cargo test -p desktop --test latency_bench -- --nocapture
 ## Project Structure
 
 ```
-vstkit/
+wavecraft/
 ├── engine/
 │   └── crates/
 │       ├── protocol/       # Shared IPC types
@@ -131,7 +131,7 @@ vstkit/
 │               └── latency_bench.rs
 └── ui/
     ├── src/
-    │   ├── lib/vstkit-ipc/     # IPC library
+    │   ├── lib/wavecraft-ipc/     # IPC library
     │   │   ├── types.ts
     │   │   ├── IpcBridge.ts
     │   │   ├── ParameterClient.ts
@@ -194,11 +194,11 @@ cd ui
 npm run dev
 ```
 
-Then update `webview.rs` to load from `http://localhost:5173` instead of `vstkit://localhost/index.html`.
+Then update `webview.rs` to load from `http://localhost:5173` instead of `wavecraft://localhost/index.html`.
 
 ### Type Safety
 
-TypeScript types in `ui/src/lib/vstkit-ipc/types.ts` **must** stay in sync with Rust types in `engine/crates/protocol/src/ipc.rs`.
+TypeScript types in `ui/src/lib/wavecraft-ipc/types.ts` **must** stay in sync with Rust types in `engine/crates/protocol/src/ipc.rs`.
 
 ## Next Steps
 

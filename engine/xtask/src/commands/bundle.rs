@@ -118,7 +118,7 @@ pub fn run_with_features(
     }
 
     // Verify bundles were created
-    // Note: nih_plug_xtask creates bundles using the package name (vstkit-core)
+    // Note: nih_plug_xtask creates bundles using the package name (wavecraft-core)
     let bundled_dir = paths::bundled_dir()?;
     let vst3_bundle = bundled_dir.join(format!("{}.vst3", package_name));
     let clap_bundle = bundled_dir.join(format!("{}.clap", package_name));

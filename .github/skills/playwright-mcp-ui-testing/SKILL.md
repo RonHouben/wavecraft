@@ -1,11 +1,11 @@
 ---
 name: playwright-mcp-ui-testing
-description: Visual UI testing using Playwright MCP to interact with the VstKit web UI. Use this skill when testing UI components, verifying visual appearance, taking screenshots, or validating UI behavior that requires browser interaction. Requires the dev server running (cargo xtask dev).
+description: Visual UI testing using Playwright MCP to interact with the Wavecraft web UI. Use this skill when testing UI components, verifying visual appearance, taking screenshots, or validating UI behavior that requires browser interaction. Requires the dev server running (cargo xtask dev).
 ---
 
 # Skill: Visual UI Testing with Playwright MCP
 
-Use Playwright MCP tools to visually test the VstKit UI during manual testing sessions.
+Use Playwright MCP tools to visually test the Wavecraft UI during manual testing sessions.
 
 ## Prerequisites
 
@@ -19,7 +19,7 @@ The agent can start the dev server automatically without user intervention:
 ```bash
 # Agent runs this in background:
 run_in_terminal(
-  command="cd /Users/ronhouben/code/private/vstkit && cargo run --manifest-path engine/xtask/Cargo.toml --release -- dev",
+  command="cd /Users/ronhouben/code/private/wavecraft && cargo run --manifest-path engine/xtask/Cargo.toml --release -- dev",
   isBackground=true
 )
 # Returns terminal_id for later status checks
@@ -45,7 +45,7 @@ pkill -f "cargo xtask dev"
 2. Wait for startup:     sleep 5
 3. Navigate to UI:       mcp_playwright_browser_navigate → http://localhost:5173
                          (Playwright will fail with timeout if server isn't ready)
-4. Wait for load:        mcp_playwright_browser_wait_for → "VstKit" text
+4. Wait for load:        mcp_playwright_browser_wait_for → "Wavecraft" text
 5. Get page state:       mcp_playwright_browser_snapshot
 6. Take screenshot:      mcp_playwright_browser_take_screenshot
 7. Interact:             mcp_playwright_browser_click, _type, etc.
@@ -62,7 +62,7 @@ pkill -f "cargo xtask dev"
 | `browser_navigate` | Open URL | `url: "http://localhost:5173"` |
 | `browser_snapshot` | Get accessibility tree (preferred for interactions) | — |
 | `browser_take_screenshot` | Capture PNG | `type: "png"`, `filename: "meter.png"` |
-| `browser_wait_for` | Wait for text/time | `text: "VstKit"` or `time: 2` |
+| `browser_wait_for` | Wait for text/time | `text: "Wavecraft"` or `time: 2` |
 
 ### Interactions
 
@@ -82,7 +82,7 @@ pkill -f "cargo xtask dev"
 
 ## Test ID Selectors
 
-All VstKit components have `data-testid` attributes. Use with snapshot refs:
+All Wavecraft components have `data-testid` attributes. Use with snapshot refs:
 
 | Component | Test ID | Usage |
 |-----------|---------|-------|
@@ -101,7 +101,7 @@ All VstKit components have `data-testid` attributes. Use with snapshot refs:
 
 ```
 1. browser_navigate → http://localhost:5173
-2. browser_wait_for → text: "VstKit"
+2. browser_wait_for → text: "Wavecraft"
 3. browser_snapshot → verify app-root visible
 ```
 

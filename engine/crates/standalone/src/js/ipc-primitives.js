@@ -1,7 +1,7 @@
 // IPC Primitives - Injected by Rust into WebView
 //
 // This script provides the minimal low-level interface between the WebView
-// and Rust. It exposes a frozen `window.__VSTKIT_IPC__` object with methods
+// and Rust. It exposes a frozen `window.__WAVECRAFT_IPC__` object with methods
 // to send messages to Rust and receive messages from Rust.
 //
 // DO NOT MODIFY THIS FILE without understanding the security implications.
@@ -122,7 +122,7 @@
   Object.freeze(api);
 
   // Expose on window
-  window.__VSTKIT_IPC__ = api;
+  window.__WAVECRAFT_IPC__ = api;
 
   console.log('[VSTKIT_IPC] Primitives loaded');
 })();
