@@ -125,6 +125,12 @@ export declare interface IpcResponse {
  */
 export declare function isBrowserEnvironment(): boolean;
 
+export declare function isIpcError(obj: unknown): obj is IpcError;
+
+export declare function isIpcNotification(obj: unknown): obj is IpcNotification;
+
+export declare function isIpcResponse(obj: unknown): obj is IpcResponse;
+
 /**
  * Environment Detection
  *

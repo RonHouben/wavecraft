@@ -222,7 +222,6 @@ ui/
 │   │   │   ├── index.ts           # Main entry (re-exports all public API)
 │   │   │   ├── meters.ts          # /meters subpath (pure audio math)
 │   │   │   ├── hooks/             # React hooks (domain folder)
-│   │   │   │   ├── index.ts       # Barrel exports
 │   │   │   │   ├── useParameter.ts
 │   │   │   │   ├── useAllParameters.ts
 │   │   │   │   ├── useParameterGroups.ts
@@ -232,16 +231,13 @@ ui/
 │   │   │   │   ├── useRequestResize.ts
 │   │   │   │   └── useWindowResizeSync.ts
 │   │   │   ├── ipc/               # IPC classes (domain folder)
-│   │   │   │   ├── index.ts       # Barrel exports
 │   │   │   │   ├── IpcBridge.ts   # Low-level IPC bridge
 │   │   │   │   └── ParameterClient.ts # High-level parameter API
 │   │   │   ├── types/             # TypeScript types (domain folder)
-│   │   │   │   ├── index.ts       # Barrel exports
 │   │   │   │   ├── ipc.ts         # IPC protocol types
 │   │   │   │   ├── parameters.ts  # Parameter types
 │   │   │   │   └── metering.ts    # Meter types
 │   │   │   ├── utils/             # Utilities (domain folder)
-│   │   │   │   ├── index.ts       # Barrel exports
 │   │   │   │   ├── environment.ts # Runtime detection
 │   │   │   │   └── audio-math.ts  # linearToDb, dbToLinear
 │   │   │   ├── transports/        # Transport implementations
@@ -268,10 +264,41 @@ ui/
 ```
 
 **Domain folder conventions:**
-- Each domain folder has an `index.ts` barrel file for clean imports
+- **No internal barrel files** — Domain folders do not have `index.ts` barrels
+- The main `src/index.ts` imports directly from each file (e.g., `./hooks/useParameter`)
 - One file per hook/class/type domain
-- Internal imports use relative paths within the package
 - External imports use `@wavecraft/core` or `@wavecraft/components`
+
+### Barrel Files
+
+**Rule:** Use barrel files only for published package entry points, not for internal folders.
+
+**Rationale:**
+- Internal barrels can defeat tree-shaking in application code
+- They can mask circular dependencies
+- They slow down TypeScript IDE performance
+- Published packages are pre-bundled, so the main entry barrel is acceptable
+
+**Do:**
+```typescript
+// ✅ Main entry point (src/index.ts) - this IS the public API
+export { useParameter } from './hooks/useParameter';
+export { IpcBridge } from './ipc/IpcBridge';
+export type { ParameterInfo } from './types/parameters';
+
+// ✅ Internal imports use direct paths
+import { IpcBridge } from './ipc/IpcBridge';
+import type { MeterFrame } from './types/metering';
+```
+
+**Don't:**
+```typescript
+// ❌ Internal barrel file (hooks/index.ts)
+export { useParameter } from './useParameter';
+export { useAllParameters } from './useAllParameters';
+// ...then importing from barrel
+import { useParameter } from './hooks';  // Avoid this pattern
+```
 
 ### Import Aliases
 

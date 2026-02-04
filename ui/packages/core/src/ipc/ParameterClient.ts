@@ -11,13 +11,13 @@ import type {
   SetParameterResult,
   GetAllParametersResult,
   ParameterChangedNotification,
-} from '../types';
+} from '../types/parameters';
 import {
   METHOD_GET_PARAMETER,
   METHOD_SET_PARAMETER,
   METHOD_GET_ALL_PARAMETERS,
   NOTIFICATION_PARAMETER_CHANGED,
-} from '../types';
+} from '../types/parameters';
 
 type ParameterChangeCallback = (id: string, value: number) => void;
 

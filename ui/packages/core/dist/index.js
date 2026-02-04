@@ -1,5 +1,5 @@
-import { dbToLinear, linearToDb } from "./meters.js";
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { dbToLinear, linearToDb } from "./meters.js";
 function isWebViewEnvironment() {
   return globalThis.__WAVECRAFT_IPC__ !== void 0;
 }
@@ -18,6 +18,9 @@ function isIpcResponse(obj) {
 }
 function isIpcNotification(obj) {
   return typeof obj === "object" && obj !== null && "jsonrpc" in obj && "method" in obj && !("id" in obj);
+}
+function isIpcError(obj) {
+  return typeof obj === "object" && obj !== null && "code" in obj && "message" in obj;
 }
 const METHOD_GET_PARAMETER = "getParameter";
 const METHOD_SET_PARAMETER = "setParameter";
@@ -806,6 +809,9 @@ export {
   dbToLinear,
   getMeterFrame,
   isBrowserEnvironment,
+  isIpcError,
+  isIpcNotification,
+  isIpcResponse,
   isWebViewEnvironment,
   linearToDb,
   logger,

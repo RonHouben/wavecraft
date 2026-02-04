@@ -9,7 +9,7 @@
 import type { Transport } from './Transport';
 import { NativeTransport } from './NativeTransport';
 import { WebSocketTransport } from './WebSocketTransport';
-import { isWebViewEnvironment } from '../utils';
+import { isWebViewEnvironment } from '../utils/environment';
 
 // Export transport types
 export type { Transport, NotificationCallback } from './Transport';

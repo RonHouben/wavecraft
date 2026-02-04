@@ -6,8 +6,8 @@
  */
 
 import type { Transport, NotificationCallback } from './Transport';
-import type { IpcResponse, IpcNotification, RequestId } from '../types';
-import { isIpcResponse, isIpcNotification } from '../types';
+import type { IpcResponse, IpcNotification, RequestId } from '../types/ipc';
+import { isIpcResponse, isIpcNotification } from '../types/ipc';
 import { logger } from '../logger/Logger';
 
 interface PendingRequest {

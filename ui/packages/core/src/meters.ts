@@ -8,7 +8,7 @@
  */
 
 // Re-export types from canonical location
-export type { MeterFrame, GetMeterFrameResult } from './types';
+export type { MeterFrame, GetMeterFrameResult } from './types/metering';
 
 // Re-export audio math utilities
-export { linearToDb, dbToLinear } from './utils';
+export { linearToDb, dbToLinear } from './utils/audio-math';

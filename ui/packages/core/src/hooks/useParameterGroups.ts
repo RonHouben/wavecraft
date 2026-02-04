@@ -7,7 +7,7 @@
  */
 
 import { useMemo } from 'react';
-import type { ParameterInfo } from '../types';
+import type { ParameterInfo } from '../types/parameters';
 
 export interface ParameterGroup {
   name: string;

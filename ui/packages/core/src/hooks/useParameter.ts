@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { ParameterClient } from '../ipc/ParameterClient';
-import type { ParameterInfo } from '../types';
+import type { ParameterInfo } from '../types/parameters';
 
 export interface UseParameterResult {
   param: ParameterInfo | null;

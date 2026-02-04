@@ -5,7 +5,7 @@
  */
 
 import type { Transport, NotificationCallback } from './Transport';
-import type { IpcResponse } from '../types';
+import type { IpcResponse } from '../types/ipc';
 
 export class MockTransport implements Transport {
   private connected = true;
