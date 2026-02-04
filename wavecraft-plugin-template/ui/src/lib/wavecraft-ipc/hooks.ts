@@ -11,6 +11,7 @@ import { ParameterClient } from './ParameterClient';
 import { IpcBridge } from './IpcBridge';
 import type { ParameterInfo } from './types';
 import { isBrowserEnvironment } from './environment';
+import { logger } from './logger/Logger';
 
 // Detect environment once at module load time.
 // Must be evaluated at module scope (not inside hooks) to comply with React's
