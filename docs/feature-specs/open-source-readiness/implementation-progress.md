@@ -16,9 +16,9 @@
 | Phase 1: Template Conversion | ✅ Complete | 8/8 |
 | Phase 2: CLI Implementation | ✅ Complete | 10/10 |
 | Phase 3: Documentation Fixes | ✅ Complete | 7/7 |
-| Phase 4: CI & Release | ⏳ Not Started | 0/6 |
+| Phase 4: CI & Release | 🚧 In Progress | 3/6 |
 
-**Overall Progress:** 25/31 tasks (81%)
+**Overall Progress:** 28/31 tasks (90%)
 
 ---
 
@@ -73,10 +73,10 @@
 | # | Task | Status | Notes |
 |---|------|--------|-------|
 | 4.1 | Create template validation workflow | ✅ | template-validation.yml validates generated projects compile |
-| 4.2 | Create release workflow | ⏳ | release.yml |
-| 4.3 | Version bump to 0.7.0 | ⏳ | Cargo.toml |
-| 4.4 | Create git tag | ⏳ | v0.7.0 |
-| 4.5 | Publish CLI to crates.io | ⏳ | cargo publish |
+| 4.2 | Create release workflow | ✅ | cli-release.yml for crates.io publishing |
+| 4.3 | Version bump to 0.7.0 | ✅ | engine/Cargo.toml + cli/Cargo.toml (CLI already at 0.7.0) |
+| 4.4 | Create git tag | ⏳ | cli-v0.7.0 (after PR merge) |
+| 4.5 | Publish CLI to crates.io | ⏳ | Automated via workflow on tag push |
 | 4.6 | End-to-end testing | ⏳ | Full flow verification |
 
 ---
@@ -134,5 +134,21 @@ The CLI tool is now fully functional and can generate new plugin projects. Teste
 
 **Next Action:** Start Phase 3 — Documentation fixes
 - Task 3.1: Create scripts/check-links.sh to identify broken links (excluding _archive/)
+
+### Day 1 (Feb 4, 2026) - Continued
+
+- ✅ **Phase 4 partial** — CI & Release workflows
+  - Created `.github/workflows/cli-release.yml` for crates.io publishing
+  - Workflow triggered by `cli-v*` tags (e.g., `cli-v0.7.0`)
+  - Includes version verification step to ensure tag matches Cargo.toml
+  - Auto-publishes to crates.io with `CARGO_REGISTRY_TOKEN` secret
+  - Creates GitHub release with installation instructions
+  - Bumped engine version from 0.6.2 → 0.7.0 in `engine/Cargo.toml`
+  - CLI version already at 0.7.0 from earlier work
+
+**Remaining Phase 4 tasks:**
+- 4.4: Create git tag `cli-v0.7.0` (after PR merge to main)
+- 4.5: Publish CLI to crates.io (automated via workflow)
+- 4.6: End-to-end testing (validate full release flow)
 
 ---
