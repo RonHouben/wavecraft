@@ -1,4 +1,13 @@
-name: CLI Release
+# Manual Override: CLI Release
+#
+# This workflow is for manual/emergency releases only.
+# Normal releases happen automatically via continuous-deploy.yml on merge to main.
+#
+# Usage:
+#   git tag cli-v0.8.0
+#   git push origin cli-v0.8.0
+#
+name: CLI Release (Manual)
 
 on:
   push:
