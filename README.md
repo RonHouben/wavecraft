@@ -92,7 +92,7 @@ wavecraft/
 │   ├── src/                      # Dev app for testing packages
 │   └── dist/                     # Build output (embedded in plugin)
 │
-├── wavecraft-plugin-template/    # Template project for SDK users
+├── plugin-template/              # Template project for SDK users
 ├── docs/                         # Architecture & specs
 └── packaging/                    # Platform installers
 ```

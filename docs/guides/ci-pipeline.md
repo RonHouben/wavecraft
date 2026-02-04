@@ -277,7 +277,7 @@ Wavecraft uses automatic continuous deployment for all publishable packages. Whe
 
 | Job | Path Filter | Publishes To |
 |-----|-------------|--------------|
-| `publish-cli` | `cli/**`, `wavecraft-plugin-template/**` | crates.io (`wavecraft`) |
+| `publish-cli` | `cli/**`, `plugin-template/**` | crates.io (`wavecraft`) |
 | `publish-engine` | `engine/crates/**` | crates.io (6 crates) |
 | `publish-npm-core` | `ui/packages/core/src/**` | npm (`@wavecraft/core`) |
 | `publish-npm-components` | `ui/packages/components/src/**` | npm (`@wavecraft/components`) |

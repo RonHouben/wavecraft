@@ -27,7 +27,7 @@ jobs:
             cli:
               - 'cli/src/**'
               - 'cli/Cargo.toml'
-              - 'wavecraft-plugin-template/**'
+              - 'plugin-template/**'
             engine:
               - 'engine/crates/wavecraft-core/**'
               - 'engine/crates/wavecraft-dsp/**'

@@ -106,7 +106,7 @@ mkdir -p /tmp/wavecraft-internal-test
 cd /tmp/wavecraft-internal-test
 
 # Clone template (simulating external developer)
-git clone /Users/ronhouben/code/private/wavecraft/wavecraft-plugin-template test-plugin
+git clone /Users/ronhouben/code/private/wavecraft/plugin-template test-plugin
 cd test-plugin
 ```
 
@@ -205,7 +205,7 @@ Verify all documentation is accurate, complete, and followable by newcomers.
 | CI Pipeline | `docs/guides/ci-pipeline.md` | Instructions work |
 | macOS Signing | `docs/guides/macos-signing.md` | Commands execute correctly |
 | Visual Testing | `docs/guides/visual-testing.md` | Playwright workflow works |
-| Template README | `wavecraft-plugin-template/README.md` | Instructions produce results |
+| Template README | `plugin-template/README.md` | Instructions produce results |
 
 ### Review Methodology
 
@@ -453,7 +453,7 @@ Specific checks for template isolation:
 # 1. Clone template to isolated location
 cd /tmp
 rm -rf wavecraft-internal-test
-git clone /path/to/wavecraft/wavecraft-plugin-template test-plugin
+git clone /path/to/wavecraft/plugin-template test-plugin
 
 # 2. Verify no path dependencies in Cargo.toml
 grep "path = " test-plugin/engine/Cargo.toml

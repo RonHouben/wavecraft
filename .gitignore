@@ -34,5 +34,5 @@
 *.vst3
 *.component
 
-# wavecraft-plugin-template specific
-/wavecraft-plugin-template/target
+# plugin-template specific
+/plugin-template/target

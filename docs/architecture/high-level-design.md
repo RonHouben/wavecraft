@@ -67,7 +67,7 @@ wavecraft/
 │   │   └── components/            # @wavecraft/components — React components
 │   ├── src/                       # Development app (internal testing)
 │   └── test/                      # Test utilities and mocks
-└── wavecraft-plugin-template/     # Plugin template (scaffolded by CLI)
+└── plugin-template/               # Plugin template (scaffolded by CLI)
 ```
 
 ### Monorepo Benefits
@@ -278,7 +278,7 @@ Wavecraft distributes its SDK through two channels:
 │                                                                                 │
 │   ┌───────────────────────┐       ┌───────────────────────┐                     │
 │   │  TEMPLATE REPOSITORY  │       │    GIT / CRATES.IO    │                     │
-│   │  wavecraft-plugin-template│       │                       │                     │
+│   │  plugin-template      │       │                       │                     │
 │   │                        │       │  wavecraft-core          │  ← Rust Framework  │
 │   │  ├── engine/          │──────▶│  wavecraft-bridge        │    (user depends)  │
 │   │  │   └── Cargo.toml   │       │  wavecraft-protocol      │                     │
