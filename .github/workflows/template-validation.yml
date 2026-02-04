@@ -84,10 +84,14 @@ jobs:
 
       - name: Override SDK dependencies with local workspace
         run: |
+          # NOTE: We use local path overrides instead of git dependencies because:
+          # 1. We're validating unreleased code (before git tags exist)
+          # 2. The wavecraft repo contains the template dir with placeholder variables
+          #    which causes Cargo to fail parsing when fetching git dependencies
+          # 
+          # Future: Move template to separate repo or use crates.io for released versions
           cat >> /tmp/test-plugin/Cargo.toml << 'EOF'
 
-          # CI Override: Use local wavecraft crates for testing before git tags exist
-          # This allows template validation during development, before creating release tags
           [patch.'https://github.com/RonHouben/wavecraft']
           wavecraft-core = { path = "${{ github.workspace }}/engine/crates/wavecraft-core" }
           wavecraft-protocol = { path = "${{ github.workspace }}/engine/crates/wavecraft-protocol" }
