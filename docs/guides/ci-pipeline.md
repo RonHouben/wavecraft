@@ -233,6 +233,60 @@ act -j check-engine -W .github/workflows/ci.yml \
 
 For detailed local testing instructions, see the [Run CI Pipeline Locally skill](/.github/skills/run-ci-pipeline-locally/SKILL.md).
 
+---
+
+## Template Validation
+
+The `template-validation.yml` workflow validates that the CLI generates working projects. This catches template bugs before release.
+
+### Why `--local-dev`?
+
+Generated plugins reference SDK crates via git tags (e.g., `tag = "v0.7.0"`). However, the tag doesn't exist until **after** the PR is merged. Cargo's `[patch]` mechanism cannot be used because it requires the original source to be resolvable first (chicken-and-egg problem).
+
+**Solution:** The `--local-dev` CLI flag generates path dependencies directly, bypassing git entirely.
+
+### Workflow
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     TEMPLATE VALIDATION                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  1. Build CLI from source                                                   │
+│        │                                                                    │
+│        ▼                                                                    │
+│  2. Generate test plugin with --local-dev                                   │
+│     wavecraft new test-plugin --local-dev ${{ github.workspace }}/engine/crates
+│        │                                                                    │
+│        ▼                                                                    │
+│  3. Verify structure (Cargo.toml, lib.rs, package.json, App.tsx)            │
+│        │                                                                    │
+│        ▼                                                                    │
+│  4. cargo check (validates SDK integration)                                 │
+│        │                                                                    │
+│        ▼                                                                    │
+│  5. cargo clippy + cargo fmt                                                │
+│        │                                                                    │
+│        ▼                                                                    │
+│  6. npm install + npm run build (validates UI integration)                  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Path Dependency Resolution
+
+With `--local-dev`, generated Cargo.toml uses absolute paths:
+
+```toml
+# Instead of:
+wavecraft-core = { git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.0" }
+
+# Generated:
+wavecraft-core = { path = "/home/runner/work/wavecraft/wavecraft/engine/crates/wavecraft-core" }
+```
+
+This allows validation against the current commit's SDK code, even before release tags exist.
+
 ## Related Documentation
 
 - [Coding Standards](../architecture/coding-standards.md) — Code conventions including linting rules

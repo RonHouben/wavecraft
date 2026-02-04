@@ -149,6 +149,9 @@ wavecraft new my-plugin --no-git
 | `--output, -o` | Output directory | `./<plugin-name>` |
 | `--sdk-version` | Wavecraft SDK version tag | `v0.7.0` |
 | `--no-git` | Skip git initialization | false |
+| `--local-dev` | Use local SDK path (for SDK development/CI) | — |
+
+> **Note:** `--local-dev` is for SDK developers and CI pipelines. It generates path dependencies (e.g., `path = "/path/to/engine/crates/wavecraft-core"`) instead of git tag dependencies. This allows validating against unreleased SDK code. Mutually exclusive with `--sdk-version`.
 
 ---
 
