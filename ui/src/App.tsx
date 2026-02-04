@@ -11,11 +11,7 @@ import {
   VersionBadge,
   ConnectionStatus,
 } from '@wavecraft/components';
-import {
-  useAllParameters,
-  useParameterGroups,
-  useWindowResizeSync,
-} from '@wavecraft/core';
+import { useAllParameters, useParameterGroups, useWindowResizeSync } from '@wavecraft/core';
 
 function App(): React.JSX.Element {
   // Fetch all parameters and organize into groups
