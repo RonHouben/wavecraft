@@ -866,21 +866,24 @@ src/lib/wavecraft-ipc/logger/Logger.test.ts:1:65 - error TS2307: Cannot find nam
 
 **Root Cause:** Many documentation files reference feature specs that were moved to `_archive/` folder, but links weren't updated
 
-**Affected Files:**
+**Affected Files (ACTIVE docs only — `_archive/` excluded):**
 - `docs/roadmap.md` - References old feature spec locations
 - `docs/architecture/coding-standards.md` - Incorrect relative paths
 - `docs/guides/visual-testing.md` - References archived specs
-- Archived PR summaries - Reference old doc locations
-- Many cross-references between documents
 
-**Impact:** Poor documentation navigation, broken cross-references reduce usability
+**Scope Exclusion:**
+- `docs/feature-specs/_archive/**` — Archived specs are historical records
+- Broken links in archived specs are acceptable (point-in-time snapshots)
+- Only user-facing/active documentation needs link fixes
+
+**Impact:** Poor documentation navigation for external developers
 
 **Suggested Fix:** 
-1. Update all references to archived specs to use `_archive/` path
-2. Fix relative path references in `coding-standards.md`
-3. Consider running link validation in CI to prevent future breakage
+1. Fix links in ACTIVE docs only (roadmap, architecture, guides)
+2. Add link validation to CI with `_archive/` excluded
+3. Do NOT waste effort fixing archived spec links
 
-**Status:** ⏳ Requires Coder fix (documentation quality issue, not blocking M12)
+**Status:** ⏳ Deferred to M12 (Open Source Readiness)
 
 ---
 

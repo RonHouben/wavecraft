@@ -53,7 +53,7 @@
 **So that** I don't have to manually copy and configure files
 
 ### Acceptance Criteria
-- [ ] `cargo install wavecraft-cli` installs the CLI tool
+- [ ] `cargo install wavecraft` installs the CLI tool
 - [ ] `wavecraft new my-plugin` creates a ready-to-build plugin project
 - [ ] CLI prompts for plugin name, vendor, and other metadata
 - [ ] Generated project compiles and bundles without errors
@@ -95,16 +95,22 @@
 
 ### Acceptance Criteria
 - [ ] SDK Getting Started guide works for external developers (not just monorepo users)
-- [ ] All documentation links work (no broken 404s)
+- [ ] All documentation links in active docs work (no broken 404s)
 - [ ] README clearly explains what Wavecraft is and who it's for
 - [ ] Prerequisites section lists everything needed (Rust, Node, macOS)
 - [ ] No references to "internal testing" or monorepo-specific workflows
 - [ ] Contact/community links provided (GitHub Discussions, Discord, etc.)
 
+### Scope Exclusion
+- **`docs/feature-specs/_archive/`** — Archived specs are historical records and will NOT be fixed
+- Broken links in archived specs are acceptable (they reference a point-in-time state)
+- Only user-facing documentation needs to be link-checked
+
 ### Technical Notes
-- Fix the 217 broken documentation links (Issue #5 from M12 testing)
+- Fix broken documentation links in ACTIVE docs only (excluding `_archive/`)
 - Review all docs from "new developer" perspective
 - Consider adding a troubleshooting section
+- Add link validation to CI (with `_archive/` excluded)
 
 ---
 
