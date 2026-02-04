@@ -7,7 +7,7 @@ use std::path::Path;
 
 use crate::template::variables::TemplateVariables;
 
-static TEMPLATE_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/template");
+static TEMPLATE_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/../wavecraft-plugin-template");
 
 /// Extracts the embedded template to the target directory and applies variable replacement.
 pub fn extract_template(target_dir: &Path, vars: &TemplateVariables) -> Result<()> {
@@ -21,25 +21,43 @@ fn extract_dir(dir: &Dir, target_dir: &Path, vars: &TemplateVariables) -> Result
     for entry in dir.entries() {
         match entry {
             include_dir::DirEntry::Dir(subdir) => {
-                // Use just the directory name, not the full path
+                // Skip build artifacts and dependencies
                 let dir_name = subdir.path().file_name()
                     .with_context(|| format!("Invalid directory path: {}", subdir.path().display()))?;
+                let dir_name_str = dir_name.to_string_lossy();
+                
+                if dir_name_str == "target" || dir_name_str == "node_modules" || dir_name_str == "dist" {
+                    continue; // Skip these directories
+                }
+                
                 let subdir_path = target_dir.join(dir_name);
                 extract_dir(subdir, &subdir_path, vars)?;
             }
             include_dir::DirEntry::File(file) => {
-                // Use just the file name, not the full path
+                // Skip binary files and lock files
                 let file_name = file.path().file_name()
                     .with_context(|| format!("Invalid file path: {}", file.path().display()))?;
+                let file_name_str = file_name.to_string_lossy();
+                
+                if file_name_str == "Cargo.lock" || file_name_str.ends_with(".dylib") 
+                    || file_name_str.ends_with(".so") || file_name_str.ends_with(".dll")
+                    || file_name_str == ".DS_Store" {
+                    continue; // Skip these files
+                }
+                
                 let file_path = target_dir.join(file_name);
-                let content = file.contents_utf8()
-                    .with_context(|| format!("File is not valid UTF-8: {}", file.path().display()))?;
                 
-                let processed = vars.apply(content)
-                    .with_context(|| format!("Failed to process template: {}", file.path().display()))?;
-                
-                fs::write(&file_path, processed)
-                    .with_context(|| format!("Failed to write file: {}", file_path.display()))?;
+                // Only process text files
+                if let Some(content) = file.contents_utf8() {
+                    let processed = vars.apply(content)
+                        .with_context(|| format!("Failed to process template: {}", file.path().display()))?;
+                    
+                    fs::write(&file_path, processed)
+                        .with_context(|| format!("Failed to write file: {}", file_path.display()))?;
+                } else {
+                    // Skip non-UTF8 files (likely binaries)
+                    continue;
+                }
             }
         }
     }
