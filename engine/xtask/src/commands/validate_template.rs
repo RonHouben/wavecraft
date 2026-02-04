@@ -8,7 +8,7 @@
 //!
 //! This is the local equivalent of the CI template-validation workflow.
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Instant;
@@ -18,6 +18,7 @@ use xtask::output::*;
 
 /// Template validation configuration.
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct ValidateTemplateConfig {
     /// Show verbose output
     pub verbose: bool,
@@ -25,14 +26,6 @@ pub struct ValidateTemplateConfig {
     pub keep: bool,
 }
 
-impl Default for ValidateTemplateConfig {
-    fn default() -> Self {
-        Self {
-            verbose: false,
-            keep: false,
-        }
-    }
-}
 
 /// Run the template validation command.
 pub fn run(config: ValidateTemplateConfig) -> Result<()> {
@@ -54,8 +47,7 @@ pub fn run(config: ValidateTemplateConfig) -> Result<()> {
         if config.verbose {
             println!("Cleaning up existing test project...");
         }
-        fs::remove_dir_all(&test_project_dir)
-            .context("Failed to remove existing test project")?;
+        fs::remove_dir_all(&test_project_dir).context("Failed to remove existing test project")?;
     }
 
     // Ensure cleanup happens even on error (unless --keep is specified)
@@ -107,7 +99,10 @@ pub fn run(config: ValidateTemplateConfig) -> Result<()> {
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     print_status("Summary");
     println!();
-    print_success_item(&format!("✅ All validation checks passed ({:.1}s)", duration.as_secs_f64()));
+    print_success_item(&format!(
+        "✅ All validation checks passed ({:.1}s)",
+        duration.as_secs_f64()
+    ));
     println!();
     print_success("Template validation successful!");
 
@@ -195,8 +190,8 @@ fn add_workspace_overrides(project_dir: &Path, workspace_root: &Path) -> Result<
     let engine_crates = workspace_root.join("engine/crates");
 
     // Read the current Cargo.toml
-    let mut content = fs::read_to_string(&engine_cargo_toml)
-        .context("Failed to read engine/Cargo.toml")?;
+    let mut content =
+        fs::read_to_string(&engine_cargo_toml).context("Failed to read engine/Cargo.toml")?;
 
     // Replace git dependencies with path dependencies
     // This is simpler and more reliable than using [patch] sections
@@ -221,8 +216,7 @@ fn add_workspace_overrides(project_dir: &Path, workspace_root: &Path) -> Result<
         &format!(r#"wavecraft-metering = {{ path = "{}/wavecraft-metering" }}"#, engine_crates.display())
     );
 
-    fs::write(&engine_cargo_toml, content)
-        .context("Failed to write engine/Cargo.toml")?;
+    fs::write(&engine_cargo_toml, content).context("Failed to write engine/Cargo.toml")?;
 
     Ok(())
 }
@@ -235,7 +229,11 @@ fn validate_engine(project_dir: &Path, verbose: bool) -> Result<()> {
     if verbose {
         println!("Running cargo check...");
     }
-    run_command("cargo", &["check", "--manifest-path", "engine/Cargo.toml"], project_dir)?;
+    run_command(
+        "cargo",
+        &["check", "--manifest-path", "engine/Cargo.toml"],
+        project_dir,
+    )?;
 
     // Clippy
     if verbose {
@@ -243,7 +241,14 @@ fn validate_engine(project_dir: &Path, verbose: bool) -> Result<()> {
     }
     run_command(
         "cargo",
-        &["clippy", "--workspace", "--all-targets", "--", "-D", "warnings"],
+        &[
+            "clippy",
+            "--workspace",
+            "--all-targets",
+            "--",
+            "-D",
+            "warnings",
+        ],
         &engine_dir,
     )?;
 
@@ -336,7 +341,11 @@ struct CleanupGuard {
 
 impl CleanupGuard {
     fn new(path: PathBuf, keep: bool, verbose: bool) -> Self {
-        Self { path, keep, verbose }
+        Self {
+            path,
+            keep,
+            verbose,
+        }
     }
 }
 
