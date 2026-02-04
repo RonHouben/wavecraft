@@ -34,6 +34,15 @@ Communication between UI and audio uses lock-free parameter systems and ring buf
 - Logic Pro (macOS, AU) — Secondary, nice-to-have
 - Other DAWs — Deprioritized
 
+## npm Packages
+
+Wavecraft's UI code is published as two npm packages under the `@wavecraft` organization:
+
+- **[@wavecraft/core](https://www.npmjs.com/package/@wavecraft/core)** — IPC bridge, React hooks, and utilities
+- **[@wavecraft/components](https://www.npmjs.com/package/@wavecraft/components)** — Pre-built React components (Meter, ParameterSlider, etc.)
+
+These packages allow plugin developers to build UIs without copying source code.
+
 ## Project Structure
 
 ```
@@ -49,7 +58,10 @@ wavecraft/
 │       └── standalone/           # Standalone dev server (WebSocket, WebView)
 │
 ├── ui/                           # React SPA (Vite + TypeScript)
-│   ├── src/
+│   ├── packages/
+│   │   ├── core/                 # @wavecraft/core package source
+│   │   └── components/           # @wavecraft/components package source
+│   ├── src/                      # Dev app for testing packages
 │   └── dist/                     # Build output (embedded in plugin)
 │
 ├── wavecraft-plugin-template/    # Template project for SDK users

@@ -129,16 +129,17 @@ my-plugin/
 │       └── lib.rs           # Plugin entry point (using declarative DSL)
 │
 ├── ui/                      # React UI (TypeScript + Tailwind)
-│   ├── package.json
+│   ├── package.json         # Dependencies: @wavecraft/core + @wavecraft/components
 │   └── src/
-│       ├── App.tsx          # Your UI layout
-│       └── components/      # Custom components
+│       └── App.tsx          # Your UI layout
 │
 └── xtask/                   # Build automation
     └── src/main.rs          # xtask commands (bundle, dev, install, etc.)
 ```
 
-**Note:** The generated project references Wavecraft SDK crates via git tags (e.g., `git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.0"`). This ensures version locking until official crates.io releases are available.
+**Note:** The generated project references:
+- **Rust crates** via git tags (e.g., `git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.0"`)
+- **npm packages** from the `@wavecraft` organization (`@wavecraft/core`, `@wavecraft/components`)
 
 ---
 
@@ -257,19 +258,30 @@ The UI is a React application in the `ui/` folder. Wavecraft provides ready-to-u
 
 ### Built-in Components
 
+Wavecraft provides two npm packages:
+
+- **`@wavecraft/core`** — IPC bridge, hooks, and utilities
+- **`@wavecraft/components`** — Pre-built React components
+
 ```tsx
-import { Meter, ParameterSlider } from '@wavecraft/ui';
+import { Meter, ParameterSlider, ParameterGroup } from '@wavecraft/components';
+import { useAllParameters, useParameterGroups } from '@wavecraft/core';
 
 function App() {
+  const { params, isLoading } = useAllParameters();
+  const groups = useParameterGroups(params);
+  
   return (
     <div className="plugin-ui">
       {/* Stereo level meter */}
       <Meter />
       
-      {/* Parameter controls */}
-      <ParameterSlider id="gain" />
-      <ParameterSlider id="mix" />
-      <ParameterSlider id="frequency" />
+      {/* Automatic parameter discovery */}
+      {groups.length > 0 ? (
+        groups.map(group => <ParameterGroup key={group.name} group={group} />)
+      ) : (
+        params?.map(p => <ParameterSlider key={p.id} id={p.id} />)
+      )}
     </div>
   );
 }
@@ -278,7 +290,7 @@ function App() {
 ### Custom Components with Hooks
 
 ```tsx
-import { useParameter } from '@wavecraft/ipc';
+import { useParameter } from '@wavecraft/core';
 
 function MyKnob({ id }: { id: string }) {
   const { value, setValue, info } = useParameter(id);
@@ -301,9 +313,13 @@ function MyKnob({ id }: { id: string }) {
 
 ### Available Hooks
 
+All hooks are exported from `@wavecraft/core`:
+
 | Hook | Purpose |
 |------|---------|
 | `useParameter(id)` | Read/write a single parameter |
+| `useAllParameters()` | Fetch all plugin parameters (automatic discovery) |
+| `useParameterGroups(params)` | Group parameters by their `group` attribute |
 | `useMeterFrame()` | Access real-time meter data |
 | `useConnectionStatus()` | WebSocket connection status (dev mode) |
 
