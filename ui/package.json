@@ -1,11 +1,15 @@
 {
-  "name": "@wavecraft/ui",
+  "name": "wavecraft-ui",
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "npm run build --workspaces && tsc && vite build",
+    "build:lib": "npm run build:lib --workspaces",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --max-warnings 0",
@@ -48,6 +52,7 @@
     "tailwindcss": "3.4.19",
     "typescript": "^5.7.3",
     "vite": "^6.0.5",
+    "vite-plugin-dts": "4.5.4",
     "vitest": "4.0.18"
   }
 }

@@ -3,13 +3,15 @@
  */
 
 import React, { useEffect } from 'react';
-import { ParameterGroup } from './components/ParameterGroup';
-import { LatencyMonitor } from './components/LatencyMonitor';
-import { Meter } from './components/Meter';
-import { ResizeHandle } from './components/ResizeHandle';
-import { VersionBadge } from './components/VersionBadge';
-import { ConnectionStatus } from './components/ConnectionStatus';
-import { requestResize, useAllParameters, useParameterGroups, logger } from './lib/wavecraft-ipc';
+import {
+  ParameterGroup,
+  LatencyMonitor,
+  Meter,
+  ResizeHandle,
+  VersionBadge,
+  ConnectionStatus,
+} from '@wavecraft/components';
+import { requestResize, useAllParameters, useParameterGroups, logger } from '@wavecraft/core';
 
 function App(): React.JSX.Element {
   // Fetch all parameters and organize into groups

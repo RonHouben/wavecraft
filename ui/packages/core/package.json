@@ -1,0 +1,53 @@
+{
+  "name": "@wavecraft/core",
+  "version": "0.7.0",
+  "description": "Core SDK for Wavecraft audio plugins — IPC bridge, hooks, and utilities",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./meters": {
+      "import": "./dist/meters.js",
+      "types": "./dist/meters.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "keywords": [
+    "wavecraft",
+    "vst",
+    "clap",
+    "audio",
+    "plugin",
+    "react",
+    "ipc",
+    "sdk"
+  ],
+  "author": "Ron Houben",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RonHouben/wavecraft.git",
+    "directory": "ui/packages/core"
+  },
+  "homepage": "https://github.com/RonHouben/wavecraft",
+  "bugs": {
+    "url": "https://github.com/RonHouben/wavecraft/issues"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0"
+  },
+  "scripts": {
+    "build": "npm run build:lib",
+    "build:lib": "vite build --config vite.lib.config.ts",
+    "prepublishOnly": "npm run build:lib"
+  }
+}
