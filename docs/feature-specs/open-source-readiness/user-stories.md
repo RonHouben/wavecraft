@@ -193,6 +193,33 @@
 
 ---
 
+## User Story 9: UI Package Publishing
+
+**As a** plugin developer building a custom UI  
+**I want** to import Wavecraft UI components and hooks from npm  
+**So that** I can use battle-tested components without copying code
+
+### Acceptance Criteria
+- [ ] `@wavecraft/ui` package published to npm (or `wavecraft-ui` if org scope unavailable)
+- [ ] Package exports core components: `Meter`, `ParameterSlider`, `VersionBadge`
+- [ ] Package exports hooks: `useParameter`, `useMeterFrame`
+- [ ] Package exports IPC utilities: `IpcBridge`, `ParameterClient`, `logger`
+- [ ] TypeScript type definitions included in package
+- [ ] Template project uses npm package instead of bundled copy
+- [ ] Package version matches SDK version (v0.7.0)
+- [ ] README included in npm package with usage examples
+
+### Technical Notes
+- **PO Decision:** Start with single `@wavecraft/ui` package — Architect to validate during low-level design
+- Package scope: `@wavecraft/ui` preferred (requires npm org), fallback to `wavecraft-ui`
+- Future consideration: Split into `@wavecraft/ipc` + `@wavecraft/components` if bundle size becomes an issue
+- Start with manual publishing; automated release workflow can follow
+- Ensure peer dependencies are correct (React 18+)
+- Package should work with Vite, webpack, and other bundlers
+- Consider tree-shaking support (proper ESM exports)
+
+---
+
 ## Success Criteria
 
 1. **External developer can build a plugin from scratch**
@@ -213,6 +240,11 @@
    - Single command project creation
    - Helpful error messages
    - Clear next-step guidance
+
+5. **UI components are importable from npm**
+   - `npm install @wavecraft/ui` works
+   - Components and hooks import cleanly
+   - TypeScript support out of the box
 
 ---
 
@@ -243,5 +275,6 @@
 | Documentation fixes | 1-2 days |
 | CI template validation | 1 day |
 | Repository cleanup | 0.5 days |
+| npm package publishing | 1-2 days |
 | Testing & QA | 1-2 days |
-| **Total** | **1-2 weeks** |
+| **Total** | **1.5-2.5 weeks** |
