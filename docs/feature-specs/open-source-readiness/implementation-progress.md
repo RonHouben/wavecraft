@@ -85,7 +85,7 @@
 
 | Issue | Severity | Status | Notes |
 |-------|----------|--------|-------|
-| Template validation uses local paths | Low | 📝 Known | CI uses path overrides instead of git deps due to template containing unparseable Cargo.toml files with `{{placeholders}}`. Future: Move template to separate repo or publish SDK crates to crates.io |
+| Template validation uses local paths | Low | 📝 Known | CI uses path overrides instead of git deps due to monorepo containing template with unparseable `{{placeholders}}`. Intentional: monorepo structure maintained, end-users use git tags/crates.io |
 
 ---
 

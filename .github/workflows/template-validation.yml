@@ -86,10 +86,11 @@ jobs:
         run: |
           # NOTE: We use local path overrides instead of git dependencies because:
           # 1. We're validating unreleased code (before git tags exist)
-          # 2. The wavecraft repo contains the template dir with placeholder variables
-          #    which causes Cargo to fail parsing when fetching git dependencies
+          # 2. The wavecraft monorepo contains the template dir with placeholder variables
+          #    ({{plugin_name}}) which causes Cargo to fail parsing when fetching git deps
           # 
-          # Future: Move template to separate repo or use crates.io for released versions
+          # This is acceptable: end-users will use released git tags or crates.io packages.
+          # The monorepo structure is intentional and will be maintained.
           cat >> /tmp/test-plugin/Cargo.toml << 'EOF'
 
           [patch.'https://github.com/RonHouben/wavecraft']
