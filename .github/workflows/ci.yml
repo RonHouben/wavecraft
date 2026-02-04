@@ -12,6 +12,19 @@ concurrency:
 
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════
+  # Documentation
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  check-docs:
+    name: Check Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check markdown links
+        run: ./scripts/check-links.sh
+
+  # ═══════════════════════════════════════════════════════════════════════════
   # UI Pipeline (runs independently)
   # ═══════════════════════════════════════════════════════════════════════════
 
