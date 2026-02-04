@@ -3,6 +3,7 @@
 /engine/crates/wavecraft-core/tests/trybuild/minimal/target/
 /engine/crates/wavecraft-core/tests/trybuild/full/target/
 /engine/crates/wavecraft-core/tests/trybuild/full/target/
+/cli/target/
 
 
 /target/
