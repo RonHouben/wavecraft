@@ -12,6 +12,15 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 
 ---
 
+## Developer Experience
+
+| Item | Notes |
+|------|-------|
+| Extend `cargo xtask clean` to cover full workspace | Currently only cleans `engine/target`. Should also clean `cli/target`, `plugin-template/target`, and `ui/node_modules`+`ui/dist`. Single command to reclaim all build artifacts. |
+| ~~Rename `wavecraft-plugin-template` → `plugin-template`~~ | ✅ **Promoted to Milestone 12** — Must happen before crates.io publish. |
+
+---
+
 ## SDK Publication (Future)
 
 | Item | Notes |

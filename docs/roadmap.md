@@ -541,6 +541,7 @@ Wavecraft is feature-complete internally but cannot be used by external develope
 | Task | Status | Notes |
 |------|--------|-------|
 | **Template Independence** | | |
+| Rename `wavecraft-plugin-template` → `plugin-template` | ⏳ | Shorter name, must happen before crates.io publish |
 | Replace path deps with git deps | ⏳ | Use `git = "https://github.com/RonHouben/wavecraft"` |
 | Version-locked dependencies | ⏳ | Use git tags (e.g., `tag = "v0.7.0"`) |
 | Template builds standalone | ⏳ | No monorepo required |
