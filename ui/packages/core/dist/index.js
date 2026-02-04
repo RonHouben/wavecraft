@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
 import { dbToLinear, linearToDb } from "./meters.js";
+import { useState, useEffect, useCallback, useMemo } from "react";
 function isWebViewEnvironment() {
   return globalThis.__WAVECRAFT_IPC__ !== void 0;
 }
@@ -13,16 +13,16 @@ const ERROR_INVALID_PARAMS = -32602;
 const ERROR_INTERNAL = -32603;
 const ERROR_PARAM_NOT_FOUND = -32e3;
 const ERROR_PARAM_OUT_OF_RANGE = -32001;
-const METHOD_GET_PARAMETER = "getParameter";
-const METHOD_SET_PARAMETER = "setParameter";
-const METHOD_GET_ALL_PARAMETERS = "getAllParameters";
-const NOTIFICATION_PARAMETER_CHANGED = "parameterChanged";
 function isIpcResponse(obj) {
   return typeof obj === "object" && obj !== null && "jsonrpc" in obj && "id" in obj && ("result" in obj || "error" in obj);
 }
 function isIpcNotification(obj) {
   return typeof obj === "object" && obj !== null && "jsonrpc" in obj && "method" in obj && !("id" in obj);
 }
+const METHOD_GET_PARAMETER = "getParameter";
+const METHOD_SET_PARAMETER = "setParameter";
+const METHOD_GET_ALL_PARAMETERS = "getAllParameters";
+const NOTIFICATION_PARAMETER_CHANGED = "parameterChanged";
 var LogLevel = /* @__PURE__ */ ((LogLevel2) => {
   LogLevel2[LogLevel2["DEBUG"] = 0] = "DEBUG";
   LogLevel2[LogLevel2["INFO"] = 1] = "INFO";
@@ -500,9 +500,7 @@ const _ParameterClient = class _ParameterClient {
    * Get singleton instance
    */
   static getInstance() {
-    if (!_ParameterClient.instance) {
-      _ParameterClient.instance = new _ParameterClient();
-    }
+    _ParameterClient.instance ?? (_ParameterClient.instance = new _ParameterClient());
     return _ParameterClient.instance;
   }
   /**
@@ -553,22 +551,18 @@ const _ParameterClient = class _ParameterClient {
 };
 _ParameterClient.instance = null;
 let ParameterClient = _ParameterClient;
-let client = null;
-function getClient() {
-  client ?? (client = ParameterClient.getInstance());
-  return client;
-}
 function useParameter(id) {
   const [param, setParam] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   useEffect(() => {
     let isMounted = true;
+    const client = ParameterClient.getInstance();
     async function loadParameter() {
       try {
         setIsLoading(true);
         setError(null);
-        const allParams = await getClient().getAllParameters();
+        const allParams = await client.getAllParameters();
         const foundParam = allParams.find((p) => p.id === id);
         if (isMounted) {
           if (foundParam) {
@@ -593,7 +587,8 @@ function useParameter(id) {
     };
   }, [id]);
   useEffect(() => {
-    const unsubscribe = getClient().onParameterChanged((changedId, value) => {
+    const client = ParameterClient.getInstance();
+    const unsubscribe = client.onParameterChanged((changedId, value) => {
       if (changedId === id) {
         setParam((prev) => prev ? { ...prev, value } : null);
       }
@@ -602,8 +597,9 @@ function useParameter(id) {
   }, [id]);
   const setValue = useCallback(
     async (value) => {
+      const client = ParameterClient.getInstance();
       try {
-        await getClient().setParameter(id, value);
+        await client.setParameter(id, value);
         setParam((prev) => prev ? { ...prev, value } : null);
       } catch (err) {
         setError(err instanceof Error ? err : new Error(String(err)));
@@ -619,10 +615,11 @@ function useAllParameters() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const reload = useCallback(async () => {
+    const client = ParameterClient.getInstance();
     try {
       setIsLoading(true);
       setError(null);
-      const allParams = await getClient().getAllParameters();
+      const allParams = await client.getAllParameters();
       setParams(allParams);
     } catch (err) {
       setError(err instanceof Error ? err : new Error(String(err)));
@@ -634,49 +631,14 @@ function useAllParameters() {
     reload();
   }, [reload]);
   useEffect(() => {
+    const client = ParameterClient.getInstance();
     const handleParamChange = (changedId, value) => {
       setParams((prev) => prev.map((p) => p.id === changedId ? { ...p, value } : p));
     };
-    const unsubscribe = getClient().onParameterChanged(handleParamChange);
+    const unsubscribe = client.onParameterChanged(handleParamChange);
     return unsubscribe;
   }, []);
   return { params, isLoading, error, reload };
-}
-function useLatencyMonitor(intervalMs = 1e3) {
-  const [latency, setLatency] = useState(null);
-  const [measurements, setMeasurements] = useState([]);
-  const bridge = IpcBridge.getInstance();
-  useEffect(() => {
-    let isMounted = true;
-    async function measure() {
-      if (!bridge.isConnected()) {
-        return;
-      }
-      try {
-        const ms = await getClient().ping();
-        if (isMounted) {
-          setLatency(ms);
-          setMeasurements((prev) => [...prev.slice(-99), ms]);
-        }
-      } catch (err) {
-        logger.debug("Ping failed", { error: err });
-      }
-    }
-    measure();
-    const intervalId = setInterval(measure, intervalMs);
-    return () => {
-      isMounted = false;
-      clearInterval(intervalId);
-    };
-  }, [intervalMs, bridge]);
-  const avg = measurements.length > 0 ? measurements.reduce((sum, val) => sum + val, 0) / measurements.length : 0;
-  const max = measurements.length > 0 ? Math.max(...measurements) : 0;
-  return {
-    latency,
-    avg,
-    max,
-    count: measurements.length
-  };
 }
 function useParameterGroups(parameters) {
   return useMemo(() => {
@@ -687,7 +649,7 @@ function useParameterGroups(parameters) {
       existing.push(param);
       grouped.set(groupName, existing);
     }
-    const groups = Array.from(grouped.entries()).map(([name, parameters2]) => ({ name, parameters: parameters2 })).sort((a, b) => {
+    const groups = Array.from(grouped.entries()).map(([name, params]) => ({ name, parameters: params })).sort((a, b) => {
       if (a.name === "Parameters") return -1;
       if (b.name === "Parameters") return 1;
       return a.name.localeCompare(b.name);
@@ -734,10 +696,86 @@ function useConnectionStatus() {
   }, []);
   return status;
 }
+function useLatencyMonitor(intervalMs = 1e3) {
+  const [latency, setLatency] = useState(null);
+  const [measurements, setMeasurements] = useState([]);
+  const bridge = IpcBridge.getInstance();
+  useEffect(() => {
+    let isMounted = true;
+    const client = ParameterClient.getInstance();
+    async function measure() {
+      if (!bridge.isConnected()) {
+        return;
+      }
+      try {
+        const ms = await client.ping();
+        if (isMounted) {
+          setLatency(ms);
+          setMeasurements((prev) => [...prev.slice(-99), ms]);
+        }
+      } catch (err) {
+        logger.debug("Ping failed", { error: err });
+      }
+    }
+    measure();
+    const intervalId = setInterval(measure, intervalMs);
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, [intervalMs, bridge]);
+  const avg = measurements.length > 0 ? measurements.reduce((sum, val) => sum + val, 0) / measurements.length : 0;
+  const max = measurements.length > 0 ? Math.max(...measurements) : 0;
+  return {
+    latency,
+    avg,
+    max,
+    count: measurements.length
+  };
+}
+function useMeterFrame(intervalMs = 50) {
+  const [frame, setFrame] = useState(null);
+  useEffect(() => {
+    let isMounted = true;
+    const bridge = IpcBridge.getInstance();
+    async function fetchFrame() {
+      if (!bridge.isConnected()) return;
+      try {
+        const result = await bridge.invoke("getMeterFrame");
+        if (isMounted && result.frame) {
+          setFrame(result.frame);
+        }
+      } catch {
+      }
+    }
+    fetchFrame();
+    const intervalId = setInterval(fetchFrame, intervalMs);
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, [intervalMs]);
+  return frame;
+}
 async function requestResize(width, height) {
   const bridge = IpcBridge.getInstance();
   const result = await bridge.invoke("requestResize", { width, height });
   return result.accepted;
+}
+function useWindowResizeSync() {
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      requestResize(width, height).catch((err) => {
+        logger.error("Failed to notify host of resize", { error: err, width, height });
+      });
+    };
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
 }
 function useRequestResize() {
   return requestResize;
@@ -775,8 +813,10 @@ export {
   useAllParameters,
   useConnectionStatus,
   useLatencyMonitor,
+  useMeterFrame,
   useParameter,
   useParameterGroups,
-  useRequestResize
+  useRequestResize,
+  useWindowResizeSync
 };
 //# sourceMappingURL=index.js.map

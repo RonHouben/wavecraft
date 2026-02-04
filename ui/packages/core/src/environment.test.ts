@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { isWebViewEnvironment, isBrowserEnvironment } from './environment';
+import { isWebViewEnvironment, isBrowserEnvironment } from './utils';
 
 describe('Environment Detection', () => {
   let originalVstkit: typeof globalThis.__WAVECRAFT_IPC__;

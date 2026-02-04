@@ -1,12 +1,10 @@
 /**
- * Window resize utilities
- *
- * Provides functions for requesting window resize from the host DAW.
+ * useWindowResizeSync - Automatic window resize sync to host
  */
 
 import { useEffect } from 'react';
-import { IpcBridge } from './IpcBridge';
-import { logger } from './logger/Logger';
+import { IpcBridge } from '../ipc/IpcBridge';
+import { logger } from '../logger';
 
 export interface RequestResizeParams {
   width: number;
@@ -40,31 +38,6 @@ export async function requestResize(width: number, height: number): Promise<bool
   const result = await bridge.invoke<RequestResizeResult>('requestResize', { width, height });
 
   return result.accepted;
-}
-
-/**
- * React hook for requesting window resize
- *
- * @returns Function to request resize
- *
- * @example
- * ```tsx
- * function MyComponent() {
- *   const resize = useRequestResize();
- *
- *   const handleExpand = async () => {
- *     const accepted = await resize(1200, 900);
- *     if (!accepted) {
- *       alert('Host rejected resize request');
- *     }
- *   };
- *
- *   return <button onClick={handleExpand}>Expand</button>;
- * }
- * ```
- */
-export function useRequestResize(): (width: number, height: number) => Promise<boolean> {
-  return requestResize;
 }
 
 /**

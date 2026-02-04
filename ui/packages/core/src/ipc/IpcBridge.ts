@@ -5,11 +5,11 @@
  * using pluggable transport implementations (NativeTransport, WebSocketTransport).
  */
 
-import type { IpcRequest, IpcResponse, IpcNotification } from './types';
-import { isIpcNotification } from './types';
-import type { Transport } from './transports';
-import { getTransport } from './transports';
-import { logger } from './logger/Logger';
+import type { IpcRequest, IpcResponse, IpcNotification } from '../types';
+import { isIpcNotification } from '../types';
+import type { Transport } from '../transports';
+import { getTransport } from '../transports';
+import { logger } from '../logger';
 
 type EventCallback<T> = (data: T) => void;
 

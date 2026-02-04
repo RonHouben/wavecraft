@@ -21,12 +21,22 @@ export declare interface GetMeterFrameResult {
 }
 
 /**
+ * Audio Math Utilities
+ *
+ * Pure functions for audio calculations with no side effects.
+ */
+/**
  * Convert linear amplitude to decibels
  * @param linear Linear amplitude (0.0 to 1.0+)
  * @param floor Minimum dB value to return (default: -60)
  */
 export declare function linearToDb(linear: number, floor?: number): number;
 
+/**
+ * Metering Types
+ *
+ * Types related to audio metering.
+ */
 /**
  * Meter frame data (all values in linear scale, not dB)
  */

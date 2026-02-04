@@ -2,8 +2,8 @@
  * Meter polling API for audio visualization (IPC-based)
  */
 
-import { IpcBridge } from './IpcBridge';
-import type { MeterFrame, GetMeterFrameResult } from './meters';
+import { IpcBridge } from './ipc';
+import type { MeterFrame, GetMeterFrameResult } from './types';
 
 /**
  * Get the latest meter frame from the audio engine

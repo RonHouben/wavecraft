@@ -1,19 +1,25 @@
 /**
- * @wavecraft/ipc - IPC library for Wavecraft WebView ↔ Rust communication
+ * @wavecraft/core - Core SDK for Wavecraft WebView ↔ Rust communication
  *
  * Public exports for application code.
  */
 
-// Environment detection
-export { isWebViewEnvironment, isBrowserEnvironment } from './environment';
+// =============================================================================
+// Environment Detection
+// =============================================================================
+export { isWebViewEnvironment, isBrowserEnvironment } from './utils';
 
+// =============================================================================
 // Types
+// =============================================================================
 export type {
+  // IPC types
   IpcRequest,
   IpcResponse,
   IpcNotification,
   IpcError,
   RequestId,
+  // Parameter types
   ParameterInfo,
   ParameterType,
   GetParameterParams,
@@ -22,9 +28,12 @@ export type {
   SetParameterResult,
   GetAllParametersResult,
   ParameterChangedNotification,
+  // Metering types
+  MeterFrame,
+  GetMeterFrameResult,
 } from './types';
 
-// Constants
+// IPC error codes
 export {
   ERROR_PARSE,
   ERROR_INVALID_REQUEST,
@@ -33,41 +42,71 @@ export {
   ERROR_INTERNAL,
   ERROR_PARAM_NOT_FOUND,
   ERROR_PARAM_OUT_OF_RANGE,
+} from './types';
+
+// IPC method names
+export {
   METHOD_GET_PARAMETER,
   METHOD_SET_PARAMETER,
   METHOD_GET_ALL_PARAMETERS,
   NOTIFICATION_PARAMETER_CHANGED,
 } from './types';
 
-// Core classes (typically not needed by application code)
-export { IpcBridge } from './IpcBridge';
-export { ParameterClient } from './ParameterClient';
+// =============================================================================
+// Core Classes (advanced use)
+// =============================================================================
+export { IpcBridge, ParameterClient } from './ipc';
 
-// React hooks (primary API)
-export { useParameter, useAllParameters, useLatencyMonitor } from './hooks';
-export type { UseParameterResult, UseAllParametersResult, UseLatencyMonitorResult } from './hooks';
+// =============================================================================
+// React Hooks (primary API)
+// =============================================================================
+export {
+  // Parameter hooks
+  useParameter,
+  useAllParameters,
+  useParameterGroups,
+  // Connection & monitoring
+  useConnectionStatus,
+  useLatencyMonitor,
+  // Metering
+  useMeterFrame,
+  // Resize
+  useRequestResize,
+  useWindowResizeSync,
+} from './hooks';
 
-// Parameter grouping hook
-export { useParameterGroups } from './useParameterGroups';
-export type { ParameterGroup } from './useParameterGroups';
+export type {
+  // Hook result types
+  UseParameterResult,
+  UseAllParametersResult,
+  UseLatencyMonitorResult,
+  // Parameter grouping
+  ParameterGroup,
+  // Connection status
+  ConnectionStatus,
+  TransportType,
+} from './hooks';
 
-// Connection status hook
-export { useConnectionStatus } from './useConnectionStatus';
-export type { ConnectionStatus, TransportType } from './useConnectionStatus';
+// =============================================================================
+// Resize API (standalone function)
+// =============================================================================
+export { requestResize } from './hooks';
+export type { RequestResizeParams, RequestResizeResult } from './hooks';
 
-// Resize API
-export { requestResize, useRequestResize, useWindowResizeSync } from './resize';
-export type { RequestResizeParams, RequestResizeResult } from './resize';
-
+// =============================================================================
 // Metering API
+// =============================================================================
 export { getMeterFrame } from './meter-ipc';
-export { linearToDb, dbToLinear } from './meters';
-export type { MeterFrame, GetMeterFrameResult } from './meters';
+export { linearToDb, dbToLinear } from './utils';
 
-// Logger - Structured logging utility
+// =============================================================================
+// Logger
+// =============================================================================
 export { logger, Logger, LogLevel } from './logger/Logger';
 export type { LogContext } from './logger/Logger';
 
+// =============================================================================
 // Transports (advanced use)
+// =============================================================================
 export type { Transport, NotificationCallback } from './transports';
 export { WebSocketTransport, NativeTransport } from './transports';

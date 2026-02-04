@@ -1,5 +1,5 @@
 /**
- * Hook for organizing parameters into groups based on their group metadata.
+ * useParameterGroups - Organize parameters into groups
  *
  * This hook takes an array of parameters and organizes them into groups
  * for better UI organization. Parameters without a group are placed in
@@ -7,7 +7,7 @@
  */
 
 import { useMemo } from 'react';
-import type { ParameterInfo } from './types';
+import type { ParameterInfo } from '../types';
 
 export interface ParameterGroup {
   name: string;
@@ -49,7 +49,7 @@ export function useParameterGroups(parameters: ParameterInfo[]): ParameterGroup[
     // Convert map to array of groups, sorted by group name
     // Exception: "Parameters" (default group) always comes first
     const groups: ParameterGroup[] = Array.from(grouped.entries())
-      .map(([name, parameters]) => ({ name, parameters }))
+      .map(([name, params]) => ({ name, parameters: params }))
       .sort((a, b) => {
         if (a.name === 'Parameters') return -1;
         if (b.name === 'Parameters') return 1;

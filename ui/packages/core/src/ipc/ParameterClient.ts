@@ -11,19 +11,19 @@ import type {
   SetParameterResult,
   GetAllParametersResult,
   ParameterChangedNotification,
-} from './types';
+} from '../types';
 import {
   METHOD_GET_PARAMETER,
   METHOD_SET_PARAMETER,
   METHOD_GET_ALL_PARAMETERS,
   NOTIFICATION_PARAMETER_CHANGED,
-} from './types';
+} from '../types';
 
 type ParameterChangeCallback = (id: string, value: number) => void;
 
 export class ParameterClient {
   private static instance: ParameterClient | null = null;
-  private bridge: IpcBridge;
+  private readonly bridge: IpcBridge;
 
   private constructor() {
     this.bridge = IpcBridge.getInstance();
@@ -33,9 +33,7 @@ export class ParameterClient {
    * Get singleton instance
    */
   public static getInstance(): ParameterClient {
-    if (!ParameterClient.instance) {
-      ParameterClient.instance = new ParameterClient();
-    }
+    ParameterClient.instance ??= new ParameterClient();
     return ParameterClient.instance;
   }
 
@@ -84,7 +82,7 @@ export class ParameterClient {
   public onParameterChanged(callback: ParameterChangeCallback): () => void {
     return this.bridge.on<ParameterChangedNotification>(NOTIFICATION_PARAMETER_CHANGED, (data) => {
       if (data && typeof data === 'object' && 'id' in data && 'value' in data) {
-        callback(data.id as string, data.value as number);
+        callback(data.id, data.value);
       }
     });
   }

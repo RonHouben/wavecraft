@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { IpcBridge } from './IpcBridge';
+import { IpcBridge } from './ipc';
 import { MockTransport } from './transports/MockTransport';
 import * as transportsModule from './transports';
 

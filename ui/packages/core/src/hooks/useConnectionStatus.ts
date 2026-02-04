@@ -6,8 +6,8 @@
  */
 
 import { useEffect, useState } from 'react';
-import { IpcBridge } from './IpcBridge';
-import { isWebViewEnvironment } from './environment';
+import { IpcBridge } from '../ipc/IpcBridge';
+import { isWebViewEnvironment } from '../utils/environment';
 
 export type TransportType = 'native' | 'websocket' | 'none';
 

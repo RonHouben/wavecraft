@@ -138,6 +138,11 @@ export declare function isBrowserEnvironment(): boolean;
 export declare function isWebViewEnvironment(): boolean;
 
 /**
+ * Audio Math Utilities
+ *
+ * Pure functions for audio calculations with no side effects.
+ */
+/**
  * Convert linear amplitude to decibels
  * @param linear Linear amplitude (0.0 to 1.0+)
  * @param floor Minimum dB value to return (default: -60)
@@ -204,6 +209,11 @@ export declare enum LogLevel {
     ERROR = 3
 }
 
+/**
+ * Metering Types
+ *
+ * Types related to audio metering.
+ */
 /**
  * Meter frame data (all values in linear scale, not dB)
  */
@@ -283,7 +293,7 @@ export declare interface ParameterChangedNotification {
 
 export declare class ParameterClient {
     private static instance;
-    private bridge;
+    private readonly bridge;
     private constructor();
     /**
      * Get singleton instance
@@ -330,6 +340,11 @@ export declare interface ParameterInfo {
     group?: string;
 }
 
+/**
+ * Parameter Types
+ *
+ * Types related to plugin parameters.
+ */
 export declare type ParameterType = 'float' | 'bool' | 'enum';
 
 /**
@@ -359,9 +374,7 @@ export declare type RequestId = string | number;
 export declare function requestResize(width: number, height: number): Promise<boolean>;
 
 /**
- * Window resize utilities
- *
- * Provides functions for requesting window resize from the host DAW.
+ * useWindowResizeSync - Automatic window resize sync to host
  */
 export declare interface RequestResizeParams {
     width: number;
@@ -444,12 +457,23 @@ export declare function useConnectionStatus(): ConnectionStatus;
 
 export declare function useLatencyMonitor(intervalMs?: number): UseLatencyMonitorResult;
 
+/**
+ * useLatencyMonitor - Hook for monitoring IPC latency
+ */
 export declare interface UseLatencyMonitorResult {
     latency: number | null;
     avg: number;
     max: number;
     count: number;
 }
+
+/**
+ * Hook to poll meter frames at a specified interval
+ *
+ * @param intervalMs - Polling interval in milliseconds (default: 50ms = 20fps)
+ * @returns Current meter frame or null if not available
+ */
+export declare function useMeterFrame(intervalMs?: number): MeterFrame | null;
 
 export declare function useParameter(id: string): UseParameterResult;
 
@@ -483,6 +507,9 @@ export declare interface UseParameterResult {
 }
 
 /**
+ * useRequestResize - Hook for requesting window resize
+ */
+/**
  * React hook for requesting window resize
  *
  * @returns Function to request resize
@@ -504,6 +531,25 @@ export declare interface UseParameterResult {
  * ```
  */
 export declare function useRequestResize(): (width: number, height: number) => Promise<boolean>;
+
+/**
+ * Hook that automatically syncs window resize events to the host
+ *
+ * This hook listens for browser window resize events and notifies the host
+ * DAW of size changes. Useful when the user resizes the plugin window via
+ * the DAW's window controls or edge dragging.
+ *
+ * @example
+ * ```tsx
+ * function App() {
+ *   // Automatically sync window size changes to host
+ *   useWindowResizeSync();
+ *
+ *   return <div>Plugin UI</div>;
+ * }
+ * ```
+ */
+export declare function useWindowResizeSync(): void;
 
 /**
  * WebSocket transport implementation with automatic reconnection
