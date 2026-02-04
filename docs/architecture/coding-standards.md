@@ -212,72 +212,81 @@ declare const __APP_VERSION__: string;
 
 ### File Organization
 
+The UI codebase is organized as an npm workspace with publishable packages:
+
 ```
-src/
-├── lib/
-│   └── wavecraft-ipc/
-│       ├── index.ts          # Public exports
-│       ├── types.ts          # Type definitions
-│       ├── environment.ts    # Environment detection (browser vs WKWebView)
-│       ├── IpcBridge.ts      # Class: low-level bridge
-│       ├── ParameterClient.ts # Class: high-level API
-│       └── hooks.ts          # React hooks (functional)
-├── components/
-│   ├── ParameterSlider.tsx   # Functional component
-│   ├── ParameterSlider.test.tsx # Co-located test
-│   ├── VersionBadge.tsx      # Version display component
-│   └── LatencyMonitor.tsx    # Functional component
+ui/
+├── packages/                      # Published npm packages
+│   ├── core/                      # @wavecraft/core
+│   │   ├── src/
+│   │   │   ├── index.ts           # Main exports (IPC, hooks, types)
+│   │   │   ├── meters.ts          # /meters subpath (pure audio math)
+│   │   │   ├── IpcBridge.ts       # Class: low-level bridge
+│   │   │   ├── ParameterClient.ts # Class: high-level API
+│   │   │   ├── hooks.ts           # React hooks
+│   │   │   └── types.ts           # Type definitions
+│   │   ├── dist/                  # Built ESM bundle + DTS
+│   │   └── package.json           # npm package config
+│   └── components/                # @wavecraft/components
+│       ├── src/
+│       │   ├── index.ts           # Component exports
+│       │   ├── Meter.tsx          # Audio level meter
+│       │   ├── ParameterSlider.tsx# Slider control
+│       │   ├── ParameterGroup.tsx # Grouped parameters
+│       │   └── VersionBadge.tsx   # Version display
+│       ├── dist/                  # Built ESM bundle + DTS
+│       └── package.json           # npm package config
+├── src/                           # Development app (internal)
+│   ├── App.tsx                    # Dev app entry
+│   └── main.tsx                   # Dev app bootstrap
 ├── test/
-│   ├── setup.ts              # Global test setup
+│   ├── setup.ts                   # Global test setup
 │   └── mocks/
-│       └── ipc.ts            # IPC mock module
-└── App.tsx
+│       └── ipc.ts                 # IPC mock module
+└── package.json                   # Workspace root (workspaces: ["packages/*"])
 ```
 
 **Note:** Class files should be named with PascalCase matching the class name.
 
 ### Import Aliases
 
-**Rule:** Use configured path aliases instead of relative imports for shared libraries.
+**Rule:** Use npm package imports for the SDK, not relative paths.
 
-The project defines the following import aliases (configured in `tsconfig.json`, `vite.config.ts`, and `vitest.config.ts`):
+The UI SDK is distributed as npm packages. User plugins and the internal dev app both import from these packages:
 
-| Alias | Path | Usage |
-|-------|------|-------|
-| `@wavecraft/ipc` | `./src/lib/wavecraft-ipc` | IPC client, hooks, and types |
-| `@wavecraft/ipc/meters` | `./src/lib/wavecraft-ipc/meters` | Pure audio math utilities (no IPC side effects) |
+| Package | Exports | Usage |
+|---------|---------|-------|
+| `@wavecraft/core` | IPC, hooks, Logger, types | Core SDK functionality |
+| `@wavecraft/core/meters` | `linearToDb`, `dbToLinear` | Pure audio math utilities |
+| `@wavecraft/components` | `Meter`, `ParameterSlider`, etc. | Pre-built React components |
 
 **Do:**
 ```typescript
-// ✅ Use alias for IPC features (in components)
-import { getMeterFrame, MeterFrame, useParameter } from '@wavecraft/ipc';
-
-// ✅ Use subpath alias for pure utilities (especially in tests)
-import { linearToDb, dbToLinear } from '@wavecraft/ipc/meters';
+// ✅ Import from npm packages
+import { useParameter, useAllParameters, Logger } from '@wavecraft/core';
+import { linearToDb, dbToLinear } from '@wavecraft/core/meters';
+import { Meter, ParameterSlider } from '@wavecraft/components';
 ```
 
 **Don't:**
 ```typescript
-// ❌ Relative imports to shared libraries
-import { getMeterFrame } from '../lib/wavecraft-ipc';
-import { useParameter } from '../../lib/wavecraft-ipc';
-
-// ❌ Relative imports in test files
-import { linearToDb } from './wavecraft-ipc/meters';
+// ❌ Relative imports (no longer applicable for SDK usage)
+import { useParameter } from '../lib/wavecraft-ipc';
+import { Meter } from '../../components/Meter';
 ```
 
-**Subpath Aliases:**
+**Subpath Exports:**
 
-The `@wavecraft/ipc/meters` subpath provides access to pure utility functions (`linearToDb`, `dbToLinear`, `getMeterFrame`) without triggering IPC initialization side effects. Use this subpath:
+The `@wavecraft/core/meters` subpath provides access to pure utility functions (`linearToDb`, `dbToLinear`, `getMeterFrame`) without triggering IPC initialization side effects. Use this subpath:
 - In unit tests for pure functions
 - When you only need math utilities, not hooks or clients
 
 **Rationale:**
-- Cleaner imports that don't change when files move
-- Immediately identifies imports as project-internal
-- Consistent import paths across the codebase
-- Test files follow the same conventions as production code
-- Subpath aliases avoid initialization side effects in tests
+- Standard npm package consumption pattern
+- Version management via package.json
+- Clear separation between SDK and user code
+- Tree-shaking support via ESM exports
+- Subpath exports avoid initialization side effects in tests
 
 ### Global Object Access
 
@@ -692,22 +701,24 @@ npm run test:coverage
 
 ### Test File Organization
 
-Tests are co-located with source files:
+Tests are co-located with source files in each package:
 
 ```
-ui/src/
-├── components/
-│   ├── Meter.tsx
-│   ├── Meter.test.tsx           # Component test
-│   ├── ParameterSlider.tsx
-│   └── ParameterSlider.test.tsx # Component test
-├── lib/
-│   ├── audio-math.ts
-│   └── audio-math.test.ts       # Pure function tests
+ui/
+├── packages/
+│   ├── core/src/
+│   │   ├── meters.ts
+│   │   └── meters.test.ts         # Pure function tests
+│   └── components/src/
+│       ├── Meter.tsx
+│       ├── Meter.test.tsx         # Component test
+│       ├── ParameterSlider.tsx
+│       └── ParameterSlider.test.tsx
+├── src/                           # Dev app (limited tests)
 └── test/
-    ├── setup.ts                 # Global test setup
+    ├── setup.ts                   # Global test setup
     └── mocks/
-        └── ipc.ts               # IPC mock module
+        └── ipc.ts                 # IPC mock module
 ```
 
 ### Mocking IPC for Tests
@@ -744,7 +755,7 @@ beforeEach(() => {
 
 **TypeScript Support:**
 - Types: `vitest/globals`, `@testing-library/jest-dom`
-- Aliases: Same as production (`@wavecraft/ipc`, `@wavecraft/ipc/meters`)
+- npm packages: `@wavecraft/core`, `@wavecraft/components` available via workspace
 
 ---
 
@@ -900,11 +911,11 @@ See the docs folder for more information.
 
 **UI Logging (TypeScript):**
 
-Use the `Logger` class from `@wavecraft/ipc` for all UI logging. Direct `console.*` calls are prohibited in production code.
+Use the `Logger` class from `@wavecraft/core` for all UI logging. Direct `console.*` calls are prohibited in production code.
 
 ```typescript
 // ✅ Import and use the logger
-import { logger } from '@wavecraft/ipc';
+import { logger } from '@wavecraft/core';
 
 logger.debug('Verbose tracing info', { requestId: 123 });
 logger.info('Connection established', { transport: 'WebSocket' });

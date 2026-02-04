@@ -5,10 +5,10 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Meter } from './Meter';
-import { setMockMeterFrame } from '../test/mocks/ipc';
+import { setMockMeterFrame } from '@test/mocks/ipc';
 
 // Mock the IPC module
-vi.mock('../lib/wavecraft-ipc', () => import('../test/mocks/ipc'));
+vi.mock('@wavecraft/core', () => import('@test/mocks/ipc'));
 
 describe('Meter', () => {
   beforeEach(() => {

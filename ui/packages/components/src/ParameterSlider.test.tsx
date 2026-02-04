@@ -5,10 +5,10 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ParameterSlider } from './ParameterSlider';
-import { setMockParameter } from '../test/mocks/ipc';
+import { setMockParameter } from '@test/mocks/ipc';
 
 // Mock the IPC module
-vi.mock('@wavecraft/ipc', () => import('../test/mocks/ipc'));
+vi.mock('@wavecraft/core', () => import('@test/mocks/ipc'));
 
 describe('ParameterSlider', () => {
   beforeEach(() => {
