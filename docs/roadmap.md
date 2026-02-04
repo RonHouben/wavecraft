@@ -7,8 +7,8 @@ This document tracks implementation progress against the milestones defined in t
 ## Progress Overview
 
 ```
-┌─────────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP           v0.7.0 | 80%  │
+┌─────────────────────────────────────────┐
+│  WAVECRAFT ROADMAP           v0.7.1 | 80%  │
 ├─────────────────────────────────────────────┤
 │  ✅ M1-M12   Foundation → Open Source Ready│
 │  ⏳ M13      Internal Testing               │
@@ -564,10 +564,17 @@ QA:           5 findings (1 Critical, 4 Medium) — all resolved
 | Template uses npm package | ✅ | Uses @wavecraft/core and @wavecraft/components |
 | Publish to npm registry | ✅ | @wavecraft/core@0.7.0, @wavecraft/components@0.7.0 |
 | **Release (Post-Merge)** | | |
-| Version bump to 0.7.0 | ✅ | engine/Cargo.toml + cli/Cargo.toml |
+| Version bump to 0.7.0 | ✅ | engine/Cargo.toml + cli/Cargo.toml (now 0.7.1) |
 | Create git tag `v0.7.0` | ⏳ | After PR merge |
 | Publish CLI to crates.io | ⏳ | Requires repo to be public |
 | End-to-end testing (external clone) | ⏳ | Requires repo to be public |
+| **Continuous Deployment** | | |
+| `continuous-deploy.yml` workflow | ✅ | Auto-publish on merge to main |
+| Path-based change detection | ✅ | dorny/paths-filter for selective publishing |
+| Auto-version bumping | ✅ | Patch versions bumped automatically |
+| npm release workflow | ✅ | `npm-release.yml` (manual override) |
+| CLI release workflow | ✅ | `cli-release.yml` (manual override) |
+| CI pipeline documentation | ✅ | Full CD section in ci-pipeline.md |
 
 **Key Deliverables:**
 - **`wavecraft` CLI** — `cargo install wavecraft && wavecraft new my-plugin` project scaffolding
@@ -577,6 +584,7 @@ QA:           5 findings (1 Critical, 4 Medium) — all resolved
 - **syn-based validation** — Authoritative Rust keyword checking (architectural best practice)
 - **`@wavecraft/core` npm package** — IPC bridge, React hooks, Logger, utilities
 - **`@wavecraft/components` npm package** — Meter, ParameterSlider, ParameterGroup, VersionBadge
+- **Continuous Deployment** — Auto-publish to npm/crates.io on merge to main
 
 **Test Results:**
 ```
@@ -596,9 +604,10 @@ QA:           PASS (0 Critical/High, 2 Medium non-blocking, 3 Low optional)
 - [x] External developer can: `cargo install wavecraft && wavecraft new my-plugin && cd my-plugin && cargo xtask bundle`
 - [x] Template builds in < 5 minutes (first time, with downloads)
 - [x] Zero broken documentation links
-- [x] `@wavecraft/core` published to npm (v0.7.0)
-- [x] `@wavecraft/components` published to npm (v0.7.0)
+- [x] `@wavecraft/core` published to npm (v0.7.1)
+- [x] `@wavecraft/components` published to npm (v0.7.1)
 - [x] Template uses npm packages instead of bundled UI copy
+- [x] Continuous deployment workflow for automatic publishing
 - [ ] CLI published to crates.io (requires public repo)
 
 **Completed:** 2026-02-04
@@ -749,6 +758,7 @@ QA:           PASS (0 Critical/High, 2 Medium non-blocking, 3 Low optional)
 
 | Date | Update |
 |------|--------|
+| 2026-02-04 | **Continuous Deployment implemented (v0.7.1)**: Added `continuous-deploy.yml` workflow for automatic package publishing on merge to main. Path-based change detection using `dorny/paths-filter` — only changed packages are published. Auto-patch version bumping with bot commits (`[skip ci]` prevents re-triggers). Supports: CLI (crates.io), 6 engine crates (crates.io), `@wavecraft/core` (npm), `@wavecraft/components` (npm). Existing `cli-release.yml` and `npm-release.yml` converted to manual overrides. Full documentation added to `docs/guides/ci-pipeline.md`. Version bumped to 0.7.1 across all packages. |
 | 2026-02-04 | **Milestone 12 complete (v0.7.0)**: Open Source Readiness fully implemented. **wavecraft CLI** published to crates.io (`cargo install wavecraft && wavecraft new my-plugin`). **npm packages** published: `@wavecraft/core@0.7.0` (IPC bridge, hooks, Logger, utilities) and `@wavecraft/components@0.7.0` (Meter, ParameterSlider, ParameterGroup, VersionBadge). **Template system** converted to use npm packages instead of bundled UI copy. **CI workflows** for template validation and CLI release. 75/75 implementation tasks complete. 20/20 manual tests passing. QA approved (0 Critical/High issues). Architecture docs updated (npm package imports, subpath exports). Archived to `_archive/open-source-readiness/`. |
 | 2026-02-03 | **CI Pipeline Optimization complete**: Added `cargo xtask check` command for fast local validation (~52s, 26x faster than Docker CI). Pre-compile test binaries in CI with `cargo test --no-run`. Tiered artifact retention (7 days main / 90 days tags, ~75-80% storage reduction). Updated agent documentation (Tester uses `cargo xtask check`, QA focuses on manual review). Architecture docs updated (high-level-design.md, ci-pipeline.md, coding-standards.md). Version 0.6.2. |
 | 2026-02-03 | **Milestone 11 complete**: Code Quality & OSS Prep fully implemented. UI Logger (`Logger` class in `@wavecraft/ipc` with debug/info/warn/error methods), Engine logging (`tracing` crate, 24 println! calls migrated), open source infrastructure (LICENSE, CONTRIBUTING.md, CODE_OF_CONDUCT.md, issue/PR templates), README polish. Horizontal scroll fix applied. Template project synchronized. 110+ engine tests, 43 UI tests, 19/19 manual tests passing. QA approved (5 findings resolved). Logging standards documented in coding-standards.md. Version 0.6.1. Archived to `_archive/code-quality-polish/`. |
@@ -823,8 +833,9 @@ QA:           PASS (0 Critical/High, 2 Medium non-blocking, 3 Low optional)
 15. ⏳ **Milestone 15**: V1.0 Release — First stable production release (v1.0.0)
 
 ### Immediate Tasks
-1. ✅ Merge Open Source Readiness PR — v0.7.0 ready for merge
-2. ⏳ Create git tag `v0.7.0` — After PR merge
+1. ✅ Merge Open Source Readiness PR — v0.7.1 ready for merge
+2. ⏳ Create git tag `v0.7.1` — After PR merge
 3. ⏳ Start Milestone 13: Internal Testing
+4. ✅ Continuous Deployment configured — Auto-publishes on merge to main
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (crates.io publication, additional example plugins, etc.)
