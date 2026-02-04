@@ -24,8 +24,8 @@ export function Meter(): React.JSX.Element {
   const [clippedL, setClippedL] = useState(false);
   const [clippedR, setClippedR] = useState(false);
 
-  const clipLTimeoutRef = useRef<number | null>(null);
-  const clipRTimeoutRef = useRef<number | null>(null);
+  const clipLTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clipRTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // Only poll when connected

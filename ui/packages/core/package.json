@@ -35,7 +35,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/RonHouben/wavecraft.git",
+    "url": "git+https://github.com/RonHouben/wavecraft.git",
     "directory": "ui/packages/core"
   },
   "homepage": "https://github.com/RonHouben/wavecraft",
