@@ -30,6 +30,87 @@ Build the audio/DSP core and host/plugin API surface in Rust (use a modern Rust 
 
 ⸻
 
+## Repository Structure (Monorepo)
+
+Wavecraft is organized as a **monorepo** containing all components of the SDK ecosystem in a single repository. This structure enables coordinated development, atomic commits across components, and simplified dependency management during the SDK's early development phase.
+
+```
+wavecraft/
+├── cli/                           # CLI tool (cargo install wavecraft)
+│   └── src/                       # CLI source code
+├── docs/                          # Documentation
+│   ├── architecture/              # Architecture documents
+│   ├── feature-specs/             # Feature specifications
+│   └── guides/                    # User guides
+├── engine/                        # Rust audio engine & SDK crates
+│   ├── crates/                    # SDK crate workspace
+│   │   ├── wavecraft-core/        # Main framework crate
+│   │   ├── wavecraft-macros/      # Procedural macros
+│   │   ├── wavecraft-protocol/    # IPC contracts
+│   │   ├── wavecraft-bridge/      # IPC handler
+│   │   ├── wavecraft-metering/    # Real-time metering
+│   │   └── wavecraft-dsp/         # DSP primitives
+│   └── xtask/                     # Build automation
+├── packaging/                     # AU wrapper, installers
+├── scripts/                       # Development scripts
+├── ui/                            # React UI & @wavecraft/ipc package
+│   └── packages/
+│       └── ipc/                   # @wavecraft/ipc npm package
+└── wavecraft-plugin-template/     # Plugin template (scaffolded by CLI)
+```
+
+### Monorepo Benefits
+
+1. **Atomic Changes** — Changes spanning CLI, engine, UI, and template can be made in a single commit, ensuring consistency.
+
+2. **Simplified Development** — Contributors can work on any component without managing multiple repositories.
+
+3. **Path Dependencies** — During Phase 1 (pre-1.0), the template uses local path dependencies to SDK crates, enabling rapid iteration without publishing.
+
+4. **Coordinated Releases** — Version bumps and releases are coordinated across all components.
+
+### Component Relationships
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           MONOREPO                                      │
+│                                                                         │
+│  ┌─────────┐     scaffolds     ┌─────────────────────────────┐          │
+│  │   CLI   │ ─────────────────►│ wavecraft-plugin-template   │          │
+│  └─────────┘                   │ (uses path deps in Phase 1) │          │
+│                                └──────────────┬──────────────┘          │
+│                                               │                         │
+│                                    depends on │                         │
+│                                               ▼                         │
+│  ┌─────────────────────────────────────────────────────────────┐        │
+│  │                     engine/crates/                          │        │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │        │
+│  │  │wavecraft-core│  │wavecraft-dsp│  │wavecraft-*  │          │        │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘          │        │
+│  └─────────────────────────────────────────────────────────────┘        │
+│                                               ▲                         │
+│                                    depends on │                         │
+│  ┌─────────────────────────────────────────────────────────────┐        │
+│  │                        ui/packages/                         │        │
+│  │              ┌─────────────────────────┐                    │        │
+│  │              │     @wavecraft/ipc      │                    │        │
+│  │              └─────────────────────────┘                    │        │
+│  └─────────────────────────────────────────────────────────────┘        │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Phase 1 vs Phase 2 Distribution
+
+| Aspect | Phase 1 (Current) | Phase 2 (Post-1.0) |
+|--------|-------------------|---------------------|
+| Template location | In monorepo | Separate repo or embedded in CLI |
+| SDK dependencies | Local path (`../../engine/crates/`) | Published crates (crates.io) |
+| Development | Rapid iteration | Stable API |
+| User workflow | Clone monorepo or use CLI | `cargo install wavecraft && wavecraft new` |
+
+⸻
+
 ## Architecture overview (block diagram, logical)
 
 +---------------------------------------------------------------+
