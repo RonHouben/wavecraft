@@ -9,9 +9,13 @@ name = "my_plugin"
 crate-type = ["cdylib"]
 
 [dependencies]
-# Wavecraft SDK dependencies (local paths for development)
-# TODO: Switch to git dependencies when published:
-#   wavecraft-core = { git = "https://github.com/YOUR_ORG/wavecraft", branch = "main" }
+# Wavecraft SDK dependencies (local paths for monorepo development)
+# NOTE: For M12 internal testing, template must be tested within monorepo structure.
+# For M13 external testing, these will need to be changed to:
+#   Option 1: Git dependencies (requires public repo or collaborator access):
+#     wavecraft-core = { git = "https://github.com/RonHouben/wavecraft", branch = "main" }
+#   Option 2: crates.io dependencies (after SDK publication):
+#     wavecraft-core = "0.6"
 wavecraft-core = { path = "../../engine/crates/wavecraft-core" }
 wavecraft-protocol = { path = "../../engine/crates/wavecraft-protocol" }
 wavecraft-dsp = { path = "../../engine/crates/wavecraft-dsp" }
