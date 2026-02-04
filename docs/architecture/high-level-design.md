@@ -37,7 +37,16 @@ Wavecraft is organized as a **monorepo** containing all components of the SDK ec
 ```
 wavecraft/
 ├── cli/                           # CLI tool (cargo install wavecraft)
-│   └── src/                       # CLI source code
+│   ├── src/                       # CLI source code
+│   │   ├── main.rs                # Entry point, clap CLI
+│   │   ├── validation.rs          # Crate name validation (syn-based)
+│   │   ├── commands/              # Command implementations
+│   │   │   ├── mod.rs
+│   │   │   └── new.rs             # `wavecraft new` command
+│   │   └── template/              # Template extraction & variables
+│   │       ├── mod.rs
+│   │       └── variables.rs
+│   └── template/                  # Embedded template source (include_dir!)
 ├── docs/                          # Documentation
 │   ├── architecture/              # Architecture documents
 │   ├── feature-specs/             # Feature specifications
@@ -53,9 +62,12 @@ wavecraft/
 │   └── xtask/                     # Build automation
 ├── packaging/                     # AU wrapper, installers
 ├── scripts/                       # Development scripts
-├── ui/                            # React UI & @wavecraft/ipc package
-│   └── packages/
-│       └── ipc/                   # @wavecraft/ipc npm package
+├── ui/                            # React UI
+│   └── src/
+│       ├── components/            # React components
+│       ├── lib/
+│       │   └── wavecraft-ipc/     # IPC client library
+│       └── test/                  # Test utilities and mocks
 └── wavecraft-plugin-template/     # Plugin template (scaffolded by CLI)
 ```
 
@@ -65,7 +77,7 @@ wavecraft/
 
 2. **Simplified Development** — Contributors can work on any component without managing multiple repositories.
 
-3. **Path Dependencies** — During Phase 1 (pre-1.0), the template uses local path dependencies to SDK crates, enabling rapid iteration without publishing.
+3. **Template Embedding** — The CLI embeds the plugin template at compile time via `include_dir!`, ensuring the template is always in sync with the CLI version.
 
 4. **Coordinated Releases** — Version bumps and releases are coordinated across all components.
 
@@ -75,27 +87,35 @@ wavecraft/
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                           MONOREPO                                      │
 │                                                                         │
-│  ┌─────────┐     scaffolds     ┌─────────────────────────────┐          │
-│  │   CLI   │ ─────────────────►│ wavecraft-plugin-template   │          │
-│  └─────────┘                   │ (uses path deps in Phase 1) │          │
-│                                └──────────────┬──────────────┘          │
-│                                               │                         │
-│                                    depends on │                         │
-│                                               ▼                         │
-│  ┌─────────────────────────────────────────────────────────────┐        │
-│  │                     engine/crates/                          │        │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │        │
-│  │  │wavecraft-core│  │wavecraft-dsp│  │wavecraft-*  │          │        │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘          │        │
-│  └─────────────────────────────────────────────────────────────┘        │
-│                                               ▲                         │
-│                                    depends on │                         │
-│  ┌─────────────────────────────────────────────────────────────┐        │
-│  │                        ui/packages/                         │        │
-│  │              ┌─────────────────────────┐                    │        │
-│  │              │     @wavecraft/ipc      │                    │        │
-│  │              └─────────────────────────┘                    │        │
-│  └─────────────────────────────────────────────────────────────┘        │
+│  ┌─────────────────┐     scaffolds      ┌───────────────────────────┐   │
+│  │   CLI           │ ──────────────────►│ New Plugin Project        │   │
+│  │ (wavecraft new) │                    │ (uses git tag deps)       │   │
+│  │                 │                    │                           │   │
+│  │  • validation   │                    │ [dependencies]            │   │
+│  │  • templates    │                    │ wavecraft-core = {        │   │
+│  │  • interactive  │                    │   git = "...wavecraft",  │   │
+│  │    prompts      │                    │   tag = "v0.7.0" }       │   │
+│  └─────────────────┘                    └───────────────────────────┘   │
+│                                                     │                   │
+│                                          depends on │ (git)             │
+│                                                     ▼                   │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │                     engine/crates/                              │    │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌──────────────────┐         │    │
+│  │  │wavecraft-core│  │wavecraft-dsp│  │wavecraft-metering│         │    │
+│  │  └─────────────┘  └─────────────┘  └──────────────────┘         │    │
+│  │  ┌───────────────┐  ┌────────────────┐  ┌─────────────────┐     │    │
+│  │  │wavecraft-macros│  │wavecraft-bridge│  │wavecraft-protocol│    │    │
+│  │  └───────────────┘  └────────────────┘  └─────────────────┘     │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │                          ui/src/                                │    │
+│  │              ┌─────────────────────────────┐                    │    │
+│  │              │  lib/wavecraft-ipc/         │                    │    │
+│  │              │  (IPC hooks & clients)      │                    │    │
+│  │              └─────────────────────────────┘                    │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -104,10 +124,10 @@ wavecraft/
 
 | Aspect | Phase 1 (Current) | Phase 2 (Post-1.0) |
 |--------|-------------------|---------------------|
-| Template location | In monorepo | Separate repo or embedded in CLI |
-| SDK dependencies | Local path (`../../engine/crates/`) | Published crates (crates.io) |
+| Template location | Embedded in CLI binary | Same (embedded) |
+| SDK dependencies | Git tag (`tag = "v0.7.0"`) | Published crates (crates.io) |
 | Development | Rapid iteration | Stable API |
-| User workflow | Clone monorepo or use CLI | `cargo install wavecraft && wavecraft new` |
+| User workflow | `cargo install wavecraft && wavecraft new` | Same, with crates.io deps |
 
 ⸻
 

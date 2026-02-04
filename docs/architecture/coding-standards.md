@@ -975,6 +975,61 @@ eprintln!("Error: {}", err);
 - TypeScript: Use explicit error types, avoid `any`
 - Rust: Use `Result<T, E>` with descriptive error types
 - Always handle errors explicitly; avoid silent failures
+
+### Validation Against Language Specifications
+
+**Rule:** When validating identifiers, keywords, or language constructs, use the language's own parser/lexer libraries instead of maintaining custom lists.
+
+**Rationale:**
+- **Future-proof**: Automatically stays current with language updates (new keywords, editions)
+- **Authoritative**: Uses the language's official rules as source of truth
+- **Comprehensive**: Covers all cases including strict keywords, reserved words, and edition-specific additions
+- **Maintainable**: No manual lists to keep in sync
+
+**Do (Rust keyword validation):**
+```rust
+use syn;
+
+/// Validates that a name is not a Rust keyword.
+/// Uses syn's parser - the same rules Rust itself uses.
+pub fn validate_not_keyword(name: &str) -> Result<()> {
+    // Convert hyphens to underscores (crate names allow hyphens)
+    let ident_name = name.replace('-', "_");
+    
+    // syn::parse_str::<syn::Ident>() fails for keywords
+    if syn::parse_str::<syn::Ident>(&ident_name).is_err() {
+        bail!("'{}' is a reserved Rust keyword", name);
+    }
+    Ok(())
+}
+```
+
+**Don't (hardcoded keyword list):**
+```rust
+// ❌ Hardcoded list becomes stale as language evolves
+const KEYWORDS: &[&str] = &[
+    "fn", "let", "if", "else", "match", // incomplete...
+    // Missing: async, await, try, dyn, etc.
+];
+
+fn validate_not_keyword(name: &str) -> Result<()> {
+    if KEYWORDS.contains(&name) {
+        bail!("Reserved keyword");
+    }
+    Ok(())
+}
+```
+
+**Why syn for Rust:**
+- `syn` is the de-facto standard Rust parser, used by proc-macros
+- `syn::Ident` parsing uses Rust's official keyword list
+- Automatically includes edition-specific keywords (e.g., `async`/`await` in 2018+)
+- Zero maintenance burden for keyword list updates
+
+**Similar patterns for other languages:**
+- **TypeScript**: Use TypeScript compiler API for identifier validation
+- **JavaScript**: Use `acorn` or `esprima` parser libraries
+
 ### Rust `unwrap()` and `expect()` Usage
 
 **Rule:** Avoid `unwrap()` in production code. Use `expect()` with descriptive messages or proper error handling.
