@@ -15,10 +15,10 @@
 |-------|--------|----------|
 | Phase 1: Template Conversion | ✅ Complete | 8/8 |
 | Phase 2: CLI Implementation | ✅ Complete | 10/10 |
-| Phase 3: Documentation Fixes | 🔄 In Progress | 1/7 |
+| Phase 3: Documentation Fixes | ✅ Complete | 7/7 |
 | Phase 4: CI & Release | ⏳ Not Started | 0/6 |
 
-**Overall Progress:** 19/31 tasks (61%)
+**Overall Progress:** 25/31 tasks (81%)
 
 ---
 
@@ -59,12 +59,12 @@
 | # | Task | Status | Notes |
 |---|------|--------|-------|
 | 3.1 | Identify broken links | ✅ | Created scripts/check-links.sh, 0 broken links found |
-| 3.2 | Fix links in roadmap.md | ⏳ | Skipped (no broken links) |
-| 3.3 | Fix links in architecture/*.md | ⏳ | Skipped (no broken links) |
-| 3.4 | Fix links in guides/*.md | ⏳ | Skipped (no broken links) |
-| 3.5 | Update SDK Getting Started | ⏳ | Still needs CLI usage docs |
-| 3.6 | Update template README | ⏳ | Still needs standalone docs |
-| 3.7 | Add link checker to CI | ⏳ | Add to lint.yml |
+| 3.2 | Fix links in roadmap.md | ✅ | Skipped (no broken links) |
+| 3.3 | Fix links in architecture/*.md | ✅ | Skipped (no broken links) |
+| 3.4 | Fix links in guides/*.md | ✅ | Skipped (no broken links) |
+| 3.5 | Update SDK Getting Started | ✅ | Added CLI workflow, interactive mode, git deps notes |
+| 3.6 | Update template README | ✅ | Rewritten for standalone usage with declarative DSL |
+| 3.7 | Add link checker to CI | ✅ | Added check-docs job to ci.yml |
 
 ---
 

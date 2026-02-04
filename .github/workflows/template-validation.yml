@@ -1,0 +1,153 @@
+name: Template Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-template:
+    name: Validate Generated Template
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ═════════════════════════════════════════════════════════════
+      # Setup
+      # ═════════════════════════════════════════════════════════════
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            engine
+            cli
+
+      # ═════════════════════════════════════════════════════════════
+      # Build CLI
+      # ═════════════════════════════════════════════════════════════
+
+      - name: Build Wavecraft CLI
+        run: cargo build --release
+        working-directory: cli
+
+      - name: Add CLI to PATH
+        run: echo "${{ github.workspace }}/cli/target/release" >> $GITHUB_PATH
+
+      # ═════════════════════════════════════════════════════════════
+      # Generate Test Project
+      # ═════════════════════════════════════════════════════════════
+
+      - name: Generate test plugin
+        run: |
+          wavecraft new test-plugin \
+            --vendor "Test Vendor" \
+            --email "test@example.com" \
+            --url "https://example.com" \
+            --no-git
+        working-directory: /tmp
+
+      - name: Verify generated files
+        run: |
+          echo "Checking generated project structure..."
+          test -f /tmp/test-plugin/engine/Cargo.toml || exit 1
+          test -f /tmp/test-plugin/engine/src/lib.rs || exit 1
+          test -f /tmp/test-plugin/ui/package.json || exit 1
+          test -f /tmp/test-plugin/ui/src/App.tsx || exit 1
+          test -f /tmp/test-plugin/README.md || exit 1
+          echo "✅ All expected files present"
+
+      # ═════════════════════════════════════════════════════════════
+      # Validate Engine Compilation
+      # ═════════════════════════════════════════════════════════════
+
+      - name: Install Linux dependencies for generated project
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libx11-xcb-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
+          version: 1.0
+
+      - name: Override SDK dependencies with local workspace
+        run: |
+          cat >> /tmp/test-plugin/Cargo.toml << 'EOF'
+
+          # CI Override: Use local wavecraft crates for testing before git tags exist
+          # This allows template validation during development, before creating release tags
+          [patch.'https://github.com/RonHouben/wavecraft']
+          wavecraft-core = { path = "${{ github.workspace }}/engine/crates/wavecraft-core" }
+          wavecraft-protocol = { path = "${{ github.workspace }}/engine/crates/wavecraft-protocol" }
+          wavecraft-dsp = { path = "${{ github.workspace }}/engine/crates/wavecraft-dsp" }
+          wavecraft-bridge = { path = "${{ github.workspace }}/engine/crates/wavecraft-bridge" }
+          wavecraft-metering = { path = "${{ github.workspace }}/engine/crates/wavecraft-metering" }
+          EOF
+
+      - name: Check generated engine code
+        run: cargo check --manifest-path engine/Cargo.toml
+        working-directory: /tmp/test-plugin
+
+      - name: Run clippy on generated code
+        run: cargo clippy --workspace --all-targets -- -D warnings
+        working-directory: /tmp/test-plugin/engine
+
+      - name: Check formatting on generated code
+        run: cargo fmt --check
+        working-directory: /tmp/test-plugin/engine
+
+      # ═════════════════════════════════════════════════════════════
+      # Validate UI Compilation
+      # ═════════════════════════════════════════════════════════════
+
+      - name: Install UI dependencies
+        run: npm ci
+        working-directory: /tmp/test-plugin/ui
+
+      - name: Run UI linting
+        run: npm run lint
+        working-directory: /tmp/test-plugin/ui
+
+      - name: Check UI formatting
+        run: npm run format:check
+        working-directory: /tmp/test-plugin/ui
+
+      - name: TypeScript type-check
+        run: npm run typecheck
+        working-directory: /tmp/test-plugin/ui
+
+      - name: Build UI
+        run: npm run build
+        working-directory: /tmp/test-plugin/ui
+
+      # ═════════════════════════════════════════════════════════════
+      # Validate xtask Commands
+      # ═════════════════════════════════════════════════════════════
+
+      - name: Test xtask bundle command (dry run)
+        run: cargo xtask bundle --check
+        working-directory: /tmp/test-plugin/engine
+
+      # ═════════════════════════════════════════════════════════════
+      # Summary
+      # ═════════════════════════════════════════════════════════════
+
+      - name: Validation complete
+        run: |
+          echo "✅ Template validation successful!"
+          echo "  - CLI generated project correctly"
+          echo "  - Engine code compiles and passes linting"
+          echo "  - UI code compiles and passes linting"
+          echo "  - xtask commands work"
