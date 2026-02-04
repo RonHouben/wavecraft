@@ -1,15 +1,29 @@
-import { Meter } from './components/Meter';
-import { ParameterSlider } from './components/ParameterSlider';
-import { VersionBadge } from './components/VersionBadge';
-import { LatencyMonitor } from './components/LatencyMonitor';
+// Core SDK - hooks and utilities
+import { useAllParameters, useParameterGroups } from '@wavecraft/core';
+
+// Pre-built components
+import {
+  Meter,
+  ParameterSlider,
+  ParameterGroup,
+  VersionBadge,
+  ConnectionStatus,
+  LatencyMonitor,
+} from '@wavecraft/components';
 
 export function App() {
+  const { params, isLoading } = useAllParameters();
+  const groups = useParameterGroups(params);
+
   return (
     <div className="flex h-screen flex-col gap-4 bg-plugin-dark p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-100">My Plugin</h1>
-        <VersionBadge />
+        <h1 className="text-2xl font-bold text-gray-100">{{plugin_name_title}}</h1>
+        <div className="flex items-center gap-2">
+          <ConnectionStatus />
+          <VersionBadge />
+        </div>
       </div>
 
       {/* Main Content */}
@@ -19,9 +33,19 @@ export function App() {
           <h2 className="mb-3 text-base font-semibold text-gray-200">
             Parameters
           </h2>
-          <div className="space-y-3">
-            <ParameterSlider id="gain" />
-          </div>
+          {isLoading ? (
+            <p className="italic text-gray-500">Loading parameters...</p>
+          ) : (
+            <div className="space-y-4">
+              {groups.length > 0 ? (
+                groups.map((group) => (
+                  <ParameterGroup key={group.name} group={group} />
+                ))
+              ) : (
+                params?.map((p) => <ParameterSlider key={p.id} id={p.id} />)
+              )}
+            </div>
+          )}
         </div>
 
         {/* Metering Section */}
