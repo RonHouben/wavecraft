@@ -552,6 +552,7 @@ QA:           5 findings (1 Critical, 4 Medium) — all resolved
 | Add link checker to CI | ✅ | check-docs job in ci.yml |
 | **CI for Template** | | |
 | Template validation workflow | ✅ | template-validation.yml validates builds |
+| `--local-dev` CLI flag | ✅ | Path deps for CI (fixes tag chicken-egg problem) |
 | CLI release workflow | ✅ | cli-release.yml for crates.io |
 | **UI Package Publishing** | | |
 | Set up npm org `@wavecraft` | ✅ | npm organization registered |
@@ -758,6 +759,7 @@ QA:           PASS (0 Critical/High, 2 Medium non-blocking, 3 Low optional)
 
 | Date | Update |
 |------|--------|
+| 2026-02-04 | **CLI `--local-dev` flag**: Added `--local-dev` CLI option to `wavecraft new` for SDK development and CI. Generates path dependencies (e.g., `path = "/path/to/engine/crates/wavecraft-core"`) instead of git tag dependencies. Solves CI chicken-egg problem where template validation fails because git tags don't exist until after PR merge. Mutually exclusive with `--sdk-version`. 10/10 unit tests, 10/10 manual tests. Documentation updated (sdk-getting-started.md, ci-pipeline.md). Archived to `_archive/ci-local-dev-dependencies/`. |
 | 2026-02-04 | **Continuous Deployment implemented (v0.7.1)**: Added `continuous-deploy.yml` workflow for automatic package publishing on merge to main. Path-based change detection using `dorny/paths-filter` — only changed packages are published. Auto-patch version bumping with bot commits (`[skip ci]` prevents re-triggers). Supports: CLI (crates.io), 6 engine crates (crates.io), `@wavecraft/core` (npm), `@wavecraft/components` (npm). Existing `cli-release.yml` and `npm-release.yml` converted to manual overrides. Full documentation added to `docs/guides/ci-pipeline.md`. Version bumped to 0.7.1 across all packages. |
 | 2026-02-04 | **Milestone 12 complete (v0.7.0)**: Open Source Readiness fully implemented. **wavecraft CLI** published to crates.io (`cargo install wavecraft && wavecraft new my-plugin`). **npm packages** published: `@wavecraft/core@0.7.0` (IPC bridge, hooks, Logger, utilities) and `@wavecraft/components@0.7.0` (Meter, ParameterSlider, ParameterGroup, VersionBadge). **Template system** converted to use npm packages instead of bundled UI copy. **CI workflows** for template validation and CLI release. 75/75 implementation tasks complete. 20/20 manual tests passing. QA approved (0 Critical/High issues). Architecture docs updated (npm package imports, subpath exports). Archived to `_archive/open-source-readiness/`. |
 | 2026-02-03 | **CI Pipeline Optimization complete**: Added `cargo xtask check` command for fast local validation (~52s, 26x faster than Docker CI). Pre-compile test binaries in CI with `cargo test --no-run`. Tiered artifact retention (7 days main / 90 days tags, ~75-80% storage reduction). Updated agent documentation (Tester uses `cargo xtask check`, QA focuses on manual review). Architecture docs updated (high-level-design.md, ci-pipeline.md, coding-standards.md). Version 0.6.2. |
