@@ -17,9 +17,10 @@
 | Phase 2: CLI Implementation | ✅ Complete | 10/10 |
 | Phase 3: Documentation Fixes | ✅ Complete | 7/7 |
 | Phase 4: CI & Release | ✅ Complete | 6/6 |
+| Phase 5: npm UI Packages | ⏳ Not Started | 0/42 |
 | **Bug Fixes** | ✅ Complete | 2/2 |
 
-**Overall Progress:** 33/33 tasks (100%)
+**Overall Progress:** 33/75 tasks (44%)
 
 ---
 
@@ -202,5 +203,107 @@ The CLI tool is now fully functional and can generate new plugin projects. Teste
 - ✅ Manual testing: Empty URL and reserved keyword validation work correctly
 
 **Feature Status:** ✅ **COMPLETE AND READY FOR QA**
+
+---
+
+## Phase 5: npm UI Package Publishing
+
+**Reference:** [implementation-plan-npm-ui-package.md](implementation-plan-npm-ui-package.md)
+
+**Architecture:** Split into two packages:
+- **`@wavecraft/core`** — IPC bridge, hooks, types, utilities (SDK foundation)
+- **`@wavecraft/components`** — Pre-built React components (depends on core)
+
+### 5.1 Workspace Setup (0.5 day)
+
+| # | Task | Status | Notes |
+|---|------|--------|-------|
+| 5.1.1 | Create packages directory structure | ⏳ | `ui/packages/core/`, `ui/packages/components/` |
+| 5.1.2 | Update root package.json for workspaces | ⏳ | Add `workspaces: ["packages/*"]` |
+| 5.1.3 | Move IPC code to core package | ⏳ | `lib/wavecraft-ipc/` → `packages/core/src/` |
+| 5.1.4 | Move component code to components package | ⏳ | `components/` → `packages/components/src/` |
+| 5.1.5 | Update dev app imports | ⏳ | Use `@wavecraft/core`, `@wavecraft/components` |
+| 5.1.6 | Update Vite config for workspace aliases | ⏳ | Resolve aliases for local dev |
+
+### 5.2 Core Package Infrastructure (1 day)
+
+| # | Task | Status | Notes |
+|---|------|--------|-------|
+| 5.2.1 | Install vite-plugin-dts | ⏳ | Build dependency |
+| 5.2.2 | Create core package.json | ⏳ | `@wavecraft/core` metadata |
+| 5.2.3 | Create core vite.lib.config.ts | ⏳ | ESM bundle + DTS |
+| 5.2.4 | Create core tsconfig.json | ⏳ | TypeScript config |
+| 5.2.5 | Create core index.ts entry point | ⏳ | Main exports |
+| 5.2.6 | Create core meters.ts subpath entry | ⏳ | Pure utilities export |
+
+### 5.3 Components Package Infrastructure (1 day)
+
+| # | Task | Status | Notes |
+|---|------|--------|-------|
+| 5.3.1 | Create components package.json | ⏳ | `@wavecraft/components` metadata |
+| 5.3.2 | Create components vite.lib.config.ts | ⏳ | ESM bundle + DTS |
+| 5.3.3 | Create components tsconfig.json | ⏳ | TypeScript config |
+| 5.3.4 | Create components index.ts entry point | ⏳ | All component exports |
+| 5.3.5 | Update component imports | ⏳ | Import from `@wavecraft/core` |
+
+### 5.4 Build Verification (0.5 day)
+
+| # | Task | Status | Notes |
+|---|------|--------|-------|
+| 5.4.1 | Build core package | ⏳ | `npm run build:lib` |
+| 5.4.2 | Build components package | ⏳ | `npm run build:lib` |
+| 5.4.3 | Verify package contents | ⏳ | `npm pack --dry-run` |
+| 5.4.4 | Local install test | ⏳ | Test in temp directory |
+| 5.4.5 | TypeScript compilation test | ⏳ | Verify DTS files |
+
+### 5.5 npm Organization Setup (0.5 day)
+
+| # | Task | Status | Notes |
+|---|------|--------|-------|
+| 5.5.1 | Create npm account | ⏳ | If needed |
+| 5.5.2 | Create @wavecraft organization | ⏳ | npm org |
+| 5.5.3 | Test publish (dry run) | ⏳ | Both packages |
+
+### 5.6 Template Migration (1 day)
+
+| # | Task | Status | Notes |
+|---|------|--------|-------|
+| 5.6.1 | Update template package.json | ⏳ | Add both `@wavecraft/*` deps |
+| 5.6.2 | Update template App.tsx | ⏳ | Import from both packages |
+| 5.6.3 | Update template tailwind.config.js | ⏳ | Scan `@wavecraft/components` |
+| 5.6.4 | Update template vite.config.ts | ⏳ | Remove local aliases |
+| 5.6.5 | Update template tsconfig.json | ⏳ | Remove path aliases |
+| 5.6.6 | Remove copied source files | ⏳ | Delete `lib/`, `components/` |
+
+### 5.7 Package Documentation (0.25 day)
+
+| # | Task | Status | Notes |
+|---|------|--------|-------|
+| 5.7.1 | Create core package README | ⏳ | npm page content |
+| 5.7.2 | Create components package README | ⏳ | npm page content |
+
+### 5.8 Documentation Updates (0.25 day)
+
+| # | Task | Status | Notes |
+|---|------|--------|-------|
+| 5.8.1 | Update SDK Getting Started | ⏳ | npm package workflow |
+| 5.8.2 | Update High-Level Design | ⏳ | Document npm architecture |
+
+### 5.9 Publishing (0.25 day)
+
+| # | Task | Status | Notes |
+|---|------|--------|-------|
+| 5.9.1 | Final pre-publish checklist | ⏳ | All prerequisites |
+| 5.9.2 | Publish core package | ⏳ | `npm publish` (first) |
+| 5.9.3 | Publish components package | ⏳ | `npm publish` (after core) |
+| 5.9.4 | Verify published packages | ⏳ | Install from registry |
+| 5.9.5 | Test template with npm packages | ⏳ | End-to-end validation |
+
+### 5.10 Cleanup (0.25 day)
+
+| # | Task | Status | Notes |
+|---|------|--------|-------|
+| 5.10.1 | Update roadmap | ⏳ | Mark tasks complete |
+| 5.10.2 | Update implementation progress | ⏳ | This file |
 
 ---
