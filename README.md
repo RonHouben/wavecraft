@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/RonHouben/wavecraft/actions/workflows/ci.yml/badge.svg)](https://github.com/RonHouben/wavecraft/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![crates.io](https://img.shields.io/crates/v/wavecraft.svg)](https://crates.io/crates/wavecraft)
+[![npm](https://img.shields.io/npm/v/@wavecraft/core.svg)](https://www.npmjs.com/package/@wavecraft/core)
 
 A cross-platform audio effects plugin framework built with **Rust** and **React**.
 
@@ -38,10 +40,36 @@ Communication between UI and audio uses lock-free parameter systems and ring buf
 
 Wavecraft's UI code is published as two npm packages under the `@wavecraft` organization:
 
-- **[@wavecraft/core](https://www.npmjs.com/package/@wavecraft/core)** — IPC bridge, React hooks, and utilities
-- **[@wavecraft/components](https://www.npmjs.com/package/@wavecraft/components)** — Pre-built React components (Meter, ParameterSlider, etc.)
+| Package | Description |
+|---------|-------------|
+| [@wavecraft/core](https://www.npmjs.com/package/@wavecraft/core) | IPC bridge, React hooks, and utilities |
+| [@wavecraft/components](https://www.npmjs.com/package/@wavecraft/components) | Pre-built React components (Meter, ParameterSlider, etc.) |
 
-These packages allow plugin developers to build UIs without copying source code.
+```bash
+npm install @wavecraft/core @wavecraft/components
+```
+
+## Rust Crates
+
+Wavecraft's Rust SDK is published to crates.io:
+
+| Crate | Description |
+|-------|-------------|
+| [wavecraft](https://crates.io/crates/wavecraft) | CLI tool for scaffolding new plugins |
+| [wavecraft-core](https://crates.io/crates/wavecraft-core) | nih-plug VST3/CLAP integration |
+| [wavecraft-dsp](https://crates.io/crates/wavecraft-dsp) | Pure DSP algorithms, `Processor` trait |
+| [wavecraft-protocol](https://crates.io/crates/wavecraft-protocol) | Shared parameter definitions |
+| [wavecraft-macros](https://crates.io/crates/wavecraft-macros) | Procedural macros (`wavecraft_plugin!`, etc.) |
+| [wavecraft-bridge](https://crates.io/crates/wavecraft-bridge) | UI ↔ Audio IPC handling |
+| [wavecraft-metering](https://crates.io/crates/wavecraft-metering) | SPSC ring buffer for real-time meters |
+
+```bash
+# Install CLI
+cargo install wavecraft
+
+# Create a new plugin
+wavecraft new my-plugin
+```
 
 ## Project Structure
 

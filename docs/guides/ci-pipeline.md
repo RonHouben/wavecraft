@@ -237,3 +237,141 @@ For detailed local testing instructions, see the [Run CI Pipeline Locally skill]
 
 - [Coding Standards](../architecture/coding-standards.md) — Code conventions including linting rules
 - [macOS Signing Guide](./macos-signing.md) — Plugin signing and notarization
+
+---
+
+## Continuous Deployment
+
+Wavecraft uses automatic continuous deployment for all publishable packages. When changes are merged to `main`, packages are automatically published to their respective registries.
+
+### Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        CONTINUOUS DEPLOYMENT                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  PR merged to main                                                          │
+│        │                                                                    │
+│        ▼                                                                    │
+│  ┌─────────────────┐                                                        │
+│  │ detect-changes  │  Analyzes which paths changed                          │
+│  └────────┬────────┘                                                        │
+│           │                                                                 │
+│     ┌─────┼─────┬─────────────┬─────────────┐                               │
+│     ▼     ▼     ▼             ▼             ▼                               │
+│  ┌─────┐ ┌──────┐ ┌───────────┐ ┌───────────┐                               │
+│  │ CLI │ │Engine│ │ npm-core  │ │npm-comps  │                               │
+│  └──┬──┘ └──┬───┘ └─────┬─────┘ └─────┬─────┘                               │
+│     │       │           │             │                                     │
+│     ▼       ▼           ▼             ▼                                     │
+│  crates.io  crates.io   npmjs.org     npmjs.org                             │
+│  (wavecraft) (6 crates) (@wavecraft/  (@wavecraft/                          │
+│                          core)         components)                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Workflow: `continuous-deploy.yml`
+
+**Trigger:** Push to `main` branch (i.e., PR merge)
+
+| Job | Path Filter | Publishes To |
+|-----|-------------|--------------|
+| `publish-cli` | `cli/**`, `wavecraft-plugin-template/**` | crates.io (`wavecraft`) |
+| `publish-engine` | `engine/crates/**` | crates.io (6 crates) |
+| `publish-npm-core` | `ui/packages/core/src/**` | npm (`@wavecraft/core`) |
+| `publish-npm-components` | `ui/packages/components/src/**` | npm (`@wavecraft/components`) |
+
+### Packages Published
+
+#### npm Packages
+
+| Package | Description |
+|---------|-------------|
+| `@wavecraft/core` | IPC bridge, hooks, types, utilities |
+| `@wavecraft/components` | Pre-built React components |
+
+#### Rust Crates (crates.io)
+
+| Crate | Description |
+|-------|-------------|
+| `wavecraft` | CLI tool for scaffolding plugins |
+| `wavecraft-protocol` | Shared parameter definitions |
+| `wavecraft-macros` | Procedural macros |
+| `wavecraft-metering` | SPSC ring buffer for audio → UI |
+| `wavecraft-dsp` | Pure DSP algorithms |
+| `wavecraft-bridge` | IPC handling |
+| `wavecraft-core` | nih-plug VST3/CLAP integration |
+
+### Version Bumping
+
+Versions are managed **automatically**:
+
+1. **On merge:** Workflow checks if current version is already published
+2. **If published:** Automatically bumps patch version (e.g., `0.7.1` → `0.7.2`)
+3. **If not published:** Publishes current version as-is
+4. **Commits:** Bot commits version bump with `[skip ci]` to prevent re-triggers
+
+#### Manual Version Control
+
+For **minor or major** version bumps (breaking changes, new features), bump the version manually in your PR:
+
+```bash
+# npm packages
+cd ui/packages/core
+npm version minor --no-git-tag-version  # 0.7.x → 0.8.0
+git add package.json
+git commit -m "chore(core): bump to 0.8.0 for new API"
+
+# Rust crates (workspace version)
+# Edit engine/Cargo.toml directly
+```
+
+The workflow will detect the new version isn't published and publish it without auto-bumping.
+
+### Secrets Required
+
+| Secret | Purpose |
+|--------|---------|
+| `NPM_TOKEN` | npm registry publishing |
+| `CARGO_REGISTRY_TOKEN` | crates.io publishing |
+| `GITHUB_TOKEN` | Commit version bumps (built-in) |
+
+### Manual Override Workflows
+
+For emergency releases or specific version publishing, use the tag-based workflows:
+
+```bash
+# CLI release
+git tag cli-v0.8.0
+git push origin cli-v0.8.0
+
+# npm release (both packages)
+git tag npm-v0.8.0
+git push origin npm-v0.8.0
+```
+
+These trigger `cli-release.yml` and `npm-release.yml` respectively.
+
+### Idempotency
+
+The workflow is **idempotent** — running it multiple times won't cause issues:
+
+1. **Already published?** Skips publishing, bumps version for next time
+2. **Publish failed?** Next run detects unpublished version and retries
+3. **No changes?** Jobs skip entirely (path filter returns false)
+
+### Engine Crate Publish Order
+
+Engine crates have interdependencies and must be published in order:
+
+```
+1. wavecraft-protocol  (no deps)
+2. wavecraft-macros    (no deps)
+3. wavecraft-metering  (no deps)
+4. wavecraft-dsp       (depends on protocol, macros)
+5. wavecraft-bridge    (depends on protocol)
+6. wavecraft-core      (depends on all above)
+```
+
+The workflow waits 30 seconds between publishes for crates.io indexing.
