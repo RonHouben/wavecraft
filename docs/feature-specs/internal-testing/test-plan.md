@@ -12,15 +12,17 @@
 
 | Status | Count |
 |--------|-------|
-| ✅ PASS | 6 |
-| ❌ FAIL | 0 |
-| ⏸️ BLOCKED | 0 |
-| ⬜ NOT RUN | 16 |
+| ✅ PASS | 5 |
+| ❌ FAIL | 1 |
+| ⏸️ BLOCKED | 16 |
+| ⬜ NOT RUN | 0 |
 
-**Critical Issues:** 0 (resolved)  
-**High Issues:** 0 (resolved)
+**Issues Summary:**
+- Critical: 1 active (Issue #3: path dependencies) + 1 resolved (Issue #1: logger imports)  
+- High: 1 resolved (Issue #2: test files)
+- Medium: 1 active (Issue #4: missing cargo config)
 
-**Status:** ✅ **READY FOR PHASE 2 CONTINUATION** — Critical issues fixed by Coder.
+**Status:** ⏸️ **PAUSED** — TC-006 blocked by Issue #3 (CRITICAL). Template cannot build outside monorepo.
 
 ## Prerequisites
 
@@ -196,22 +198,33 @@
 - `test-plugin/engine/target/bundled/` contains VST3 and CLAP bundles
 - Total time < 30 minutes (excluding download time)
 
-**Status**: ✅ PASS
+**Status**: ❌ FAIL (blocked by Issues #3 and #4)
 
 **Actual Result**: 
-- Template cloned successfully to `/tmp/wavecraft-internal-test/test-plugin`
-- `npm install` completed in 3 seconds (285 packages)
-- `npm run build` completed successfully in 773ms
-- Build artifacts created in `dist/`:
-  - `index.html` (0.49 kB)
-  - `assets/index-*.css` (11.93 kB)
-  - `assets/index-*.js` (162.48 kB)
-- Ready to proceed to plugin bundling step
+- ✅ Template cloned successfully to `/tmp/wavecraft-internal-test/test-plugin`
+- ✅ `npm install` completed in 2 seconds (285 packages, after clean install)
+- ✅ `npm run build` **PASSED** (after Issue #1 fix):
+  - Duration: 1.19s  
+  - Output: `index.html` (0.49 kB), CSS (11.93 kB gzipped: 3.13 kB), JS (162.48 kB gzipped: 51.24 kB)
+- ❌ `cargo xtask bundle --release` **FAILED** — command not found (Issue #4)
+- ❌ Workaround attempt with `cargo run --package xtask --release -- bundle` **FAILED**:
+  ```
+  error: failed to load manifest for dependency `wavecraft-bridge`
+  Caused by:
+    failed to read `/private/tmp/wavecraft-internal-test/engine/crates/wavecraft-bridge/Cargo.toml`
+  Caused by:
+    No such file or directory (os error 2)
+  ```
+- **Unable to complete plugin bundling** — template is broken outside monorepo
 
 **Notes**: 
-- **FIXED** — Coder resolved Issue #1 and Issue #2
-- Template now builds successfully on first try
-- TypeScript compilation passes with no errors 
+- Issue #1 (logger imports) ✅ RESOLVED by Coder
+- Issue #2 (test files) ✅ RESOLVED by Coder  
+- Issue #3 (path dependencies) ❌ **CRITICAL NEW BLOCKER** — template has hardcoded `path = "../../engine/crates/..."` 
+- Issue #4 (missing .cargo/config.toml) ⚠️ MEDIUM — workaround exists but docs are wrong
+- **This completely blocks TC-021 (Template Independence)**
+- **External beta testers would be unable to build anything**
+- Total time so far: ~5 minutes (excluding Coder fixes) 
 
 ---
 
@@ -723,6 +736,81 @@ src/lib/wavecraft-ipc/logger/Logger.test.ts:1:65 - error TS2307: Cannot find nam
 
 ---
 
+### Issue #3: Template Has Monorepo Path Dependencies (CRITICAL)
+
+**Severity:** Critical  
+**Found in:** Phase 2, TC-006 (Fresh Clone Experience - Step 4)  
+**Symptom:** `cargo xtask bundle` fails with:
+```
+error: failed to load manifest for dependency `wavecraft-bridge`
+Caused by:
+  failed to read `/private/tmp/wavecraft-internal-test/engine/crates/wavecraft-bridge/Cargo.toml`
+Caused by:
+  No such file or directory (os error 2)
+```
+
+**Expected:** Template builds independently when cloned to any location
+
+**Actual:** Template's `engine/Cargo.toml` has hardcoded path dependencies:
+```toml
+wavecraft-core = { path = "../../engine/crates/wavecraft-core" }
+wavecraft-protocol = { path = "../../engine/crates/wavecraft-protocol" }
+wavecraft-dsp = { path = "../../engine/crates/wavecraft-dsp" }
+wavecraft-bridge = { path = "../../engine/crates/wavecraft-bridge" }
+wavecraft-metering = { path = "../../engine/crates/wavecraft-metering" }
+```
+
+**Root Cause:** Template assumes it lives inside monorepo at `wavecraft/wavecraft-plugin-template/`. These path dependencies point to `../../engine/crates/` which only exists in the monorepo structure, not when template is cloned independently.
+
+**Impact:** **COMPLETELY BLOCKS EXTERNAL USAGE**  
+- Template cannot build outside the monorepo
+- Violates TC-021 (Template Independence)  
+- Makes external beta testing (M13) impossible
+- This is the most critical blocker for SDK adoption
+
+**Resolution:** Template's `Cargo.toml` must use git dependencies (or crates.io when SDK is published):
+```toml
+# Use git dependencies (template already has this commented out):
+wavecraft-core = { git = "https://github.com/RonHouben/wavecraft", branch = "main" }
+wavecraft-protocol = { git = "https://github.com/RonHouben/wavecraft", branch = "main" }
+# ... etc for all wavecraft-* crates
+```
+
+**Status:** ⏳ Requires Coder fix
+
+---
+
+### Issue #4: Template Missing .cargo/config.toml (MEDIUM)
+
+**Severity:** Medium  
+**Found in:** Phase 2, TC-006 (Fresh Clone Experience - Step 4)  
+**Symptom:** `cargo xtask bundle` fails with:
+```
+error: no such command: `xtask`
+help: a command with a similar name exists: `test`
+```
+
+**Expected:** `cargo xtask bundle` works as documented
+
+**Actual:** Template missing `.cargo/config.toml` that defines the xtask alias
+
+**Root Cause:** Main repo has `engine/.cargo/config.toml` with:
+```toml
+[alias]
+xtask = "run --package xtask --release --"
+```
+But this file was not copied to the template.
+
+**Impact:** Developer experience friction — docs say `cargo xtask bundle` but users must run `cargo run --package xtask --release -- bundle` instead
+
+**Workaround:** Users can run xtask directly: `cargo run --package xtask --release -- bundle`
+
+**Resolution:** Copy `.cargo/config.toml` to template at `wavecraft-plugin-template/engine/.cargo/config.toml`
+
+**Status:** ⏳ Requires Coder fix
+
+---
+
 ## Testing Notes
 
 ### Phase 1: Automated Verification (COMPLETE ✅)
@@ -736,26 +824,34 @@ src/lib/wavecraft-ipc/logger/Logger.test.ts:1:65 - error TS2307: Cannot find nam
 - Performance excellent (~27s actual vs ~52s estimated)
 - No issues found in this phase
 
-### Phase 2: Manual Workflow Testing (READY ✅)
+### Phase 2: Manual Workflow Testing (BLOCKED ⏸️)
 
 **Date:** February 4, 2026  
-**Progress:** 1/16 tests executed, critical issues resolved
+**Progress:** 1/16 tests attempted, NEW critical blocker discovered
 
-- **TC-006 (Fresh Clone):** NOW PASSING ✅
-  - Template builds successfully after Coder fixes
-  - Both critical and high issues resolved
-  - Ready to continue with remaining Phase 2 tests
+- **TC-006 (Fresh Clone):** ❌ STILL FAILING (new issue found)
+  - UI build now works ✅ (Issue #1, #2 resolved by Coder)
+  - **But plugin bundling BLOCKED** by Issue #3 (path dependencies)
+  - Template has hardcoded `path = "../../engine/crates/..."` dependencies
+  - Cannot build outside monorepo — violates template independence requirement
+
+**Critical Discovery:**
+- Issue #3 is **more severe** than #1 or #2
+- Template is **completely non-functional** for external users
+- This wasn't caught earlier because we tested within the monorepo structure
 
 **Impact Assessment:**
-- ✅ Template sync issues resolved
-- ✅ Developer onboarding experience now works
-- ✅ Can proceed with DAW integration testing
-- ✅ External beta testing (M13) unblocked
+- ❌ Template cannot be used outside the monorepo
+- ❌ Violates TC-021 (Template Independence)
+- ❌ **BLOCKS ALL EXTERNAL BETA TESTING** (M13)
+- ❌ SDK is not usable by external developers
 
 **Next Steps:**
-1. Continue Phase 2 testing starting with TC-007 (Plugin loads in Ableton)
-2. Complete remaining manual workflow tests
-3. Proceed to Phase 3 (Documentation Review)
+1. **URGENT**: Hand off Issues #3 and #4 to Coder immediately
+2. Coder must convert path dependencies to git dependencies
+3. Coder must add `.cargo/config.toml` to template
+4. Re-test TC-006 in clean environment
+5. Only then can we continue with TC-007+
 
 ---
 
