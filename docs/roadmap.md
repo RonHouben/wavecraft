@@ -314,7 +314,7 @@ Wavecraft has achieved its internal development goals (Milestones 1–7). The ne
 **Key Deliverables:**
 - **5-crate SDK architecture** with clear domain boundaries
 - **`wavecraft_plugin!` macro** for zero-boilerplate plugin declaration
-- **Template project** (`wavecraft-plugin-template/`) demonstrating full SDK usage
+- **Template project** (`plugin-template/`) demonstrating full SDK usage
 - **SDK Getting Started guide** for developers
 - **Version 0.4.0** released
 
@@ -394,7 +394,7 @@ Potential areas:
 | Update npm package names | ✅ | `@vstkit/*` → `@wavecraft/*` |
 | Update all documentation | ✅ | README, guides, architecture docs |
 | Update UI branding | ✅ | IPC global `__WAVECRAFT_IPC__` |
-| Update template project | ✅ | Full `wavecraft-plugin-template` |
+| Update template project | ✅ | Full `plugin-template/` |
 | Update AU wrapper | ✅ | CMakeLists.txt with Wavecraft naming |
 | **CI/CD** | | |
 | Update GitHub Actions workflows | ✅ | Artifact names: `wavecraft-*` |
@@ -410,7 +410,7 @@ Potential areas:
 - **156 files changed** in initial rename commit
 - **Version 0.5.0** (breaking change, minor version bump)
 - **5 SDK crates renamed**: `wavecraft-protocol`, `wavecraft-dsp`, `wavecraft-bridge`, `wavecraft-metering`, `wavecraft-core`
-- **Template fully updated**: `wavecraft-plugin-template` with correct dependencies and IPC
+- **Template fully updated**: `plugin-template/` with correct dependencies and IPC
 - **24/24 manual tests passing**, all automated checks clean
 - **All QA findings resolved** (5 issues fixed including AU wrapper)
 
@@ -506,7 +506,7 @@ Linting:      All checks passed (cargo fmt, clippy, ESLint, Prettier)
 - **Engine logging** — `tracing` crate replacing `println!` in standalone crate (24 calls migrated)
 - **CI optimization** — `cargo xtask check` command for 26x faster local validation, pre-compiled test binaries, tiered artifact retention
 - **Open source infrastructure** — LICENSE, CONTRIBUTING.md, CODE_OF_CONDUCT.md, issue/PR templates
-- **Template synchronization** — Logger and CSS fixes propagated to `wavecraft-plugin-template`
+- **Template synchronization** — Logger and CSS fixes propagated to `plugin-template/`
 - **Documentation updates** — Logging standards added to coding-standards.md, IPC exports documented in high-level-design.md, agent workflows updated
 
 **Test Results:**
