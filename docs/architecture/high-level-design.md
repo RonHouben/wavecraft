@@ -46,7 +46,6 @@ wavecraft/
 │   │   └── template/              # Template extraction & variables
 │   │       ├── mod.rs
 │   │       └── variables.rs
-│   └── template/                  # Embedded template source (include_dir!)
 ├── docs/                          # Documentation
 │   ├── architecture/              # Architecture documents
 │   ├── feature-specs/             # Feature specifications
