@@ -50,6 +50,12 @@ enum Commands {
         /// Wavecraft SDK version to use (git tag)
         #[arg(long, default_value = "v0.7.0")]
         sdk_version: String,
+        
+        /// Use local SDK path for development (path to engine/crates directory).
+        /// When provided, generates path dependencies instead of git tag dependencies.
+        /// Mutually exclusive with a custom --sdk-version.
+        #[arg(long, conflicts_with = "sdk_version")]
+        local_dev: Option<PathBuf>,
     },
 }
 
@@ -65,6 +71,7 @@ fn main() -> Result<()> {
             output,
             no_git,
             sdk_version,
+            local_dev,
         } => {
             let cmd = NewCommand {
                 name,
@@ -74,6 +81,7 @@ fn main() -> Result<()> {
                 output,
                 no_git,
                 sdk_version,
+                local_dev,
             };
             cmd.execute()?;
         }

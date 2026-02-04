@@ -1,6 +1,7 @@
 use anyhow::Result;
 use heck::{ToPascalCase, ToSnakeCase, ToTitleCase};
 use regex::Regex;
+use std::path::PathBuf;
 
 /// Template variables that get replaced during project generation.
 #[derive(Debug, Clone)]
@@ -13,6 +14,8 @@ pub struct TemplateVariables {
     pub email: Option<String>,
     pub url: Option<String>,
     pub sdk_version: String,
+    /// Local SDK path for development (generates path deps instead of git deps)
+    pub local_dev: Option<PathBuf>,
     pub year: String,
 }
 
@@ -23,6 +26,7 @@ impl TemplateVariables {
         email: Option<String>,
         url: Option<String>,
         sdk_version: String,
+        local_dev: Option<PathBuf>,
     ) -> Self {
         let plugin_name_snake = plugin_name.to_snake_case();
         let plugin_name_pascal = plugin_name.to_pascal_case();
@@ -38,6 +42,7 @@ impl TemplateVariables {
             email,
             url,
             sdk_version,
+            local_dev,
             year,
         }
     }
@@ -82,6 +87,7 @@ mod tests {
             None,
             None,
             "0.7.0".to_string(),
+            None, // local_dev
         );
         
         assert_eq!(vars.plugin_name, "my-plugin");
@@ -98,6 +104,7 @@ mod tests {
             Some("info@example.com".to_string()),
             Some("https://example.com".to_string()),
             "0.7.0".to_string(),
+            None, // local_dev
         );
         
         let template = "# {{plugin_name_title}} by {{vendor}}";
@@ -113,6 +120,7 @@ mod tests {
             None,
             None,
             "0.7.0".to_string(),
+            None, // local_dev
         );
         
         let template = "Hello {{unknown_var}}";
@@ -127,6 +135,7 @@ mod tests {
             None,  // No email
             None,  // No URL
             "0.7.0".to_string(),
+            None, // local_dev
         );
         
         // Template with optional variables should replace with empty string

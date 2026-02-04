@@ -1,7 +1,7 @@
 ---
 name: qa
 description: Quality Assurance agent focused on code quality and static code analysis.
-tools: ['search', 'read', 'execute', 'edit']
+tools: ['agent', 'search', 'read', 'execute', 'edit']
 user-invokable: true
 handoffs:
   - label: Fix findings

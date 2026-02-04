@@ -18,6 +18,8 @@ pub struct NewCommand {
     pub output: Option<PathBuf>,
     pub no_git: bool,
     pub sdk_version: String,
+    /// Local SDK path for development (generates path deps instead of git deps)
+    pub local_dev: Option<PathBuf>,
 }
 
 impl NewCommand {
@@ -47,6 +49,7 @@ impl NewCommand {
             email,
             url,
             self.sdk_version.clone(),
+            self.local_dev.clone(),
         );
         
         // Extract template with progress bar
