@@ -13,9 +13,14 @@
 | Status | Count |
 |--------|-------|
 | ✅ PASS | 5 |
-| ❌ FAIL | 0 |
-| ⏸️ BLOCKED | 0 |
-| ⬜ NOT RUN | 17 |
+| ❌ FAIL | 1 |
+| ⏸️ BLOCKED | 16 |
+| ⬜ NOT RUN | 0 |
+
+**Critical Issues:** 1 (blocks external testing)  
+**High Issues:** 1 (impacts user experience)
+
+**Status:** ⏸️ **PAUSED** — TC-006 failure blocks remaining Phase 2 tests. Handoff to Coder required.
 
 ## Prerequisites
 
@@ -191,11 +196,18 @@
 - `test-plugin/engine/target/bundled/` contains VST3 and CLAP bundles
 - Total time < 30 minutes (excluding download time)
 
-**Status**: ⬜ NOT RUN
+**Status**: ❌ FAIL (blocked by Issue #1)
 
 **Actual Result**: 
+- Template cloned successfully to `/tmp/wavecraft-internal-test/test-plugin`
+- `npm install` completed in 3 seconds (285 packages)
+- `npm run build` **FAILED** with TypeScript errors — missing logger imports
+- Unable to proceed to plugin bundling step
 
 **Notes**: 
+- This is a **Critical blocker** for new developers
+- The "first 30 minutes" experience is completely broken
+- Must hand off to Coder to fix template sync issue 
 
 ---
 
@@ -650,22 +662,105 @@
 
 ## Issues Found
 
-_Issues will be documented here as they are discovered during testing_
+### Issue #1: Template Missing Logger Imports (CRITICAL)
+
+**Severity:** Critical  
+**Found in:** Phase 2, TC-006 (Fresh Clone Experience)  
+**Symptom:** TypeScript compilation fails during `npm run build` with errors:
+```
+src/lib/wavecraft-ipc/IpcBridge.ts:47:9 - error TS2304: Cannot find name 'logger'.
+src/lib/wavecraft-ipc/IpcBridge.ts:82:9 - error TS2304: Cannot find name 'logger'.
+src/lib/wavecraft-ipc/IpcBridge.ts:149:9 - error TS2304: Cannot find name 'logger'.
+src/lib/wavecraft-ipc/hooks.ts:224:9 - error TS2304: Cannot find name 'logger'.
+```
+
+**Expected:** Template builds successfully with `npm run build`
+
+**Actual:** Build fails because `IpcBridge.ts` and `hooks.ts` use `logger` without importing it
+
+**Root Cause:** The template's `wavecraft-ipc` library is out of sync with the main repo. The files use `logger` but are missing the import statement:
+- Missing in `src/lib/wavecraft-ipc/IpcBridge.ts`: `import { logger } from './logger/Logger';`
+- Missing in `src/lib/wavecraft-ipc/hooks.ts`: `import { logger } from './logger/Logger';`
+
+**Impact:** **Blocks TC-006** — New developers cannot build a working plugin from the template. This completely blocks the "first 30 minutes" experience.
+
+**Resolution:** Coder must sync the template's wavecraft-ipc files with the main UI's version
+
+**Files to fix:**
+1. `wavecraft-plugin-template/ui/src/lib/wavecraft-ipc/IpcBridge.ts` — Add logger import at line 12
+2. `wavecraft-plugin-template/ui/src/lib/wavecraft-ipc/hooks.ts` — Add logger import at line 12
+
+---
+
+### Issue #2: Template Includes Test Files in Build (HIGH)
+
+**Severity:** High  
+**Found in:** Phase 2, TC-006 (Fresh Clone Experience)  
+**Symptom:** TypeScript compilation attempts to compile test files:
+```
+src/lib/wavecraft-ipc/logger/Logger.test.ts:1:65 - error TS2307: Cannot find name 'vitest'
+```
+
+**Expected:** Test files excluded from production build
+
+**Actual:** TypeScript tries to compile `.test.ts` files, causing errors because `vitest` is not available in template
+
+**Root Cause:** Template's `tsconfig.json` likely doesn't exclude test files, or Vitest is missing from devDependencies
+
+**Impact:** Adds noise to build errors, may increase bundle size if tests somehow get included
+
+**Resolution:** Either:
+- Add `vitest` to template's `package.json` devDependencies, OR
+- Exclude `**/*.test.ts` files in `tsconfig.json`, OR
+- Remove test files from template (simplest for template users)
 
 ---
 
 ## Testing Notes
 
-_General observations and notes will be added here during testing_
+### Phase 1: Automated Verification (COMPLETE ✅)
+
+**Date:** February 3, 2026  
+**Duration:** 27.5 seconds
+
+- All automated tests passed flawlessly
+- 113 engine tests + 43 UI tests = **156 total tests**
+- Linting clean for both Rust and TypeScript
+- Performance excellent (~27s actual vs ~52s estimated)
+- No issues found in this phase
+
+### Phase 2: Manual Workflow Testing (BLOCKED ⏸️)
+
+**Date:** February 3, 2026  
+**Progress:** 1/16 tests executed
+
+- **TC-006 (Fresh Clone):** CRITICAL FAILURE
+  - Template cannot be built due to missing logger imports
+  - This completely blocks the developer onboarding experience
+  - Two affected files: `IpcBridge.ts` and `hooks.ts`
+  - Secondary issue: test files included in build (vitest dependency missing)
+
+**Impact Assessment:**
+- All subsequent Phase 2 tests depend on a working plugin build
+- Cannot test DAW integration without bundled plugin
+- Cannot test dev workflow without functioning codebase
+- **External beta testing (M13) is blocked until this is resolved**
+
+**Next Steps:**
+1. Hand off Issues #1 and #2 to Coder agent
+2. Coder fixes template sync issues
+3. Resume testing at TC-006 step 3 (npm run build retry)
 
 ---
 
 ## Sign-off
 
-- [ ] All Phase 1 tests pass
-- [ ] All Phase 2 tests pass
-- [ ] All Phase 3 tests pass
-- [ ] Critical issues resolved
-- [ ] High issues resolved
-- [ ] Version bumped to 0.6.3
-- [ ] Ready for external beta testing (M13): YES / NO
+- [✅] Phase 1 tests complete (all pass)
+- [❌] Phase 2 tests blocked by critical issue
+- [⬜] Phase 3 tests not started
+- [⚠️] **Critical issue #1 must be resolved** before continuing
+- [⬜] High issue #2 should be resolved
+- [⬜] Version bump to 0.6.3
+- [❌] Ready for external beta testing (M13): **NO** — Critical blocker present
+
+**Tester Recommendation:** Hand off to Coder immediately to fix template synchronization issue. This blocks all downstream testing and would completely frustrate external beta testers.
