@@ -1,7 +1,9 @@
-# Test Plan: Internal Testing (Milestone 12)
+# Test Plan: Internal Testing (Milestone 13)
 
 ## Overview
 - **Feature**: Internal Testing — Comprehensive SDK validation before external beta
+- **Milestone**: M13 (formerly M12 before roadmap restructure)
+- **Depends On**: M12 (Open Source Readiness) — template independence, CLI tool
 - **Spec Location**: `docs/feature-specs/internal-testing/`
 - **Date**: February 3, 2026
 - **Tester**: Tester Agent
@@ -880,11 +882,24 @@ src/lib/wavecraft-ipc/logger/Logger.test.ts:1:65 - error TS2307: Cannot find nam
 2. Fix relative path references in `coding-standards.md`
 3. Consider running link validation in CI to prevent future breakage
 
-**Status:** ⏳ Requires Coder fix (documentation quality issue, not blocking M12)
+**Status:** ⏳ Requires Coder fix (documentation quality issue, not blocking M13)
 
 ---
 
 ## Testing Notes
+
+### Roadmap Update (February 4, 2026)
+
+**Important:** During this testing phase, the roadmap was restructured to add **M12: Open Source Readiness** as a prerequisite milestone. This means:
+
+- **This milestone is now M13** (was M12)
+- **Depends on M12:** Template independence, CLI tool (`wavecraft new`), documentation fixes
+- **Rationale:** Internal testing should validate the external developer experience, not the monorepo experience
+
+**Impact on Current Testing:**
+- Many M13 tests now blocked by M12 requirements (template independence, CLI tool)
+- Issues #3 and #5 identified as M12 blockers, not M13 bugs
+- This testing validates what M12 needs to deliver
 
 ### Phase 1: Automated Verification (COMPLETE ✅)
 

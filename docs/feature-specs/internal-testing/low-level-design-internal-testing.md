@@ -1,8 +1,10 @@
-# Low-Level Design: Internal Testing (Milestone 12)
+# Low-Level Design: Internal Testing (Milestone 13)
 
 ## Overview
 
-This document defines the **testing strategy, methodology, and execution framework** for Milestone 12: Internal Testing. Unlike feature development milestones, this milestone produces no new code — it validates the complete Wavecraft SDK workflow before external beta testing.
+**Milestone Context:** M13 (formerly M12 before roadmap restructure). Depends on M12 (Open Source Readiness).
+
+This document defines the **testing strategy, methodology, and execution framework** for Milestone 13: Internal Testing. Unlike feature development milestones, this milestone produces no new code — it validates the complete Wavecraft SDK workflow before external beta testing.
 
 The "design" here is the **testing architecture**: how tests are organized, executed, tracked, and how discovered issues are resolved.
 

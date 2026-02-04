@@ -1,6 +1,8 @@
-# User Stories: Internal Testing (Milestone 12)
+# User Stories: Internal Testing (Milestone 13)
 
 ## Overview
+
+**Milestone Context:** M13 (formerly M12 before roadmap restructure). Depends on M12 (Open Source Readiness).
 
 This milestone focuses on **comprehensive internal validation** of the complete Wavecraft SDK workflow before external beta testing. The goal is to catch issues that would frustrate external testers — missing documentation, unclear instructions, broken workflows, or regressions from previous milestones.
 
