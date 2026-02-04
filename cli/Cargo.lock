@@ -614,6 +614,7 @@ dependencies = [
  "include_dir",
  "indicatif",
  "regex",
+ "syn",
  "tempfile",
  "walkdir",
 ]

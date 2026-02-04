@@ -21,9 +21,17 @@ pub fn validate_crate_name(name: &str) -> Result<()> {
         );
     }
     
-    const RESERVED: &[&str] = &["std", "core", "alloc", "test", "proc_macro", "self", "super", "crate"];
-    if RESERVED.contains(&name) {
+    // Use syn to check if the name (with hyphens converted to underscores) is a valid identifier.
+    // This automatically checks against Rust's keyword list and stays up-to-date with the language.
+    let ident_name = name.replace('-', "_");
+    if syn::parse_str::<syn::Ident>(&ident_name).is_err() {
         bail!("'{}' is a reserved Rust keyword and cannot be used as a plugin name", name);
+    }
+    
+    // Additional check for standard library crates to avoid conflicts
+    const STD_CRATES: &[&str] = &["std", "core", "alloc", "test", "proc_macro"];
+    if STD_CRATES.contains(&name) {
+        bail!("'{}' is a standard library crate name and cannot be used as a plugin name", name);
     }
     
     Ok(())
@@ -48,5 +56,7 @@ mod tests {
         assert!(validate_crate_name("123plugin").is_err());
         assert!(validate_crate_name("-plugin").is_err());
         assert!(validate_crate_name("std").is_err());
+        assert!(validate_crate_name("match").is_err());
+        assert!(validate_crate_name("async").is_err());
     }
 }

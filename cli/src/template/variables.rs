@@ -55,13 +55,9 @@ impl TemplateVariables {
         result = result.replace("{{sdk_version}}", &self.sdk_version);
         result = result.replace("{{year}}", &self.year);
         
-        // Optional variables
-        if let Some(email) = &self.email {
-            result = result.replace("{{email}}", email);
-        }
-        if let Some(url) = &self.url {
-            result = result.replace("{{url}}", url);
-        }
+        // Optional variables - replace with empty string if None
+        result = result.replace("{{email}}", self.email.as_deref().unwrap_or(""));
+        result = result.replace("{{url}}", self.url.as_deref().unwrap_or(""));
         
         // Check for unreplaced variables
         let unreplaced = Regex::new(r"\{\{(\w+)\}\}").unwrap();
@@ -121,5 +117,26 @@ mod tests {
         
         let template = "Hello {{unknown_var}}";
         assert!(vars.apply(template).is_err());
+    }
+    
+    #[test]
+    fn test_empty_optional_variables() {
+        let vars = TemplateVariables::new(
+            "my-plugin".to_string(),
+            "My Company".to_string(),
+            None,  // No email
+            None,  // No URL
+            "0.7.0".to_string(),
+        );
+        
+        // Template with optional variables should replace with empty string
+        let template = "Email: {{email}}, URL: {{url}}";
+        let result = vars.apply(template).unwrap();
+        assert_eq!(result, "Email: , URL: ");
+        
+        // Should not error on templates with optional variables
+        let template_with_url = "url: \"{{url}}\",";
+        let result = vars.apply(template_with_url).unwrap();
+        assert_eq!(result, "url: \"\",");
     }
 }

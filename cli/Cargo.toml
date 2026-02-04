@@ -23,6 +23,7 @@ include_dir = "0.7"
 regex = "1.10"
 heck = "0.5"
 chrono = "0.4"
+syn = "2.0"
 
 [dev-dependencies]
 tempfile = "3.8"
