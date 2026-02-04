@@ -72,7 +72,7 @@
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| 4.1 | Create template validation workflow | ⏳ | template-validation.yml |
+| 4.1 | Create template validation workflow | ✅ | template-validation.yml validates generated projects compile |
 | 4.2 | Create release workflow | ⏳ | release.yml |
 | 4.3 | Version bump to 0.7.0 | ⏳ | Cargo.toml |
 | 4.4 | Create git tag | ⏳ | v0.7.0 |
