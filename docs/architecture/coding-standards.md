@@ -219,12 +219,33 @@ ui/
 ├── packages/                      # Published npm packages
 │   ├── core/                      # @wavecraft/core
 │   │   ├── src/
-│   │   │   ├── index.ts           # Main exports (IPC, hooks, types)
+│   │   │   ├── index.ts           # Main entry (re-exports all public API)
 │   │   │   ├── meters.ts          # /meters subpath (pure audio math)
-│   │   │   ├── IpcBridge.ts       # Class: low-level bridge
-│   │   │   ├── ParameterClient.ts # Class: high-level API
-│   │   │   ├── hooks.ts           # React hooks
-│   │   │   └── types.ts           # Type definitions
+│   │   │   ├── hooks/             # React hooks (domain folder)
+│   │   │   │   ├── index.ts       # Barrel exports
+│   │   │   │   ├── useParameter.ts
+│   │   │   │   ├── useAllParameters.ts
+│   │   │   │   ├── useParameterGroups.ts
+│   │   │   │   ├── useConnectionStatus.ts
+│   │   │   │   ├── useLatencyMonitor.ts
+│   │   │   │   ├── useMeterFrame.ts
+│   │   │   │   ├── useRequestResize.ts
+│   │   │   │   └── useWindowResizeSync.ts
+│   │   │   ├── ipc/               # IPC classes (domain folder)
+│   │   │   │   ├── index.ts       # Barrel exports
+│   │   │   │   ├── IpcBridge.ts   # Low-level IPC bridge
+│   │   │   │   └── ParameterClient.ts # High-level parameter API
+│   │   │   ├── types/             # TypeScript types (domain folder)
+│   │   │   │   ├── index.ts       # Barrel exports
+│   │   │   │   ├── ipc.ts         # IPC protocol types
+│   │   │   │   ├── parameters.ts  # Parameter types
+│   │   │   │   └── metering.ts    # Meter types
+│   │   │   ├── utils/             # Utilities (domain folder)
+│   │   │   │   ├── index.ts       # Barrel exports
+│   │   │   │   ├── environment.ts # Runtime detection
+│   │   │   │   └── audio-math.ts  # linearToDb, dbToLinear
+│   │   │   ├── transports/        # Transport implementations
+│   │   │   └── logger/            # Structured logging
 │   │   ├── dist/                  # Built ESM bundle + DTS
 │   │   └── package.json           # npm package config
 │   └── components/                # @wavecraft/components
@@ -246,7 +267,11 @@ ui/
 └── package.json                   # Workspace root (workspaces: ["packages/*"])
 ```
 
-**Note:** Class files should be named with PascalCase matching the class name.
+**Domain folder conventions:**
+- Each domain folder has an `index.ts` barrel file for clean imports
+- One file per hook/class/type domain
+- Internal imports use relative paths within the package
+- External imports use `@wavecraft/core` or `@wavecraft/components`
 
 ### Import Aliases
 
@@ -707,8 +732,10 @@ Tests are co-located with source files in each package:
 ui/
 ├── packages/
 │   ├── core/src/
-│   │   ├── meters.ts
-│   │   └── meters.test.ts         # Pure function tests
+│   │   ├── IpcBridge.test.ts      # IPC bridge tests
+│   │   ├── environment.test.ts    # Environment detection tests
+│   │   └── logger/
+│   │       └── Logger.test.ts     # Logger tests
 │   └── components/src/
 │       ├── Meter.tsx
 │       ├── Meter.test.tsx         # Component test
