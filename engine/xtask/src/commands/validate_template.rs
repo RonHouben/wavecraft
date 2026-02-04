@@ -17,15 +17,13 @@ use std::{env, fs};
 use xtask::output::*;
 
 /// Template validation configuration.
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct ValidateTemplateConfig {
     /// Show verbose output
     pub verbose: bool,
     /// Keep the generated test project (don't clean up)
     pub keep: bool,
 }
-
 
 /// Run the template validation command.
 pub fn run(config: ValidateTemplateConfig) -> Result<()> {

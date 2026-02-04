@@ -280,7 +280,7 @@ Add a WebSocket server to the standalone app that exposes the same IPC protocol 
 **Strategic Context:**
 Wavecraft has achieved its internal development goals (Milestones 1–7). The next step is to make it **accessible to other developers** as a proper SDK/toolkit. This required rethinking packaging, documentation, and developer experience.
 
-**User Stories:** [docs/feature-specs/developer-sdk/user-stories.md](feature-specs/developer-sdk/user-stories.md)
+**User Stories:** [docs/feature-specs/_archive/developer-sdk/user-stories.md](feature-specs/_archive/developer-sdk/user-stories.md)
 
 ### Phase 1: SDK Architecture & Implementation ✅
 
@@ -357,7 +357,7 @@ Potential areas:
 **Rationale:**
 "VST" is a Steinberg trademark. While "VstKit" may be defensible as a toolkit name, rebranding to "Wavecraft" eliminates any trademark risk and establishes a unique, memorable identity for the project.
 
-**User Stories:** [docs/feature-specs/project-rename-wavecraft/user-stories.md](feature-specs/project-rename-wavecraft/user-stories.md)
+**User Stories:** [docs/feature-specs/_archive/project-rename-wavecraft/user-stories.md](feature-specs/_archive/project-rename-wavecraft/user-stories.md)
 
 **Scope:**
 | Area | Changes Required |
@@ -529,7 +529,7 @@ QA:           5 findings (1 Critical, 4 Medium) — all resolved
 **Branch:** `feature/open-source-readiness`  
 **Target Version:** `0.7.0` (minor — new CLI tool, significant public API changes)
 
-**User Stories:** [docs/feature-specs/open-source-readiness/user-stories.md](feature-specs/open-source-readiness/user-stories.md)
+**User Stories:** [docs/feature-specs/_archive/open-source-readiness/user-stories.md](feature-specs/_archive/open-source-readiness/user-stories.md)
 
 | Task | Status | Notes |
 |------|--------|-------|
@@ -796,7 +796,7 @@ QA:           PASS (0 Critical/High, 2 Medium non-blocking, 3 Low optional)
 | 2026-01-31 | **Milestone 4 fully validated**: Ableton Live (macOS) testing complete — plugin loads without security warnings, React UI renders, parameters work, automation syncs, state persists, multi-instance works. Ad-hoc signing validated. Developer ID signing/notarization deferred until Apple Developer account available. |
 | 2026-01-31 | **CI/CD pipeline paused for redesign**: Current pipeline disabled on PRs (was blocking). Scheduled for dedicated architecture review to define proper phases (build, lint, test, release). Will collaborate with architect. |
 | 2026-01-31 | **Linting infrastructure design complete**: User stories (7) and low-level design created. Covers ESLint + Prettier for UI, Clippy + fmt for Rust, `cargo xtask lint` commands, QA agent integration, and CI workflow. Ready for implementation. |
-| 2026-01-31 | Added **Linting infrastructure** to Milestone 5 — ESLint/Prettier for UI, Clippy/fmt for Rust, xtask commands, QA agent integration, CI enforcement. User stories in `docs/feature-specs/linting-infrastructure/`. |
+| 2026-01-31 | Added **Linting infrastructure** to Milestone 5 — ESLint/Prettier for UI, Clippy/fmt for Rust, xtask commands, QA agent integration, CI enforcement. User stories in `docs/feature-specs/_archive/linting-infrastructure/`. |
 | 2026-01-31 | **Milestone 4 implementation complete**: Code signing and notarization infrastructure implemented. Three new xtask commands (`sign`, `notarize`, `release`) with full CI/CD pipeline and documentation. Ready for manual testing with Apple Developer credentials. |
 | 2026-01-31 | Added "CI/CD pipeline (GitHub Actions)" to Milestone 5 — automated builds, tests, and release workflow. |
 | 2026-01-31 | Added "Implement semantic versioning" to Milestone 5 — SemVer for consistent release tracking. |

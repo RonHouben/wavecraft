@@ -12,4 +12,3 @@ wavecraft_plugin! {
     email: "{{email}}",
     signal: {{plugin_name_pascal}}Gain,
 }
-
