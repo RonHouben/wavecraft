@@ -111,6 +111,7 @@
   - Implemented commands/new.rs with interactive prompts and git init
   - Implemented main.rs with clap argument parsing
   - Fixed path handling bug in template extraction (was using full path instead of file name)
+  - **Refactored to eliminate template duplication**: Changed include_dir! path from `cli/template/` to `../wavecraft-plugin-template`, added filtering for build artifacts (target/, node_modules/, dist/) and binary files, maintaining single source of truth
   - Successfully tested CLI: generates working project with all variables replaced correctly
 - 📝 All unit tests passing (6 tests)
 
@@ -121,10 +122,13 @@
 **Phases 1 & 2 Complete!**
 
 The CLI tool is now fully functional and can generate new plugin projects. Tested successfully:
-- Creates project from embedded template
+- Creates project from embedded template (directly references wavecraft-plugin-template/)
 - Replaces all template variables correctly
 - Generates proper directory structure
 - Supports interactive and non-interactive modes
+- Filters out build artifacts and binary files automatically
+
+**Architecture improvement:** CLI now uses `include_dir!("$CARGO_MANIFEST_DIR/../wavecraft-plugin-template")` instead of duplicating the template, maintaining single source of truth and eliminating ~8K lines of duplication.
 
 **Known Limitation:** Generated projects cannot build yet because Wavecraft SDK dependencies point to a git URL that requires authentication. This will resolve when the repository is made public.
 
