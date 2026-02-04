@@ -8,14 +8,15 @@ This document tracks implementation progress against the milestones defined in t
 
 ```
 ┌─────────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP           v0.6.2 | 79%  │
+│  WAVECRAFT ROADMAP           v0.6.2 | 73%  │
 ├─────────────────────────────────────────────┤
 │  ✅ M1-M11   Foundation → OSS Ready        │
-│  ⏳ M12      Internal Testing               │
-│  ⏳ M13      User Testing                   │
-│  ⏳ M14      V1.0 Release                   │
+│  ⏳ M12      Open Source Readiness          │
+│  ⏳ M13      Internal Testing               │
+│  ⏳ M14      User Testing                   │
+│  ⏳ M15      V1.0 Release                   │
 ├─────────────────────────────────────────────┤
-│  [████████████████████████░░░░░░░] 11/14   │
+│  [████████████████████████░░░░░░░░] 11/15  │
 └─────────────────────────────────────────────┘
 ```
 
@@ -520,13 +521,71 @@ QA:           5 findings (1 Critical, 4 Medium) — all resolved
 
 ---
 
-## Milestone 12: Internal Testing ⏳
+## Milestone 12: Open Source Readiness ⏳
 
-> **Goal:** Comprehensive internal validation of the complete SDK workflow before external beta testing. Catch issues that would frustrate external testers.
+> **Goal:** Prepare the repository for open source release — make the template truly independent, create a CLI for project scaffolding, and fix documentation for external developers.
 
 **Depends on:** Milestone 11 (Code Quality & OSS Prep)
 
-**Target Version:** `0.6.3` (patch — bug fixes and polish from internal testing)
+**Target Version:** `0.7.0` (minor — new CLI tool, significant public API changes)
+
+**User Stories:** [docs/feature-specs/open-source-readiness/user-stories.md](feature-specs/open-source-readiness/user-stories.md)
+
+**Problem Statement:**
+Wavecraft is feature-complete internally but cannot be used by external developers:
+- Template has hardcoded monorepo path dependencies (`path = "../../engine/crates/..."`)
+- No CLI tool for easy project scaffolding
+- Documentation assumes internal/monorepo usage
+- 217 broken documentation links
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Template Independence** | | |
+| Replace path deps with git deps | ⏳ | Use `git = "https://github.com/RonHouben/wavecraft"` |
+| Version-locked dependencies | ⏳ | Use git tags (e.g., `tag = "v0.7.0"`) |
+| Template builds standalone | ⏳ | No monorepo required |
+| **CLI Tool** | | |
+| Create `wavecraft-cli` crate | ⏳ | New crate for project scaffolding |
+| `wavecraft new <name>` command | ⏳ | Interactive project creation |
+| Plugin name/vendor prompts | ⏳ | Customize generated project |
+| Template variable replacement | ⏳ | Replace `{{plugin_name}}` placeholders |
+| `wavecraft --help` documentation | ⏳ | Built-in usage help |
+| Publish to crates.io | ⏳ | `cargo install wavecraft-cli` |
+| **Documentation** | | |
+| Fix 217 broken links | ⏳ | Issue #5 from internal testing |
+| Update SDK Getting Started | ⏳ | External developer workflow |
+| Update template README | ⏳ | Standalone instructions |
+| Add troubleshooting section | ⏳ | Common issues and solutions |
+| **Repository Preparation** | | |
+| Security audit (no secrets) | ⏳ | Review git history |
+| Fork-friendly CI | ⏳ | Works without secrets |
+| GitHub topics/description | ⏳ | Discoverability |
+| **CI for Template** | | |
+| Template build validation | ⏳ | CI tests template in isolation |
+
+**Key Deliverables:**
+- **`wavecraft-cli`** — CLI tool for `wavecraft new my-plugin` project scaffolding
+- **Independent template** — Builds without monorepo, uses git dependencies
+- **Fixed documentation** — All links work, written for external users
+- **Version-locked deps** — Stable builds with git tags
+
+**Success Criteria:**
+- [ ] External developer can: `cargo install wavecraft-cli && wavecraft new my-plugin && cd my-plugin && cargo xtask bundle`
+- [ ] Template builds in < 5 minutes (first time, with downloads)
+- [ ] Zero broken documentation links
+- [ ] CLI rated "easy to use" by testers
+
+**Estimated Effort:** 1-2 weeks
+
+---
+
+## Milestone 13: Internal Testing ⏳
+
+> **Goal:** Comprehensive internal validation of the complete SDK workflow before external beta testing. Catch issues that would frustrate external testers.
+
+**Depends on:** Milestone 12 (Open Source Readiness)
+
+**Target Version:** `0.7.1` (patch — bug fixes and polish from internal testing)
 
 | Task | Status | Notes |
 |------|--------|-------|
@@ -567,13 +626,13 @@ QA:           5 findings (1 Critical, 4 Medium) — all resolved
 
 ---
 
-## Milestone 13: User Testing ⏳
+## Milestone 14: User Testing ⏳
 
 > **Goal:** Validate Wavecraft with real plugin developers before V1 release. Gather feedback on SDK usability, documentation quality, and overall developer experience.
 
-**Depends on:** Milestone 12 (Internal Testing) — codebase should be thoroughly tested internally before external testers use it.
+**Depends on:** Milestone 13 (Internal Testing) — codebase should be thoroughly tested internally before external testers use it.
 
-**Target Version:** `0.7.0` (minor — pre-release milestone with potential breaking changes from feedback)
+**Target Version:** `0.8.0` (minor — pre-release milestone with potential breaking changes from feedback)
 
 | Task | Status | Notes |
 |------|--------|-------|
@@ -608,11 +667,11 @@ QA:           5 findings (1 Critical, 4 Medium) — all resolved
 
 ---
 
-## Milestone 14: V1.0 Release 🎯
+## Milestone 15: V1.0 Release 🎯
 
 > **Goal:** Ship Wavecraft 1.0 — the first stable, production-ready release of the Rust + React audio plugin framework.
 
-**Depends on:** Milestone 13 (User Testing) — all critical feedback addressed.
+**Depends on:** Milestone 14 (User Testing) — all critical feedback addressed.
 
 **Target Version:** `1.0.0` (major — first stable release)
 
