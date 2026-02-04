@@ -56,7 +56,7 @@ export { useConnectionStatus } from './useConnectionStatus';
 export type { ConnectionStatus, TransportType } from './useConnectionStatus';
 
 // Resize API
-export { requestResize, useRequestResize } from './resize';
+export { requestResize, useRequestResize, useWindowResizeSync } from './resize';
 export type { RequestResizeParams, RequestResizeResult } from './resize';
 
 // Metering API

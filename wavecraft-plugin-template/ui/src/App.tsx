@@ -1,5 +1,9 @@
 // Core SDK - hooks and utilities
-import { useAllParameters, useParameterGroups } from '@wavecraft/core';
+import {
+  useAllParameters,
+  useParameterGroups,
+  useWindowResizeSync,
+} from '@wavecraft/core';
 
 // Pre-built components
 import {
@@ -14,6 +18,9 @@ import {
 export function App() {
   const { params, isLoading } = useAllParameters();
   const groups = useParameterGroups(params);
+
+  // Sync window resize events to host DAW
+  useWindowResizeSync();
 
   return (
     <div className="flex h-screen flex-col gap-4 bg-plugin-dark p-6">
