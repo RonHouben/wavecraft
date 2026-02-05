@@ -1,6 +1,6 @@
 use anyhow::Result;
 use heck::{ToPascalCase, ToSnakeCase, ToTitleCase};
-use regex::Regex;
+use regex::{escape, Regex};
 use std::path::PathBuf;
 
 /// Template variables that get replaced during project generation.
@@ -51,27 +51,33 @@ impl TemplateVariables {
     pub fn apply(&self, content: &str) -> Result<String> {
         let mut result = content.to_string();
         
-        // Replace all variables
-        result = result.replace("{{plugin_name}}", &self.plugin_name);
-        result = result.replace("{{plugin_name_snake}}", &self.plugin_name_snake);
-        result = result.replace("{{plugin_name_pascal}}", &self.plugin_name_pascal);
-        result = result.replace("{{plugin_name_title}}", &self.plugin_name_title);
-        result = result.replace("{{vendor}}", &self.vendor);
-        result = result.replace("{{sdk_version}}", &self.sdk_version);
-        result = result.replace("{{year}}", &self.year);
-        
+        // Replace all variables (allowing optional whitespace inside the braces)
+        result = Self::replace_variable(result, "plugin_name", &self.plugin_name);
+        result = Self::replace_variable(result, "plugin_name_snake", &self.plugin_name_snake);
+        result = Self::replace_variable(result, "plugin_name_pascal", &self.plugin_name_pascal);
+        result = Self::replace_variable(result, "plugin_name_title", &self.plugin_name_title);
+        result = Self::replace_variable(result, "vendor", &self.vendor);
+        result = Self::replace_variable(result, "sdk_version", &self.sdk_version);
+        result = Self::replace_variable(result, "year", &self.year);
+
         // Optional variables - replace with empty string if None
-        result = result.replace("{{email}}", self.email.as_deref().unwrap_or(""));
-        result = result.replace("{{url}}", self.url.as_deref().unwrap_or(""));
+        result = Self::replace_variable(result, "email", self.email.as_deref().unwrap_or(""));
+        result = Self::replace_variable(result, "url", self.url.as_deref().unwrap_or(""));
         
         // Check for unreplaced variables
-        let unreplaced = Regex::new(r"\{\{(\w+)\}\}").unwrap();
+        let unreplaced = Regex::new(r"\{\{\s*(\w+)\s*\}\}").unwrap();
         if let Some(captures) = unreplaced.captures(&result) {
             let var_name = &captures[1];
             anyhow::bail!("Unreplaced template variable: {{{{{}}}}}", var_name);
         }
         
         Ok(result)
+    }
+
+    fn replace_variable(result: String, name: &str, value: &str) -> String {
+        let pattern = format!("\\{{\\{{\\s*{}\\s*\\}}\\}}", escape(name));
+        let re = Regex::new(&pattern).expect("valid template variable regex");
+        re.replace_all(&result, value).to_string()
     }
 }
 
