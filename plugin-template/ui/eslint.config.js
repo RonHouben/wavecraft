@@ -20,10 +20,11 @@ export default [
         ecmaVersion: 'latest',
         sourceType: 'module',
         ecmaFeatures: { jsx: true },
-        project: './tsconfig.json',
+        project: ['./tsconfig.json', './tsconfig.node.json'],
       },
       globals: {
         ...globals.browser,
+        process: 'readonly',
         __APP_VERSION__: 'readonly',
       },
     },

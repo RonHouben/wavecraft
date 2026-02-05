@@ -4,6 +4,7 @@ import {
   useParameterGroups,
   useWindowResizeSync,
 } from '@wavecraft/core';
+import type { JSX } from 'react';
 
 // Pre-built components
 import {
@@ -15,7 +16,7 @@ import {
   LatencyMonitor,
 } from '@wavecraft/components';
 
-export function App() {
+export function App(): JSX.Element {
   const { params, isLoading } = useAllParameters();
   const groups = useParameterGroups(params);
 
