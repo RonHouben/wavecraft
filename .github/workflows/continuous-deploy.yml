@@ -47,6 +47,8 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.cli == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for version bump commits
     steps:
       - uses: actions/checkout@v4
         with:
@@ -111,6 +113,8 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.engine == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for version bump commits
     steps:
       - uses: actions/checkout@v4
         with:
@@ -194,6 +198,9 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.npm-core == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # Required for npm OIDC trusted publishing
+      contents: write  # Required for version bump commits
     steps:
       - uses: actions/checkout@v4
         with:
@@ -261,6 +268,9 @@ jobs:
       needs.detect-changes.outputs.npm-components == 'true' &&
       (needs.publish-npm-core.result == 'success' || needs.publish-npm-core.result == 'skipped')
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # Required for npm OIDC trusted publishing
+      contents: write  # Required for version bump commits
     steps:
       - uses: actions/checkout@v4
         with:
