@@ -23,7 +23,7 @@ export function App(): JSX.Element {
     <div className="flex h-screen flex-col gap-4 bg-plugin-dark p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-100">{{ plugin_name_title }}</h1>
+        <h1 className="text-2xl font-bold text-gray-100">{'{{ plugin_name_title }}'}</h1>
         <div className="flex items-center gap-2">
           <ConnectionStatus />
           <VersionBadge />
