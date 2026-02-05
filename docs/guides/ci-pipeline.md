@@ -157,16 +157,30 @@ Using Ubuntu for most jobs significantly reduces CI costs while macOS is only us
 
 ## Triggers
 
+### CI and Template Validation
+
+```yaml
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:  # Manual trigger for emergencies
+```
+
+- **Pull Requests:** Full validation (CI + Template Validation)
+- **Main branch:** No automatic runs — code already validated via PR
+- **Manual:** Available via GitHub Actions UI (`workflow_dispatch`)
+
+### Continuous Deploy
+
 ```yaml
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 ```
 
-- **Pull Requests:** Full pipeline except `build-plugin`
-- **Main branch:** Full pipeline including `build-plugin`
+- **Main branch:** Publishes changed packages after PR merge
+- **Manual:** Available via GitHub Actions UI
 
 ## Local Testing
 
