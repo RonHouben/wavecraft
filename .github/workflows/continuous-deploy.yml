@@ -199,7 +199,7 @@ jobs:
     if: needs.detect-changes.outputs.npm-core == 'true'
     runs-on: ubuntu-latest
     permissions:
-      id-token: write  # Required for npm OIDC trusted publishing
+      id-token: write  # Required for npm OIDC trusted publishing + provenance
       contents: write  # Required for version bump commits
     steps:
       - uses: actions/checkout@v4
@@ -244,9 +244,7 @@ jobs:
       
       - name: Publish to npm
         working-directory: ui/packages/core
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public
+        run: npm publish --access public --provenance
       
       - name: Commit version bump
         if: steps.check.outputs.published == 'true'
@@ -269,7 +267,7 @@ jobs:
       (needs.publish-npm-core.result == 'success' || needs.publish-npm-core.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
-      id-token: write  # Required for npm OIDC trusted publishing
+      id-token: write  # Required for npm OIDC trusted publishing + provenance
       contents: write  # Required for version bump commits
     steps:
       - uses: actions/checkout@v4
@@ -318,9 +316,7 @@ jobs:
       
       - name: Publish to npm
         working-directory: ui/packages/components
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public
+        run: npm publish --access public --provenance
       
       - name: Commit version bump
         if: steps.check.outputs.published == 'true'

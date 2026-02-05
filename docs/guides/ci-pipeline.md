@@ -401,9 +401,10 @@ The workflow will detect the new version isn't published and publish it without 
 
 | Secret | Purpose |
 |--------|---------|
-| `NPM_TOKEN` | npm registry publishing |
 | `CARGO_REGISTRY_TOKEN` | crates.io publishing |
 | `GITHUB_TOKEN` | Commit version bumps (built-in) |
+
+**Note:** npm publishing uses OIDC trusted publishing (no secret required). Packages are published with `--provenance` for cryptographic attestation.
 
 ### Manual Override Workflows
 
