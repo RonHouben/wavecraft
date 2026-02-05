@@ -1,9 +1,5 @@
 // Core SDK - hooks and utilities
-import {
-  useAllParameters,
-  useParameterGroups,
-  useWindowResizeSync,
-} from '@wavecraft/core';
+import { useAllParameters, useParameterGroups, useWindowResizeSync } from '@wavecraft/core';
 import type { JSX } from 'react';
 
 // Pre-built components
@@ -27,7 +23,7 @@ export function App(): JSX.Element {
     <div className="flex h-screen flex-col gap-4 bg-plugin-dark p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-100">{{plugin_name_title}}</h1>
+        <h1 className="text-2xl font-bold text-gray-100">{{ plugin_name_title }}</h1>
         <div className="flex items-center gap-2">
           <ConnectionStatus />
           <VersionBadge />
@@ -38,29 +34,21 @@ export function App(): JSX.Element {
       <div className="flex flex-1 flex-col gap-6">
         {/* Parameters Section */}
         <div className="rounded-lg border border-plugin-border bg-plugin-surface p-4">
-          <h2 className="mb-3 text-base font-semibold text-gray-200">
-            Parameters
-          </h2>
+          <h2 className="mb-3 text-base font-semibold text-gray-200">Parameters</h2>
           {isLoading ? (
             <p className="italic text-gray-500">Loading parameters...</p>
           ) : (
             <div className="space-y-4">
-              {groups.length > 0 ? (
-                groups.map((group) => (
-                  <ParameterGroup key={group.name} group={group} />
-                ))
-              ) : (
-                params?.map((p) => <ParameterSlider key={p.id} id={p.id} />)
-              )}
+              {groups.length > 0
+                ? groups.map((group) => <ParameterGroup key={group.name} group={group} />)
+                : params?.map((p) => <ParameterSlider key={p.id} id={p.id} />)}
             </div>
           )}
         </div>
 
         {/* Metering Section */}
         <div className="rounded-lg border border-plugin-border bg-plugin-surface p-4">
-          <h2 className="mb-3 text-base font-semibold text-gray-200">
-            Output Metering
-          </h2>
+          <h2 className="mb-3 text-base font-semibold text-gray-200">Output Metering</h2>
           <Meter />
         </div>
 
