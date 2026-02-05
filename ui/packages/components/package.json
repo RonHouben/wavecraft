@@ -1,0 +1,57 @@
+{
+  "name": "@wavecraft/components",
+  "version": "0.7.1",
+  "description": "Pre-built React components for Wavecraft audio plugins",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "keywords": [
+    "wavecraft",
+    "vst",
+    "audio",
+    "plugin",
+    "react",
+    "components",
+    "meter",
+    "slider",
+    "ui"
+  ],
+  "author": "Ron Houben",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RonHouben/wavecraft.git",
+    "directory": "ui/packages/components"
+  },
+  "homepage": "https://github.com/RonHouben/wavecraft",
+  "bugs": {
+    "url": "https://github.com/RonHouben/wavecraft/issues"
+  },
+  "peerDependencies": {
+    "@wavecraft/core": "^0.7.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "scripts": {
+    "build": "npm run build:lib",
+    "build:lib": "vite build --config vite.lib.config.ts",
+    "prepublishOnly": "npm run build:lib"
+  }
+}

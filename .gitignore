@@ -3,6 +3,7 @@
 /engine/crates/wavecraft-core/tests/trybuild/minimal/target/
 /engine/crates/wavecraft-core/tests/trybuild/full/target/
 /engine/crates/wavecraft-core/tests/trybuild/full/target/
+/cli/target/
 
 
 /target/
@@ -33,5 +34,5 @@
 *.vst3
 *.component
 
-# wavecraft-plugin-template specific
-/wavecraft-plugin-template/target
+# plugin-template specific
+/plugin-template/target

@@ -1,0 +1,29 @@
+[package]
+name = "wavecraft"
+version = "0.7.1"
+edition = "2021"
+description = "CLI tool for creating Wavecraft audio plugins"
+license = "MIT"
+repository = "https://github.com/RonHouben/wavecraft"
+keywords = ["audio", "vst", "clap", "plugin", "dsp"]
+categories = ["development-tools", "multimedia::audio"]
+
+[[bin]]
+name = "wavecraft"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.4", features = ["derive", "color"] }
+dialoguer = "0.11"
+console = "0.15"
+indicatif = "0.17"
+anyhow = "1.0"
+walkdir = "2.4"
+include_dir = "0.7"
+regex = "1.10"
+heck = "0.5"
+chrono = "0.4"
+syn = "2.0"
+
+[dev-dependencies]
+tempfile = "3.8"

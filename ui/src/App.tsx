@@ -2,39 +2,24 @@
  * Main App component
  */
 
-import React, { useEffect } from 'react';
-import { ParameterGroup } from './components/ParameterGroup';
-import { LatencyMonitor } from './components/LatencyMonitor';
-import { Meter } from './components/Meter';
-import { ResizeHandle } from './components/ResizeHandle';
-import { VersionBadge } from './components/VersionBadge';
-import { ConnectionStatus } from './components/ConnectionStatus';
-import { requestResize, useAllParameters, useParameterGroups, logger } from './lib/wavecraft-ipc';
+import React from 'react';
+import {
+  ParameterGroup,
+  LatencyMonitor,
+  Meter,
+  ResizeHandle,
+  VersionBadge,
+  ConnectionStatus,
+} from '@wavecraft/components';
+import { useAllParameters, useParameterGroups, useWindowResizeSync } from '@wavecraft/core';
 
 function App(): React.JSX.Element {
   // Fetch all parameters and organize into groups
   const { params, isLoading } = useAllParameters();
   const groups = useParameterGroups(params);
 
-  // Handle native window resize
-  useEffect(() => {
-    const handleResize = (): void => {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-
-      // Notify host of the new size
-      requestResize(width, height).catch((err) => {
-        logger.error('Failed to notify host of resize', { error: err, width, height });
-      });
-    };
-
-    // Listen for window resize events
-    window.addEventListener('resize', handleResize);
-
-    return (): void => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
+  // Sync window resize events to host
+  useWindowResizeSync();
 
   return (
     <div data-testid="app-root" className="flex min-h-full flex-col bg-plugin-dark">

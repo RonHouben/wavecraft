@@ -11,7 +11,7 @@ export default defineConfig({
     environment: 'happy-dom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.test.{ts,tsx}'],
+    include: ['src/**/*.test.{ts,tsx}', 'packages/*/src/**/*.test.{ts,tsx}'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
@@ -21,8 +21,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@wavecraft/ipc': path.resolve(__dirname, './src/lib/wavecraft-ipc'),
-      '@wavecraft/ipc/meters': path.resolve(__dirname, './src/lib/wavecraft-ipc/meters'),
+      '@wavecraft/core': path.resolve(__dirname, './packages/core/src'),
+      '@wavecraft/core/meters': path.resolve(__dirname, './packages/core/src/meters'),
+      '@wavecraft/components': path.resolve(__dirname, './packages/components/src'),
+      '@test': path.resolve(__dirname, './src/test'),
     },
   },
 });

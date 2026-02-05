@@ -33,8 +33,8 @@ export default defineConfig({
   base: './', // Use relative paths for embedded assets
   resolve: {
     alias: {
-      '@wavecraft/ipc': path.resolve(__dirname, './src/lib/wavecraft-ipc'),
-      '@wavecraft/ipc/meters': path.resolve(__dirname, './src/lib/wavecraft-ipc/meters'),
+      '@wavecraft/core': path.resolve(__dirname, './packages/core/src'),
+      '@wavecraft/components': path.resolve(__dirname, './packages/components/src'),
     },
   },
   define: {

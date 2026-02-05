@@ -30,6 +30,110 @@ Build the audio/DSP core and host/plugin API surface in Rust (use a modern Rust 
 
 ⸻
 
+## Repository Structure (Monorepo)
+
+Wavecraft is organized as a **monorepo** containing all components of the SDK ecosystem in a single repository. This structure enables coordinated development, atomic commits across components, and simplified dependency management during the SDK's early development phase.
+
+```
+wavecraft/
+├── cli/                           # CLI tool (cargo install wavecraft)
+│   ├── src/                       # CLI source code
+│   │   ├── main.rs                # Entry point, clap CLI
+│   │   ├── validation.rs          # Crate name validation (syn-based)
+│   │   ├── commands/              # Command implementations
+│   │   │   ├── mod.rs
+│   │   │   └── new.rs             # `wavecraft new` command
+│   │   └── template/              # Template extraction & variables
+│   │       ├── mod.rs
+│   │       └── variables.rs
+├── docs/                          # Documentation
+│   ├── architecture/              # Architecture documents
+│   ├── feature-specs/             # Feature specifications
+│   └── guides/                    # User guides
+├── engine/                        # Rust audio engine & SDK crates
+│   ├── crates/                    # SDK crate workspace
+│   │   ├── wavecraft-core/        # Main framework crate
+│   │   ├── wavecraft-macros/      # Procedural macros
+│   │   ├── wavecraft-protocol/    # IPC contracts
+│   │   ├── wavecraft-bridge/      # IPC handler
+│   │   ├── wavecraft-metering/    # Real-time metering
+│   │   └── wavecraft-dsp/         # DSP primitives
+│   └── xtask/                     # Build automation
+├── packaging/                     # AU wrapper, installers
+├── scripts/                       # Development scripts
+├── ui/                            # React UI (npm workspace)
+│   ├── packages/                  # Published npm packages
+│   │   ├── core/                  # @wavecraft/core — IPC, hooks, utilities
+│   │   └── components/            # @wavecraft/components — React components
+│   ├── src/                       # Development app (internal testing)
+│   └── test/                      # Test utilities and mocks
+└── plugin-template/               # Plugin template (scaffolded by CLI)
+```
+
+### Monorepo Benefits
+
+1. **Atomic Changes** — Changes spanning CLI, engine, UI, and template can be made in a single commit, ensuring consistency.
+
+2. **Simplified Development** — Contributors can work on any component without managing multiple repositories.
+
+3. **Template Embedding** — The CLI embeds the plugin template at compile time via `include_dir!`, ensuring the template is always in sync with the CLI version.
+
+4. **Coordinated Releases** — Version bumps and releases are coordinated across all components.
+
+### Component Relationships
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           MONOREPO                                      │
+│                                                                         │
+│  ┌─────────────────┐     scaffolds      ┌───────────────────────────┐   │
+│  │   CLI           │ ──────────────────►│ New Plugin Project        │   │
+│  │ (wavecraft new) │                    │ (uses git tag deps)       │   │
+│  │                 │                    │                           │   │
+│  │  • validation   │                    │ [dependencies]            │   │
+│  │  • templates    │                    │ wavecraft-core = {        │   │
+│  │  • interactive  │                    │   git = "...wavecraft",  │   │
+│  │    prompts      │                    │   tag = "v0.7.0" }       │   │
+│  └─────────────────┘                    └───────────────────────────┘   │
+│                                                     │                   │
+│                                          depends on │ (git)             │
+│                                                     ▼                   │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │                     engine/crates/                              │    │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌──────────────────┐         │    │
+│  │  │wavecraft-core│  │wavecraft-dsp│  │wavecraft-metering│         │    │
+│  │  └─────────────┘  └─────────────┘  └──────────────────┘         │    │
+│  │  ┌───────────────┐  ┌────────────────┐  ┌─────────────────┐     │    │
+│  │  │wavecraft-macros│  │wavecraft-bridge│  │wavecraft-protocol│    │    │
+│  │  └───────────────┘  └────────────────┘  └─────────────────┘     │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │                    ui/packages/ (npm workspace)                 │    │
+│  │  ┌─────────────────────────────┐  ┌────────────────────────┐    │    │
+│  │  │ @wavecraft/core (npm)       │  │ @wavecraft/components  │    │    │
+│  │  │ • IPC bridge & clients      │  │ (npm)                  │    │    │
+│  │  │ • React hooks               │  │ • Meter, Sliders       │    │    │
+│  │  │ • Logger, utilities         │  │ • ParameterGroup       │    │    │
+│  │  │ • /meters subpath export    │  │ • VersionBadge, etc.   │    │    │
+│  │  └─────────────────────────────┘  └────────────────────────┘    │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Phase 1 vs Phase 2 Distribution
+
+| Aspect | Phase 1 (Current) | Phase 2 (Post-1.0) |
+|--------|-------------------|---------------------|
+| Template location | Embedded in CLI binary | Same (embedded) |
+| Rust SDK dependencies | Git tag (`tag = "v0.7.0"`) | Published crates (crates.io) |
+| UI SDK dependencies | **npm packages** (`@wavecraft/core`, `@wavecraft/components`) | Same (npm) |
+| Development | Rapid iteration | Stable API |
+| User workflow | `cargo install wavecraft && wavecraft new` | Same, with crates.io deps |
+
+⸻
+
 ## Architecture overview (block diagram, logical)
 
 +---------------------------------------------------------------+
@@ -82,11 +186,12 @@ Key: the audio path never blocks on UI; the UI never directly runs audio code.
 	•	**Transport Abstraction**: The IPC layer uses a pluggable transport system:
 		- `NativeTransport`: postMessage-based communication in WKWebView (production)
 		- `WebSocketTransport`: WebSocket-based communication in browser (development)
-	•	**Library Exports** (`@wavecraft/ipc`):
+	•	**npm Package** (`@wavecraft/core`):
 		- IPC: `IpcBridge`, `ParameterClient`, `MeterClient`
-		- Hooks: `useParameter`, `useConnectionStatus`, `useMeterFrame`
+		- Hooks: `useParameter`, `useAllParameters`, `useConnectionStatus`, `useMeterFrame`
 		- Logging: `logger`, `Logger`, `LogLevel` — structured logging with severity levels
 		- Types: `ParameterInfo`, `MeterFrame`, `IpcError`
+		- Subpath `/meters`: Pure audio math utilities (`linearToDb`, `dbToLinear`)
 	•	JSON-RPC 2.0 message format with request/response correlation. Expose a minimal API:
 		- `setParameter(id, value)`
 		- `getParameter(id)`
@@ -161,6 +266,11 @@ Wavecraft is designed as a **Developer SDK** that enables other developers to bu
 
 ### SDK Distribution Model
 
+Wavecraft distributes its SDK through two channels:
+
+1. **Rust Crates** — Audio engine, DSP, and plugin framework (via Git tags, crates.io in Phase 2)
+2. **npm Packages** — React UI components, IPC hooks, and utilities (via npm)
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                         WAVECRAFT SDK DISTRIBUTION                              │
@@ -168,22 +278,25 @@ Wavecraft is designed as a **Developer SDK** that enables other developers to bu
 │                                                                                 │
 │   ┌───────────────────────┐       ┌───────────────────────┐                     │
 │   │  TEMPLATE REPOSITORY  │       │    GIT / CRATES.IO    │                     │
-│   │  wavecraft-plugin-template│       │                       │                     │
-│   │                        │       │  wavecraft-core          │  ← Framework       │
+│   │  plugin-template      │       │                       │                     │
+│   │                        │       │  wavecraft-core          │  ← Rust Framework  │
 │   │  ├── engine/          │──────▶│  wavecraft-bridge        │    (user depends)  │
 │   │  │   └── Cargo.toml   │       │  wavecraft-protocol      │                     │
 │   │  │                    │       │  wavecraft-metering      │                     │
-│   │  ├── ui/              │       │  wavecraft-dsp           │                     │
-│   │  │   └── package.json │       │                       │                     │
-│   │  └── README.md        │       └───────────────────────┘                     │
-│   │  
-│   │  NOTE: In Phase 1 the template uses local path dependencies to the monorepo's `engine/crates/` directories. This makes the template easy to develop within the monorepo but prevents standalone compilation; in Phase 2 these will be updated to published crates (crates.io or git dependencies).
-│   └───────────────────────┘                                                     │
+│   │  │                    │       │  wavecraft-dsp           │                     │
+│   │  │                    │       └───────────────────────┘                     │
+│   │  │                    │                                                     │
+│   │  │                    │       ┌───────────────────────┐                     │
+│   │  ├── ui/              │       │        NPM            │                     │
+│   │  │   └── package.json │──────▶│                       │                     │
+│   │  │                    │       │  @wavecraft/core      │  ← UI Framework    │
+│   │  └── README.md        │       │  @wavecraft/components│    (user depends)  │
+│   └───────────────────────┘       └───────────────────────┘                     │
 │              │                                                                  │
 │              │  User customizes:                                                │
 │              │  - DSP code (Processor trait impl)                               │
-│              │  - Parameters (wavecraft_params! macro)                             │
-│              │  - UI components (React)                                         │
+│              │  - Parameters (ProcessorParams derive macro)                     │
+│              │  - UI components (React, using @wavecraft/components)            │
 │              ▼                                                                  │
 │   ┌───────────────────────┐                                                     │
 │   │   USER'S PLUGIN       │                                                     │
@@ -193,7 +306,7 @@ Wavecraft is designed as a **Developer SDK** that enables other developers to bu
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### SDK Crate Structure
+### SDK Crate Structure (Rust)
 
 All SDK crates use the `wavecraft-*` naming convention for clear identification:
 
@@ -206,7 +319,53 @@ All SDK crates use the `wavecraft-*` naming convention for clear identification:
 | `wavecraft-metering` | Real-time safe SPSC ring buffer for audio → UI metering | Uses `MeterProducer` in DSP |
 | `wavecraft-dsp` | DSP primitives, `Processor` trait, built-in processors, audio utilities | Implements `Processor` trait |
 
-### Public API Surface
+### npm Package Structure (UI)
+
+The UI SDK is distributed as npm packages, enabling standard JavaScript/TypeScript dependency management:
+
+| Package | Purpose | Exports |
+|---------|---------|---------|
+| `@wavecraft/core` | IPC bridge, React hooks, utilities, types | `useParameter`, `useAllParameters`, `useMeterFrame`, `IpcBridge`, `Logger`, types |
+| `@wavecraft/components` | Pre-built React components | `Meter`, `ParameterSlider`, `ParameterGroup`, `ParameterToggle`, `VersionBadge`, `ConnectionStatus`, `LatencyMonitor`, `ResizeHandle`, `ResizeControls` |
+
+**Subpath Exports:**
+
+The `@wavecraft/core` package supports subpath exports for tree-shaking and avoiding side effects:
+
+```typescript
+// Main entry — full SDK (IPC, hooks, utilities)
+import { useParameter, IpcBridge, Logger } from '@wavecraft/core';
+
+// Subpath: Pure audio math utilities (no IPC side effects)
+import { linearToDb, dbToLinear, getMeterFrame } from '@wavecraft/core/meters';
+```
+
+**Package Dependencies:**
+
+```
+@wavecraft/components
+    └── @wavecraft/core (peer dependency)
+            └── react (peer dependency)
+```
+
+**User Plugin Usage:**
+
+```typescript
+// In user's plugin UI
+import { useParameter, useAllParameters, Logger } from '@wavecraft/core';
+import { Meter, ParameterSlider, ParameterGroup } from '@wavecraft/components';
+
+function MyPluginUI() {
+  const allParams = useAllParameters();
+  return (
+    <ParameterGroup name="Input">
+      {allParams.map(p => <ParameterSlider key={p.id} parameter={p} />)}
+    </ParameterGroup>
+  );
+}
+```
+
+### Public API Surface (Rust)
 
 The SDK exposes a minimal, stable API through the `wavecraft_core::prelude` module:
 
@@ -294,19 +453,52 @@ The template provides a standardized project structure:
 ```
 my-plugin/
 ├── engine/
-│   ├── Cargo.toml           ← Depends on wavecraft-* crates
+│   ├── Cargo.toml           ← Depends on wavecraft-* crates (git tag)
 │   └── src/
 │       ├── lib.rs           ← Plugin entry point
 │       └── dsp.rs           ← User's Processor implementation
 │
 ├── ui/
-│   ├── package.json         ← React + @wavecraft/ipc
+│   ├── package.json         ← Depends on @wavecraft/core + @wavecraft/components
 │   ├── vite.config.ts
 │   └── src/
-│       ├── App.tsx          ← User's custom UI layout
-│       └── components/      ← Custom UI components
+│       └── App.tsx          ← User's custom UI (imports from npm packages)
 │
 └── xtask/                   ← Build automation (bundle, dev, etc.)
+```
+
+**Template `package.json` Dependencies:**
+
+```json
+{
+  "dependencies": {
+    "@wavecraft/core": "^0.7.0",
+    "@wavecraft/components": "^0.7.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}
+```
+
+**Template UI Example:**
+
+```tsx
+// my-plugin/ui/src/App.tsx
+import { useAllParameters, useMeterFrame } from '@wavecraft/core';
+import { Meter, ParameterSlider, VersionBadge } from '@wavecraft/components';
+
+export function App() {
+  const params = useAllParameters();
+  const meters = useMeterFrame();
+  
+  return (
+    <div>
+      <VersionBadge />
+      <Meter leftDb={meters?.leftDb} rightDb={meters?.rightDb} />
+      {params.map(p => <ParameterSlider key={p.id} parameter={p} />)}
+    </div>
+  );
+}
 ```
 
 ### SDK Design Principles

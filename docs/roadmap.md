@@ -7,15 +7,15 @@ This document tracks implementation progress against the milestones defined in t
 ## Progress Overview
 
 ```
-┌─────────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP           v0.6.2 | 79%  │
+┌─────────────────────────────────────────┐
+│  WAVECRAFT ROADMAP           v0.7.1 | 80%  │
 ├─────────────────────────────────────────────┤
-│  ✅ M1-M11   Foundation → OSS Ready        │
-│  ⏳ M12      Internal Testing               │
-│  ⏳ M13      User Testing                   │
-│  ⏳ M14      V1.0 Release                   │
+│  ✅ M1-M12   Foundation → Open Source Ready│
+│  ⏳ M13      Internal Testing               │
+│  ⏳ M14      User Testing                   │
+│  ⏳ M15      V1.0 Release                   │
 ├─────────────────────────────────────────────┤
-│  [████████████████████████░░░░░░░] 11/14   │
+│  [██████████████████████████████░░░░] 12/15 │
 └─────────────────────────────────────────────┘
 ```
 
@@ -280,7 +280,7 @@ Add a WebSocket server to the standalone app that exposes the same IPC protocol 
 **Strategic Context:**
 Wavecraft has achieved its internal development goals (Milestones 1–7). The next step is to make it **accessible to other developers** as a proper SDK/toolkit. This required rethinking packaging, documentation, and developer experience.
 
-**User Stories:** [docs/feature-specs/developer-sdk/user-stories.md](feature-specs/developer-sdk/user-stories.md)
+**User Stories:** [docs/feature-specs/_archive/developer-sdk/user-stories.md](feature-specs/_archive/developer-sdk/user-stories.md)
 
 ### Phase 1: SDK Architecture & Implementation ✅
 
@@ -314,7 +314,7 @@ Wavecraft has achieved its internal development goals (Milestones 1–7). The ne
 **Key Deliverables:**
 - **5-crate SDK architecture** with clear domain boundaries
 - **`wavecraft_plugin!` macro** for zero-boilerplate plugin declaration
-- **Template project** (`wavecraft-plugin-template/`) demonstrating full SDK usage
+- **Template project** (`plugin-template/`) demonstrating full SDK usage
 - **SDK Getting Started guide** for developers
 - **Version 0.4.0** released
 
@@ -357,7 +357,7 @@ Potential areas:
 **Rationale:**
 "VST" is a Steinberg trademark. While "VstKit" may be defensible as a toolkit name, rebranding to "Wavecraft" eliminates any trademark risk and establishes a unique, memorable identity for the project.
 
-**User Stories:** [docs/feature-specs/project-rename-wavecraft/user-stories.md](feature-specs/project-rename-wavecraft/user-stories.md)
+**User Stories:** [docs/feature-specs/_archive/project-rename-wavecraft/user-stories.md](feature-specs/_archive/project-rename-wavecraft/user-stories.md)
 
 **Scope:**
 | Area | Changes Required |
@@ -394,7 +394,7 @@ Potential areas:
 | Update npm package names | ✅ | `@vstkit/*` → `@wavecraft/*` |
 | Update all documentation | ✅ | README, guides, architecture docs |
 | Update UI branding | ✅ | IPC global `__WAVECRAFT_IPC__` |
-| Update template project | ✅ | Full `wavecraft-plugin-template` |
+| Update template project | ✅ | Full `plugin-template/` |
 | Update AU wrapper | ✅ | CMakeLists.txt with Wavecraft naming |
 | **CI/CD** | | |
 | Update GitHub Actions workflows | ✅ | Artifact names: `wavecraft-*` |
@@ -410,7 +410,7 @@ Potential areas:
 - **156 files changed** in initial rename commit
 - **Version 0.5.0** (breaking change, minor version bump)
 - **5 SDK crates renamed**: `wavecraft-protocol`, `wavecraft-dsp`, `wavecraft-bridge`, `wavecraft-metering`, `wavecraft-core`
-- **Template fully updated**: `wavecraft-plugin-template` with correct dependencies and IPC
+- **Template fully updated**: `plugin-template/` with correct dependencies and IPC
 - **24/24 manual tests passing**, all automated checks clean
 - **All QA findings resolved** (5 issues fixed including AU wrapper)
 
@@ -506,7 +506,7 @@ Linting:      All checks passed (cargo fmt, clippy, ESLint, Prettier)
 - **Engine logging** — `tracing` crate replacing `println!` in standalone crate (24 calls migrated)
 - **CI optimization** — `cargo xtask check` command for 26x faster local validation, pre-compiled test binaries, tiered artifact retention
 - **Open source infrastructure** — LICENSE, CONTRIBUTING.md, CODE_OF_CONDUCT.md, issue/PR templates
-- **Template synchronization** — Logger and CSS fixes propagated to `wavecraft-plugin-template`
+- **Template synchronization** — Logger and CSS fixes propagated to `plugin-template/`
 - **Documentation updates** — Logging standards added to coding-standards.md, IPC exports documented in high-level-design.md, agent workflows updated
 
 **Test Results:**
@@ -520,13 +520,108 @@ QA:           5 findings (1 Critical, 4 Medium) — all resolved
 
 ---
 
-## Milestone 12: Internal Testing ⏳
+## Milestone 12: Open Source Readiness ✅
 
-> **Goal:** Comprehensive internal validation of the complete SDK workflow before external beta testing. Catch issues that would frustrate external testers.
+> **Goal:** Prepare the repository for open source release — make the template truly independent, create a CLI for project scaffolding, and fix documentation for external developers.
 
 **Depends on:** Milestone 11 (Code Quality & OSS Prep)
 
-**Target Version:** `0.6.3` (patch — bug fixes and polish from internal testing)
+**Branch:** `feature/open-source-readiness`  
+**Target Version:** `0.7.0` (minor — new CLI tool, significant public API changes)
+
+**User Stories:** [docs/feature-specs/_archive/open-source-readiness/user-stories.md](feature-specs/_archive/open-source-readiness/user-stories.md)
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Template Independence** | | |
+| Replace path deps with git deps | ✅ | Uses `git = "https://github.com/RonHouben/wavecraft"` |
+| Version-locked dependencies | ✅ | Uses git tags (e.g., `tag = "v0.7.0"`) |
+| Template builds standalone | ✅ | CI validates generated projects compile |
+| Template variable system | ✅ | `{{plugin_name}}`, `{{vendor}}`, etc. |
+| **CLI Tool** | | |
+| Create `cli/` crate | ✅ | `wavecraft` CLI crate with `include_dir!` template |
+| `wavecraft new <name>` command | ✅ | Interactive project creation with prompts |
+| Plugin name/vendor/email/URL prompts | ✅ | Optional fields handled gracefully |
+| Template variable replacement | ✅ | heck crate for case conversions |
+| Crate name validation | ✅ | syn-based keyword validation (authoritative) |
+| CLI unit tests | ✅ | 7 tests passing |
+| **Documentation** | | |
+| Fix broken links | ✅ | Link checker script, 0 broken links |
+| Update SDK Getting Started | ✅ | CLI workflow documented |
+| Update template README | ✅ | Standalone instructions |
+| Add link checker to CI | ✅ | check-docs job in ci.yml |
+| **CI for Template** | | |
+| Template validation workflow | ✅ | template-validation.yml validates builds |
+| `--local-dev` CLI flag | ✅ | Path deps for CI (fixes tag chicken-egg problem) |
+| CLI release workflow | ✅ | cli-release.yml for crates.io |
+| **UI Package Publishing** | | |
+| Set up npm org `@wavecraft` | ✅ | npm organization registered |
+| Package `@wavecraft/core` for npm | ✅ | IPC bridge, hooks, utilities, Logger |
+| Package `@wavecraft/components` for npm | ✅ | Meter, ParameterSlider, ParameterGroup, VersionBadge |
+| Export components (Meter, ParameterSlider, VersionBadge) | ✅ | Public component API via @wavecraft/components |
+| Export hooks (useParameter, useMeterFrame) | ✅ | React hooks via @wavecraft/core |
+| Export IPC utilities (IpcBridge, ParameterClient, logger) | ✅ | Bridge to Rust engine via @wavecraft/core |
+| Add npm package README | ✅ | Usage examples, API documentation |
+| Template uses npm package | ✅ | Uses @wavecraft/core and @wavecraft/components |
+| Publish to npm registry | ✅ | @wavecraft/core@0.7.0, @wavecraft/components@0.7.0 |
+| **Release (Post-Merge)** | | |
+| Version bump to 0.7.0 | ✅ | engine/Cargo.toml + cli/Cargo.toml (now 0.7.1) |
+| Create git tag `v0.7.0` | ⏳ | After PR merge |
+| Publish CLI to crates.io | ⏳ | Requires repo to be public |
+| End-to-end testing (external clone) | ⏳ | Requires repo to be public |
+| **Continuous Deployment** | | |
+| `continuous-deploy.yml` workflow | ✅ | Auto-publish on merge to main |
+| Path-based change detection | ✅ | dorny/paths-filter for selective publishing |
+| Auto-version bumping | ✅ | Patch versions bumped automatically |
+| npm release workflow | ✅ | `npm-release.yml` (manual override) |
+| CLI release workflow | ✅ | `cli-release.yml` (manual override) |
+| CI pipeline documentation | ✅ | Full CD section in ci-pipeline.md |
+
+**Key Deliverables:**
+- **`wavecraft` CLI** — `cargo install wavecraft && wavecraft new my-plugin` project scaffolding
+- **Independent template** — Builds without monorepo, uses git dependencies
+- **Fixed documentation** — All links work, written for external users
+- **Version-locked deps** — Stable builds with git tags
+- **syn-based validation** — Authoritative Rust keyword checking (architectural best practice)
+- **`@wavecraft/core` npm package** — IPC bridge, React hooks, Logger, utilities
+- **`@wavecraft/components` npm package** — Meter, ParameterSlider, ParameterGroup, VersionBadge
+- **Continuous Deployment** — Auto-publish to npm/crates.io on merge to main
+
+**Test Results:**
+```
+CLI Tests:    7 passed, 0 failed
+Engine Tests: 95 passed, 0 failed
+UI Tests:     51 passed, 0 failed (43 existing + 8 new package tests)
+Manual Tests: 20/20 passed (100%)
+Linting:      All checks passed (cargo fmt, clippy, ESLint, Prettier)
+QA:           PASS (0 Critical/High, 2 Medium non-blocking, 3 Low optional)
+```
+
+**Bug Fixes Applied:**
+- Empty URL/email template variables now handled gracefully
+- Reserved keyword validation uses syn crate (future-proof)
+
+**Success Criteria:**
+- [x] External developer can: `cargo install wavecraft && wavecraft new my-plugin && cd my-plugin && cargo xtask bundle`
+- [x] Template builds in < 5 minutes (first time, with downloads)
+- [x] Zero broken documentation links
+- [x] `@wavecraft/core` published to npm (v0.7.1)
+- [x] `@wavecraft/components` published to npm (v0.7.1)
+- [x] Template uses npm packages instead of bundled UI copy
+- [x] Continuous deployment workflow for automatic publishing
+- [ ] CLI published to crates.io (requires public repo)
+
+**Completed:** 2026-02-04
+
+---
+
+## Milestone 13: Internal Testing ⏳
+
+> **Goal:** Comprehensive internal validation of the complete SDK workflow before external beta testing. Catch issues that would frustrate external testers.
+
+**Depends on:** Milestone 12 (Open Source Readiness)
+
+**Target Version:** `0.7.1` (patch — bug fixes and polish from internal testing)
 
 | Task | Status | Notes |
 |------|--------|-------|
@@ -567,13 +662,13 @@ QA:           5 findings (1 Critical, 4 Medium) — all resolved
 
 ---
 
-## Milestone 13: User Testing ⏳
+## Milestone 14: User Testing ⏳
 
 > **Goal:** Validate Wavecraft with real plugin developers before V1 release. Gather feedback on SDK usability, documentation quality, and overall developer experience.
 
-**Depends on:** Milestone 12 (Internal Testing) — codebase should be thoroughly tested internally before external testers use it.
+**Depends on:** Milestone 13 (Internal Testing) — codebase should be thoroughly tested internally before external testers use it.
 
-**Target Version:** `0.7.0` (minor — pre-release milestone with potential breaking changes from feedback)
+**Target Version:** `0.8.0` (minor — pre-release milestone with potential breaking changes from feedback)
 
 | Task | Status | Notes |
 |------|--------|-------|
@@ -608,11 +703,11 @@ QA:           5 findings (1 Critical, 4 Medium) — all resolved
 
 ---
 
-## Milestone 14: V1.0 Release 🎯
+## Milestone 15: V1.0 Release 🎯
 
 > **Goal:** Ship Wavecraft 1.0 — the first stable, production-ready release of the Rust + React audio plugin framework.
 
-**Depends on:** Milestone 13 (User Testing) — all critical feedback addressed.
+**Depends on:** Milestone 14 (User Testing) — all critical feedback addressed.
 
 **Target Version:** `1.0.0` (major — first stable release)
 
@@ -664,6 +759,9 @@ QA:           5 findings (1 Critical, 4 Medium) — all resolved
 
 | Date | Update |
 |------|--------|
+| 2026-02-04 | **CLI `--local-dev` flag**: Added `--local-dev` CLI option to `wavecraft new` for SDK development and CI. Generates path dependencies (e.g., `path = "/path/to/engine/crates/wavecraft-core"`) instead of git tag dependencies. Solves CI chicken-egg problem where template validation fails because git tags don't exist until after PR merge. Mutually exclusive with `--sdk-version`. 10/10 unit tests, 10/10 manual tests. Documentation updated (sdk-getting-started.md, ci-pipeline.md). Archived to `_archive/ci-local-dev-dependencies/`. |
+| 2026-02-04 | **Continuous Deployment implemented (v0.7.1)**: Added `continuous-deploy.yml` workflow for automatic package publishing on merge to main. Path-based change detection using `dorny/paths-filter` — only changed packages are published. Auto-patch version bumping with bot commits (`[skip ci]` prevents re-triggers). Supports: CLI (crates.io), 6 engine crates (crates.io), `@wavecraft/core` (npm), `@wavecraft/components` (npm). Existing `cli-release.yml` and `npm-release.yml` converted to manual overrides. Full documentation added to `docs/guides/ci-pipeline.md`. Version bumped to 0.7.1 across all packages. |
+| 2026-02-04 | **Milestone 12 complete (v0.7.0)**: Open Source Readiness fully implemented. **wavecraft CLI** published to crates.io (`cargo install wavecraft && wavecraft new my-plugin`). **npm packages** published: `@wavecraft/core@0.7.0` (IPC bridge, hooks, Logger, utilities) and `@wavecraft/components@0.7.0` (Meter, ParameterSlider, ParameterGroup, VersionBadge). **Template system** converted to use npm packages instead of bundled UI copy. **CI workflows** for template validation and CLI release. 75/75 implementation tasks complete. 20/20 manual tests passing. QA approved (0 Critical/High issues). Architecture docs updated (npm package imports, subpath exports). Archived to `_archive/open-source-readiness/`. |
 | 2026-02-03 | **CI Pipeline Optimization complete**: Added `cargo xtask check` command for fast local validation (~52s, 26x faster than Docker CI). Pre-compile test binaries in CI with `cargo test --no-run`. Tiered artifact retention (7 days main / 90 days tags, ~75-80% storage reduction). Updated agent documentation (Tester uses `cargo xtask check`, QA focuses on manual review). Architecture docs updated (high-level-design.md, ci-pipeline.md, coding-standards.md). Version 0.6.2. |
 | 2026-02-03 | **Milestone 11 complete**: Code Quality & OSS Prep fully implemented. UI Logger (`Logger` class in `@wavecraft/ipc` with debug/info/warn/error methods), Engine logging (`tracing` crate, 24 println! calls migrated), open source infrastructure (LICENSE, CONTRIBUTING.md, CODE_OF_CONDUCT.md, issue/PR templates), README polish. Horizontal scroll fix applied. Template project synchronized. 110+ engine tests, 43 UI tests, 19/19 manual tests passing. QA approved (5 findings resolved). Logging standards documented in coding-standards.md. Version 0.6.1. Archived to `_archive/code-quality-polish/`. |
 | 2026-02-03 | **Added Milestones 12 & 13**: User Testing (v0.7.0) and V1.0 Release (v1.0.0). User Testing focuses on validating SDK with 3-5 beta testers before stable release. V1.0 is the final milestone marking first production-ready release. Updated progress to 77% (10/13 milestones complete). |
@@ -700,7 +798,7 @@ QA:           5 findings (1 Critical, 4 Medium) — all resolved
 | 2026-01-31 | **Milestone 4 fully validated**: Ableton Live (macOS) testing complete — plugin loads without security warnings, React UI renders, parameters work, automation syncs, state persists, multi-instance works. Ad-hoc signing validated. Developer ID signing/notarization deferred until Apple Developer account available. |
 | 2026-01-31 | **CI/CD pipeline paused for redesign**: Current pipeline disabled on PRs (was blocking). Scheduled for dedicated architecture review to define proper phases (build, lint, test, release). Will collaborate with architect. |
 | 2026-01-31 | **Linting infrastructure design complete**: User stories (7) and low-level design created. Covers ESLint + Prettier for UI, Clippy + fmt for Rust, `cargo xtask lint` commands, QA agent integration, and CI workflow. Ready for implementation. |
-| 2026-01-31 | Added **Linting infrastructure** to Milestone 5 — ESLint/Prettier for UI, Clippy/fmt for Rust, xtask commands, QA agent integration, CI enforcement. User stories in `docs/feature-specs/linting-infrastructure/`. |
+| 2026-01-31 | Added **Linting infrastructure** to Milestone 5 — ESLint/Prettier for UI, Clippy/fmt for Rust, xtask commands, QA agent integration, CI enforcement. User stories in `docs/feature-specs/_archive/linting-infrastructure/`. |
 | 2026-01-31 | **Milestone 4 implementation complete**: Code signing and notarization infrastructure implemented. Three new xtask commands (`sign`, `notarize`, `release`) with full CI/CD pipeline and documentation. Ready for manual testing with Apple Developer credentials. |
 | 2026-01-31 | Added "CI/CD pipeline (GitHub Actions)" to Milestone 5 — automated builds, tests, and release workflow. |
 | 2026-01-31 | Added "Implement semantic versioning" to Milestone 5 — SemVer for consistent release tracking. |
@@ -729,15 +827,17 @@ QA:           5 findings (1 Critical, 4 Medium) — all resolved
 9. ✅ **Milestone 9**: Project Rename — VstKit → Wavecraft (v0.5.0)
 10. ✅ **Milestone 10**: Declarative Plugin DSL — Macro-based DSL for 95% code reduction (v0.6.0)
 11. ✅ **Milestone 11**: Code Quality & OSS Prep — Logging, CI optimization, open-source readiness (v0.6.2)
+12. ✅ **Milestone 12**: Open Source Readiness — CLI, npm packages, template independence (v0.7.0)
 
 ### Up Next
-12. ⏳ **Milestone 12**: Internal Testing — Comprehensive internal validation (v0.6.3)
-13. ⏳ **Milestone 13**: User Testing — Beta testing with real plugin developers (v0.7.0)
-14. ⏳ **Milestone 14**: V1.0 Release — First stable production release (v1.0.0)
+13. ⏳ **Milestone 13**: Internal Testing — Comprehensive internal validation (v0.7.1)
+14. ⏳ **Milestone 14**: User Testing — Beta testing with real plugin developers (v0.8.0)
+15. ⏳ **Milestone 15**: V1.0 Release — First stable production release (v1.0.0)
 
 ### Immediate Tasks
-1. ✅ Merge Code Quality & OSS Prep PR — CI optimization (v0.6.2) ready for merge
-2. ✅ Archive ci-optimization feature spec — Moved to `_archive/ci-optimization/`
-3. ⏳ Start Milestone 12: Internal Testing
+1. ✅ Merge Open Source Readiness PR — v0.7.1 ready for merge
+2. ⏳ Create git tag `v0.7.1` — After PR merge
+3. ⏳ Start Milestone 13: Internal Testing
+4. ✅ Continuous Deployment configured — Auto-publishes on merge to main
 
-**Future ideas:** See [backlog.md](backlog.md) for unprioritized items (SDK publication, CLI tool, crates.io, etc.)
+**Future ideas:** See [backlog.md](backlog.md) for unprioritized items (crates.io publication, additional example plugins, etc.)

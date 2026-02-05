@@ -219,6 +219,14 @@ enum Commands {
         #[arg(long)]
         skip_tests: bool,
     },
+
+    /// Validate CLI template generation
+    #[command(about = "Validate CLI template generation (replicates CI workflow)")]
+    ValidateTemplate {
+        /// Keep the generated test project (don't clean up)
+        #[arg(long)]
+        keep: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -359,6 +367,13 @@ fn main() -> Result<()> {
                 verbose: cli.verbose,
             };
             commands::check::run(config)
+        }
+        Some(Commands::ValidateTemplate { keep }) => {
+            let config = commands::validate_template::ValidateTemplateConfig {
+                verbose: cli.verbose,
+                keep,
+            };
+            commands::validate_template::run(config)
         }
         None => {
             // Default behavior: run nih_plug_xtask for backward compatibility

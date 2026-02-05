@@ -394,7 +394,7 @@ The agent uses these Playwright MCP tools:
 
 ## Related Documentation
 
-- [Implementation Plan](../feature-specs/browser-visual-testing/implementation-plan.md)
-- [Low-Level Design](../feature-specs/browser-visual-testing/low-level-design-browser-visual-testing.md)
-- [User Stories](../feature-specs/browser-visual-testing/user-stories.md)
+- [Implementation Plan](../feature-specs/_archive/browser-visual-testing/implementation-plan.md)
+- [Low-Level Design](../feature-specs/_archive/browser-visual-testing/low-level-design-browser-visual-testing.md)
+- [User Stories](../feature-specs/_archive/browser-visual-testing/user-stories.md)
 

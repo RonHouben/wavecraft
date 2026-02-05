@@ -4,6 +4,39 @@ This guide walks you through building your first VST3/CLAP audio plugin using th
 
 ---
 
+## Published Packages
+
+Wavecraft is distributed via standard package registries:
+
+### npm (UI SDK)
+
+```bash
+npm install @wavecraft/core @wavecraft/components
+```
+
+| Package | Description |
+|---------|-------------|
+| [@wavecraft/core](https://www.npmjs.com/package/@wavecraft/core) | IPC bridge, hooks, types, utilities |
+| [@wavecraft/components](https://www.npmjs.com/package/@wavecraft/components) | Pre-built React components (Meter, ParameterSlider, etc.) |
+
+### crates.io (Rust SDK)
+
+```bash
+cargo install wavecraft  # CLI tool
+```
+
+| Crate | Description |
+|-------|-------------|
+| [wavecraft](https://crates.io/crates/wavecraft) | CLI tool for scaffolding plugins |
+| [wavecraft-core](https://crates.io/crates/wavecraft-core) | nih-plug VST3/CLAP integration |
+| [wavecraft-dsp](https://crates.io/crates/wavecraft-dsp) | Pure DSP algorithms, Processor trait |
+| [wavecraft-protocol](https://crates.io/crates/wavecraft-protocol) | Shared parameter definitions |
+| [wavecraft-macros](https://crates.io/crates/wavecraft-macros) | Procedural macros (`wavecraft_plugin!`, etc.) |
+| [wavecraft-bridge](https://crates.io/crates/wavecraft-bridge) | IPC handling |
+| [wavecraft-metering](https://crates.io/crates/wavecraft-metering) | Audio → UI metering (SPSC ring buffer) |
+
+---
+
 ## Prerequisites
 
 - **Rust** (1.75+) — Install via [rustup](https://rustup.rs/)
@@ -12,23 +45,57 @@ This guide walks you through building your first VST3/CLAP audio plugin using th
 
 ---
 
+# Wavecraft SDK — Getting Started
+
+This guide walks you through building your first VST3/CLAP audio plugin using the Wavecraft SDK.
+
+---
+
+## Prerequisites
+
+- **Rust** (1.75+) — Install via [rustup](https://rustup.rs/)
+- **Node.js** (18+) — For building the React UI
+- **macOS** (primary) — Windows/Linux support is secondary
+
+---
+
 ## Quick Start (< 30 minutes)
 
-### 1. Clone the Template
+### 1. Install Wavecraft CLI
 
 ```bash
-git clone https://github.com/wavecraft/wavecraft-plugin-template my-plugin
+cargo install wavecraft
+```
+
+### 2. Create a New Plugin Project
+
+```bash
+# Interactive mode (prompts for vendor, email, URL)
+wavecraft new my-plugin
+
+# Non-interactive mode (provide all options)
+wavecraft new my-plugin \
+  --vendor "My Company" \
+  --email "info@example.com" \
+  --url "https://example.com"
+
 cd my-plugin
 ```
 
-### 2. Install Dependencies
+The CLI creates a complete project with:
+- Rust engine configured with Wavecraft dependencies
+- React UI with TypeScript and Tailwind CSS
+- xtask build system
+- Ready-to-build plugin template
+
+### 3. Install Dependencies
 
 ```bash
 # Install UI dependencies
 cd ui && npm install && cd ..
 ```
 
-### 3. Build Your Plugin
+### 4. Build Your Plugin
 
 ```bash
 # Build VST3 and CLAP bundles
@@ -39,7 +106,7 @@ cargo xtask bundle
 # target/bundled/my-plugin.clap
 ```
 
-### 4. Test in Your DAW
+### 5. Test in Your DAW
 
 Copy the plugin to your DAW's plugin directory:
 
@@ -50,30 +117,91 @@ cargo xtask install
 
 ---
 
+## CLI Reference
+
+### Creating New Projects
+
+```bash
+# Interactive mode (recommended for first-time users)
+wavecraft new my-plugin
+
+# With all options
+wavecraft new my-plugin \
+  --vendor "My Company" \
+  --email "info@example.com" \
+  --url "https://example.com" \
+  --sdk-version "v0.7.0"
+
+# Custom output directory
+wavecraft new my-plugin --output ~/projects/my-plugin
+
+# Skip git initialization
+wavecraft new my-plugin --no-git
+```
+
+### CLI Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--vendor, -v` | Company or developer name | Interactive prompt |
+| `--email, -e` | Contact email | Interactive prompt (optional) |
+| `--url, -u` | Website URL | Interactive prompt (optional) |
+| `--output, -o` | Output directory | `./<plugin-name>` |
+| `--sdk-version` | Wavecraft SDK version tag | `v0.7.0` |
+| `--no-git` | Skip git initialization | false |
+| `--local-dev` | Use local SDK path (for SDK development/CI) | — |
+
+> **Note:** `--local-dev` is for SDK developers and CI pipelines. It generates path dependencies (e.g., `path = "/path/to/engine/crates/wavecraft-core"`) instead of git tag dependencies. This allows validating against unreleased SDK code. Mutually exclusive with `--sdk-version`.
+
+---
+
 ## Project Structure
 
 ```
 my-plugin/
 ├── engine/                  # Rust audio engine
-│   ├── Cargo.toml           # Dependencies on wavecraft-* crates
+│   ├── Cargo.toml           # Dependencies on wavecraft-* crates (git tags)
 │   └── src/
-│       ├── lib.rs           # Plugin entry point
-│       └── dsp.rs           # Your DSP implementation
+│       └── lib.rs           # Plugin entry point (using declarative DSL)
 │
-├── ui/                      # React UI
-│   ├── package.json
+├── ui/                      # React UI (TypeScript + Tailwind)
+│   ├── package.json         # Dependencies: @wavecraft/core + @wavecraft/components
 │   └── src/
-│       ├── App.tsx          # Your UI layout
-│       └── components/      # Custom components
+│       └── App.tsx          # Your UI layout
 │
 └── xtask/                   # Build automation
+    └── src/main.rs          # xtask commands (bundle, dev, install, etc.)
 ```
+
+**Note:** The generated project references:
+- **Rust crates** via git tags (e.g., `git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.0"`)
+- **npm packages** from the `@wavecraft` organization (`@wavecraft/core`, `@wavecraft/components`)
 
 ---
 
 ## Implementing Your DSP
 
-Your audio processing code lives in `engine/src/dsp.rs`. Implement the `Processor` trait:
+The CLI-generated plugin uses the **declarative DSL** for quick setup. Your plugin is defined in `engine/src/lib.rs`:
+
+```rust
+use wavecraft_core::prelude::*;
+
+// Define the processor chain (using built-in Gain processor)
+wavecraft_processor!(MyPluginGain => Gain);
+
+// Generate the complete plugin
+wavecraft_plugin! {
+    name: "My Plugin",
+    vendor: "My Company",
+    url: "https://example.com",
+    email: "info@example.com",
+    signal: MyPluginGain,
+}
+```
+
+### Adding Custom DSP
+
+To implement custom processing, create your own processor struct and implement the `Processor` trait:
 
 ```rust
 use wavecraft_core::prelude::*;
@@ -166,19 +294,30 @@ The UI is a React application in the `ui/` folder. Wavecraft provides ready-to-u
 
 ### Built-in Components
 
+Wavecraft provides two npm packages:
+
+- **`@wavecraft/core`** — IPC bridge, hooks, and utilities
+- **`@wavecraft/components`** — Pre-built React components
+
 ```tsx
-import { Meter, ParameterSlider } from '@wavecraft/ui';
+import { Meter, ParameterSlider, ParameterGroup } from '@wavecraft/components';
+import { useAllParameters, useParameterGroups } from '@wavecraft/core';
 
 function App() {
+  const { params, isLoading } = useAllParameters();
+  const groups = useParameterGroups(params);
+  
   return (
     <div className="plugin-ui">
       {/* Stereo level meter */}
       <Meter />
       
-      {/* Parameter controls */}
-      <ParameterSlider id="gain" />
-      <ParameterSlider id="mix" />
-      <ParameterSlider id="frequency" />
+      {/* Automatic parameter discovery */}
+      {groups.length > 0 ? (
+        groups.map(group => <ParameterGroup key={group.name} group={group} />)
+      ) : (
+        params?.map(p => <ParameterSlider key={p.id} id={p.id} />)
+      )}
     </div>
   );
 }
@@ -187,7 +326,7 @@ function App() {
 ### Custom Components with Hooks
 
 ```tsx
-import { useParameter } from '@wavecraft/ipc';
+import { useParameter } from '@wavecraft/core';
 
 function MyKnob({ id }: { id: string }) {
   const { value, setValue, info } = useParameter(id);
@@ -210,9 +349,13 @@ function MyKnob({ id }: { id: string }) {
 
 ### Available Hooks
 
+All hooks are exported from `@wavecraft/core`:
+
 | Hook | Purpose |
 |------|---------|
 | `useParameter(id)` | Read/write a single parameter |
+| `useAllParameters()` | Fetch all plugin parameters (automatic discovery) |
+| `useParameterGroups(params)` | Group parameters by their `group` attribute |
 | `useMeterFrame()` | Access real-time meter data |
 | `useConnectionStatus()` | WebSocket connection status (dev mode) |
 

@@ -27,8 +27,9 @@
     /* Path aliases */
     "paths": {
       "*": ["./*"],
-      "@wavecraft/ipc": ["./src/lib/wavecraft-ipc"],
-      "@wavecraft/ipc/meters": ["./src/lib/wavecraft-ipc/meters"]
+      "@wavecraft/core": ["./packages/core/src"],
+      "@wavecraft/core/meters": ["./packages/core/src/meters"],
+      "@wavecraft/components": ["./packages/components/src"]
     }
   },
   "include": ["src"]

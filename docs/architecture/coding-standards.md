@@ -212,72 +212,133 @@ declare const __APP_VERSION__: string;
 
 ### File Organization
 
+The UI codebase is organized as an npm workspace with publishable packages:
+
 ```
-src/
-├── lib/
-│   └── wavecraft-ipc/
-│       ├── index.ts          # Public exports
-│       ├── types.ts          # Type definitions
-│       ├── environment.ts    # Environment detection (browser vs WKWebView)
-│       ├── IpcBridge.ts      # Class: low-level bridge
-│       ├── ParameterClient.ts # Class: high-level API
-│       └── hooks.ts          # React hooks (functional)
-├── components/
-│   ├── ParameterSlider.tsx   # Functional component
-│   ├── ParameterSlider.test.tsx # Co-located test
-│   ├── VersionBadge.tsx      # Version display component
-│   └── LatencyMonitor.tsx    # Functional component
+ui/
+├── packages/                      # Published npm packages
+│   ├── core/                      # @wavecraft/core
+│   │   ├── src/
+│   │   │   ├── index.ts           # Main entry (re-exports all public API)
+│   │   │   ├── meters.ts          # /meters subpath (pure audio math)
+│   │   │   ├── hooks/             # React hooks (domain folder)
+│   │   │   │   ├── useParameter.ts
+│   │   │   │   ├── useAllParameters.ts
+│   │   │   │   ├── useParameterGroups.ts
+│   │   │   │   ├── useConnectionStatus.ts
+│   │   │   │   ├── useLatencyMonitor.ts
+│   │   │   │   ├── useMeterFrame.ts
+│   │   │   │   ├── useRequestResize.ts
+│   │   │   │   └── useWindowResizeSync.ts
+│   │   │   ├── ipc/               # IPC classes (domain folder)
+│   │   │   │   ├── IpcBridge.ts   # Low-level IPC bridge
+│   │   │   │   └── ParameterClient.ts # High-level parameter API
+│   │   │   ├── types/             # TypeScript types (domain folder)
+│   │   │   │   ├── ipc.ts         # IPC protocol types
+│   │   │   │   ├── parameters.ts  # Parameter types
+│   │   │   │   └── metering.ts    # Meter types
+│   │   │   ├── utils/             # Utilities (domain folder)
+│   │   │   │   ├── environment.ts # Runtime detection
+│   │   │   │   └── audio-math.ts  # linearToDb, dbToLinear
+│   │   │   ├── transports/        # Transport implementations
+│   │   │   └── logger/            # Structured logging
+│   │   ├── dist/                  # Built ESM bundle + DTS
+│   │   └── package.json           # npm package config
+│   └── components/                # @wavecraft/components
+│       ├── src/
+│       │   ├── index.ts           # Component exports
+│       │   ├── Meter.tsx          # Audio level meter
+│       │   ├── ParameterSlider.tsx# Slider control
+│       │   ├── ParameterGroup.tsx # Grouped parameters
+│       │   └── VersionBadge.tsx   # Version display
+│       ├── dist/                  # Built ESM bundle + DTS
+│       └── package.json           # npm package config
+├── src/                           # Development app (internal)
+│   ├── App.tsx                    # Dev app entry
+│   └── main.tsx                   # Dev app bootstrap
 ├── test/
-│   ├── setup.ts              # Global test setup
+│   ├── setup.ts                   # Global test setup
 │   └── mocks/
-│       └── ipc.ts            # IPC mock module
-└── App.tsx
+│       └── ipc.ts                 # IPC mock module
+└── package.json                   # Workspace root (workspaces: ["packages/*"])
 ```
 
-**Note:** Class files should be named with PascalCase matching the class name.
+**Domain folder conventions:**
+- **No internal barrel files** — Domain folders do not have `index.ts` barrels
+- The main `src/index.ts` imports directly from each file (e.g., `./hooks/useParameter`)
+- One file per hook/class/type domain
+- External imports use `@wavecraft/core` or `@wavecraft/components`
 
-### Import Aliases
+### Barrel Files
 
-**Rule:** Use configured path aliases instead of relative imports for shared libraries.
+**Rule:** Use barrel files only for published package entry points, not for internal folders.
 
-The project defines the following import aliases (configured in `tsconfig.json`, `vite.config.ts`, and `vitest.config.ts`):
-
-| Alias | Path | Usage |
-|-------|------|-------|
-| `@wavecraft/ipc` | `./src/lib/wavecraft-ipc` | IPC client, hooks, and types |
-| `@wavecraft/ipc/meters` | `./src/lib/wavecraft-ipc/meters` | Pure audio math utilities (no IPC side effects) |
+**Rationale:**
+- Internal barrels can defeat tree-shaking in application code
+- They can mask circular dependencies
+- They slow down TypeScript IDE performance
+- Published packages are pre-bundled, so the main entry barrel is acceptable
 
 **Do:**
 ```typescript
-// ✅ Use alias for IPC features (in components)
-import { getMeterFrame, MeterFrame, useParameter } from '@wavecraft/ipc';
+// ✅ Main entry point (src/index.ts) - this IS the public API
+export { useParameter } from './hooks/useParameter';
+export { IpcBridge } from './ipc/IpcBridge';
+export type { ParameterInfo } from './types/parameters';
 
-// ✅ Use subpath alias for pure utilities (especially in tests)
-import { linearToDb, dbToLinear } from '@wavecraft/ipc/meters';
+// ✅ Internal imports use direct paths
+import { IpcBridge } from './ipc/IpcBridge';
+import type { MeterFrame } from './types/metering';
 ```
 
 **Don't:**
 ```typescript
-// ❌ Relative imports to shared libraries
-import { getMeterFrame } from '../lib/wavecraft-ipc';
-import { useParameter } from '../../lib/wavecraft-ipc';
-
-// ❌ Relative imports in test files
-import { linearToDb } from './wavecraft-ipc/meters';
+// ❌ Internal barrel file (hooks/index.ts)
+export { useParameter } from './useParameter';
+export { useAllParameters } from './useAllParameters';
+// ...then importing from barrel
+import { useParameter } from './hooks';  // Avoid this pattern
 ```
 
-**Subpath Aliases:**
+### Import Aliases
 
-The `@wavecraft/ipc/meters` subpath provides access to pure utility functions (`linearToDb`, `dbToLinear`, `getMeterFrame`) without triggering IPC initialization side effects. Use this subpath:
+**Rule:** Use npm package imports for the SDK, not relative paths.
+
+The UI SDK is distributed as npm packages. User plugins and the internal dev app both import from these packages:
+
+| Package | Exports | Usage |
+|---------|---------|-------|
+| `@wavecraft/core` | IPC, hooks, Logger, types | Core SDK functionality |
+| `@wavecraft/core/meters` | `linearToDb`, `dbToLinear` | Pure audio math utilities |
+| `@wavecraft/components` | `Meter`, `ParameterSlider`, etc. | Pre-built React components |
+
+**Do:**
+```typescript
+// ✅ Import from npm packages
+import { useParameter, useAllParameters, Logger } from '@wavecraft/core';
+import { linearToDb, dbToLinear } from '@wavecraft/core/meters';
+import { Meter, ParameterSlider } from '@wavecraft/components';
+```
+
+**Don't:**
+```typescript
+// ❌ Relative imports (no longer applicable for SDK usage)
+import { useParameter } from '../lib/wavecraft-ipc';
+import { Meter } from '../../components/Meter';
+```
+
+**Subpath Exports:**
+
+The `@wavecraft/core/meters` subpath provides access to pure utility functions (`linearToDb`, `dbToLinear`, `getMeterFrame`) without triggering IPC initialization side effects. Use this subpath:
 - In unit tests for pure functions
 - When you only need math utilities, not hooks or clients
 
 **Rationale:**
-- Cleaner imports that don't change when files move
-- Immediately identifies imports as project-internal
-- Consistent import paths across the codebase
-- Test files follow the same conventions as production code
-- Subpath aliases avoid initialization side effects in tests
+- Standard npm package consumption pattern
+- Version management via package.json
+- Clear separation between SDK and user code
+- Tree-shaking support via ESM exports
+- Subpath exports avoid initialization side effects in tests
 
 ### Global Object Access
 
@@ -692,22 +753,26 @@ npm run test:coverage
 
 ### Test File Organization
 
-Tests are co-located with source files:
+Tests are co-located with source files in each package:
 
 ```
-ui/src/
-├── components/
-│   ├── Meter.tsx
-│   ├── Meter.test.tsx           # Component test
-│   ├── ParameterSlider.tsx
-│   └── ParameterSlider.test.tsx # Component test
-├── lib/
-│   ├── audio-math.ts
-│   └── audio-math.test.ts       # Pure function tests
+ui/
+├── packages/
+│   ├── core/src/
+│   │   ├── IpcBridge.test.ts      # IPC bridge tests
+│   │   ├── environment.test.ts    # Environment detection tests
+│   │   └── logger/
+│   │       └── Logger.test.ts     # Logger tests
+│   └── components/src/
+│       ├── Meter.tsx
+│       ├── Meter.test.tsx         # Component test
+│       ├── ParameterSlider.tsx
+│       └── ParameterSlider.test.tsx
+├── src/                           # Dev app (limited tests)
 └── test/
-    ├── setup.ts                 # Global test setup
+    ├── setup.ts                   # Global test setup
     └── mocks/
-        └── ipc.ts               # IPC mock module
+        └── ipc.ts                 # IPC mock module
 ```
 
 ### Mocking IPC for Tests
@@ -744,7 +809,7 @@ beforeEach(() => {
 
 **TypeScript Support:**
 - Types: `vitest/globals`, `@testing-library/jest-dom`
-- Aliases: Same as production (`@wavecraft/ipc`, `@wavecraft/ipc/meters`)
+- npm packages: `@wavecraft/core`, `@wavecraft/components` available via workspace
 
 ---
 
@@ -900,11 +965,11 @@ See the docs folder for more information.
 
 **UI Logging (TypeScript):**
 
-Use the `Logger` class from `@wavecraft/ipc` for all UI logging. Direct `console.*` calls are prohibited in production code.
+Use the `Logger` class from `@wavecraft/core` for all UI logging. Direct `console.*` calls are prohibited in production code.
 
 ```typescript
 // ✅ Import and use the logger
-import { logger } from '@wavecraft/ipc';
+import { logger } from '@wavecraft/core';
 
 logger.debug('Verbose tracing info', { requestId: 123 });
 logger.info('Connection established', { transport: 'WebSocket' });
@@ -975,6 +1040,61 @@ eprintln!("Error: {}", err);
 - TypeScript: Use explicit error types, avoid `any`
 - Rust: Use `Result<T, E>` with descriptive error types
 - Always handle errors explicitly; avoid silent failures
+
+### Validation Against Language Specifications
+
+**Rule:** When validating identifiers, keywords, or language constructs, use the language's own parser/lexer libraries instead of maintaining custom lists.
+
+**Rationale:**
+- **Future-proof**: Automatically stays current with language updates (new keywords, editions)
+- **Authoritative**: Uses the language's official rules as source of truth
+- **Comprehensive**: Covers all cases including strict keywords, reserved words, and edition-specific additions
+- **Maintainable**: No manual lists to keep in sync
+
+**Do (Rust keyword validation):**
+```rust
+use syn;
+
+/// Validates that a name is not a Rust keyword.
+/// Uses syn's parser - the same rules Rust itself uses.
+pub fn validate_not_keyword(name: &str) -> Result<()> {
+    // Convert hyphens to underscores (crate names allow hyphens)
+    let ident_name = name.replace('-', "_");
+    
+    // syn::parse_str::<syn::Ident>() fails for keywords
+    if syn::parse_str::<syn::Ident>(&ident_name).is_err() {
+        bail!("'{}' is a reserved Rust keyword", name);
+    }
+    Ok(())
+}
+```
+
+**Don't (hardcoded keyword list):**
+```rust
+// ❌ Hardcoded list becomes stale as language evolves
+const KEYWORDS: &[&str] = &[
+    "fn", "let", "if", "else", "match", // incomplete...
+    // Missing: async, await, try, dyn, etc.
+];
+
+fn validate_not_keyword(name: &str) -> Result<()> {
+    if KEYWORDS.contains(&name) {
+        bail!("Reserved keyword");
+    }
+    Ok(())
+}
+```
+
+**Why syn for Rust:**
+- `syn` is the de-facto standard Rust parser, used by proc-macros
+- `syn::Ident` parsing uses Rust's official keyword list
+- Automatically includes edition-specific keywords (e.g., `async`/`await` in 2018+)
+- Zero maintenance burden for keyword list updates
+
+**Similar patterns for other languages:**
+- **TypeScript**: Use TypeScript compiler API for identifier validation
+- **JavaScript**: Use `acorn` or `esprima` parser libraries
+
 ### Rust `unwrap()` and `expect()` Usage
 
 **Rule:** Avoid `unwrap()` in production code. Use `expect()` with descriptive messages or proper error handling.
