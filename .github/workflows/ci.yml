@@ -1,10 +1,11 @@
 name: CI
 
+# Runs on PRs only — main branch validation happens via PR quality gates.
+# Use workflow_dispatch for manual runs (e.g., after direct commits to main).
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
