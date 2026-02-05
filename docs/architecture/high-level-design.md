@@ -910,10 +910,20 @@ See [macOS Signing Guide](../guides/macos-signing.md) for complete setup instruc
 Wavecraft uses GitHub Actions for continuous integration and release automation.
 
 **CI Build** (`.github/workflows/ci.yml`):
-- Triggers on push/PR to `main`
+- Triggers on PRs to `main` (not on merge/push — code already validated via PR)
+- Manual trigger available via `workflow_dispatch`
 - Builds UI and plugin with React UI
 - Ad-hoc signs bundles for artifact verification
 - Uploads signed VST3/CLAP artifacts (30-day retention)
+
+**Template Validation** (`.github/workflows/template-validation.yml`):
+- Triggers on PRs to `main` (not on merge/push)
+- Manual trigger available via `workflow_dispatch`
+- Scaffolds test plugin with CLI and validates compilation
+
+**Continuous Deploy** (`.github/workflows/continuous-deploy.yml`):
+- Triggers on push to `main` (after PR merge)
+- Detects changed packages and publishes to crates.io/npm
 
 **Release Build** (`.github/workflows/release.yml`):
 - Triggers on version tags (`v*`) or manual dispatch

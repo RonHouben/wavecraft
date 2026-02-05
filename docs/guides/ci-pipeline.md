@@ -4,7 +4,7 @@ This document describes the CI/CD pipeline architecture for Wavecraft.
 
 ## Overview
 
-The CI pipeline runs on every push to `main` and on all pull requests. It consists of two independent pipelines that run in **parallel**:
+The CI pipeline runs on all pull requests to `main` (not on merge/push). It consists of two independent pipelines that run in **parallel**:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
