@@ -105,8 +105,15 @@ jobs:
       # Validate UI Compilation
       # ═════════════════════════════════════════════════════════════
 
+      # Use `npm install` instead of `npm ci` because:
+      # 1. The template's package-lock.json may reference npm packages that
+      #    haven't been published yet (PR runs before merge/publish).
+      # 2. Package versions may have changed since the lock file was generated.
+      # 3. This mirrors real user behavior when lock files need updating.
+      # The goal is validating "does the generated code compile", not
+      # "is the lock file byte-for-byte correct".
       - name: Install UI dependencies
-        run: npm ci
+        run: npm install
         working-directory: /tmp/test-plugin/ui
 
       - name: Run UI linting
