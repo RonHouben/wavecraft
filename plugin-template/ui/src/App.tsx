@@ -1,8 +1,5 @@
-// Core SDK - hooks and utilities
 import { useAllParameters, useParameterGroups, useWindowResizeSync } from '@wavecraft/core';
 import type { JSX } from 'react';
-
-// Pre-built components
 import {
   Meter,
   ParameterSlider,
@@ -16,7 +13,6 @@ export function App(): JSX.Element {
   const { params, isLoading } = useAllParameters();
   const groups = useParameterGroups(params);
 
-  // Sync window resize events to host DAW
   useWindowResizeSync();
 
   return (
