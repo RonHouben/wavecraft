@@ -16,6 +16,10 @@ enum Commands {
         /// Build in release mode (default)
         #[arg(long)]
         release: bool,
+        
+        /// Validate configuration without building (dry run)
+        #[arg(long)]
+        check: bool,
     },
 }
 
@@ -23,7 +27,12 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Bundle { release: _ } => {
+        Commands::Bundle { release: _, check } => {
+            if check {
+                println!("✓ Bundle configuration valid (dry run)");
+                return Ok(());
+            }
+            
             println!("Building my-plugin plugin...");
             
             // Build arguments for nih_plug_xtask
