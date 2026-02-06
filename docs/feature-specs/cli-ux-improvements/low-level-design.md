@@ -75,14 +75,14 @@ dialoguer = "0.11"
 
 ---
 
-## Story 3: Remove `--sdk-version`, Rename `--local-dev` to `--sdk-path`
+## Story 3: Remove `--sdk-version`, Rename `--local-dev` to `--local-sdk` (boolean)
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `cli/src/main.rs` | Remove `--sdk-version`, rename `--local-dev`, add version constant |
-| `cli/src/commands/new.rs` | Update struct field name, use constant |
+| `cli/src/main.rs` | Remove `--sdk-version`, change `--local-dev` to boolean `--local-sdk`, add version constant |
+| `cli/src/commands/new.rs` | Update struct field, add repo root detection logic |
 
 ### Implementation: `cli/src/main.rs`
 
@@ -125,9 +125,9 @@ enum Commands {
 
         // REMOVED: --sdk-version (now automatic via SDK_VERSION constant)
         
-        /// Path to local SDK crates directory (for SDK development only)
-        #[arg(long = "sdk-path", hide = true)]
-        sdk_path: Option<PathBuf>,
+        /// Use local SDK from repository (for SDK development only)
+        #[arg(long, hide = true)]
+        local_sdk: bool,
     },
 }
 ```
@@ -146,7 +146,7 @@ fn main() -> Result<()> {
             url,
             output,
             no_git,
-            sdk_path,
+            local_sdk,
         } => {
             let cmd = NewCommand {
                 name,
@@ -156,7 +156,7 @@ fn main() -> Result<()> {
                 output,
                 no_git,
                 sdk_version: SDK_VERSION.to_string(),
-                sdk_path,
+                local_sdk,
             };
             cmd.execute()?;
         }
@@ -177,26 +177,75 @@ pub struct NewCommand {
     pub url: Option<String>,
     pub output: Option<PathBuf>,
     pub no_git: bool,
-    pub sdk_version: String,          // Now always set from CLI constant
-    pub sdk_path: Option<PathBuf>,    // Renamed from local_dev
+    pub sdk_version: String,
+    pub local_sdk: bool,  // Changed from Option<PathBuf>
 }
 ```
 
-**Update `TemplateVariables::new()` call:**
+**Add helper function to detect SDK path:**
 ```rust
-let vars = TemplateVariables::new(
-    self.name.clone(),
-    vendor,
-    email,
-    url,
-    self.sdk_version.clone(),
-    self.sdk_path.clone(),  // renamed from local_dev
-);
+use std::process::Command;
+
+fn find_local_sdk_path() -> Result<PathBuf> {
+    // Get git repository root
+    let output = Command::new("git")
+        .args(["rev-parse", "--show-toplevel"])
+        .output()
+        .context("Failed to run git rev-parse")?;
+    
+    if !output.status.success() {
+        anyhow::bail!(
+            "Error: --local-sdk requires running from within a git repository."
+        );
+    }
+    
+    let repo_root = String::from_utf8(output.stdout)
+        .context("Invalid UTF-8 in git output")?
+        .trim()
+        .to_string();
+    
+    let sdk_path = PathBuf::from(&repo_root).join("engine/crates");
+    
+    if !sdk_path.exists() {
+        anyhow::bail!(
+            "Error: --local-sdk requires running from within the wavecraft repository.\n\
+             Could not find engine/crates directory at: {}",
+            sdk_path.display()
+        );
+    }
+    
+    Ok(sdk_path)
+}
+```
+
+**Update `execute()` to use it:**
+```rust
+pub fn execute(&self) -> Result<()> {
+    // ... validation ...
+    
+    // Resolve SDK path if --local-sdk is set
+    let sdk_path = if self.local_sdk {
+        Some(find_local_sdk_path()?)
+    } else {
+        None
+    };
+    
+    let vars = TemplateVariables::new(
+        self.name.clone(),
+        vendor,
+        email,
+        url,
+        self.sdk_version.clone(),
+        sdk_path,  // Option<PathBuf>, same as before
+    );
+    
+    // ... rest unchanged ...
+}
 ```
 
 ### Template Variables
 
-Check `cli/src/template/variables.rs` — the `local_dev` field name may need updating to `sdk_path` for consistency. The actual behavior (generating path deps vs git deps) remains unchanged.
+No changes needed to `TemplateVariables` — it still receives `Option<PathBuf>`. The change is only in how that path is determined (auto-detected vs user-provided).
 
 ---
 
@@ -234,18 +283,9 @@ Add this callout:
 
 ### Template Validation Workflow
 
-The workflow at `.github/workflows/template-validation.yml` uses `--local-dev` (to be renamed `--sdk-path`).
+The workflow at `.github/workflows/template-validation.yml` uses `--local-dev` (to be renamed `--local-sdk`).
 
 **Required update:**
-```yaml
-# Before:
---local-dev ${{ github.workspace }}/engine/crates
-
-# After:
---sdk-path ${{ github.workspace }}/engine/crates
-```
-
-Also remove the now-unnecessary flags that will use defaults:
 ```yaml
 # Before:
 wavecraft new test-plugin \
@@ -258,8 +298,10 @@ wavecraft new test-plugin \
 # After:
 wavecraft new test-plugin \
   --no-git \
-  --sdk-path ${{ github.workspace }}/engine/crates
+  --local-sdk
 ```
+
+Much simpler — no path needed, auto-detected from repo root.
 
 ---
 
@@ -287,11 +329,19 @@ wavecraft new test-plugin \
    ```
    Verify: Values used in generated files.
 
-4. **SDK path mode (hidden flag):**
+4. **Local SDK mode (hidden flag):**
    ```bash
-   wavecraft new my-test-plugin --sdk-path /path/to/wavecraft/engine/crates
+   # From within wavecraft repo:
+   wavecraft new my-test-plugin --local-sdk
    ```
-   Verify: Generates path dependencies, not git tag dependencies.
+   Verify: Auto-detects `engine/crates` path, generates path dependencies.
+
+5. **Local SDK error (outside repo):**
+   ```bash
+   # From outside wavecraft repo:
+   cd /tmp && wavecraft new my-test-plugin --local-sdk
+   ```
+   Verify: Clear error message about requiring wavecraft repository.
 
 5. **Generated project compiles:**
    ```bash
