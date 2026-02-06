@@ -222,6 +222,10 @@ jobs:
         working-directory: ui/packages/core
         run: npm run build:lib
       
+      - name: Verify publishability (dry-run)
+        working-directory: ui/packages/core
+        run: npm publish --access public --dry-run
+      
       - name: Publish to npm
         working-directory: ui/packages/core
         env:
@@ -303,6 +307,10 @@ jobs:
       - name: Build package
         working-directory: ui/packages/components
         run: npm run build:lib
+      
+      - name: Verify publishability (dry-run)
+        working-directory: ui/packages/components
+        run: npm publish --access public --dry-run
       
       - name: Publish to npm
         working-directory: ui/packages/components
