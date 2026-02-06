@@ -239,22 +239,6 @@ cd engine && cargo xtask install  # Install to system for DAW testing
 cd engine && cargo run -p desktop
 ```
 
-### Docker-Based CI (for debugging GitHub Actions)
-
-Only needed when debugging CI workflow YAML changes:
-
-```bash
-# Check Docker is running
-docker info > /dev/null 2>&1 && echo "✅ Docker running" || echo "❌ Start Docker"
-
-# Run full CI pipeline via Docker
-act -W .github/workflows/ci.yml \
-    --container-architecture linux/amd64 \
-    -P ubuntu-latest=wavecraft-ci:latest \
-    --pull=false \
-    --artifact-server-path /tmp/act-artifacts
-```
-
 ### Phase 3b: Visual UI Testing (Playwright MCP)
 
 For tests requiring UI interaction or visual verification, use Playwright MCP tools.
