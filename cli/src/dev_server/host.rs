@@ -231,7 +231,7 @@ mod tests {
         let frame = host.get_meter_frame().expect("should have meter frame");
 
         // Synthetic meters should have reasonable values
-        assert!(frame.left_peak >= 0.0);
-        assert!(frame.right_peak >= 0.0);
+        assert!(frame.peak_l >= 0.0);
+        assert!(frame.peak_r >= 0.0);
     }
 }

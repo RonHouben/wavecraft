@@ -97,15 +97,15 @@ impl PluginLoader {
 
         // Get the FFI symbols
         let get_params_json: Symbol<GetParamsJsonFn> = unsafe {
-            library
-                .get(b"wavecraft_get_params_json\0")
-                .map_err(|e| PluginLoaderError::SymbolNotFound(format!("wavecraft_get_params_json: {}", e)))?
+            library.get(b"wavecraft_get_params_json\0").map_err(|e| {
+                PluginLoaderError::SymbolNotFound(format!("wavecraft_get_params_json: {}", e))
+            })?
         };
 
         let free_string: Symbol<FreeStringFn> = unsafe {
-            library
-                .get(b"wavecraft_free_string\0")
-                .map_err(|e| PluginLoaderError::SymbolNotFound(format!("wavecraft_free_string: {}", e)))?
+            library.get(b"wavecraft_free_string\0").map_err(|e| {
+                PluginLoaderError::SymbolNotFound(format!("wavecraft_free_string: {}", e))
+            })?
         };
 
         // Call the FFI function to get parameter JSON

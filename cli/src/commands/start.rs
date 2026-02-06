@@ -140,8 +140,8 @@ fn run_dev_servers(
     println!("{} Plugin built", style("✓").green());
 
     // 2. Find the plugin dylib
-    let dylib_path = find_plugin_dylib(&project.engine_dir)
-        .context("Failed to find compiled plugin library")?;
+    let dylib_path =
+        find_plugin_dylib(&project.engine_dir).context("Failed to find compiled plugin library")?;
 
     if verbose {
         println!("  Found dylib: {}", dylib_path.display());
@@ -153,15 +153,16 @@ fn run_dev_servers(
         .context("Failed to load plugin. Make sure it's compiled with wavecraft SDK.")?;
 
     let params = loader.parameters().to_vec();
-    println!(
-        "{} Loaded {} parameters",
-        style("✓").green(),
-        params.len()
-    );
+    println!("{} Loaded {} parameters", style("✓").green(), params.len());
 
     if verbose {
         for param in &params {
-            println!("  - {}: {} ({})", param.id, param.name, param.group.as_deref().unwrap_or("ungrouped"));
+            println!(
+                "  - {}: {} ({})",
+                param.id,
+                param.name,
+                param.group.as_deref().unwrap_or("ungrouped")
+            );
         }
     }
 
@@ -176,13 +177,10 @@ fn run_dev_servers(
     let handler = Arc::new(IpcHandler::new(host));
 
     // Create tokio runtime for the WebSocket server
-    let runtime = tokio::runtime::Runtime::new()
-        .context("Failed to create async runtime")?;
+    let runtime = tokio::runtime::Runtime::new().context("Failed to create async runtime")?;
 
     let server = WsServer::new(ws_port, handler.clone(), verbose);
-    runtime.block_on(async {
-        server.start().await.map_err(|e| anyhow::anyhow!("{}", e))
-    })?;
+    runtime.block_on(async { server.start().await.map_err(|e| anyhow::anyhow!("{}", e)) })?;
 
     println!("{} WebSocket server running", style("✓").green());
 
@@ -239,8 +237,7 @@ fn find_plugin_dylib(engine_dir: &std::path::Path) -> Result<PathBuf> {
     let extension = "dll";
 
     // Find .dylib files (skip deps/ subdirectory)
-    let entries = std::fs::read_dir(&debug_dir)
-        .context("Failed to read debug directory")?;
+    let entries = std::fs::read_dir(&debug_dir).context("Failed to read debug directory")?;
 
     let candidates: Vec<PathBuf> = entries
         .filter_map(|e| e.ok())
