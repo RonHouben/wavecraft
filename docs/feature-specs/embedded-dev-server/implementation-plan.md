@@ -12,12 +12,12 @@
 This plan implements an embedded WebSocket server in the `wavecraft` CLI that:
 1. Builds the user's plugin (`cargo build --lib`)
 2. Loads the compiled dylib and extracts parameters via FFI
-3. Runs an embedded WebSocket server using `wavecraft-bridge`
+3. Runs an embedded WebSocket server using reused `standalone::ws_server::WsServer<H>`
 4. Spawns Vite dev server for React UI
 
 This replaces the broken `cargo run -p standalone` approach that fails in user projects.
 
-**Estimated effort:** 9-14 hours
+**Estimated effort:** 7-11 hours (~25% reduced by reusing WsServer from standalone)
 
 ---
 
@@ -36,12 +36,11 @@ This replaces the broken `cargo run -p standalone` approach that fails in user p
 | `wavecraft-macros/src/plugin.rs` | **Modify** | Generate FFI exports in `wavecraft_plugin!` |
 | `wavecraft-nih_plug/src/lib.rs` | **Modify** | Add `__internal` module with re-exports |
 | **CLI Changes** | | |
-| `cli/Cargo.toml` | **Modify** | Add tokio, libloading, wavecraft-bridge deps |
+| `cli/Cargo.toml` | **Modify** | Add standalone, libloading, wavecraft-bridge deps |
 | `cli/src/main.rs` | **Modify** | Add `mod dev_server;` declaration |
 | `cli/src/dev_server/mod.rs` | **New** | Module root, exports |
 | `cli/src/dev_server/plugin_loader.rs` | **New** | dylib loading via libloading |
 | `cli/src/dev_server/host.rs` | **New** | `DevServerHost` implementing `ParameterHost` |
-| `cli/src/dev_server/ws_server.rs` | **New** | WebSocket server using tokio-tungstenite |
 | `cli/src/dev_server/meter.rs` | **New** | Synthetic meter generator |
 | `cli/src/commands/start.rs` | **Modify** | Replace `cargo run -p standalone` with embedded server |
 
@@ -207,21 +206,26 @@ pub use ws_server::WsServer;
 
 ---
 
-### Phase 3: Embedded WebSocket Server
-**Goal:** Implement WebSocket server using existing wavecraft-bridge
+### Phase 3: DevServerHost + Dependencies
+**Goal:** Add dependencies and implement parameter host (reusing WsServer from standalone)
 
-#### Step 3.1: Add async runtime dependencies
+#### Step 3.1: Add standalone and async runtime dependencies
 **File:** `cli/Cargo.toml`
-- Action: Add tokio, tokio-tungstenite, futures-util dependencies
-- Why: Required for async WebSocket server
+- Action: Add `standalone` crate as dependency (brings tokio/tungstenite transitively)
+- Why: Reuse existing tested WebSocket server implementation
 - Dependencies: None
 - Risk: Low
 
 ```toml
-tokio = { version = "1", features = ["rt-multi-thread", "net", "sync", "macros", "signal", "time"] }
-tokio-tungstenite = "0.24"
-futures-util = "0.3"
+# Reuse standalone crate for WebSocket server
+# This brings in tokio, tokio-tungstenite, futures-util transitively
+standalone = { path = "../engine/crates/standalone" }
+
+# Async runtime (needed for CLI orchestration)
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal"] }
 ```
+
+**Note:** `standalone` pulls in `tokio-tungstenite` and `futures-util` as transitive dependencies.
 
 #### Step 3.2: Add wavecraft-bridge dependency
 **File:** `cli/Cargo.toml`
@@ -238,7 +242,7 @@ wavecraft-protocol = { path = "../engine/crates/wavecraft-protocol" }
 #### Step 3.3: Implement DevServerHost
 **File:** `cli/src/dev_server/host.rs`
 - Action: Implement `ParameterHost` trait for in-memory parameter state
-- Why: Bridge between loaded parameters and IpcHandler
+- Why: Bridge between loaded parameters and IpcHandler; used by reused `standalone::ws_server::WsServer<H>`
 - Dependencies: Step 3.2
 - Risk: Low
 
@@ -249,6 +253,8 @@ wavecraft-protocol = { path = "../engine/crates/wavecraft-protocol" }
 - `get_all_parameters(&self)` - Return all params with current values
 - `get_meter_frame(&self)` - Delegate to MeterGenerator (step 3.4)
 - `request_resize(&self, width, height)` - Return false (no-op in dev mode)
+
+**Note:** No WebSocket server implementation needed — `DevServerHost` is passed to `standalone::ws_server::WsServer<DevServerHost>` which handles all WebSocket communication.
 
 #### Step 3.4: Implement MeterGenerator
 **File:** `cli/src/dev_server/meter.rs`
@@ -264,20 +270,7 @@ wavecraft-protocol = { path = "../engine/crates/wavecraft-protocol" }
 - Peak = RMS + 3-5 dB offset
 - Slight stereo difference
 
-#### Step 3.5: Implement WsServer
-**File:** `cli/src/dev_server/ws_server.rs`
-- Action: Implement WebSocket server using tokio-tungstenite
-- Why: Accept connections from browser UI
-- Dependencies: Steps 3.1, 3.3
-- Risk: Medium (async code, connection management)
-
-**Key features:**
-- Accept connections on configurable port
-- Route messages through IpcHandler
-- Broadcast meter frames at ~60 Hz
-- Handle disconnection gracefully
-
-#### Step 3.6: Add tracing dependency for logging
+#### Step 3.5: Add tracing dependency for logging
 **File:** `cli/Cargo.toml`
 - Action: Add tracing and tracing-subscriber
 - Why: Consistent logging in async context
@@ -388,7 +381,7 @@ fn build_plugin(project: &ProjectMarkers, verbose: bool) -> Result<()> {
 **Files:** Multiple in `cli/src/dev_server/`
 - Action: Add tracing::debug!() calls for troubleshooting
 - Why: Help users diagnose issues with --verbose
-- Dependencies: Step 3.6
+- Dependencies: Step 3.5
 - Risk: Low
 
 #### Step 5.3: Update documentation
@@ -473,9 +466,9 @@ The template-validation workflow will verify:
 |-------|----------|------------|
 | Phase 1: SDK FFI Exports | 1-2 hours | 1-2 hours |
 | Phase 2: CLI Plugin Loader | 2-3 hours | 3-5 hours |
-| Phase 3: WebSocket Server | 3-4 hours | 6-9 hours |
-| Phase 4: Integration | 2-3 hours | 8-12 hours |
-| Phase 5: Polish | 1-2 hours | 9-14 hours |
+| Phase 3: DevServerHost + Dependencies | 1-2 hours | 4-7 hours |
+| Phase 4: Integration | 2-3 hours | 6-10 hours |
+| Phase 5: Polish | 1 hour | 7-11 hours |
 
 ---
 

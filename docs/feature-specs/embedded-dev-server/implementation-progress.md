@@ -12,11 +12,13 @@
 |-------|--------|----------|
 | Phase 1: SDK FFI Exports | ⬜ Not Started | 0/4 steps |
 | Phase 2: CLI Plugin Loader | ⬜ Not Started | 0/5 steps |
-| Phase 3: WebSocket Server | ⬜ Not Started | 0/6 steps |
+| Phase 3: DevServerHost + Dependencies | ⬜ Not Started | 0/5 steps |
 | Phase 4: Integration | ⬜ Not Started | 0/5 steps |
 | Phase 5: Polish | ⬜ Not Started | 0/4 steps |
 
-**Overall:** 0/24 steps complete
+**Overall:** 0/23 steps complete
+
+**Key design note:** We reuse `standalone::ws_server::WsServer<H>` instead of implementing a new WebSocket server.
 
 ---
 
@@ -53,11 +55,11 @@
 - [ ] **2.5** Add unit tests for PluginLoader
   - File: `cli/src/dev_server/plugin_loader.rs`
 
-### Phase 3: WebSocket Server
+### Phase 3: DevServerHost + Dependencies
 
-- [ ] **3.1** Add async runtime dependencies
+- [ ] **3.1** Add standalone and async runtime dependencies
   - File: `cli/Cargo.toml`
-  - Deps: tokio, tokio-tungstenite, futures-util
+  - Deps: standalone (brings tokio/tungstenite transitively)
   
 - [ ] **3.2** Add wavecraft-bridge dependency
   - File: `cli/Cargo.toml`
@@ -65,16 +67,13 @@
 - [ ] **3.3** Implement DevServerHost
   - File: `cli/src/dev_server/host.rs`
   - Implements: `ParameterHost` trait
+  - Note: No WsServer impl needed — reuse from standalone
   
 - [ ] **3.4** Implement MeterGenerator
   - File: `cli/src/dev_server/meter.rs`
   - Output: Synthetic ~60 Hz meter data
   
-- [ ] **3.5** Implement WsServer
-  - File: `cli/src/dev_server/ws_server.rs`
-  - Uses: tokio-tungstenite, IpcHandler
-  
-- [ ] **3.6** Add tracing dependency for logging
+- [ ] **3.5** Add tracing dependency for logging
   - File: `cli/Cargo.toml`
 
 ### Phase 4: Integration

@@ -36,6 +36,35 @@ This is a **critical architectural gap** that breaks the core developer experien
 
 ---
 
+## Reuse Analysis
+
+Before designing new components, we analyzed existing crates in the SDK monorepo for reuse opportunities.
+
+### Existing Components in `engine/crates/`
+
+| Crate | Component | Reusable? | Notes |
+|-------|-----------|-----------|-------|
+| `standalone` | `WsServer<H: ParameterHost>` | ✅ **Yes** | Generic WebSocket server, fully tested |
+| `standalone` | `AppState` (ParameterHost impl) | ❌ No | Hardcoded 3 params; CLI needs dynamic params |
+| `wavecraft-bridge` | `IpcHandler<H>` | ✅ **Yes** | JSON-RPC handler (already in WsServer) |
+| `wavecraft-bridge` | `ParameterHost` trait | ✅ **Yes** | Define our `DevServerHost` impl |
+| `wavecraft-protocol` | `ParameterInfo`, `MeterFrame` | ✅ **Yes** | Protocol types |
+
+### What We Reuse vs. Build New
+
+| Component | Source | Rationale |
+|-----------|--------|-----------|
+| `WsServer<H>` | Reuse from `standalone` | Production-tested, has logging, shutdown, verbose mode |
+| `IpcHandler<H>` | Reuse from `wavecraft-bridge` | Already integrated in WsServer |
+| `ParameterHost` trait | Reuse from `wavecraft-bridge` | Standard interface |
+| `DevServerHost` | **New in CLI** | Needs dynamic params from FFI + synthetic metering |
+| `PluginLoader` | **New in CLI** | FFI dylib loading (libloading) |
+| `MeterGenerator` | **New in CLI** | Synthetic meter data for dev UX |
+
+This reduces implementation effort by ~40% (no need to write/test WebSocket handling).
+
+---
+
 ## Architecture Overview
 
 ```
@@ -55,23 +84,24 @@ This is a **critical architectural gap** that breaks the core developer experien
   │  │  2. Check/install npm deps (existing logic)                 │    │
   │  │  3. Build user's plugin: cargo build --lib                  │    │
   │  │  4. Load dylib, extract parameters via FFI                  │    │
-  │  │  5. Start embedded WebSocket server (tokio + wavecraft-bridge)  │
+  │  │  5. Start WsServer<DevServerHost> (reuse from standalone)   │    │
   │  │  6. Start Vite dev server (spawn npm run dev)               │    │
   │  │  7. Wait for Ctrl+C, graceful shutdown                      │    │
   │  └─────────────────────────────────────────────────────────────┘    │
   │                                                                     │
   │  ┌─────────────────┐    ┌─────────────────┐    ┌────────────────┐   │
   │  │ PluginLoader    │───►│ DevServerHost   │───►│ IpcHandler     │   │
-  │  │ (libloading)    │    │ (ParameterHost) │    │ (wavecraft-    │   │
-  │  │                 │    │                 │    │  bridge)       │   │
-  │  └─────────────────┘    └─────────────────┘    └───────┬────────┘   │
-  │          │                      │                      │            │
-  │          │ FFI call             │ params               │ JSON-RPC   │
+  │  │ (NEW: libloading)    │ (NEW: CLI impl) │    │ (reuse:        │   │
+  │  │                 │    │                 │    │  wavecraft-    │   │
+  │  └─────────────────┘    └─────────────────┘    │  bridge)       │   │
+  │          │                      │              └───────┬────────┘   │
+  │          │ FFI call             │ params               │            │
   │          ▼                      ▼                      ▼            │
   │  ┌─────────────────┐    ┌─────────────────┐    ┌────────────────┐   │
-  │  │ Plugin dylib    │    │ In-memory state │    │ WebSocket      │   │
-  │  │ (user's plugin) │    │ (param values)  │    │ Server         │   │
-  │  └─────────────────┘    └─────────────────┘    └───────┬────────┘   │
+  │  │ Plugin dylib    │    │ In-memory state │    │ WsServer<H>    │   │
+  │  │ (user's plugin) │    │ + MeterGenerator│    │ (reuse:        │   │
+  │  └─────────────────┘    └─────────────────┘    │  standalone)   │   │
+  │                                                └───────┬────────┘   │
   └─────────────────────────────────────────────────────────│───────────┘
                                                             │
                           ws://127.0.0.1:9000               │
@@ -180,20 +210,27 @@ impl PluginLoader {
 
 ### 3. Dev Server Host (`cli/src/dev_server/host.rs`)
 
-Implements `ParameterHost` trait from `wavecraft-bridge`:
+Implements `ParameterHost` trait from `wavecraft-bridge`. Integrates `MeterGenerator` for synthetic metering.
 
 ```rust
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
-use wavecraft_bridge::ParameterHost;
-use wavecraft_protocol::ParameterInfo;
+use std::sync::RwLock;
+use wavecraft_bridge::{BridgeError, ParameterHost};
+use wavecraft_protocol::{MeterFrame, ParameterInfo, ParameterType};
+
+use super::meter::MeterGenerator;
 
 /// In-memory parameter host for dev server
+///
+/// Unlike `standalone::AppState` which has hardcoded parameters, this host
+/// accepts dynamic parameters loaded from the user's plugin via FFI.
 pub struct DevServerHost {
-    /// Parameter specifications (from plugin)
+    /// Parameter specifications (from plugin FFI)
     params: Vec<ParameterInfo>,
     /// Current parameter values (mutable state)
-    values: Arc<RwLock<HashMap<String, f32>>>,
+    values: RwLock<HashMap<String, f32>>,
+    /// Synthetic meter generator for dev UX
+    meter_gen: MeterGenerator,
 }
 
 impl DevServerHost {
@@ -206,14 +243,35 @@ impl DevServerHost {
 
         Self {
             params,
-            values: Arc::new(RwLock::new(values)),
+            values: RwLock::new(values),
+            meter_gen: MeterGenerator::new(),
         }
     }
 }
 
 impl ParameterHost for DevServerHost {
-    fn get_parameters(&self) -> Vec<ParameterInfo> {
-        // Return params with current values
+    fn get_parameter(&self, id: &str) -> Option<ParameterInfo> {
+        let values = self.values.read().unwrap();
+        self.params.iter().find(|p| p.id == id).map(|p| {
+            let mut param = p.clone();
+            if let Some(&val) = values.get(&p.id) {
+                param.value = val;
+            }
+            param
+        })
+    }
+
+    fn set_parameter(&self, id: &str, value: f32) -> Result<(), BridgeError> {
+        if self.params.iter().any(|p| p.id == id) {
+            let mut values = self.values.write().unwrap();
+            values.insert(id.to_string(), value);
+            Ok(())
+        } else {
+            Err(BridgeError::ParameterNotFound(id.to_string()))
+        }
+    }
+
+    fn get_all_parameters(&self) -> Vec<ParameterInfo> {
         let values = self.values.read().unwrap();
         self.params
             .iter()
@@ -227,128 +285,43 @@ impl ParameterHost for DevServerHost {
             .collect()
     }
 
-    fn get_parameter(&self, id: &str) -> Option<ParameterInfo> {
-        let values = self.values.read().unwrap();
-        self.params.iter().find(|p| p.id == id).map(|p| {
-            let mut param = p.clone();
-            if let Some(&val) = values.get(&p.id) {
-                param.value = val;
-            }
-            param
-        })
+    fn get_meter_frame(&self) -> Option<MeterFrame> {
+        // Return synthetic meter data for dev UX
+        Some(self.meter_gen.next_frame())
     }
 
-    fn set_parameter(&self, id: &str, value: f32) -> bool {
-        if self.params.iter().any(|p| p.id == id) {
-            let mut values = self.values.write().unwrap();
-            values.insert(id.to_string(), value);
-            true
-        } else {
-            false
-        }
+    fn request_resize(&self, _width: u32, _height: u32) -> bool {
+        // Dev server doesn't have a window to resize
+        false
     }
 }
 ```
 
-### 4. WebSocket Server (`cli/src/dev_server/ws_server.rs`)
+### 4. WebSocket Server (Reuse from `standalone`)
+
+**No new code needed.** We reuse `standalone::ws_server::WsServer<H>`:
 
 ```rust
-use std::sync::Arc;
-use tokio::net::TcpListener;
-use tokio_tungstenite::accept_async;
-use futures_util::{SinkExt, StreamExt};
+// In cli/src/commands/start.rs
+use standalone::ws_server::WsServer;
 use wavecraft_bridge::IpcHandler;
+use std::sync::Arc;
 
-use super::host::DevServerHost;
-use super::meter::MeterGenerator;
+// Create parameter host with plugin data
+let host = DevServerHost::new(params);
 
-pub struct WsServer {
-    handler: Arc<IpcHandler<DevServerHost>>,
-    meter_gen: Arc<MeterGenerator>,
-}
+// Wrap in IpcHandler (same as standalone does)
+let handler = Arc::new(IpcHandler::new(host));
 
-impl WsServer {
-    pub fn new(host: DevServerHost) -> Self {
-        Self {
-            handler: Arc::new(IpcHandler::new(Arc::new(host))),
-            meter_gen: Arc::new(MeterGenerator::new()),
-        }
-    }
-
-    pub async fn run(&self, port: u16) -> Result<()> {
-        let addr = format!("127.0.0.1:{}", port);
-        let listener = TcpListener::bind(&addr).await
-            .context(format!("Failed to bind to {}", addr))?;
-
-        info!("WebSocket server listening on ws://{}", addr);
-
-        loop {
-            let (stream, peer) = listener.accept().await?;
-            debug!("New connection from {}", peer);
-
-            let handler = self.handler.clone();
-            let meter_gen = self.meter_gen.clone();
-
-            tokio::spawn(async move {
-                if let Err(e) = handle_connection(stream, handler, meter_gen).await {
-                    warn!("Connection error: {}", e);
-                }
-            });
-        }
-    }
-}
-
-async fn handle_connection(
-    stream: tokio::net::TcpStream,
-    handler: Arc<IpcHandler<DevServerHost>>,
-    meter_gen: Arc<MeterGenerator>,
-) -> Result<()> {
-    let ws_stream = accept_async(stream).await?;
-    let (mut write, mut read) = ws_stream.split();
-
-    // Spawn meter broadcast task (~60 Hz)
-    let meter_tx = {
-        let (tx, mut rx) = tokio::sync::mpsc::channel::<String>(16);
-        let meter_gen = meter_gen.clone();
-        
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(Duration::from_millis(16)); // ~60 Hz
-            loop {
-                interval.tick().await;
-                let frame = meter_gen.next_frame();
-                let json = serde_json::to_string(&frame).unwrap();
-                // Format as JSON-RPC notification
-                let msg = format!(r#"{{"jsonrpc":"2.0","method":"meterUpdate","params":{}}}"#, json);
-                if tx.send(msg).await.is_err() {
-                    break;
-                }
-            }
-        });
-        rx
-    };
-
-    // Handle incoming messages and outgoing meter data
-    loop {
-        tokio::select! {
-            msg = read.next() => {
-                match msg {
-                    Some(Ok(Message::Text(text))) => {
-                        let response = handler.handle_json(&text);
-                        write.send(Message::Text(response)).await?;
-                    }
-                    Some(Ok(Message::Close(_))) | None => break,
-                    _ => {}
-                }
-            }
-            Some(meter_msg) = meter_tx.recv() => {
-                write.send(Message::Text(meter_msg)).await?;
-            }
-        }
-    }
-
-    Ok(())
-}
+// Reuse the existing WsServer
+let server = WsServer::new(port, handler, verbose);
+server.start().await?;
 ```
+
+**Why this works:**
+- `WsServer<H: ParameterHost>` is generic over any `ParameterHost` implementation
+- `DevServerHost` implements `ParameterHost`
+- All async runtime deps (tokio, tokio-tungstenite) are already in `standalone`
 
 ### 5. Synthetic Meter Generator (`cli/src/dev_server/meter.rs`)
 
@@ -356,7 +329,7 @@ Generates realistic-looking meter data for UI testing:
 
 ```rust
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use wavecraft_protocol::MeterFrame;
 
 /// Generates synthetic meter data for dev mode
@@ -495,21 +468,35 @@ ctrlc = "3"
 # New: Dynamic library loading
 libloading = "0.8"
 
-# New: Async runtime + WebSocket
-tokio = { version = "1", features = ["rt-multi-thread", "net", "sync", "macros", "signal", "time"] }
-tokio-tungstenite = "0.24"
-futures-util = "0.3"
+# Reuse standalone crate for WebSocket server
+# This brings in tokio, tokio-tungstenite, futures-util transitively
+standalone = { path = "../engine/crates/standalone" }
 
-# New: Reuse SDK crates
+# Reuse SDK crates for types
 wavecraft-bridge = { path = "../engine/crates/wavecraft-bridge" }
 wavecraft-protocol = { path = "../engine/crates/wavecraft-protocol" }
 
-# New: Logging
+# Async runtime (needed for CLI orchestration)
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal"] }
+
+# Logging (optional - standalone already uses tracing)
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.29", features = ["signal"] }
+```
+
+**Note:** `standalone` pulls in `tokio-tungstenite` and `futures-util` as transitive dependencies. We don't need to declare them directly.
+
+**Binary Size Consideration:** `standalone` also pulls in `wry`/`tao` for the desktop app GUI (~2MB). If this becomes a concern, we can add a feature flag to `standalone` to exclude the GUI dependencies:
+
+```toml
+# Future optimization (not needed for v0.8.0)
+[features]
+default = ["gui"]
+gui = ["wry", "tao"]
+ws-server = []  # CLI only needs this
 ```
 
 ### 2. New Module Structure
@@ -524,16 +511,17 @@ cli/src/
 ├── project/
 │   ├── mod.rs
 │   └── detection.rs
-├── dev_server/           # NEW
+├── dev_server/           # NEW (3 files, not 4)
 │   ├── mod.rs
-│   ├── host.rs           # DevServerHost impl
-│   ├── ws_server.rs      # WebSocket server
+│   ├── host.rs           # DevServerHost impl (ParameterHost)
 │   ├── meter.rs          # Synthetic meter generator
-│   └── plugin_loader.rs  # dylib loading
+│   └── plugin_loader.rs  # dylib loading via libloading
 └── template/
     ├── mod.rs
     └── variables.rs
 ```
+
+**Key difference from prior design:** No `ws_server.rs` — we reuse `standalone::ws_server::WsServer<H>`.
 
 ### 3. Updated `start.rs`
 
@@ -542,7 +530,10 @@ Replace the `cargo run -p standalone` approach with embedded server:
 ```rust
 // cli/src/commands/start.rs
 
-use crate::dev_server::{DevServerHost, PluginLoader, WsServer};
+use crate::dev_server::{DevServerHost, PluginLoader};
+use standalone::ws_server::WsServer;  // Reuse from standalone crate
+use wavecraft_bridge::IpcHandler;
+use std::sync::Arc;
 
 fn run_dev_servers(
     project: &ProjectMarkers,
@@ -581,28 +572,38 @@ fn run_dev_servers(
         }
     }
 
-    // 3. Start embedded WebSocket server
+    // 3. Start embedded WebSocket server (reusing standalone::ws_server)
     println!("{} Starting WebSocket server on port {}...", style("→").cyan(), ws_port);
     let host = DevServerHost::new(params);
-    let ws_server = WsServer::new(host);
+    let handler = Arc::new(IpcHandler::new(host));
+    let ws_server = WsServer::new(ws_port, handler, verbose);
 
     // Run WebSocket server in background
     let rt = tokio::runtime::Runtime::new()?;
-    let ws_handle = rt.spawn(async move {
-        ws_server.run(ws_port).await
-    });
+    rt.block_on(async {
+        ws_server.start().await?;
+        
+        // 4. Start Vite dev server (in parallel with WS server)
+        println!("{} Starting UI dev server on port {}...", style("→").cyan(), ui_port);
+        let ui_server = Command::new("npm")
+            .args(["run", "dev", "--", &format!("--port={}", ui_port)])
+            .current_dir(&project.ui_dir)
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .spawn()
+            .context("Failed to start UI dev server")?;
 
-    // 4. Start Vite dev server
-    println!("{} Starting UI dev server on port {}...", style("→").cyan(), ui_port);
-    let ui_server = Command::new("npm")
-        .args(["run", "dev", "--", &format!("--port={}", ui_port)])
-        .current_dir(&project.ui_dir)
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .spawn()
-        .context("Failed to start UI dev server")?;
+        // Wait for Ctrl+C signal
+        tokio::signal::ctrl_c().await?;
+        println!("\n{} Shutting down...", style("→").cyan());
 
-    // ... rest of shutdown logic
+        // Kill UI server and clean up
+        // ...
+
+        Ok::<_, anyhow::Error>(())
+    })?;
+
+    Ok(())
 }
 
 /// Find the compiled plugin dylib
@@ -643,17 +644,24 @@ fn find_plugin_dylib(engine_dir: &Path) -> Result<PathBuf> {
 
 ## Binary Size Impact
 
-| Component | Estimated Size |
-|-----------|----------------|
-| Current CLI | ~4 MB |
-| + libloading | +100 KB |
-| + tokio (multi-thread) | +2 MB |
-| + tokio-tungstenite | +500 KB |
-| + wavecraft-bridge | +200 KB |
-| + wavecraft-protocol | +100 KB |
-| **Total** | **~7-8 MB** |
+By reusing `standalone`, we get the WebSocket server code "for free" but inherit the full `standalone` dependency graph.
 
-This is acceptable for a developer tool.
+| Component | Estimated Size | Notes |
+|-----------|----------------|-------|
+| Current CLI | ~4 MB | |
+| + libloading | +100 KB | New: FFI dylib loading |
+| + standalone | +4-5 MB | Includes tokio, tungstenite, wry, tao |
+| + wavecraft-bridge | +200 KB | Types, might already be in standalone |
+| + wavecraft-protocol | +100 KB | Types, might already be in standalone |
+| **Total** | **~8-10 MB** | |
+
+**Trade-off analysis:**
+- **Pros**: No code duplication, tested WsServer, faster implementation
+- **Cons**: ~2-3 MB larger than writing a minimal WsServer (wry/tao overhead)
+
+**Acceptable for v0.8.0.** If binary size becomes a concern:
+1. Add feature flags to `standalone` to exclude `wry`/`tao` when only WsServer is needed
+2. Or extract `WsServer` into a separate `wavecraft-ws-server` crate
 
 ---
 
@@ -733,27 +741,27 @@ The template validation workflow will catch regressions:
 - Test with existing Wavecraft SDK plugin
 
 ### Phase 2: CLI Plugin Loader (2-3 hours)
-- Add libloading dependency
+- Add `libloading` dependency
 - Implement `PluginLoader` with error handling
 - Unit tests for FFI calling convention
 
-### Phase 3: Embedded WebSocket Server (3-4 hours)
-- Add tokio + tungstenite dependencies
+### Phase 3: DevServerHost + MeterGenerator (1-2 hours)
+- Add `standalone` as dependency for `WsServer` reuse
 - Implement `DevServerHost` (ParameterHost trait)
-- Implement `WsServer` with connection handling
-- Implement `MeterGenerator` for synthetic data
+- Implement `MeterGenerator` for synthetic meter data
+- No WebSocket code needed — reuse `standalone::ws_server::WsServer`
 
 ### Phase 4: Integration (2-3 hours)
 - Update `start.rs` to use embedded server
 - Wire up build → load → serve pipeline
 - Test end-to-end with browser
 
-### Phase 5: Polish (1-2 hours)
+### Phase 5: Polish (1 hour)
 - Verbose logging
 - Error messages with recovery hints
 - Update documentation
 
-**Total estimated effort:** 9-14 hours
+**Total estimated effort:** 7-11 hours (reduced ~25% by reusing WsServer)
 
 ---
 
@@ -764,6 +772,7 @@ The template validation workflow will catch regressions:
 | Metering data | Synthetic sine wave simulation | Better dev experience than silence |
 | Build mode | Debug by default | Faster iteration (~3s vs ~15s) |
 | Hot reload params | Manual restart (v1) | Complex; defer to future enhancement |
+| WebSocket server | Reuse `standalone::ws_server` | Avoid code duplication, tested implementation |
 
 ---
 
@@ -773,11 +782,4 @@ The template validation workflow will catch regressions:
 2. **Parameter hot reload**: Watch `src/` for changes, auto-rebuild and reload
 3. **Audio file playback**: Play audio files through plugin for real metering
 4. **Multiple clients**: Broadcast parameter changes to all connected browsers
-
----
-
-## Related Documents
-
-- [CLI Start Command](../cli-start-command/low-level-design-cli-start-command.md) — Original design (to be superseded)
-- [High-Level Design](../../architecture/high-level-design.md) — Overall architecture
-- [Coding Standards](../../architecture/coding-standards.md) — Implementation conventions
+5. **Feature-flag standalone**: Extract `WsServer` to reduce CLI binary size
