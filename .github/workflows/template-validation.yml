@@ -54,17 +54,15 @@ jobs:
       # Generate Test Project
       # ═════════════════════════════════════════════════════════════
 
-      - name: Generate test plugin (local dev mode)
+      - name: Generate test plugin (local SDK mode)
         run: |
-          # Use --local-dev to generate path dependencies pointing to local SDK crates.
+          # Use --local-sdk to generate path dependencies pointing to local SDK crates.
           # This allows CI to validate against unreleased code (before git tags exist).
+          # Must run from repo root so --local-sdk can find engine/crates
           wavecraft new test-plugin \
-            --vendor "Test Vendor" \
-            --email "test@example.com" \
-            --url "https://example.com" \
             --no-git \
-            --local-dev ${{ github.workspace }}/engine/crates
-        working-directory: /tmp
+            --local-sdk \
+            --output /tmp/test-plugin
 
       - name: Verify generated files
         run: |
