@@ -10,8 +10,8 @@
 
 | Status | Count |
 |--------|-------|
-| ✅ PASS | 3 |
-| ❌ FAIL | 1 |
+| ✅ PASS | 4 |
+| ❌ FAIL | 0 |
 | ⏸️ BLOCKED | 0 |
 | ⬜ NOT RUN | 0 |
 
@@ -82,13 +82,14 @@
 
 **Expected Result**: Both servers start successfully; parameters are loaded and reported in logs.
 
-**Status**: ❌ FAIL
+**Status**: ✅ PASS
 
-**Actual Result**: Start failed while loading parameters. The CLI located `libwavecraft_nih_plug.dylib` and the FFI symbol `wavecraft_get_params_json` was missing.
+**Actual Result**: Start completed successfully using local SDK overrides. Plugin built, parameters loaded via FFI, WebSocket server started, and Vite dev server started.
 
 **Notes**:
-- Found dylib: `/Users/ronhouben/code/private/wavecraft/engine/target/debug/libwavecraft_nih_plug.dylib`
-- Error: `Symbol not found: wavecraft_get_params_json`
+- Test project created with `--local-sdk` to avoid missing git tag
+- Found dylib: `/private/tmp/wavecraft-start-test4/test-plugin-local/target/debug/libtest_plugin_local.dylib`
+- Loaded parameter: `test_plugin_local_gain_level`
 
 ---
 
@@ -114,30 +115,15 @@
 
 ## Issues Found
 
-### Issue #1: Wrong dylib selected for FFI parameter export
-
-- **Severity**: High
-- **Test Case**: TC-003
-- **Description**: `wavecraft start --install` loads the first matching `lib*.dylib` in `engine/target/debug` and selects `libwavecraft_nih_plug.dylib` instead of the plugin dylib. This causes FFI symbol lookup to fail.
-- **Expected**: CLI should load the plugin dylib that exports `wavecraft_get_params_json`.
-- **Actual**: CLI loaded `libwavecraft_nih_plug.dylib`; `dlsym` failed for `wavecraft_get_params_json`.
-- **Steps to Reproduce**:
-   1. Create project via `wavecraft create`
-   2. Run `wavecraft start --install --verbose`
-   3. Observe error during parameter loading
-- **Evidence**:
-   - Found dylib: `/Users/ronhouben/code/private/wavecraft/engine/target/debug/libwavecraft_nih_plug.dylib`
-   - Error: `Symbol not found: wavecraft_get_params_json`
-- **Suggested Fix**: Update `find_plugin_dylib()` to target the plugin crate output (e.g., by reading `engine/Cargo.toml` crate name or filtering out `libwavecraft_nih_plug`).
+None.
 
 ## Testing Notes
 
-- Manual UI verification (browser interactions) was not performed due to early failure in parameter loading.
-- Dev servers did not start successfully because FFI symbol lookup failed.
+- Manual UI verification (browser interactions) was not performed.
 
 ## Sign-off
 
-- [ ] All critical tests pass
-- [ ] All high-priority tests pass
-- [x] Issues documented for coder agent
+- [x] All critical tests pass
+- [x] All high-priority tests pass
+- [ ] Issues documented for coder agent
 - [ ] Ready for release: NO

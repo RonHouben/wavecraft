@@ -219,14 +219,7 @@ fn run_dev_servers(
 /// Searches for `.dylib` (macOS), `.so` (Linux), or `.dll` (Windows)
 /// files in `engine/target/debug/`.
 fn find_plugin_dylib(engine_dir: &Path) -> Result<PathBuf> {
-    let debug_dir = engine_dir.join("target").join("debug");
-
-    if !debug_dir.exists() {
-        anyhow::bail!(
-            "Build output directory not found: {}\nRun `cargo build` first.",
-            debug_dir.display()
-        );
-    }
+    let debug_dir = resolve_debug_dir(engine_dir)?;
 
     // Look for library files with platform-specific extensions
     #[cfg(target_os = "macos")]
@@ -285,6 +278,33 @@ fn find_plugin_dylib(engine_dir: &Path) -> Result<PathBuf> {
             .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
     });
     Ok(sorted.pop().unwrap())
+}
+
+fn resolve_debug_dir(engine_dir: &Path) -> Result<PathBuf> {
+    let engine_debug = engine_dir.join("target").join("debug");
+    if engine_debug.exists() {
+        return Ok(engine_debug);
+    }
+
+    let workspace_debug = engine_dir
+        .parent()
+        .map(|p| p.join("target").join("debug"));
+
+    if let Some(debug_dir) = workspace_debug {
+        if debug_dir.exists() {
+            return Ok(debug_dir);
+        }
+    }
+
+    anyhow::bail!(
+        "Build output directory not found. Tried:\n  - {}\n  - {}\n\
+         Run `cargo build` first.",
+        engine_debug.display(),
+        engine_dir
+            .parent()
+            .map(|p| p.join("target").join("debug").display().to_string())
+            .unwrap_or_else(|| "<workspace root unavailable>".to_string())
+    );
 }
 
 fn read_engine_crate_name(engine_dir: &Path) -> Option<String> {
