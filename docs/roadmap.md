@@ -8,7 +8,7 @@ This document tracks implementation progress against the milestones defined in t
 
 ```
 ┌─────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP           v0.7.1 | 80%  │
+│  WAVECRAFT ROADMAP           v0.7.2 | 80%  │
 ├─────────────────────────────────────────────┤
 │  ✅ M1-M12   Foundation → Open Source Ready│
 │  🚧 M13      Internal Testing (In Progress)│
@@ -788,6 +788,7 @@ QA:           PASS (0 Critical/High/Medium, 1 Low finding resolved)
 
 | Date | Update |
 |------|--------|
+| 2026-02-06 | **CI Build Stage Removal (v0.7.2)**: Removed redundant `build-plugin` job from CI workflow. Job never executed (workflow triggers on PRs, job condition required main branch). Simplifies CI from 7 jobs to 6, reduces confusion. Updated ci-pipeline.md, high-level-design.md, skill documentation. Version bumped to 0.7.2. PR #30. Archived to `_archive/ci-build-stage-removal/`. |
 | 2026-02-06 | **Template Reorganization**: Restructured CLI template from `cli/plugin-template/` to `cli/sdk-templates/new-project/react/` for better organization and future extensibility (vanilla, svelte variants). Fixed template xtask hardcoded plugin names (Issue #1) — now uses `{{plugin_name}}` and `{{plugin_name_snake}}` variables. Updated CLI default SDK version from v0.7.0 to v0.7.1 (Issue #2). CI path filters updated. All documentation updated (high-level-design.md, README.md, ci-pipeline.md). 10/10 tests passing, QA approved. Archived to `_archive/template-relocation-docs/`. |
 | 2026-02-06 | **wavecraft-core crate split for crates.io publishing**: Split wavecraft-core into wavecraft-core (publishable, no nih_plug dependency) + wavecraft-nih_plug (git-only, contains nih-plug integration). Added `__nih` module for proc-macro type exports. Template uses Cargo package rename (`wavecraft = { package = "wavecraft-nih_plug" }`). All 6 publishable crates validated with dry-run publish. 24/24 manual tests, QA approved. Architecture docs updated (high-level-design.md, coding-standards.md). Milestone 13 now **In Progress**. |
 | 2026-02-05 | **CI Workflow Simplification**: Removed redundant `push` triggers from CI and Template Validation workflows — they now only run on PRs (not on merge to main). Added `workflow_dispatch` for manual runs when needed. Eliminates ~10-14 CI minutes of redundant validation per merge. Documentation updated (ci-pipeline.md, high-level-design.md). Archived to `_archive/ci-workflow-simplification/`. |
