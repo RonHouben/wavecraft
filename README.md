@@ -96,7 +96,11 @@ wavecraft/
 │   ├── src/                      # Dev app for testing packages
 │   └── dist/                     # Build output (embedded in plugin)
 │
-├── plugin-template/              # Template project for SDK users
+├── cli/                          # Wavecraft CLI tool
+│   ├── src/                      # CLI source code
+│   └── sdk-templates/            # Project templates embedded in CLI
+│       └── new-project/react/    # React UI template (default)
+│
 ├── docs/                         # Architecture & specs
 └── packaging/                    # Platform installers
 ```

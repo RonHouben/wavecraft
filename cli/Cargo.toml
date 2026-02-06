@@ -7,14 +7,6 @@ license = "MIT"
 repository = "https://github.com/RonHouben/wavecraft"
 keywords = ["audio", "vst", "clap", "plugin", "dsp"]
 categories = ["development-tools", "multimedia::audio"]
-# Explicitly include plugin-template despite .gitignore using negation pattern
-include = [
-    "/src/**/*.rs",
-    "/Cargo.toml",
-    "/build.rs",
-    "!/plugin-template/",
-    "/plugin-template/**",
-]
 
 [[bin]]
 name = "wavecraft"

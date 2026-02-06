@@ -48,7 +48,7 @@ enum Commands {
         no_git: bool,
         
         /// Wavecraft SDK version to use (git tag)
-        #[arg(long, default_value = "v0.7.0")]
+        #[arg(long, default_value = "v0.7.1")]
         sdk_version: String,
         
         /// Use local SDK path for development (path to engine/crates directory).

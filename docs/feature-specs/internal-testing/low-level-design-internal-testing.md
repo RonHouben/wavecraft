@@ -97,7 +97,7 @@ Ensure the existing automated test suite passes completely before manual testing
 ### Objective
 Validate the complete SDK experience as a new developer would encounter it.
 
-### 2.1 Fresh Clone Test
+### 2.1 Fresh Scaffold Test
 
 **Test Environment Setup:**
 ```bash
@@ -105,8 +105,8 @@ Validate the complete SDK experience as a new developer would encounter it.
 mkdir -p /tmp/wavecraft-internal-test
 cd /tmp/wavecraft-internal-test
 
-# Clone template (simulating external developer)
-git clone /Users/ronhouben/code/private/wavecraft/plugin-template test-plugin
+# Scaffold project using CLI (simulating external developer)
+wavecraft new test-plugin --vendor "Test Company"
 cd test-plugin
 ```
 
@@ -114,7 +114,7 @@ cd test-plugin
 
 | Step | Command | Success Criteria |
 |------|---------|------------------|
-| 1. Clone | `git clone ... test-plugin` | Directory created with all files |
+| 1. Scaffold | `wavecraft new test-plugin` | Directory created with all files |
 | 2. Install deps | `cd ui && npm install` | No npm errors, node_modules created |
 | 3. Build UI | `npm run build` | dist/ folder created with index.html |
 | 4. Bundle plugin | `cd engine && cargo xtask bundle` | VST3 + CLAP in target/bundled/ |
@@ -205,7 +205,7 @@ Verify all documentation is accurate, complete, and followable by newcomers.
 | CI Pipeline | `docs/guides/ci-pipeline.md` | Instructions work |
 | macOS Signing | `docs/guides/macos-signing.md` | Commands execute correctly |
 | Visual Testing | `docs/guides/visual-testing.md` | Playwright workflow works |
-| Template README | `plugin-template/README.md` | Instructions produce results |
+| Scaffolded README | Scaffolded project `README.md` | Instructions produce results |
 
 ### Review Methodology
 
@@ -450,10 +450,10 @@ Quick reference checklist for the Tester agent:
 Specific checks for template isolation:
 
 ```bash
-# 1. Clone template to isolated location
+# 1. Scaffold project to isolated location
 cd /tmp
 rm -rf wavecraft-internal-test
-git clone /path/to/wavecraft/plugin-template test-plugin
+wavecraft new test-plugin --vendor "Test Company"
 
 # 2. Verify no path dependencies in Cargo.toml
 grep "path = " test-plugin/engine/Cargo.toml
@@ -465,7 +465,7 @@ cd engine && cargo xtask bundle --release
 
 # 4. Verify bundles exist
 ls engine/target/bundled/
-# Should show: "My Plugin.clap" and "My Plugin.vst3/"
+# Should show: "Test Plugin.clap" and "Test Plugin.vst3/"
 ```
 
 If any step fails, there's a hidden dependency on the main monorepo that must be fixed.
