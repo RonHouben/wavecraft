@@ -73,3 +73,36 @@ pub mod __nih {
     // Re-export the editor module for WavecraftEditor
     pub use super::editor;
 }
+
+/// Internal types used by generated code (not part of public API).
+///
+/// This module provides types and functions needed by FFI exports generated
+/// by the `wavecraft_plugin!` macro for parameter discovery via `wavecraft start`.
+#[doc(hidden)]
+pub mod __internal {
+    pub use serde_json;
+    pub use wavecraft_protocol::ParameterInfo;
+    pub use wavecraft_protocol::ParameterType;
+
+    use wavecraft_dsp::ParamSpec;
+
+    /// Convert ParamSpec to ParameterInfo for JSON serialization.
+    ///
+    /// This function bridges the DSP layer's ParamSpec to the protocol's
+    /// ParameterInfo, enabling FFI export of parameter metadata.
+    pub fn param_spec_to_info(spec: &ParamSpec, id_prefix: &str) -> ParameterInfo {
+        ParameterInfo {
+            id: format!("{}_{}", id_prefix, spec.id_suffix),
+            name: spec.name.to_string(),
+            param_type: ParameterType::Float,
+            value: spec.default as f32,
+            default: spec.default as f32,
+            unit: if spec.unit.is_empty() {
+                None
+            } else {
+                Some(spec.unit.to_string())
+            },
+            group: spec.group.map(|s| s.to_string()),
+        }
+    }
+}

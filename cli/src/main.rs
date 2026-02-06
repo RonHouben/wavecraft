@@ -1,4 +1,5 @@
 mod commands;
+mod dev_server;
 mod project;
 mod template;
 mod validation;

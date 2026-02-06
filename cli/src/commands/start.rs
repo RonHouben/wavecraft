@@ -1,14 +1,25 @@
 //! Development server command - starts WebSocket + UI dev servers.
+//!
+//! This command provides the development experience for wavecraft plugins:
+//! 1. Builds the plugin in debug mode
+//! 2. Loads parameter metadata via FFI from the compiled dylib
+//! 3. Starts an embedded WebSocket server for browser UI communication
+//! 4. Starts the Vite dev server for UI hot-reloading
 
 use anyhow::{Context, Result};
 use console::style;
 use std::io::{self, Write};
+use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc;
+use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
+use crate::dev_server::{DevServerHost, PluginLoader};
 use crate::project::{has_node_modules, ProjectMarkers};
+use standalone::ws_server::WsServer;
+use wavecraft_bridge::IpcHandler;
 
 /// Options for the `start` command.
 #[derive(Debug)]
@@ -109,40 +120,73 @@ fn run_dev_servers(
     );
     println!();
 
-    // Start WebSocket server
+    // 1. Build the plugin in debug mode
+    println!("{} Building plugin...", style("→").cyan());
+    let build_status = Command::new("cargo")
+        .args(["build", "--lib"])
+        .current_dir(&project.engine_dir)
+        .stdout(if verbose {
+            Stdio::inherit()
+        } else {
+            Stdio::null()
+        })
+        .stderr(Stdio::inherit())
+        .status()
+        .context("Failed to run cargo build. Is Rust installed?")?;
+
+    if !build_status.success() {
+        anyhow::bail!("Plugin build failed. Please fix the errors above.");
+    }
+    println!("{} Plugin built", style("✓").green());
+
+    // 2. Find the plugin dylib
+    let dylib_path = find_plugin_dylib(&project.engine_dir)
+        .context("Failed to find compiled plugin library")?;
+
+    if verbose {
+        println!("  Found dylib: {}", dylib_path.display());
+    }
+
+    // 3. Load parameters via FFI
+    println!("{} Loading plugin parameters...", style("→").cyan());
+    let loader = PluginLoader::load(&dylib_path)
+        .context("Failed to load plugin. Make sure it's compiled with wavecraft SDK.")?;
+
+    let params = loader.parameters().to_vec();
+    println!(
+        "{} Loaded {} parameters",
+        style("✓").green(),
+        params.len()
+    );
+
+    if verbose {
+        for param in &params {
+            println!("  - {}: {} ({})", param.id, param.name, param.group.as_deref().unwrap_or("ungrouped"));
+        }
+    }
+
+    // 4. Start embedded WebSocket server
     println!(
         "{} Starting WebSocket server on port {}...",
         style("→").cyan(),
         ws_port
     );
 
-    let ws_port_str = ws_port.to_string();
-    let mut ws_args = vec![
-        "run",
-        "-p",
-        "standalone",
-        "--release",
-        "--",
-        "--dev-server",
-        "--port",
-        &ws_port_str,
-    ];
-    if verbose {
-        ws_args.push("--verbose");
-    }
+    let host = DevServerHost::new(params);
+    let handler = Arc::new(IpcHandler::new(host));
 
-    let ws_server = Command::new("cargo")
-        .args(&ws_args)
-        .current_dir(&project.engine_dir)
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .spawn()
-        .context("Failed to start WebSocket server. Is cargo installed?")?;
+    // Create tokio runtime for the WebSocket server
+    let runtime = tokio::runtime::Runtime::new()
+        .context("Failed to create async runtime")?;
 
-    // Give the server time to start
-    thread::sleep(Duration::from_millis(500));
+    let server = WsServer::new(ws_port, handler.clone(), verbose);
+    runtime.block_on(async {
+        server.start().await.map_err(|e| anyhow::anyhow!("{}", e))
+    })?;
 
-    // Start UI dev server
+    println!("{} WebSocket server running", style("✓").green());
+
+    // 5. Start UI dev server
     println!(
         "{} Starting UI dev server on port {}...",
         style("→").cyan(),
@@ -168,12 +212,68 @@ fn run_dev_servers(
     println!("{}", style("Press Ctrl+C to stop").dim());
     println!();
 
-    // Wait for shutdown
-    wait_for_shutdown(ws_server, ui_server)
+    // Wait for shutdown (keeps runtime alive)
+    wait_for_shutdown(ui_server, runtime)
+}
+
+/// Find the plugin dylib in the target directory.
+///
+/// Searches for `.dylib` (macOS), `.so` (Linux), or `.dll` (Windows)
+/// files in `engine/target/debug/`.
+fn find_plugin_dylib(engine_dir: &std::path::Path) -> Result<PathBuf> {
+    let debug_dir = engine_dir.join("target").join("debug");
+
+    if !debug_dir.exists() {
+        anyhow::bail!(
+            "Build output directory not found: {}\nRun `cargo build` first.",
+            debug_dir.display()
+        );
+    }
+
+    // Look for library files with platform-specific extensions
+    #[cfg(target_os = "macos")]
+    let extension = "dylib";
+    #[cfg(target_os = "linux")]
+    let extension = "so";
+    #[cfg(target_os = "windows")]
+    let extension = "dll";
+
+    // Find .dylib files (skip deps/ subdirectory)
+    let entries = std::fs::read_dir(&debug_dir)
+        .context("Failed to read debug directory")?;
+
+    let candidates: Vec<PathBuf> = entries
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .filter(|p| {
+            p.extension().is_some_and(|ext| ext == extension)
+                && p.file_name()
+                    .is_some_and(|n| n.to_string_lossy().starts_with("lib"))
+        })
+        .collect();
+
+    match candidates.len() {
+        0 => anyhow::bail!(
+            "No plugin library found in {}.\n\
+             Make sure the engine crate has `crate-type = [\"cdylib\"]` in Cargo.toml.",
+            debug_dir.display()
+        ),
+        1 => Ok(candidates.into_iter().next().unwrap()),
+        _ => {
+            // Multiple libraries - pick the one most recently modified
+            let mut sorted = candidates;
+            sorted.sort_by_key(|p| {
+                std::fs::metadata(p)
+                    .and_then(|m| m.modified())
+                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+            });
+            Ok(sorted.pop().unwrap())
+        }
+    }
 }
 
 /// Set up Ctrl+C handler and wait for shutdown.
-fn wait_for_shutdown(ws_server: Child, ui_server: Child) -> Result<()> {
+fn wait_for_shutdown(ui_server: Child, _runtime: tokio::runtime::Runtime) -> Result<()> {
     let (tx, rx) = mpsc::channel();
 
     ctrlc::set_handler(move || {
@@ -187,10 +287,10 @@ fn wait_for_shutdown(ws_server: Child, ui_server: Child) -> Result<()> {
     println!();
     println!("{} Shutting down servers...", style("→").cyan());
 
-    // Kill both servers
-    kill_process(ws_server)?;
+    // Kill UI server
     kill_process(ui_server)?;
 
+    // Runtime is dropped when it goes out of scope, which stops the WebSocket server
     println!("{} Servers stopped", style("✓").green());
     Ok(())
 }
