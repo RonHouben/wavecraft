@@ -12,12 +12,12 @@
 This plan implements an embedded WebSocket server in the `wavecraft` CLI that:
 1. Builds the user's plugin (`cargo build --lib`)
 2. Loads the compiled dylib and extracts parameters via FFI
-3. Runs an embedded WebSocket server using reused `standalone::ws_server::WsServer<H>`
+3. Runs an embedded WebSocket server using reused `wavecraft_dev_server::ws_server::WsServer<H>`
 4. Spawns Vite dev server for React UI
 
-This replaces the broken `cargo run -p standalone` approach that fails in user projects.
+This replaces the broken `cargo run -p wavecraft-dev-server` approach that fails in user projects.
 
-**Estimated effort:** 7-11 hours (~25% reduced by reusing WsServer from standalone)
+**Estimated effort:** 7-11 hours (~25% reduced by reusing WsServer from wavecraft-dev-server)
 
 ---
 
@@ -36,13 +36,13 @@ This replaces the broken `cargo run -p standalone` approach that fails in user p
 | `wavecraft-macros/src/plugin.rs` | **Modify** | Generate FFI exports in `wavecraft_plugin!` |
 | `wavecraft-nih_plug/src/lib.rs` | **Modify** | Add `__internal` module with re-exports |
 | **CLI Changes** | | |
-| `cli/Cargo.toml` | **Modify** | Add standalone, libloading, wavecraft-bridge deps |
+| `cli/Cargo.toml` | **Modify** | Add wavecraft-dev-server, libloading, wavecraft-bridge deps |
 | `cli/src/main.rs` | **Modify** | Add `mod dev_server;` declaration |
 | `cli/src/dev_server/mod.rs` | **New** | Module root, exports |
 | `cli/src/dev_server/plugin_loader.rs` | **New** | dylib loading via libloading |
 | `cli/src/dev_server/host.rs` | **New** | `DevServerHost` implementing `ParameterHost` |
 | `cli/src/dev_server/meter.rs` | **New** | Synthetic meter generator |
-| `cli/src/commands/start.rs` | **Modify** | Replace `cargo run -p standalone` with embedded server |
+| `cli/src/commands/start.rs` | **Modify** | Replace `cargo run -p wavecraft-dev-server` with embedded server |
 
 ---
 
@@ -207,25 +207,25 @@ pub use ws_server::WsServer;
 ---
 
 ### Phase 3: DevServerHost + Dependencies
-**Goal:** Add dependencies and implement parameter host (reusing WsServer from standalone)
+**Goal:** Add dependencies and implement parameter host (reusing WsServer from wavecraft-dev-server)
 
-#### Step 3.1: Add standalone and async runtime dependencies
+#### Step 3.1: Add wavecraft-dev-server and async runtime dependencies
 **File:** `cli/Cargo.toml`
-- Action: Add `standalone` crate as dependency (brings tokio/tungstenite transitively)
+- Action: Add `wavecraft-dev-server` crate as dependency (brings tokio/tungstenite transitively)
 - Why: Reuse existing tested WebSocket server implementation
 - Dependencies: None
 - Risk: Low
 
 ```toml
-# Reuse standalone crate for WebSocket server
+# Reuse wavecraft-dev-server crate for WebSocket server
 # This brings in tokio, tokio-tungstenite, futures-util transitively
-standalone = { path = "../engine/crates/standalone" }
+wavecraft-dev-server = { path = "../engine/crates/wavecraft-dev-server" }
 
 # Async runtime (needed for CLI orchestration)
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal"] }
 ```
 
-**Note:** `standalone` pulls in `tokio-tungstenite` and `futures-util` as transitive dependencies.
+**Note:** `wavecraft-dev-server` pulls in `tokio-tungstenite` and `futures-util` as transitive dependencies.
 
 #### Step 3.2: Add wavecraft-bridge dependency
 **File:** `cli/Cargo.toml`
@@ -242,7 +242,7 @@ wavecraft-protocol = { path = "../engine/crates/wavecraft-protocol" }
 #### Step 3.3: Implement DevServerHost
 **File:** `cli/src/dev_server/host.rs`
 - Action: Implement `ParameterHost` trait for in-memory parameter state
-- Why: Bridge between loaded parameters and IpcHandler; used by reused `standalone::ws_server::WsServer<H>`
+- Why: Bridge between loaded parameters and IpcHandler; used by reused `wavecraft_dev_server::ws_server::WsServer<H>`
 - Dependencies: Step 3.2
 - Risk: Low
 
@@ -254,7 +254,7 @@ wavecraft-protocol = { path = "../engine/crates/wavecraft-protocol" }
 - `get_meter_frame(&self)` - Delegate to MeterGenerator (step 3.4)
 - `request_resize(&self, width, height)` - Return false (no-op in dev mode)
 
-**Note:** No WebSocket server implementation needed — `DevServerHost` is passed to `standalone::ws_server::WsServer<DevServerHost>` which handles all WebSocket communication.
+**Note:** No WebSocket server implementation needed — `DevServerHost` is passed to `wavecraft_dev_server::ws_server::WsServer<DevServerHost>` which handles all WebSocket communication.
 
 #### Step 3.4: Implement MeterGenerator
 **File:** `cli/src/dev_server/meter.rs`
@@ -332,7 +332,7 @@ fn build_plugin(project: &ProjectMarkers, verbose: bool) -> Result<()> {
 
 #### Step 4.3: Update run_dev_servers to use embedded server
 **File:** `cli/src/commands/start.rs`
-- Action: Replace `cargo run -p standalone` with embedded WebSocket server
+- Action: Replace `cargo run -p wavecraft-dev-server` with embedded WebSocket server
 - Why: Core change that fixes the broken behavior
 - Dependencies: Steps 4.1, 4.2
 - Risk: Medium (major control flow change)

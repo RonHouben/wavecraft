@@ -14,4 +14,4 @@
 ## Optional
 - [x] Unify `MeterFrame` types between protocol and metering crates.
 - [x] Move `MeterGenerator` to shared dev module.
-- [x] Align standalone host with shared host.
+- [x] Align wavecraft-dev-server host with shared host.

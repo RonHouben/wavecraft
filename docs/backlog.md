@@ -46,7 +46,7 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 | Item | Notes |
 |------|-------|
 | ~~Replace console.log with Logger class (UI)~~ | ✅ **Complete** in v0.6.1 — `Logger` class in `@wavecraft/core` with `debug/info/warn/error` methods. Documented in coding-standards.md. (Note: Migrated from `@wavecraft/ipc` to `@wavecraft/core` in v0.7.0) |
-| ~~Use `log` or `tracing` crate (Engine)~~ | ✅ **Complete** in v0.6.1 — `tracing` crate in standalone crate (24 calls migrated). `xtask` CLI keeps `println!` for user-facing output as intended. |
+| ~~Use `log` or `tracing` crate (Engine)~~ | ✅ **Complete** in v0.6.1 — `tracing` crate in wavecraft-dev-server crate (24 calls migrated). `xtask` CLI keeps `println!` for user-facing output as intended. |
 
 ---
 

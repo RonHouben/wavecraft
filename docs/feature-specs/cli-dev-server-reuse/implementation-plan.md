@@ -1,7 +1,7 @@
 # Implementation Plan: CLI Dev Server Reuse
 
 ## Overview
-Reduce duplication between `cli/src/dev_server` and engine crates by extracting shared utilities (parameter host storage, plugin param FFI loader, synthetic meter generator) into engine-level crates. This preserves the current CLI behavior while centralizing reusable logic and aligning protocol/metering types. Optional cleanups cover meter frame type unification and standalone host reuse.
+Reduce duplication between `cli/src/dev_server` and engine crates by extracting shared utilities (parameter host storage, plugin param FFI loader, synthetic meter generator) into engine-level crates. This preserves the current CLI behavior while centralizing reusable logic and aligning protocol/metering types. Optional cleanups cover meter frame type unification and wavecraft-dev-server host reuse.
 
 ## Requirements
 - Preserve existing `wavecraft start` behavior and CLI UX.
@@ -9,7 +9,7 @@ Reduce duplication between `cli/src/dev_server` and engine crates by extracting 
 - Move reusable functionality into engine crates with stable APIs.
 - Avoid changes to `docs/roadmap.md` and archived feature specs.
 - Ensure tests cover newly extracted components.
-- Optional: unify meter frame types and re-use shared host in standalone.
+- Optional: unify meter frame types and re-use shared host in wavecraft-dev-server.
 
 ## Architecture Changes
 - **`engine/crates/wavecraft-bridge`**: introduce reusable `InMemoryParameterHost` (or similarly named) that implements `ParameterHost` for a `Vec<ParameterInfo>` + value map.
@@ -95,11 +95,11 @@ Reduce duplication between `cli/src/dev_server` and engine crates by extracting 
     - Dependencies: None.
     - Risk: Low.
 
-13. **Align standalone host with shared host** (File: `engine/crates/standalone/src/app.rs`)
+13. **Align wavecraft-dev-server host with shared host** (File: `engine/crates/wavecraft-dev-server/src/app.rs`)
     - Action: Optionally refactor to use `InMemoryParameterHost` for consistency.
     - Why: Avoid two host implementations with similar responsibilities.
     - Dependencies: Phase 1.
-    - Risk: Medium (standalone tests may need update).
+   - Risk: Medium (wavecraft-dev-server tests may need update).
 
 ## Testing Strategy
 - **Unit tests**:

@@ -18,7 +18,7 @@
 
 **Overall:** 20/23 steps complete
 
-**Key design note:** We reuse `standalone::ws_server::WsServer<H>` instead of implementing a new WebSocket server.
+**Key design note:** We reuse `wavecraft_dev_server::ws_server::WsServer<H>` instead of implementing a new WebSocket server.
 
 ---
 
@@ -65,9 +65,9 @@
 
 ### Phase 3: DevServerHost + Dependencies
 
-- [x] **3.1** Add standalone and async runtime dependencies
+- [x] **3.1** Add wavecraft-dev-server and async runtime dependencies
   - File: `cli/Cargo.toml`
-  - Deps: standalone (path), tokio[full]
+  - Deps: wavecraft-dev-server (path), tokio[full]
   
 - [x] **3.2** Add wavecraft-bridge dependency
   - File: `cli/Cargo.toml`
@@ -83,7 +83,7 @@
   - Output: Synthetic oscillating meter data
   
 - [x] **3.5** Add tracing dependency for logging
-  - Uses tracing from standalone crate transitively
+  - Uses tracing from wavecraft-dev-server crate transitively
 
 ### Phase 4: Integration
 
@@ -97,7 +97,7 @@
   
 - [x] **4.3** Update run_dev_servers to use embedded server
   - File: `cli/src/commands/start.rs`
-  - Uses WsServer from standalone crate
+  - Uses WsServer from wavecraft-dev-server crate
   
 - [x] **4.4** Update imports and cleanup
   - File: `cli/src/commands/start.rs`
@@ -135,7 +135,7 @@ None currently.
 - Primary platform: macOS (Windows/Linux deferred)
 - Build mode: Debug by default (faster iteration)
 - Metering: Synthetic sine wave simulation
-- WsServer reused from standalone crate (reduces ~200 lines)
+- WsServer reused from wavecraft-dev-server crate (reduces ~200 lines)
 
 ---
 

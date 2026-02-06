@@ -64,6 +64,7 @@ wavecraft/
 │   │   ├── wavecraft-protocol/    # IPC contracts
 │   │   ├── wavecraft-bridge/      # IPC handler
 │   │   ├── wavecraft-metering/    # Real-time metering
+│   │   ├── wavecraft-dev-server/  # Browser dev server (WebSocket transport)
 │   │   └── wavecraft-dsp/         # DSP primitives
 │   └── xtask/                     # Build automation
 ├── packaging/                     # AU wrapper, installers
@@ -113,6 +114,9 @@ wavecraft/
 │  │  ┌────────────────┐  ┌────────────────┐  ┌─────────────────┐    │    │
 │  │  │wavecraft-macros│  │wavecraft-bridge│  │wavecraft-protocol│   │    │
 │  │  └────────────────┘  └────────────────┘  └─────────────────┘    │    │
+│  │  ┌───────────────────────────────────────────────┐             │    │
+│  │  │ wavecraft-dev-server (browser WebSocket dev) │             │    │
+│  │  └───────────────────────────────────────────────┘             │    │
 │  │  ┌─────────────────────────────────────────────────────────┐    │    │
 │  │  │ wavecraft-nih_plug (git-only, wraps nih-plug)           │    │    │
 │  │  └─────────────────────────────────────────────────────────┘    │    │

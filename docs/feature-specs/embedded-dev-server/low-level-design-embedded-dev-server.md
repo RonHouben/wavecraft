@@ -9,9 +9,9 @@
 
 ## Problem Statement
 
-The `wavecraft start` command currently tries to run `cargo run -p standalone`, which:
+The `wavecraft start` command currently tries to run `cargo run -p wavecraft-dev-server`, which:
 1. Only exists in the SDK monorepo, not in user projects created by `wavecraft create`
-2. Results in "package standalone not found" error for all user projects
+2. Results in "package wavecraft-dev-server not found" error for all user projects
 3. Leaves the UI unable to connect (no WebSocket server running)
 
 This is a **critical architectural gap** that breaks the core developer experience.
@@ -44,8 +44,8 @@ Before designing new components, we analyzed existing crates in the SDK monorepo
 
 | Crate | Component | Reusable? | Notes |
 |-------|-----------|-----------|-------|
-| `standalone` | `WsServer<H: ParameterHost>` | ✅ **Yes** | Generic WebSocket server, fully tested |
-| `standalone` | `AppState` (ParameterHost impl) | ❌ No | Hardcoded 3 params; CLI needs dynamic params |
+| `wavecraft-dev-server` | `WsServer<H: ParameterHost>` | ✅ **Yes** | Generic WebSocket server, fully tested |
+| `wavecraft-dev-server` | `AppState` (ParameterHost impl) | ❌ No | Hardcoded 3 params; CLI needs dynamic params |
 | `wavecraft-bridge` | `IpcHandler<H>` | ✅ **Yes** | JSON-RPC handler (already in WsServer) |
 | `wavecraft-bridge` | `ParameterHost` trait | ✅ **Yes** | Define our `DevServerHost` impl |
 | `wavecraft-protocol` | `ParameterInfo`, `MeterFrame` | ✅ **Yes** | Protocol types |
@@ -54,7 +54,7 @@ Before designing new components, we analyzed existing crates in the SDK monorepo
 
 | Component | Source | Rationale |
 |-----------|--------|-----------|
-| `WsServer<H>` | Reuse from `standalone` | Production-tested, has logging, shutdown, verbose mode |
+| `WsServer<H>` | Reuse from `wavecraft-dev-server` | Production-tested, has logging, shutdown, verbose mode |
 | `IpcHandler<H>` | Reuse from `wavecraft-bridge` | Already integrated in WsServer |
 | `ParameterHost` trait | Reuse from `wavecraft-bridge` | Standard interface |
 | `DevServerHost` | **New in CLI** | Needs dynamic params from FFI + synthetic metering |
@@ -84,7 +84,7 @@ This reduces implementation effort by ~40% (no need to write/test WebSocket hand
   │  │  2. Check/install npm deps (existing logic)                 │    │
   │  │  3. Build user's plugin: cargo build --lib                  │    │
   │  │  4. Load dylib, extract parameters via FFI                  │    │
-  │  │  5. Start WsServer<DevServerHost> (reuse from standalone)   │    │
+    │  │  5. Start WsServer<DevServerHost> (reuse from wavecraft-dev-server)   │    │
   │  │  6. Start Vite dev server (spawn npm run dev)               │    │
   │  │  7. Wait for Ctrl+C, graceful shutdown                      │    │
   │  └─────────────────────────────────────────────────────────────┘    │
@@ -100,7 +100,7 @@ This reduces implementation effort by ~40% (no need to write/test WebSocket hand
   │  ┌─────────────────┐    ┌─────────────────┐    ┌────────────────┐   │
   │  │ Plugin dylib    │    │ In-memory state │    │ WsServer<H>    │   │
   │  │ (user's plugin) │    │ + MeterGenerator│    │ (reuse:        │   │
-  │  └─────────────────┘    └─────────────────┘    │  standalone)   │   │
+    │  └─────────────────┘    └─────────────────┘    │  wavecraft-dev-server)   │   │
   │                                                └───────┬────────┘   │
   └─────────────────────────────────────────────────────────│───────────┘
                                                             │
@@ -222,7 +222,7 @@ use super::meter::MeterGenerator;
 
 /// In-memory parameter host for dev server
 ///
-/// Unlike `standalone::AppState` which has hardcoded parameters, this host
+/// Unlike `wavecraft_dev_server::AppState` which has hardcoded parameters, this host
 /// accepts dynamic parameters loaded from the user's plugin via FFI.
 pub struct DevServerHost {
     /// Parameter specifications (from plugin FFI)
@@ -297,20 +297,20 @@ impl ParameterHost for DevServerHost {
 }
 ```
 
-### 4. WebSocket Server (Reuse from `standalone`)
+### 4. WebSocket Server (Reuse from `wavecraft-dev-server`)
 
-**No new code needed.** We reuse `standalone::ws_server::WsServer<H>`:
+**No new code needed.** We reuse `wavecraft_dev_server::ws_server::WsServer<H>`:
 
 ```rust
 // In cli/src/commands/start.rs
-use standalone::ws_server::WsServer;
+use wavecraft_dev_server::ws_server::WsServer;
 use wavecraft_bridge::IpcHandler;
 use std::sync::Arc;
 
 // Create parameter host with plugin data
 let host = DevServerHost::new(params);
 
-// Wrap in IpcHandler (same as standalone does)
+// Wrap in IpcHandler (same as wavecraft-dev-server does)
 let handler = Arc::new(IpcHandler::new(host));
 
 // Reuse the existing WsServer
@@ -321,7 +321,7 @@ server.start().await?;
 **Why this works:**
 - `WsServer<H: ParameterHost>` is generic over any `ParameterHost` implementation
 - `DevServerHost` implements `ParameterHost`
-- All async runtime deps (tokio, tokio-tungstenite) are already in `standalone`
+- All async runtime deps (tokio, tokio-tungstenite) are already in `wavecraft-dev-server`
 
 ### 5. Synthetic Meter Generator (`cli/src/dev_server/meter.rs`)
 
@@ -468,9 +468,9 @@ ctrlc = "3"
 # New: Dynamic library loading
 libloading = "0.8"
 
-# Reuse standalone crate for WebSocket server
+# Reuse wavecraft-dev-server crate for WebSocket server
 # This brings in tokio, tokio-tungstenite, futures-util transitively
-standalone = { path = "../engine/crates/standalone" }
+wavecraft-dev-server = { path = "../engine/crates/wavecraft-dev-server" }
 
 # Reuse SDK crates for types
 wavecraft-bridge = { path = "../engine/crates/wavecraft-bridge" }
@@ -479,7 +479,7 @@ wavecraft-protocol = { path = "../engine/crates/wavecraft-protocol" }
 # Async runtime (needed for CLI orchestration)
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal"] }
 
-# Logging (optional - standalone already uses tracing)
+# Logging (optional - wavecraft-dev-server already uses tracing)
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
@@ -487,9 +487,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 nix = { version = "0.29", features = ["signal"] }
 ```
 
-**Note:** `standalone` pulls in `tokio-tungstenite` and `futures-util` as transitive dependencies. We don't need to declare them directly.
+**Note:** `wavecraft-dev-server` pulls in `tokio-tungstenite` and `futures-util` as transitive dependencies. We don't need to declare them directly.
 
-**Binary Size Consideration:** `standalone` also pulls in `wry`/`tao` for the desktop app GUI (~2MB). If this becomes a concern, we can add a feature flag to `standalone` to exclude the GUI dependencies:
+**Binary Size Consideration:** `wavecraft-dev-server` also pulls in `wry`/`tao` for the desktop app GUI (~2MB). If this becomes a concern, we can add a feature flag to `wavecraft-dev-server` to exclude the GUI dependencies:
 
 ```toml
 # Future optimization (not needed for v0.8.0)
@@ -521,17 +521,17 @@ cli/src/
     └── variables.rs
 ```
 
-**Key difference from prior design:** No `ws_server.rs` — we reuse `standalone::ws_server::WsServer<H>`.
+**Key difference from prior design:** No `ws_server.rs` — we reuse `wavecraft_dev_server::ws_server::WsServer<H>`.
 
 ### 3. Updated `start.rs`
 
-Replace the `cargo run -p standalone` approach with embedded server:
+Replace the `cargo run -p wavecraft-dev-server` approach with embedded server:
 
 ```rust
 // cli/src/commands/start.rs
 
 use crate::dev_server::{DevServerHost, PluginLoader};
-use standalone::ws_server::WsServer;  // Reuse from standalone crate
+use wavecraft_dev_server::ws_server::WsServer;  // Reuse from wavecraft-dev-server crate
 use wavecraft_bridge::IpcHandler;
 use std::sync::Arc;
 
@@ -572,7 +572,7 @@ fn run_dev_servers(
         }
     }
 
-    // 3. Start embedded WebSocket server (reusing standalone::ws_server)
+    // 3. Start embedded WebSocket server (reusing wavecraft-dev-server::ws_server)
     println!("{} Starting WebSocket server on port {}...", style("→").cyan(), ws_port);
     let host = DevServerHost::new(params);
     let handler = Arc::new(IpcHandler::new(host));
@@ -644,15 +644,15 @@ fn find_plugin_dylib(engine_dir: &Path) -> Result<PathBuf> {
 
 ## Binary Size Impact
 
-By reusing `standalone`, we get the WebSocket server code "for free" but inherit the full `standalone` dependency graph.
+By reusing `wavecraft-dev-server`, we get the WebSocket server code "for free" but inherit the full `wavecraft-dev-server` dependency graph.
 
 | Component | Estimated Size | Notes |
 |-----------|----------------|-------|
 | Current CLI | ~4 MB | |
 | + libloading | +100 KB | New: FFI dylib loading |
-| + standalone | +4-5 MB | Includes tokio, tungstenite, wry, tao |
-| + wavecraft-bridge | +200 KB | Types, might already be in standalone |
-| + wavecraft-protocol | +100 KB | Types, might already be in standalone |
+| + wavecraft-dev-server | +4-5 MB | Includes tokio, tungstenite, wry, tao |
+| + wavecraft-bridge | +200 KB | Types, might already be in wavecraft-dev-server |
+| + wavecraft-protocol | +100 KB | Types, might already be in wavecraft-dev-server |
 | **Total** | **~8-10 MB** | |
 
 **Trade-off analysis:**
