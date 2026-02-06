@@ -25,6 +25,9 @@
 *.swo
 .DS_Store
 
+# CLI build artifact (template copied by build.rs)
+/cli/plugin-template
+
 # Build outputs
 *.dylib
 *.so
