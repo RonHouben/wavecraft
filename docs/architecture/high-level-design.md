@@ -46,6 +46,12 @@ wavecraft/
 │   │   └── template/              # Template extraction & variables
 │   │       ├── mod.rs
 │   │       └── variables.rs
+│   └── sdk-templates/             # Embedded project templates
+│       └── new-project/           # `wavecraft new` templates
+│           └── react/             # React UI variant (default)
+│               ├── Cargo.toml.template
+│               ├── engine/        # Rust audio engine template
+│               └── ui/            # React UI template
 ├── docs/                          # Documentation
 │   ├── architecture/              # Architecture documents
 │   ├── feature-specs/             # Feature specifications
@@ -68,7 +74,6 @@ wavecraft/
 │   │   └── components/            # @wavecraft/components — React components
 │   ├── src/                       # Development app (internal testing)
 │   └── test/                      # Test utilities and mocks
-└── plugin-template/               # Plugin template (scaffolded by CLI)
 ```
 
 ### Monorepo Benefits
@@ -281,9 +286,9 @@ Wavecraft distributes its SDK through two channels:
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                 │
 │   ┌───────────────────────┐       ┌───────────────────────┐                     │
-│   │  TEMPLATE REPOSITORY  │       │    GIT-ONLY           │                     │
-│   │  plugin-template      │       │                       │                     │
-│   │                       │       │  wavecraft-nih_plug   │  ← User depends     │
+│   │  EMBEDDED TEMPLATE    │       │    GIT-ONLY           │                     │
+│   │  cli/sdk-templates/   │       │                       │                     │
+│   │  new-project/react/   │       │  wavecraft-nih_plug   │  ← User depends     │
 │   │  ├── engine/          │──────▶│  (Cargo rename:       │    (git tag)        │
 │   │  │   └── Cargo.toml   │       │   wavecraft = {...})  │                     │
 │   │  │   wavecraft = {    │       │                       │                     │
