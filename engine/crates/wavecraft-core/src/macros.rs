@@ -58,16 +58,16 @@
 macro_rules! wavecraft_processor {
     ($name:ident => Gain) => {
         #[derive(Default)]
-        pub struct $name(::wavecraft_dsp::builtins::GainDsp);
+        pub struct $name($crate::wavecraft_dsp::builtins::GainDsp);
 
-        impl ::wavecraft_dsp::Processor for $name {
+        impl $crate::wavecraft_dsp::Processor for $name {
             type Params =
-                <::wavecraft_dsp::builtins::GainDsp as ::wavecraft_dsp::Processor>::Params;
+                <$crate::wavecraft_dsp::builtins::GainDsp as $crate::wavecraft_dsp::Processor>::Params;
 
             fn process(
                 &mut self,
                 buffer: &mut [&mut [f32]],
-                transport: &::wavecraft_dsp::Transport,
+                transport: &$crate::wavecraft_dsp::Transport,
                 params: &Self::Params,
             ) {
                 self.0.process(buffer, transport, params)
@@ -77,16 +77,16 @@ macro_rules! wavecraft_processor {
 
     ($name:ident => Passthrough) => {
         #[derive(Default)]
-        pub struct $name(::wavecraft_dsp::builtins::PassthroughDsp);
+        pub struct $name($crate::wavecraft_dsp::builtins::PassthroughDsp);
 
-        impl ::wavecraft_dsp::Processor for $name {
+        impl $crate::wavecraft_dsp::Processor for $name {
             type Params =
-                <::wavecraft_dsp::builtins::PassthroughDsp as ::wavecraft_dsp::Processor>::Params;
+                <$crate::wavecraft_dsp::builtins::PassthroughDsp as $crate::wavecraft_dsp::Processor>::Params;
 
             fn process(
                 &mut self,
                 buffer: &mut [&mut [f32]],
-                transport: &::wavecraft_dsp::Transport,
+                transport: &$crate::wavecraft_dsp::Transport,
                 params: &Self::Params,
             ) {
                 self.0.process(buffer, transport, params)

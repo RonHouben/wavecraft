@@ -186,8 +186,8 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
         const _: () = {
             fn assert_processor_traits<T>()
             where
-                T: ::wavecraft_dsp::Processor + ::std::default::Default + ::std::marker::Send + 'static,
-                T::Params: ::wavecraft_dsp::ProcessorParams + ::std::default::Default + ::std::marker::Send + ::std::marker::Sync + 'static,
+                T: #krate::Processor + ::std::default::Default + ::std::marker::Send + 'static,
+                T::Params: #krate::ProcessorParams + ::std::default::Default + ::std::marker::Send + ::std::marker::Sync + 'static,
             {
             }
 
@@ -200,9 +200,9 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
         pub struct __WavecraftPlugin {
             params: ::std::sync::Arc<__WavecraftParams>,
             processor: __ProcessorType,
-            meter_producer: ::wavecraft_metering::MeterProducer,
+            meter_producer: #krate::MeterProducer,
             #[cfg(any(target_os = "macos", target_os = "windows"))]
-            meter_consumer: ::std::sync::Arc<::std::sync::Mutex<::wavecraft_metering::MeterConsumer>>,
+            meter_consumer: ::std::sync::Mutex<::std::option::Option<#krate::MeterConsumer>>,
         }
 
         /// Generated params struct.
@@ -217,14 +217,14 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
         impl __WavecraftParams {
             fn from_processor_specs() -> Self
             where
-                <__ProcessorType as ::wavecraft_dsp::Processor>::Params: ::wavecraft_dsp::ProcessorParams,
+                <__ProcessorType as #krate::Processor>::Params: #krate::ProcessorParams,
             {
-                let specs = <<__ProcessorType as ::wavecraft_dsp::Processor>::Params as ::wavecraft_dsp::ProcessorParams>::param_specs();
+                let specs = <<__ProcessorType as #krate::Processor>::Params as #krate::ProcessorParams>::param_specs();
 
                 let params = specs
                     .iter()
                     .map(|spec| {
-                        use ::wavecraft_dsp::ParamRange;
+                        use #krate::ParamRange;
 
                         let range = match &spec.range {
                             ParamRange::Linear { min, max } => {
@@ -292,13 +292,13 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
         impl ::std::default::Default for __WavecraftPlugin {
             fn default() -> Self {
                 let (meter_producer, _meter_consumer) =
-                    ::wavecraft_metering::create_meter_channel(64);
+                    #krate::create_meter_channel(64);
                 Self {
                     params: ::std::sync::Arc::new(__WavecraftParams::default()),
                     processor: <__ProcessorType as ::std::default::Default>::default(),
                     meter_producer,
                     #[cfg(any(target_os = "macos", target_os = "windows"))]
-                    meter_consumer: ::std::sync::Arc::new(::std::sync::Mutex::new(_meter_consumer)),
+                    meter_consumer: ::std::sync::Mutex::new(::std::option::Option::Some(_meter_consumer)),
                 }
             }
         }
@@ -336,9 +336,12 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
             ) -> ::std::option::Option<::std::boxed::Box<dyn #krate::__nih::Editor>> {
                 #[cfg(any(target_os = "macos", target_os = "windows"))]
                 {
+                    let meter_consumer = self.meter_consumer.lock().unwrap().take();
                     #krate::editor::create_webview_editor(
                         self.params.clone(),
-                        self.meter_consumer.clone(),
+                        meter_consumer,
+                        800,
+                        600,
                     )
                 }
 
@@ -383,10 +386,10 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
                     let mut sample_ptrs: ::std::vec::Vec<&mut [f32]> =
                         sample_buffers.iter_mut().map(|v| &mut v[..]).collect();
 
-                    let transport = ::wavecraft_dsp::Transport::default();
+                    let transport = #krate::Transport::default();
 
                     // Import Processor trait for process() method
-                    use ::wavecraft_dsp::Processor as _;
+                    use #krate::Processor as _;
                     self.processor.process(&mut sample_ptrs, &transport, &processor_params);
 
                     // Write processed samples back
@@ -414,7 +417,7 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
                     peak_right = buffer.as_slice()[1].iter().map(|&s| s.abs()).fold(0.0, f32::max);
                 }
 
-                let frame = ::wavecraft_metering::MeterFrame {
+                let frame = #krate::MeterFrame {
                     peak_l: peak_left,
                     peak_r: peak_right,
                     rms_l: peak_left * 0.707, // Simplified RMS estimation
@@ -440,8 +443,8 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
             ///
             /// For custom parameter behavior, implement the `Plugin` trait directly
             /// instead of using the `wavecraft_plugin!` macro.
-            fn build_processor_params(&self) -> <__ProcessorType as ::wavecraft_dsp::Processor>::Params {
-                <<__ProcessorType as ::wavecraft_dsp::Processor>::Params as ::std::default::Default>::default()
+            fn build_processor_params(&self) -> <__ProcessorType as #krate::Processor>::Params {
+                <<__ProcessorType as #krate::Processor>::Params as ::std::default::Default>::default()
             }
         }
 
