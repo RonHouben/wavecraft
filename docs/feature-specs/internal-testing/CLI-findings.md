@@ -37,6 +37,31 @@ Findings from internal testing of the Wavecraft CLI user experience.
 
 ---
 
+### 3. CLI: Asking for personal information feels invasive
+
+**Severity:** High  
+**Status:** 🔴 Open
+
+**Issue:** The `wavecraft new` command prompts for vendor name, email, and website URL. This feels like the CLI is gathering personal data, which creates distrust.
+
+**Current behavior:**
+```bash
+wavecraft new my-plugin
+# Prompts for:
+# - Vendor name
+# - Email address
+# - Website URL
+```
+
+**Recommendation:** Remove these prompts entirely. Use sensible defaults or placeholder values that users can optionally edit later in their project's `Cargo.toml` or plugin metadata.
+
+**Impact:** 
+- Creates distrust ("why does a scaffolding tool need my email?")
+- Slows down the getting-started experience
+- These fields are optional for plugin development anyway
+
+---
+
 ## Test Environment
 
 - macOS
