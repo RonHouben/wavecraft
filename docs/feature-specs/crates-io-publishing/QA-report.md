@@ -6,14 +6,14 @@
 
 ## Summary
 
-| Severity | Count |
-|----------|-------|
-| Critical | 0 |
-| High | 0 |
-| Medium | 0 |
-| Low | 1 |
+| Severity | Count | Resolved |
+|----------|-------|----------|
+| Critical | 0 | — |
+| High | 0 | — |
+| Medium | 0 | — |
+| Low | 1 | ✅ |
 
-**Overall**: ✅ PASS — No Critical/High/Medium issues found.
+**Overall**: ✅ PASS — All findings resolved.
 
 ## Automated Check Results
 
@@ -80,26 +80,32 @@
 
 ## Findings
 
-| ID | Severity | Category | Description | Location | Recommendation |
-|----|----------|----------|-------------|----------|----------------|
-| 1 | Low | Documentation | TODO comment about parameter mapping | [plugin.rs](engine/crates/wavecraft-macros/src/plugin.rs#L439) | Document as known limitation or add parameter sync |
+| ID | Severity | Category | Description | Location | Status |
+|----|----------|----------|-------------|----------|--------|
+| 1 | Low | Documentation | TODO comment about parameter mapping | [plugin.rs](engine/crates/wavecraft-macros/src/plugin.rs#L439) | ✅ RESOLVED |
 
-### Finding #1: Parameter Mapping TODO
+### Finding #1: Parameter Mapping TODO — RESOLVED
 
 **Location**: [plugin.rs](engine/crates/wavecraft-macros/src/plugin.rs#L439) line 439
 
+**Resolution**: Replaced TODO comment with proper documentation explaining the known limitation and providing a workaround (use `Plugin` trait directly for custom parameter behavior).
+
+**Original Code**:
 ```rust
-/// Build processor parameters from current nih-plug parameter values.
-fn build_processor_params(&self) -> <__ProcessorType as ::wavecraft_dsp::Processor>::Params {
-    // For now, use default params
-    // TODO: Map nih-plug parameter values to processor params
-    <<__ProcessorType as ::wavecraft_dsp::Processor>::Params as ::std::default::Default>::default()
-}
+// For now, use default params
+// TODO: Map nih-plug parameter values to processor params
 ```
 
-**Assessment**: This is pre-existing behavior from the declarative DSL feature (not introduced by the crate split). The comment documents a known limitation where DSP processor params don't receive UI updates. This doesn't affect the crate split functionality.
-
-**Recommendation**: Document as known limitation in SDK docs. Future enhancement could implement bidirectional parameter sync.
+**Updated Code**:
+```rust
+/// # Known Limitation
+///
+/// Currently returns default params. Full bidirectional parameter sync
+/// between nih-plug and processor params is not yet implemented.
+/// ...
+/// For custom parameter behavior, implement the `Plugin` trait directly
+/// instead of using the `wavecraft_plugin!` macro.
+```
 
 ## Architectural Concerns
 
