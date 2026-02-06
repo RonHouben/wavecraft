@@ -480,7 +480,7 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
         ///
         /// # Safety
         /// The returned pointer must be freed with `wavecraft_free_string`.
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub extern "C" fn wavecraft_get_params_json() -> *mut ::std::ffi::c_char {
             let specs = <<__ProcessorType as #krate::Processor>::Params as #krate::ProcessorParams>::param_specs();
 
@@ -515,7 +515,7 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
         ///
         /// # Safety
         /// The pointer must have been returned by `wavecraft_get_params_json`.
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub extern "C" fn wavecraft_free_string(ptr: *mut ::std::ffi::c_char) {
             if !ptr.is_null() {
                 unsafe {

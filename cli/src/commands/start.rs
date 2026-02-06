@@ -9,7 +9,7 @@
 use anyhow::{Context, Result};
 use console::style;
 use std::io::{self, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc;
 use std::sync::Arc;
@@ -218,7 +218,7 @@ fn run_dev_servers(
 ///
 /// Searches for `.dylib` (macOS), `.so` (Linux), or `.dll` (Windows)
 /// files in `engine/target/debug/`.
-fn find_plugin_dylib(engine_dir: &std::path::Path) -> Result<PathBuf> {
+fn find_plugin_dylib(engine_dir: &Path) -> Result<PathBuf> {
     let debug_dir = engine_dir.join("target").join("debug");
 
     if !debug_dir.exists() {
@@ -236,7 +236,7 @@ fn find_plugin_dylib(engine_dir: &std::path::Path) -> Result<PathBuf> {
     #[cfg(target_os = "windows")]
     let extension = "dll";
 
-    // Find .dylib files (skip deps/ subdirectory)
+    // Find library files (skip deps/ subdirectory)
     let entries = std::fs::read_dir(&debug_dir).context("Failed to read debug directory")?;
 
     let candidates: Vec<PathBuf> = entries
@@ -244,28 +244,68 @@ fn find_plugin_dylib(engine_dir: &std::path::Path) -> Result<PathBuf> {
         .map(|e| e.path())
         .filter(|p| {
             p.extension().is_some_and(|ext| ext == extension)
-                && p.file_name()
-                    .is_some_and(|n| n.to_string_lossy().starts_with("lib"))
+                && p.file_name().is_some_and(|n| {
+                    let name = n.to_string_lossy();
+                    if cfg!(target_os = "windows") {
+                        !name.starts_with("lib")
+                    } else {
+                        name.starts_with("lib")
+                    }
+                })
         })
         .collect();
 
-    match candidates.len() {
-        0 => anyhow::bail!(
+    if candidates.is_empty() {
+        anyhow::bail!(
             "No plugin library found in {}.\n\
              Make sure the engine crate has `crate-type = [\"cdylib\"]` in Cargo.toml.",
             debug_dir.display()
-        ),
-        1 => Ok(candidates.into_iter().next().unwrap()),
-        _ => {
-            // Multiple libraries - pick the one most recently modified
-            let mut sorted = candidates;
-            sorted.sort_by_key(|p| {
-                std::fs::metadata(p)
-                    .and_then(|m| m.modified())
-                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
-            });
-            Ok(sorted.pop().unwrap())
+        );
+    }
+
+    // Prefer the dylib that matches the engine crate name
+    if let Some(crate_name) = read_engine_crate_name(engine_dir) {
+        let expected_stem = crate_name.replace('-', "_");
+        if let Some(matched) = candidates.iter().find(|p| {
+            library_matches_name(p, &expected_stem, extension)
+        }) {
+            return Ok(matched.to_path_buf());
         }
+    }
+
+    if candidates.len() == 1 {
+        return Ok(candidates.into_iter().next().unwrap());
+    }
+
+    // Multiple libraries - pick the one most recently modified
+    let mut sorted = candidates;
+    sorted.sort_by_key(|p| {
+        std::fs::metadata(p)
+            .and_then(|m| m.modified())
+            .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+    });
+    Ok(sorted.pop().unwrap())
+}
+
+fn read_engine_crate_name(engine_dir: &Path) -> Option<String> {
+    let cargo_toml_path = engine_dir.join("Cargo.toml");
+    let contents = std::fs::read_to_string(cargo_toml_path).ok()?;
+
+    let re = regex::Regex::new("(?m)^name\\s*=\\s*\"([^\"]+)\"").ok()?;
+    re.captures(&contents)
+        .and_then(|c| c.get(1).map(|m| m.as_str().to_string()))
+}
+
+fn library_matches_name(path: &Path, expected_stem: &str, extension: &str) -> bool {
+    let file_name = match path.file_name().and_then(|n| n.to_str()) {
+        Some(name) => name,
+        None => return false,
+    };
+
+    if cfg!(target_os = "windows") {
+        file_name.eq_ignore_ascii_case(&format!("{}.{}", expected_stem, extension))
+    } else {
+        file_name.eq_ignore_ascii_case(&format!("lib{}.{}", expected_stem, extension))
     }
 }
 
