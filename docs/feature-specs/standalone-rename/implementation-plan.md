@@ -14,7 +14,8 @@ Rename the `standalone` crate to `wavecraft-dev-server` to clearly communicate i
 
 - Rename crate folder preserving git history
 - Update all Rust code references (imports, comments, CLI metadata)
-- Update xtask and CLI build commands
+- Update CLI dependency on the dev-server crate (path + import)
+- Update xtask build commands
 - Update active documentation (not archived specs)
 - Maintain build stability throughout
 
@@ -144,27 +145,46 @@ cd engine && cargo build -p wavecraft-dev-server
 
 ---
 
-#### 2.2 Update CLI start command
-**File:** `cli/src/commands/start.rs`  
-**Why:** Command must invoke new package name  
+#### 2.2 Update CLI dependency path
+**File:** `cli/Cargo.toml`  
+**Why:** CLI depends on the dev server crate for the embedded WebSocket server  
 **Dependencies:** Phase 1 complete  
 **Risk:** Low
 
-**Change on line 123:**
-```rust
-// Before:
-        "standalone",
+**Change at dependency list:**
+```toml
+# Before:
+[dependencies.standalone]
+path = "../engine/crates/standalone"
 
-// After:
-        "wavecraft-dev-server",
+# After:
+[dependencies.wavecraft-dev-server]
+path = "../engine/crates/wavecraft-dev-server"
 ```
 
 ---
 
-#### 2.3 Verify Phase 2 functionality
+#### 2.3 Update CLI import
+**File:** `cli/src/commands/start.rs`  
+**Why:** Import must use the renamed crate  
+**Dependencies:** Phase 1 complete  
+**Risk:** Low
+
+**Change near top of file:**
+```rust
+// Before:
+use standalone::ws_server::WsServer;
+
+// After:
+use wavecraft_dev_server::ws_server::WsServer;
+```
+
+---
+
+#### 2.4 Verify Phase 2 functionality
 **Action:** Terminal commands  
 **Why:** Ensure xtask dev works  
-**Dependencies:** Steps 2.1, 2.2  
+**Dependencies:** Steps 2.1–2.3  
 **Risk:** Low
 
 ```bash

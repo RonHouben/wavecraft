@@ -57,7 +57,7 @@
 
 **Status**: ✅ PASS
 
-**Actual Result**: `cargo test` completed successfully.
+**Actual Result**: `cargo test` completed successfully (23 tests passed).
 
 **Notes**:
 
@@ -88,7 +88,7 @@
 
 **Notes**:
 - Test project created with `--local-sdk` to avoid missing git tag
-- Found dylib: `/private/tmp/wavecraft-start-test8/test-plugin-local/target/debug/libtest_plugin_local.dylib`
+- Found dylib: `/private/tmp/wavecraft-start-test10/test-plugin-local/target/debug/libtest_plugin_local.dylib`
 - Loaded parameter: `test_plugin_local_gain_level`
 
 ---

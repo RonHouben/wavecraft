@@ -23,8 +23,9 @@
 | Step | Description | Status | Notes |
 |------|-------------|--------|-------|
 | 2.1 | Update `xtask/commands/dev.rs` | ⬜ | |
-| 2.2 | Update `cli/commands/start.rs` | ⬜ | |
-| 2.3 | Verify Phase 2 functionality | ⬜ | |
+| 2.2 | Update `cli/Cargo.toml` dependency | ⬜ | |
+| 2.3 | Update `cli/commands/start.rs` import | ⬜ | |
+| 2.4 | Verify Phase 2 functionality | ⬜ | |
 
 ### Phase 3: Source Comments & CLI Metadata
 
@@ -67,11 +68,11 @@
 | Phase | Steps | Completed | Progress |
 |-------|-------|-----------|----------|
 | Phase 1 | 6 | 0 | 0% |
-| Phase 2 | 3 | 0 | 0% |
+| Phase 2 | 4 | 0 | 0% |
 | Phase 3 | 6 | 0 | 0% |
 | Phase 4 | 9 | 0 | 0% |
 | Phase 5 | 4 | 0 | 0% |
-| **Total** | **28** | **0** | **0%** |
+| **Total** | **29** | **0** | **0%** |
 
 ---
 
