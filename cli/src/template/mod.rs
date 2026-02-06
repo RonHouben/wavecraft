@@ -8,10 +8,9 @@ use std::path::Path;
 
 use crate::template::variables::TemplateVariables;
 
-// Note: The template is copied into cli/plugin-template by build.rs during local development,
-// and by the CI workflow before publishing. This ensures `cargo publish` includes the template
-// in the tarball (cargo only packages files within the crate directory).
-static TEMPLATE_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/plugin-template");
+// The template lives in cli/sdk-templates/new-project/react/ and is packaged directly with the CLI crate.
+// Structure: sdk-templates/new-project/<variant>/ — currently only "react" variant exists.
+static TEMPLATE_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/sdk-templates/new-project/react");
 
 /// Extracts the embedded template to the target directory and applies variable replacement.
 pub fn extract_template(target_dir: &Path, vars: &TemplateVariables) -> Result<()> {
@@ -49,7 +48,14 @@ fn extract_dir(dir: &Dir, target_dir: &Path, vars: &TemplateVariables) -> Result
                     continue; // Skip these files
                 }
                 
-                let file_path = target_dir.join(file_name);
+                // Handle .template files: rename back to original (e.g., Cargo.toml.template -> Cargo.toml)
+                // These are renamed to avoid cargo treating the template as a crate during packaging.
+                let output_name = if file_name_str.ends_with(".template") {
+                    file_name_str.strip_suffix(".template").unwrap().to_string()
+                } else {
+                    file_name_str.to_string()
+                };
+                let file_path = target_dir.join(&output_name);
                 
                 // Only process text files
                 if let Some(content) = file.contents_utf8() {

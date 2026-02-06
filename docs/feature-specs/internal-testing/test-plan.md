@@ -181,11 +181,11 @@
 
 **Preconditions**:
 - Fresh terminal session
-- Template exists at `plugin-template/` within monorepo
+- Template exists at `cli/sdk-templates/new-project/react/` within monorepo
 - **M12 Scope Clarification**: Template tested from monorepo location, not external copy
 
 **Steps**:
-1. Navigate to template: `cd /Users/ronhouben/code/private/wavecraft/plugin-template`
+1. Navigate to template: `cd /Users/ronhouben/code/private/wavecraft/cli/sdk-templates/new-project/react`
 2. Clean previous builds: `rm -rf ui/node_modules ui/dist engine/target`
 3. Build UI:
    - `cd ui && npm install`
@@ -203,7 +203,7 @@
 **Status**: ✅ PASS (after Issues #1, #2, #4 resolved)
 
 **Actual Result**: 
-- ✅ Template location: `/Users/ronhouben/code/private/wavecraft/plugin-template`
+- ✅ Template location: `/Users/ronhouben/code/private/wavecraft/cli/sdk-templates/new-project/react`
 - ✅ `npm install` completed in 3.7 seconds (285 packages)
 - ✅ `npm run build` completed in 853ms:
   - Output: `index.html` (0.49 kB), CSS (11.93 kB / 3.13 kB gzipped), JS (162.48 kB / 51.24 kB gzipped)
@@ -776,8 +776,8 @@ src/lib/wavecraft-ipc/hooks.ts:224:9 - error TS2304: Cannot find name 'logger'.
 - Template now builds successfully (`npm run build` completes in 773ms)
 
 **Files Fixed:**
-1. `plugin-template/ui/src/lib/wavecraft-ipc/IpcBridge.ts` ✅
-2. `plugin-template/ui/src/lib/wavecraft-ipc/hooks.ts` ✅
+1. `cli/sdk-templates/new-project/react/ui/src/lib/wavecraft-ipc/IpcBridge.ts` ✅
+2. `cli/sdk-templates/new-project/react/ui/src/lib/wavecraft-ipc/hooks.ts` ✅
 
 ---
 
@@ -817,7 +817,7 @@ src/lib/wavecraft-ipc/logger/Logger.test.ts:1:65 - error TS2307: Cannot find nam
 - For **M12 (Internal Testing)**: Template is designed to work WITHIN the monorepo structure
   - Uses `path = "../../engine/crates/..."` dependencies
   - This is correct for internal development and testing
-  - Internal testers should test from `wavecraft/plugin-template/` location
+  - Internal testers should test from `wavecraft/cli/sdk-templates/new-project/react/` location
 
 - For **M13 (External Testing)**: Template will need to be adapted for external users
   - Option 1: Make repo public, use git dependencies
@@ -825,7 +825,7 @@ src/lib/wavecraft-ipc/logger/Logger.test.ts:1:65 - error TS2307: Cannot find nam
   - This is a **blocker for M13**, not M12
 
 **TC-006 Corrected Test Procedure:**
-1. Test template FROM WITHIN monorepo: `cd wavecraft/plugin-template/`
+1. Test template FROM WITHIN monorepo: `cd wavecraft/cli/sdk-templates/new-project/react/`
 2. Follow build steps from that location
 3. Verify bundles are created
 
@@ -849,12 +849,12 @@ src/lib/wavecraft-ipc/logger/Logger.test.ts:1:65 - error TS2307: Cannot find nam
 **Symptom:** `cargo xtask bundle` command not recognized
 
 **Resolution:** ✅ **FIXED** by Coder on February 4, 2026
-- Created `.cargo/config.toml` in template at `plugin-template/engine/.cargo/config.toml`
+- Created `.cargo/config.toml` in template at `cli/sdk-templates/new-project/react/engine/.cargo/config.toml`
 - Defines xtask alias: `xtask = "run --package xtask --release --"`
 - Now `cargo xtask bundle` works as documented
 
 **Files Added:**
-1. `plugin-template/engine/.cargo/config.toml` ✅
+1. `cli/sdk-templates/new-project/react/engine/.cargo/config.toml` ✅
 
 ---
 
