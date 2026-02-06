@@ -8,6 +8,10 @@ use std::path::PathBuf;
 
 use commands::NewCommand;
 
+/// SDK version derived from CLI package version at compile time.
+/// Used for git tag dependencies in generated projects.
+const SDK_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 #[derive(Parser)]
 #[command(
     name = "wavecraft",
@@ -26,42 +30,36 @@ enum Commands {
     New {
         /// Plugin name (lowercase, alphanumeric + underscore/hyphen)
         name: String,
-        
+
         /// Vendor name (company or developer name)
         #[arg(short, long)]
         vendor: Option<String>,
-        
+
         /// Contact email (optional)
         #[arg(short, long)]
         email: Option<String>,
-        
+
         /// Website URL (optional)
         #[arg(short, long)]
         url: Option<String>,
-        
+
         /// Output directory (defaults to plugin name)
         #[arg(short, long)]
         output: Option<PathBuf>,
-        
+
         /// Skip git initialization
         #[arg(long)]
         no_git: bool,
-        
-        /// Wavecraft SDK version to use (git tag)
-        #[arg(long, default_value = "v0.7.1")]
-        sdk_version: String,
-        
-        /// Use local SDK path for development (path to engine/crates directory).
-        /// When provided, generates path dependencies instead of git tag dependencies.
-        /// Mutually exclusive with a custom --sdk-version.
-        #[arg(long, conflicts_with = "sdk_version")]
-        local_dev: Option<PathBuf>,
+
+        /// Use local SDK from repository (for SDK development only)
+        #[arg(long, hide = true)]
+        local_sdk: bool,
     },
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    
+
     match cli.command {
         Commands::New {
             name,
@@ -70,8 +68,7 @@ fn main() -> Result<()> {
             url,
             output,
             no_git,
-            sdk_version,
-            local_dev,
+            local_sdk,
         } => {
             let cmd = NewCommand {
                 name,
@@ -80,12 +77,12 @@ fn main() -> Result<()> {
                 url,
                 output,
                 no_git,
-                sdk_version,
-                local_dev,
+                sdk_version: SDK_VERSION.to_string(),
+                local_sdk,
             };
             cmd.execute()?;
         }
     }
-    
+
     Ok(())
 }

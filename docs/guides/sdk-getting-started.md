@@ -20,13 +20,26 @@ This guide walks you through building your first VST3/CLAP audio plugin using th
 cargo install wavecraft
 ```
 
+> **Troubleshooting:** If you see `command not found: wavecraft`, your shell PATH may not include Cargo's bin directory. Either restart your terminal, or add it manually:
+>
+> **zsh:** `echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc`
+>
+> **bash:** `echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc`
+>
+> Or run directly: `~/.cargo/bin/wavecraft new my-plugin`
+
+To verify installation:
+```bash
+wavecraft --help
+```
+
 ### 2. Create a New Plugin Project
 
 ```bash
-# Interactive mode (prompts for vendor, email, URL)
+# Simple - uses placeholder values for vendor/email/url
 wavecraft new my-plugin
 
-# Non-interactive mode (provide all options)
+# With custom vendor information (optional)
 wavecraft new my-plugin \
   --vendor "My Company" \
   --email "info@example.com" \
@@ -40,6 +53,8 @@ The CLI creates a complete project with:
 - React UI with TypeScript and Tailwind CSS
 - xtask build system
 - Ready-to-build plugin template
+
+> **Tip:** You can customize vendor, email, and URL later by editing `engine/Cargo.toml`
 
 ### 3. Install Dependencies
 
@@ -75,36 +90,34 @@ cargo xtask install
 ### Creating New Projects
 
 ```bash
-# Interactive mode (recommended for first-time users)
+# Simple - uses placeholder values
 wavecraft new my-plugin
 
-# With all options
+# With custom vendor information
 wavecraft new my-plugin \
   --vendor "My Company" \
   --email "info@example.com" \
-  --url "https://example.com" \
-  --sdk-version "v0.7.0"
+  --url "https://example.com"
 
 # Custom output directory
 wavecraft new my-plugin --output ~/projects/my-plugin
 
 # Skip git initialization
 wavecraft new my-plugin --no-git
+
+# View all options
+wavecraft new --help
 ```
 
 ### CLI Options
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--vendor, -v` | Company or developer name | Interactive prompt |
-| `--email, -e` | Contact email | Interactive prompt (optional) |
-| `--url, -u` | Website URL | Interactive prompt (optional) |
+| `--vendor, -v` | Company or developer name | `"Your Company"` |
+| `--email, -e` | Contact email (optional) | — |
+| `--url, -u` | Website URL (optional) | — |
 | `--output, -o` | Output directory | `./<plugin-name>` |
-| `--sdk-version` | Wavecraft SDK version tag | `v0.7.0` |
 | `--no-git` | Skip git initialization | false |
-| `--local-dev` | Use local SDK path (for SDK development/CI) | — |
-
-> **Note:** `--local-dev` is for SDK developers and CI pipelines. It generates path dependencies (e.g., `path = "/path/to/engine/crates/wavecraft-core"`) instead of git tag dependencies. This allows validating against unreleased SDK code. Mutually exclusive with `--sdk-version`.
 
 ---
 
