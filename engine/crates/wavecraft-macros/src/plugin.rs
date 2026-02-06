@@ -430,9 +430,17 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
 
         impl __WavecraftPlugin {
             /// Build processor parameters from current nih-plug parameter values.
+            ///
+            /// # Known Limitation
+            ///
+            /// Currently returns default params. Full bidirectional parameter sync
+            /// between nih-plug and processor params is not yet implemented.
+            /// The DSL-generated nih-plug params work correctly for host automation
+            /// and UI display, but processor-level params use defaults.
+            ///
+            /// For custom parameter behavior, implement the `Plugin` trait directly
+            /// instead of using the `wavecraft_plugin!` macro.
             fn build_processor_params(&self) -> <__ProcessorType as ::wavecraft_dsp::Processor>::Params {
-                // For now, use default params
-                // TODO: Map nih-plug parameter values to processor params
                 <<__ProcessorType as ::wavecraft_dsp::Processor>::Params as ::std::default::Default>::default()
             }
         }
