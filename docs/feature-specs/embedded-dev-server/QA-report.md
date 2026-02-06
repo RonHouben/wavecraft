@@ -10,7 +10,7 @@
 |----------|-------|
 | Critical | 0 |
 | High | 0 |
-| Medium | 1 |
+| Medium | 0 |
 | Low | 0 |
 
 **Overall**: PASS (no Critical/High issues)
@@ -26,7 +26,7 @@
 
 | ID | Severity | Category | Description | Location | Recommendation |
 |----|----------|----------|-------------|----------|----------------|
-| 1 | Medium | Robustness | `read_engine_crate_name()` uses a regex to select the first `name = "..."` occurrence in `engine/Cargo.toml`. This can select the wrong name if `name` appears before `[package]` (e.g., custom `[lib]` name or other sections), leading to incorrect dylib selection. | `cli/src/commands/start.rs` (`read_engine_crate_name`, `find_plugin_dylib`) | Parse TOML and prefer `[lib].name` if present, else `[package].name`. Consider using `toml` or `cargo_metadata` for correctness. |
+| 1 | Medium | Robustness | ✅ Resolved — `read_engine_crate_name()` now parses Cargo.toml and prefers `[lib].name` over `[package].name`, avoiding ambiguous regex selection. | `cli/src/commands/start.rs` | No further action required. |
 
 ## Architectural Concerns
 

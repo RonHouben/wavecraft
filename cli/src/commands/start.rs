@@ -310,10 +310,23 @@ fn resolve_debug_dir(engine_dir: &Path) -> Result<PathBuf> {
 fn read_engine_crate_name(engine_dir: &Path) -> Option<String> {
     let cargo_toml_path = engine_dir.join("Cargo.toml");
     let contents = std::fs::read_to_string(cargo_toml_path).ok()?;
+    let manifest: toml::Value = toml::from_str(&contents).ok()?;
 
-    let re = regex::Regex::new("(?m)^name\\s*=\\s*\"([^\"]+)\"").ok()?;
-    re.captures(&contents)
-        .and_then(|c| c.get(1).map(|m| m.as_str().to_string()))
+    let lib_name = manifest
+        .get("lib")
+        .and_then(|lib| lib.get("name"))
+        .and_then(|name| name.as_str())
+        .map(|name| name.to_string());
+
+    if lib_name.is_some() {
+        return lib_name;
+    }
+
+    manifest
+        .get("package")
+        .and_then(|pkg| pkg.get("name"))
+        .and_then(|name| name.as_str())
+        .map(|name| name.to_string())
 }
 
 fn library_matches_name(path: &Path, expected_stem: &str, extension: &str) -> bool {

@@ -42,6 +42,9 @@ features = ["derive"]
 [dependencies.serde_json]
 version = "1.0"
 
+[dependencies.toml]
+version = "0.8"
+
 [dependencies.tokio]
 version = "1"
 features = ["full"]

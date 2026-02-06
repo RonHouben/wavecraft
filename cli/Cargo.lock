@@ -3178,6 +3178,7 @@ dependencies = [
  "syn 2.0.114",
  "tempfile",
  "tokio",
+ "toml",
  "walkdir",
  "wavecraft-bridge",
  "wavecraft-protocol",
