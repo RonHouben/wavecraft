@@ -945,12 +945,12 @@ See [macOS Signing Guide](../guides/macos-signing.md) for complete setup instruc
 
 Wavecraft uses GitHub Actions for continuous integration and release automation.
 
-**CI Build** (`.github/workflows/ci.yml`):
+**CI** (`.github/workflows/ci.yml`):
 - Triggers on PRs to `main` (not on merge/push — code already validated via PR)
 - Manual trigger available via `workflow_dispatch`
-- Builds UI and plugin with React UI
-- Ad-hoc signs bundles for artifact verification
-- Uploads signed VST3/CLAP artifacts (30-day retention)
+- Validates code quality: linting (ESLint, Prettier, cargo fmt, clippy), documentation links
+- Runs automated tests: UI (Vitest) and Engine (cargo test)
+- Does NOT build plugin bundles — that's the Release workflow's responsibility
 
 **Template Validation** (`.github/workflows/template-validation.yml`):
 - Triggers on PRs to `main` (not on merge/push)
