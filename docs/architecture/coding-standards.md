@@ -531,7 +531,8 @@ No `.css` files should exist in `src/components/`.
 ### Module Organization
 
 Follow the existing crate structure:
-- `wavecraft-core` — Main framework: nih-plug integration, WebView editor, declarative macros
+- `wavecraft-nih_plug` — nih-plug integration, WebView editor, plugin exports (`publish = false`, git-only)
+- `wavecraft-core` — Core SDK types and declarative macros (publishable, no nih_plug dependency)
 - `wavecraft-macros` — Procedural macros: `ProcessorParams` derive, `wavecraft_plugin!`
 - `wavecraft-protocol` — Shared contracts and types
 - `wavecraft-dsp` — Pure DSP code, `Processor` trait, built-in processors
