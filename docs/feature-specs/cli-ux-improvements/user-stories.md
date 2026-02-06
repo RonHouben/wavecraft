@@ -64,7 +64,7 @@ Internal testing of the Wavecraft CLI revealed several friction points in the de
 
 ---
 
-## User Story 3: Clean CLI Interface (Hide Internal Flags)
+## User Story 3: Clean CLI Interface (Remove/Hide Internal Flags)
 
 **As a** plugin developer  
 **I want** the CLI to show only relevant options  
@@ -72,13 +72,20 @@ Internal testing of the Wavecraft CLI revealed several friction points in the de
 
 ### Acceptance Criteria
 
-- [ ] `--sdk-version` is hidden from `wavecraft new --help` output
-- [ ] `--local-dev` is hidden from `wavecraft new --help` output
-- [ ] Both flags still work when explicitly provided (for SDK developers/CI)
-- [ ] CLI automatically uses the SDK version matching the installed CLI version
-- [ ] Consider: `--local-dev` could alternatively be triggered by env var `WAVECRAFT_LOCAL_DEV=1`
-- [ ] Documentation removes references to `--sdk-version` and `--local-dev` from user-facing sections
-- [ ] Internal/advanced flags documented separately (e.g., in a "For SDK Developers" section or contributor docs)
+- [ ] `--sdk-version` flag is **removed entirely**
+- [ ] CLI automatically determines SDK version from its own version (`env!("CARGO_PKG_VERSION")`)
+- [ ] Generated projects use git tag matching CLI version (e.g., CLI v0.8.0 → `tag = "v0.8.0"`)
+- [ ] `--local-dev` is **renamed to `--sdk-path`** for clarity
+- [ ] `--sdk-path` is hidden from `wavecraft new --help` output
+- [ ] `--sdk-path` still works when explicitly provided (for SDK developers/CI)
+- [ ] Documentation removes references to `--sdk-version` from user-facing sections
+- [ ] `--sdk-path` documented in contributor/SDK developer docs only
+
+### Technical Notes
+
+- `--sdk-version` removal: The CLI version *is* the SDK version. No user decision needed.
+- `--sdk-path` naming: Clearer than `--local-dev` — it means "use SDK from this filesystem path"
+- Implementation: Use `const SDK_VERSION: &str = env!("CARGO_PKG_VERSION");` at compile time
 
 ### Notes
 
