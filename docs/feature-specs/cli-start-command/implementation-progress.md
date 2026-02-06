@@ -37,7 +37,7 @@
 ### Phase 5: Version Bump & Testing
 - [x] 5.1 Bump CLI version to 0.8.0
 - [x] 5.2 Run unit tests (`cargo test`) — 16 tests pass
-- [ ] 5.3 Manual integration test (scaffold → start → shutdown)
+- [x] 5.3 Manual integration test (scaffold → start → shutdown) — All 7 test cases pass
 - [x] 5.4 Test error cases (running outside a project)
 
 ---
@@ -57,6 +57,14 @@
 - All 16 tests pass
 - Clippy passes
 - Manual test: error message works correctly when not in a project
+- Manual testing completed: All 7 test cases pass (2026-02-06)
+  - TC-001: Error outside project ✓
+  - TC-002: Help output ✓
+  - TC-003: Dependency detection ✓
+  - TC-004: Server startup ✓
+  - TC-005: Custom ports ✓
+  - TC-006: Create next steps ✓
+  - TC-007: UI via Playwright ✓
 
 ---
 
@@ -73,3 +81,4 @@ _None_
 - Unix process group handling uses `nix` crate (same as xtask)
 - Removed unused `DEFAULT_WS_PORT` and `DEFAULT_UI_PORT` constants to fix clippy warnings
 - Added `#[allow(dead_code)]` to `ProjectMarkers` fields retained for future use
+- Command renamed from `wavecraft new` to `wavecraft create` (2026-02-06)
