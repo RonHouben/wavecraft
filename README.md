@@ -87,7 +87,7 @@ wavecraft/
 │       ├── wavecraft-bridge/     # UI ↔ Audio IPC (ParameterHost trait)
 │       ├── wavecraft-protocol/   # Shared contracts (param IDs, JSON-RPC types)
 │       ├── wavecraft-metering/   # SPSC ring buffer for real-time meters
-│       └── standalone/           # Standalone dev server (WebSocket, WebView)
+│       └── wavecraft-dev-server/ # Development server (WebSocket, WebView)
 │
 ├── ui/                           # React SPA (Vite + TypeScript)
 │   ├── packages/

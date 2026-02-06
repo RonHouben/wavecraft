@@ -18,7 +18,7 @@ use std::time::Duration;
 
 use crate::dev_server::{DevServerHost, PluginLoader};
 use crate::project::{has_node_modules, ProjectMarkers};
-use standalone::ws_server::WsServer;
+use wavecraft_dev_server::ws_server::WsServer;
 use wavecraft_bridge::IpcHandler;
 
 /// Options for the `start` command.

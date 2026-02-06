@@ -1,8 +1,8 @@
-# Wavecraft Desktop POC
+# Wavecraft Dev Server
 
 **Status:** ✅ Complete
 
-A standalone desktop application demonstrating WebView ↔ Rust IPC communication for the Wavecraft plugin framework.
+A development server and desktop app demonstrating WebView ↔ Rust IPC communication for the Wavecraft plugin framework.
 
 ## Features
 
@@ -55,30 +55,30 @@ npm install
 npm run build
 ```
 
-### Build Desktop App
+### Build Dev Server App
 
 ```bash
 cd engine
-cargo build -p desktop --release
+cargo build -p wavecraft-dev-server --release
 ```
 
 ### Run
 
 ```bash
-cargo run -p desktop --release
+cargo run -p wavecraft-dev-server --release
 ```
 
 Or run the binary directly:
 
 ```bash
-./target/release/desktop
+./target/release/wavecraft-dev-server
 ```
 
 ### CLI Options
 
 ```bash
-desktop --help              # Show help
-desktop --list-assets       # List embedded UI assets
+wavecraft-dev-server --help              # Show help
+wavecraft-dev-server --list-assets       # List embedded UI assets
 ```
 
 ## Testing
@@ -86,21 +86,21 @@ desktop --list-assets       # List embedded UI assets
 ### Unit Tests
 
 ```bash
-cargo test -p protocol      # Protocol types
-cargo test -p bridge        # IPC handler
-cargo test -p desktop       # App state & assets
+cargo test -p protocol                # Protocol types
+cargo test -p bridge                  # IPC handler
+cargo test -p wavecraft-dev-server    # App state & assets
 ```
 
 ### Integration Tests
 
 ```bash
-cargo test -p desktop --test integration_test
+cargo test -p wavecraft-dev-server --test integration_test
 ```
 
 ### Latency Benchmarks
 
 ```bash
-cargo test -p desktop --test latency_bench -- --nocapture
+cargo test -p wavecraft-dev-server --test latency_bench -- --nocapture
 ```
 
 **Results (on Apple Silicon):**
@@ -117,9 +117,9 @@ cargo test -p desktop --test latency_bench -- --nocapture
 wavecraft/
 ├── engine/
 │   └── crates/
-│       ├── protocol/       # Shared IPC types
-│       ├── bridge/         # IPC handler
-│       └── desktop/        # WebView app
+│       ├── protocol/            # Shared IPC types
+│       ├── bridge/              # IPC handler
+│       └── wavecraft-dev-server/# WebView app
 │           ├── src/
 │           │   ├── app.rs          # AppState
 │           │   ├── assets.rs       # Asset embedding

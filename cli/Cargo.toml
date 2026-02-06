@@ -48,6 +48,6 @@ path = "../engine/crates/wavecraft-bridge"
 [dependencies.wavecraft-metering]
 path = "../engine/crates/wavecraft-metering"
 
-[dependencies.standalone]
-path = "../engine/crates/standalone"
+[dependencies.wavecraft-dev-server]
+path = "../engine/crates/wavecraft-dev-server"
 

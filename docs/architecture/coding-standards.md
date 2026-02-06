@@ -174,7 +174,7 @@ Values that need to be injected at build time (e.g., version from Cargo.toml) sh
 ```typescript
 export default defineConfig({
   define: {
-    // Compile-time replacement, falls back to 'dev' for standalone npm run dev
+    // Compile-time replacement, falls back to 'dev' for local npm run dev
     '__APP_VERSION__': JSON.stringify(process.env.VITE_APP_VERSION || 'dev'),
   },
 });
@@ -538,7 +538,7 @@ Follow the existing crate structure:
 - `wavecraft-dsp` — Pure DSP code, `Processor` trait, built-in processors
 - `wavecraft-bridge` — IPC handling
 - `wavecraft-metering` — SPSC ring buffer for audio → UI metering
-- `standalone` — Standalone desktop app for browser-based development
+- `wavecraft-dev-server` — Development server for browser-based UI testing
 
 ### Declarative Plugin DSL
 

@@ -720,7 +720,7 @@ Wavecraft supports running the UI in a standard browser for rapid development it
              │                                      │
              ▼                                      ▼
   ┌─────────────────────┐                ┌─────────────────────┐
-  │ Standalone Dev      │                │ Plugin Binary       │
+  │ Dev Server          │                │ Plugin Binary       │
   │ Server (Rust)       │                │ (Embedded WebView)  │
   │ IpcHandler          │                │ IpcHandler          │
   └─────────────────────┘                └─────────────────────┘
@@ -794,7 +794,7 @@ wavecraft start
 
 # Or manually:
 # Terminal 1: Start WebSocket server
-cargo run -p standalone -- --dev-server --port 9000
+cargo run -p wavecraft-dev-server -- --dev-server --port 9000
 
 # Terminal 2: Start Vite dev server
 cd ui && npm run dev
