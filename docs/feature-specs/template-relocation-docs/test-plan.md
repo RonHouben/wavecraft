@@ -10,9 +10,9 @@
 
 | Status | Count |
 |--------|-------|
-| ✅ PASS | 9 |
+| ✅ PASS | 10 |
 | ❌ FAIL | 0 |
-| ⏸️ BLOCKED | 1 |
+| ⏸️ BLOCKED | 0 |
 | ⬜ NOT RUN | 0 |
 
 ## Prerequisites
@@ -106,11 +106,15 @@
 
 **Expected Result**: VST3 and CLAP bundles generated
 
-**Status**: ⏸️ BLOCKED
+**Status**: ✅ PASS
 
-**Actual Result**: UI dependencies installed successfully. UI build completed (dist/ created). Plugin bundle **FAILED** due to pre-existing template bug: `xtask/src/main.rs` hardcodes `my-plugin` instead of using template variable `{{plugin_name}}`.
+**Actual Result**: UI dependencies installed successfully. UI build completed. Plugin bundled successfully:
+- `target/bundled/test-plugin.vst3`
+- `target/bundled/test-plugin.clap`
 
-**Notes**: This is a **pre-existing bug** in the template, not caused by the reorganization. The template reorganization itself is working correctly. See Issue #1 below. 
+Template variables `{{plugin_name}}` and `{{plugin_name_snake}}` correctly substituted in xtask/src/main.rs.
+
+**Notes**: Issues #1 and #2 have been fixed. Template extraction and build now work correctly. 
 
 ---
 
@@ -251,52 +255,49 @@
 
 ## Issues Found
 
-### Issue #1: Template xtask hardcodes plugin name (PRE-EXISTING)
+### Issue #1: Template xtask hardcodes plugin name — ✅ FIXED
 
 - **Severity**: Medium
 - **Test Case**: TC-004
-- **Description**: The template file `cli/sdk-templates/new-project/react/engine/xtask/src/main.rs` has hardcoded `my-plugin` strings instead of using template variables like `{{plugin_name}}`.
-- **Expected**: xtask should use `{{plugin_name}}` variables that get substituted during `wavecraft new`
-- **Actual**: Lines 6, 36, 39 contain hardcoded `my-plugin`
-- **Steps to Reproduce**:
-  1. `wavecraft new test-plugin --vendor "Test" --no-git`
-  2. `cd test-plugin/ui && npm install && npm run build`
-  3. `cd ../engine && cargo xtask bundle --release`
-  4. Error: `package ID specification 'my-plugin' did not match any packages`
-- **Evidence**: `grep -n "my-plugin" engine/xtask/src/main.rs` shows 3 hardcoded references
-- **Impact**: Scaffolded projects cannot bundle without manually editing xtask/main.rs
-- **Root Cause**: Template was never fully updated with variable substitution for xtask
-- **Note**: This is a **PRE-EXISTING BUG** — not introduced by the template reorganization feature. The reorganization is working correctly; this bug existed before the move.
+- **Status**: ✅ **FIXED**
+- **Fix Commit**: Updated template to use `{{plugin_name}}` and `{{plugin_name_snake}}` variables
+- **Description**: The template file `cli/sdk-templates/new-project/react/engine/xtask/src/main.rs` had hardcoded `my-plugin` strings.
+- **Resolution**: Lines 6, 36, 39 now use `{{plugin_name}}`; line 46 uses `{{plugin_name_snake}}`
 
-### Issue #2: SDK version default is outdated (PRE-EXISTING)
+### Issue #2: SDK version default is outdated — ✅ FIXED
 
 - **Severity**: Low
 - **Test Case**: TC-004 (discovered during)
-- **Description**: The CLI default `--sdk-version` is `v0.7.0` but the repo is at `v0.7.1`.
-- **File**: `cli/src/main.rs` line 52
-- **Expected**: Default should match latest published tag
-- **Actual**: `#[arg(long, default_value = "v0.7.0")]`
-- **Impact**: Default scaffold fails with "tag v0.7.0 not found" (workaround: use `--local-dev` or specify `--sdk-version v0.7.1`)
-- **Note**: This is a **PRE-EXISTING BUG** — not introduced by the template reorganization feature.
+- **Status**: ✅ **FIXED**
+- **Fix Commit**: Updated default from `v0.7.0` to `v0.7.1`
+- **Description**: The CLI default `--sdk-version` was `v0.7.0` but the repo is at `v0.7.1`.
+- **File**: `cli/src/main.rs` line 51
+- **Resolution**: Default value now `v0.7.1`
 
 ## Testing Notes
 
-The **template reorganization feature** (moving `cli/plugin-template/` to `cli/sdk-templates/new-project/react/`) is **working correctly**:
+The **template reorganization feature** (moving `cli/plugin-template/` to `cli/sdk-templates/new-project/react/`) is **fully working**:
 
 1. Directory structure created properly
 2. CLI compiles with new `include_dir!` path
 3. Template extraction via `wavecraft new` works
-4. All documentation updated to reference new location
-5. CI workflow path filters updated
-6. All automated checks (lint + tests) pass
+4. Generated projects build and bundle successfully (VST3 + CLAP)
+5. All documentation updated to reference new location
+6. CI workflow path filters updated
+7. All automated checks (lint + tests) pass
 
-Two **pre-existing bugs** were discovered during testing (Issue #1 and #2). These bugs existed before the reorganization and are **not caused by this feature**. They should be tracked separately for future fixes.
+**Issues Fixed During Testing:**
+- Issue #1: Template xtask now uses `{{plugin_name}}` and `{{plugin_name_snake}}` variables
+- Issue #2: CLI default SDK version updated to `v0.7.1`
 
 ## Sign-off
 
-- [x] All critical tests pass (9/9 within scope of this feature)
+- [x] All critical tests pass (10/10)
 - [x] All high-priority tests pass
-- [x] Issues documented for coder agent (2 pre-existing bugs documented)
-- [x] Ready for release: **YES** (for the template reorganization feature)
+- [x] Issues fixed (2 issues resolved)
+- [x] Ready for release: **YES**
 
-**Recommendation**: The template reorganization feature is complete and working. The pre-existing bugs (Issue #1, #2) should be filed as separate backlog items and do not block this PR.
+**Test verification performed:**
+- Created test project with `wavecraft new test-plugin`
+- UI build: ✅ Success
+- Plugin bundle: ✅ Success (VST3 + CLAP created)
