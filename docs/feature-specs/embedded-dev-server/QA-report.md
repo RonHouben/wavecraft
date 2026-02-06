@@ -26,7 +26,7 @@
 
 | ID | Severity | Category | Description | Location | Recommendation |
 |----|----------|----------|-------------|----------|----------------|
-| 1 | Medium | Robustness | ✅ Resolved — `read_engine_crate_name()` now parses Cargo.toml and prefers `[lib].name` over `[package].name`, avoiding ambiguous regex selection. | `cli/src/commands/start.rs` | No further action required. |
+| — | — | — | No findings in this review. | — | — |
 
 ## Architectural Concerns
 

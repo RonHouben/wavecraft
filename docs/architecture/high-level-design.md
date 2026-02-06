@@ -786,8 +786,11 @@ The IPC system uses a factory pattern to automatically select the appropriate tr
 ### Development Workflow
 
 ```bash
-# Start both servers (recommended)
+# Start both servers (recommended for SDK development)
 cargo xtask dev
+
+# Start embedded dev server from a plugin project (recommended for plugin authors)
+wavecraft start
 
 # Or manually:
 # Terminal 1: Start WebSocket server
@@ -846,6 +849,9 @@ cargo xtask check --fix      # Auto-fix linting issues
 # Browser-based UI development (recommended for UI work)
 cargo xtask dev              # Starts WebSocket server + Vite
 cargo xtask dev --verbose    # With detailed IPC logging
+
+# Plugin project development (embedded server + FFI parameter discovery)
+wavecraft start
 
 # Fast iteration (debug build, no signing)
 cargo xtask bundle --debug

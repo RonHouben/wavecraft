@@ -15,6 +15,7 @@ Rename the `standalone` crate to `wavecraft-dev-server` to clearly communicate i
 - Rename crate folder preserving git history
 - Update all Rust code references (imports, comments, CLI metadata)
 - Update CLI dependency on the dev-server crate (path + import)
+- Update CLI lockfile to reflect crate rename
 - Update xtask build commands
 - Update active documentation (not archived specs)
 - Maintain build stability throughout
@@ -181,10 +182,37 @@ use wavecraft_dev_server::ws_server::WsServer;
 
 ---
 
-#### 2.4 Verify Phase 2 functionality
+#### 2.4 Update CLI dev_server module comments
+**File:** `cli/src/dev_server/mod.rs`  
+**Why:** Comments mention the standalone crate by name  
+**Dependencies:** Phase 1 complete  
+**Risk:** Low
+
+**Change comment references:**
+```rust
+// Example before:
+//! │  WsServer<H>    │  from standalone crate
+
+// After:
+//! │  WsServer<H>    │  from wavecraft-dev-server crate
+```
+
+---
+
+#### 2.5 Update CLI Cargo.lock
+**File:** `cli/Cargo.lock`  
+**Why:** Lockfile will still reference the old crate name  
+**Dependencies:** Steps 2.2–2.3  
+**Risk:** Low
+
+**Action:** Run `cargo update -p wavecraft-dev-server` or regenerate lockfile via `cargo build` in `cli/` after updating the dependency.
+
+---
+
+#### 2.6 Verify Phase 2 functionality
 **Action:** Terminal commands  
 **Why:** Ensure xtask dev works  
-**Dependencies:** Steps 2.1–2.3  
+**Dependencies:** Steps 2.1–2.5  
 **Risk:** Low
 
 ```bash

@@ -84,12 +84,13 @@
 
 **Status**: ✅ PASS
 
-**Actual Result**: Start completed successfully using local SDK overrides. Plugin built, parameters loaded via FFI, WebSocket server started, and Vite dev server started.
+**Actual Result**: Start completed successfully using local SDK overrides. Plugin built, parameters loaded via FFI, WebSocket server started, and Vite dev server started (ports 9020/5176).
 
 **Notes**:
-- Test project created with `--local-sdk` to avoid missing git tag
-- Found dylib: `/private/tmp/wavecraft-start-test10/test-plugin-local/target/debug/libtest_plugin_local.dylib`
-- Loaded parameter: `test_plugin_local_gain_level`
+- Test project created with `--local-sdk` to avoid missing git tag.
+- Initial attempt on port 9010 failed with `Address already in use`; rerun on 9020/5176 succeeded.
+- Found dylib: `/private/tmp/wavecraft-start-test9/test-plugin-local/target/debug/libtest_plugin_local.dylib`.
+- Loaded parameter: `test_plugin_local_gain_level`.
 
 ---
 
