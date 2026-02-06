@@ -139,7 +139,7 @@ fn generate_test_plugin(cli_binary: &Path, parent_dir: &Path, verbose: bool) -> 
     // This avoids issues when the actual version tag doesn't exist yet
     let status = Command::new(cli_binary)
         .args([
-            "new",
+            "create",
             "test-plugin",
             "--vendor",
             "Test Vendor",
@@ -153,7 +153,7 @@ fn generate_test_plugin(cli_binary: &Path, parent_dir: &Path, verbose: bool) -> 
         ])
         .current_dir(parent_dir)
         .status()
-        .context("Failed to run wavecraft new")?;
+        .context("Failed to run wavecraft create")?;
 
     if !status.success() {
         bail!("Failed to generate test plugin");

@@ -72,7 +72,7 @@ Wavecraft's Rust SDK is published to crates.io:
 cargo install wavecraft
 
 # Create a new plugin
-wavecraft new my-plugin
+wavecraft create my-plugin
 ```
 
 ## Project Structure

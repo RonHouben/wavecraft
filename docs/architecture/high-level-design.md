@@ -42,12 +42,12 @@ wavecraft/
 │   │   ├── validation.rs          # Crate name validation (syn-based)
 │   │   ├── commands/              # Command implementations
 │   │   │   ├── mod.rs
-│   │   │   └── new.rs             # `wavecraft new` command
+│   │   │   └── create.rs          # `wavecraft create` command
 │   │   └── template/              # Template extraction & variables
 │   │       ├── mod.rs
 │   │       └── variables.rs
 │   └── sdk-templates/             # Embedded project templates
-│       └── new-project/           # `wavecraft new` templates
+│       └── new-project/           # `wavecraft create` templates
 │           └── react/             # React UI variant (default)
 │               ├── Cargo.toml.template
 │               ├── engine/        # Rust audio engine template
@@ -94,7 +94,7 @@ wavecraft/
 │                                                                         │
 │  ┌─────────────────┐     scaffolds      ┌───────────────────────────┐   │
 │  │   CLI           │ ──────────────────►│ New Plugin Project        │   │
-│  │ (wavecraft new) │                    │ (uses git tag deps)       │   │
+│  │(wavecraft create)│                    │ (uses git tag deps)       │   │
 │  │                 │                    │                           │   │
 │  │  • validation   │                    │ [dependencies]            │   │
 │  │  • templates    │                    │ wavecraft-core = {        │   │
@@ -140,7 +140,7 @@ wavecraft/
 | Rust SDK dependencies | Git tag (`tag = "wavecraft-cli-v0.7.1"`) | Published crates (crates.io) |
 | UI SDK dependencies | **npm packages** (`@wavecraft/core`, `@wavecraft/components`) | Same (npm) |
 | Development | Rapid iteration | Stable API |
-| User workflow | `cargo install wavecraft && wavecraft new` | Same, with crates.io deps |
+| User workflow | `cargo install wavecraft && wavecraft create` | Same, with crates.io deps |
 | CLI behavior | No prompts, uses placeholder defaults | Same |
 
 ⸻

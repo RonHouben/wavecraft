@@ -35,7 +35,7 @@ Internal testing should simulate these perspectives to catch documentation gaps 
 **So that** I can quickly validate whether Wavecraft is right for my project
 
 ### Acceptance Criteria
-- [ ] Scaffold new project using `wavecraft new test-plugin --vendor "Test Company"` (outside main repo)
+- [ ] Scaffold new project using `wavecraft create test-plugin --vendor "Test Company"` (outside main repo)
 - [ ] Follow the README.md instructions exactly — no undocumented steps required
 - [ ] `cargo xtask bundle --release` completes without errors
 - [ ] Plugin files appear in `target/bundled/` (VST3 + CLAP)

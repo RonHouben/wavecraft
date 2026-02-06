@@ -42,11 +42,11 @@ Findings from internal testing of the Wavecraft CLI user experience.
 **Severity:** High  
 **Status:** 🔴 Open
 
-**Issue:** The `wavecraft new` command prompts for vendor name, email, and website URL. This feels like the CLI is gathering personal data, which creates distrust.
+**Issue:** The `wavecraft create` command prompts for vendor name, email, and website URL. This feels like the CLI is gathering personal data, which creates distrust.
 
 **Current behavior:**
 ```bash
-wavecraft new my-plugin
+wavecraft create my-plugin
 # Prompts for:
 # - Vendor name
 # - Email address
@@ -71,7 +71,7 @@ wavecraft new my-plugin
 
 **Current behavior:**
 ```bash
-wavecraft new my-plugin --sdk-version "v0.7.0"
+wavecraft create my-plugin --sdk-version "v0.7.0"
 ```
 
 **Recommendation:** 
@@ -92,7 +92,7 @@ wavecraft new my-plugin --sdk-version "v0.7.0"
 
 **Current behavior:**
 ```bash
-wavecraft new my-plugin --local-dev
+wavecraft create my-plugin --local-dev
 ```
 
 **Recommendation:** 
@@ -129,7 +129,7 @@ zsh: command not found: wavecraft
    ```
 3. **Workaround for docs:** Suggest users can run directly without PATH:
    ```bash
-   ~/.cargo/bin/wavecraft new my-plugin
+   ~/.cargo/bin/wavecraft create my-plugin
    ```
 
 **Impact:** Blocks new users immediately after installation - critical friction point in onboarding.

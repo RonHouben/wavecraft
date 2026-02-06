@@ -59,7 +59,7 @@ jobs:
           # Use --local-sdk to generate path dependencies pointing to local SDK crates.
           # This allows CI to validate against unreleased code (before git tags exist).
           # Must run from repo root so --local-sdk can find engine/crates
-          wavecraft new test-plugin \
+          wavecraft create test-plugin \
             --no-git \
             --local-sdk \
             --output /tmp/test-plugin

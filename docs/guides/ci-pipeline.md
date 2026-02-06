@@ -255,7 +255,7 @@ Generated plugins reference SDK crates via git tags (e.g., `tag = "v0.7.0"`). Ho
 │        │                                                                    │
 │        ▼                                                                    │
 │  2. Generate test plugin with --local-dev                                   │
-│     wavecraft new test-plugin --local-dev ${{ github.workspace }}/engine/crates
+│     wavecraft create test-plugin --local-dev ${{ github.workspace }}/engine/crates
 │        │                                                                    │
 │        ▼                                                                    │
 │  3. Verify structure (Cargo.toml, lib.rs, package.json, App.tsx)            │

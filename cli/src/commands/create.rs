@@ -7,9 +7,9 @@ use std::process::Command;
 use crate::template::{extract_template, variables::TemplateVariables};
 use crate::validation::validate_crate_name;
 
-/// Options for the `new` command.
+/// Options for the `create` command.
 #[derive(Debug)]
-pub struct NewCommand {
+pub struct CreateCommand {
     pub name: String,
     pub vendor: Option<String>,
     pub email: Option<String>,
@@ -20,7 +20,7 @@ pub struct NewCommand {
     pub local_sdk: bool,
 }
 
-impl NewCommand {
+impl CreateCommand {
     pub fn execute(&self) -> Result<()> {
         // Validate plugin name
         validate_crate_name(&self.name)?;
@@ -92,7 +92,7 @@ impl NewCommand {
         println!();
         println!("Next steps:");
         println!("  cd {}", self.name);
-        println!("  cargo xtask dev    # Start development servers");
+        println!("  wavecraft start    # Start development servers");
         println!();
         println!("Documentation: https://github.com/RonHouben/wavecraft/tree/main/docs");
 

@@ -26,7 +26,7 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 
 | Item | Notes |
 |------|-------|
-| CLI scaffolding tool | `cargo wavecraft new my-plugin` — Scaffolds new plugin project from template. Required before crates.io publication for good developer UX. |
+| CLI scaffolding tool | `cargo wavecraft create my-plugin` — Scaffolds new plugin project from template. Required before crates.io publication for good developer UX. |
 | End-to-end SDK testing in Ableton | Create plugin from template as end-user developer, test full workflow in Ableton Live. Validates SDK is production-ready. |
 | Publish to crates.io | Publish `wavecraft-*` crates. Requires CLI and Ableton validation first. |
 | Documentation site | Consider `wavecraft.dev` domain (available at €10.89/yr). Host API docs, guides, examples. |

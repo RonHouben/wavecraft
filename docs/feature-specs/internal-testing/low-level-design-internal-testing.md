@@ -106,7 +106,7 @@ mkdir -p /tmp/wavecraft-internal-test
 cd /tmp/wavecraft-internal-test
 
 # Scaffold project using CLI (simulating external developer)
-wavecraft new test-plugin --vendor "Test Company"
+wavecraft create test-plugin --vendor "Test Company"
 cd test-plugin
 ```
 
@@ -114,7 +114,7 @@ cd test-plugin
 
 | Step | Command | Success Criteria |
 |------|---------|------------------|
-| 1. Scaffold | `wavecraft new test-plugin` | Directory created with all files |
+| 1. Scaffold | `wavecraft create test-plugin` | Directory created with all files |
 | 2. Install deps | `cd ui && npm install` | No npm errors, node_modules created |
 | 3. Build UI | `npm run build` | dist/ folder created with index.html |
 | 4. Bundle plugin | `cd engine && cargo xtask bundle` | VST3 + CLAP in target/bundled/ |
@@ -453,7 +453,7 @@ Specific checks for template isolation:
 # 1. Scaffold project to isolated location
 cd /tmp
 rm -rf wavecraft-internal-test
-wavecraft new test-plugin --vendor "Test Company"
+wavecraft create test-plugin --vendor "Test Company"
 
 # 2. Verify no path dependencies in Cargo.toml
 grep "path = " test-plugin/engine/Cargo.toml

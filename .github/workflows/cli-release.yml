@@ -64,6 +64,6 @@ jobs:
             
             Create a new plugin:
             ```bash
-            wavecraft new my-plugin
+            wavecraft create my-plugin
             cd my-plugin
             ```
