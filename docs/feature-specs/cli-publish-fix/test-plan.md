@@ -10,14 +10,14 @@
 
 | Status | Count |
 |--------|-------|
-| ✅ PASS | 0 |
-| ❌ FAIL | 1 |
+| ✅ PASS | 2 |
+| ❌ FAIL | 0 |
 | ⏸️ BLOCKED | 0 |
 | ⬜ NOT RUN | 0 |
 
 ## Problem Description
 
-The CLI fails to publish to crates.io during GitHub Actions with the error:
+The CLI failed to publish to crates.io during GitHub Actions with the error:
 
 ```
 error: proc macro panicked
@@ -31,87 +31,80 @@ error: proc macro panicked
 
 ### Root Cause
 
-1. The CLI uses `include_dir!("$CARGO_MANIFEST_DIR/../plugin-template")` to embed the template
-2. The `plugin-template/` directory is **outside** the `cli/` crate directory
-3. `cargo publish` only packages files **within** the crate directory
-4. During verification, cargo extracts the tarball and builds from it
-5. The `../plugin-template` path doesn't exist relative to the extracted tarball
+1. The `plugin-template/` was located **outside** the `cli/` crate directory
+2. `cargo publish` only packages files **within** the crate directory
+3. Additionally, cargo excludes directories containing `Cargo.toml` files (treats them as separate crates)
+
+### Solution Implemented
+
+1. **Moved template into CLI crate**: `plugin-template/` → `cli/plugin-template/`
+2. **Renamed Cargo.toml files**: `Cargo.toml` → `Cargo.toml.template` to prevent cargo from excluding them
+3. **Updated extraction code**: Template extraction now renames `.template` files back to their original names
 
 ## Test Cases
 
-### TC-001: Verify CI publish failure
+### TC-001: Verify cargo publish --dry-run succeeds
 
-**Description**: Confirm the publish-cli job fails in CI
+**Description**: Confirm the CLI can be packaged and verified
 
 **Steps**:
-1. Check GitHub Actions for the continuous-deploy workflow
-2. Observe publish-cli job failure
+1. Run `cd cli && cargo publish --dry-run`
+2. Verify compilation succeeds
+3. Verify "aborting upload due to dry run" message appears
 
-**Expected Result**: Job fails with the "not a directory" error
+**Expected Result**: Package verification passes
 
-**Status**: ❌ FAIL (as expected - this is the bug being reported)
+**Status**: ✅ PASS
 
 **Actual Result**: 
 ```
-error: proc macro panicked
-= help: message: "/home/runner/work/wavecraft/wavecraft/cli/target/package/wavecraft-0.7.1/../plugin-template" is not a directory
+Packaged 33 files, 72.2KiB (22.4KiB compressed)
+Verifying wavecraft v0.7.1
+Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.40s
+Uploading wavecraft v0.7.1
+warning: aborting upload due to dry run
 ```
 
 ---
 
-## Issues Found
+### TC-002: Verify template extraction renames .template files
 
-### Issue #1: CLI cannot publish to crates.io due to external template path
+**Description**: Confirm generated projects have proper Cargo.toml files (not .template)
 
-- **Severity**: Critical
-- **Test Case**: TC-001
-- **Description**: The `include_dir!` macro references `../plugin-template` which is outside the CLI crate. `cargo publish` only packages files within the crate directory, so the template is not included in the tarball.
-- **Expected**: CLI publishes successfully to crates.io
-- **Actual**: Build fails during `cargo publish` verification
-- **Steps to Reproduce**:
-  1. Run `cd cli && cargo publish --dry-run`
-  2. Observe the error about missing directory
-- **Evidence**: GitHub Actions error from publish-cli job
-- **Suggested Fix**: 
-  1. Update CI workflow to copy `plugin-template/` into `cli/plugin-template/` before publishing
-  2. Update `include_dir!` path from `"$CARGO_MANIFEST_DIR/../plugin-template"` to `"$CARGO_MANIFEST_DIR/plugin-template"`
-  3. Add `cli/plugin-template/` to `.gitignore` (it's a build artifact, not source of truth)
-  4. For local development, either:
-     - Use a build script to copy before build, OR
-     - Update contributing docs to require the copy step
+**Steps**:
+1. Run `wavecraft new test-plugin --vendor "Test" --no-git`
+2. Check that `test-plugin/Cargo.toml` exists (not `.template`)
+3. Check that `test-plugin/engine/Cargo.toml` exists
+4. Verify the content is valid TOML
 
-## Files Involved
+**Expected Result**: All Cargo.toml files exist with correct names and valid content
 
-| File | Purpose |
-|------|---------|
-| `cli/src/template/mod.rs:11` | Contains the `include_dir!` macro call |
-| `cli/Cargo.toml` | CLI package configuration |
-| `.github/workflows/continuous-deploy.yml` | CI publish workflow |
-| `plugin-template/` | The template directory to embed |
+**Status**: ✅ PASS
 
-## Testing Notes
-
-The fix needs to ensure:
-1. ✅ Local development still works (`cargo build` in `cli/`)
-2. ✅ `cargo publish --dry-run` succeeds
-3. ✅ CI publish-cli job succeeds
-4. ✅ Published crate includes the template correctly
-
-## Sign-off
-
-- [x] Critical issue documented
-- [x] Issues documented for coder agent
-- [ ] Ready for release: **NO** (blocked by Issue #1)
+**Actual Result**: 
+- `test-plugin/Cargo.toml` ✓
+- `test-plugin/engine/Cargo.toml` ✓
+- `test-plugin/engine/xtask/Cargo.toml` ✓
+- All files contain valid TOML with correct plugin name substitution
 
 ---
 
-## Handoff to Coder
+## Files Changed
 
-**Recommended Action**: Hand off to coder agent to implement the fix.
+| File | Change |
+|------|--------|
+| `cli/plugin-template/` | Moved from repo root `plugin-template/` |
+| `cli/plugin-template/Cargo.toml` | Renamed to `Cargo.toml.template` |
+| `cli/plugin-template/engine/Cargo.toml` | Renamed to `Cargo.toml.template` |
+| `cli/plugin-template/engine/xtask/Cargo.toml` | Renamed to `Cargo.toml.template` |
+| `cli/src/template/mod.rs` | Updated to strip `.template` suffix during extraction |
+| `cli/Cargo.toml` | Removed unneeded `include` directive |
+| `.github/workflows/continuous-deploy.yml` | Updated paths-filter, removed copy step |
+| `.github/workflows/cli-release.yml` | Removed copy step |
+| `.gitignore` | Removed `/cli/plugin-template` and `/plugin-template/target` |
 
-The coder should:
-1. Update CI workflow to copy `plugin-template/` into `cli/plugin-template/` before publishing
-2. Update `include_dir!` path in `cli/src/template/mod.rs`
-3. Add `cli/plugin-template/` to `.gitignore`
-4. Optionally add a local dev convenience (build.rs or script)
-5. Test with `cargo publish --dry-run`
+## Sign-off
+
+- [x] All test cases pass
+- [x] No blockers remain
+- [x] Ready for release: **YES**

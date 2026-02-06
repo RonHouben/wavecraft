@@ -47,7 +47,14 @@ fn extract_dir(dir: &Dir, target_dir: &Path, vars: &TemplateVariables) -> Result
                     continue; // Skip these files
                 }
                 
-                let file_path = target_dir.join(file_name);
+                // Handle .template files: rename back to original (e.g., Cargo.toml.template -> Cargo.toml)
+                // These are renamed to avoid cargo treating the template as a crate during packaging.
+                let output_name = if file_name_str.ends_with(".template") {
+                    file_name_str.strip_suffix(".template").unwrap().to_string()
+                } else {
+                    file_name_str.to_string()
+                };
+                let file_path = target_dir.join(&output_name);
                 
                 // Only process text files
                 if let Some(content) = file.contents_utf8() {
