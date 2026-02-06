@@ -62,6 +62,27 @@ wavecraft new my-plugin
 
 ---
 
+### 4. CLI: `--sdk-version` flag is confusing for users
+
+**Severity:** Medium  
+**Status:** 🔴 Open
+
+**Issue:** The `--sdk-version` option is exposed to end users, but from a user's perspective it's unclear why they would need to specify this. Users expect to always use the latest version.
+
+**Current behavior:**
+```bash
+wavecraft new my-plugin --sdk-version "v0.7.0"
+```
+
+**Recommendation:** 
+- The CLI should automatically use the latest SDK version (matching the installed CLI version)
+- Hide `--sdk-version` from regular help output
+- Only expose it as an advanced/hidden flag for SDK developers or specific debugging scenarios
+
+**Impact:** Confuses new users and adds unnecessary complexity to the getting-started flow.
+
+---
+
 ## Test Environment
 
 - macOS
