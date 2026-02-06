@@ -38,12 +38,11 @@ act -j check-engine -W .github/workflows/ci.yml \
 | `prepare-engine` | Build UI + compile Rust | ✅ Works |
 | `check-engine` | cargo fmt + clippy | ✅ Works |
 | `test-engine` | cargo test | ✅ Works |
-| `build-plugin` | macOS bundle + signing | ❌ Requires macOS |
 
 ### Run Full Pipeline Locally
 
 ```bash
-# Run entire CI workflow (except macOS build-plugin)
+# Run entire CI workflow
 act -W .github/workflows/ci.yml \
     --container-architecture linux/amd64 \
     -P ubuntu-latest=wavecraft-ci:latest \
@@ -125,19 +124,6 @@ act --secret-file .secrets
 | `-W .github/workflows/ci.yml` | Specify workflow file |
 | `-j <job-name>` | Run specific job || `--artifact-server-path <dir>` | Enable local artifact upload/download |
 ## Limitations
-
-### macOS Runners Cannot Be Emulated
-
-GitHub's `macos-latest` runners cannot be simulated locally. The `build-plugin` job requires macOS for:
-- Code signing
-- Creating VST3/CLAP bundles
-- Notarization
-
-**Workaround:** Test macOS-specific commands manually:
-```bash
-cargo xtask bundle --release
-cargo xtask sign --adhoc
-```
 
 ### Artifact Upload/Download
 
