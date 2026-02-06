@@ -74,33 +74,33 @@ pub const PLUGIN_PACKAGE: &str = "wavecraft-core"; // Crate name (for -p flag)
 pub const PLUGIN_NAME: &str = "wavecraft"; // Binary/library name
 pub const PLUGIN_DISPLAY_NAME: &str = "Wavecraft"; // Display name
 
-/// Read version from workspace Cargo.toml.
+/// Read plugin version from wavecraft-core Cargo.toml.
 ///
-/// Extracts the version string from the `[workspace.package]` section.
+/// With independent crate versioning, wavecraft-core is the primary plugin crate
+/// and its version represents the overall plugin version.
 ///
 /// # Returns
 ///
-/// The SemVer version string (e.g., "0.1.0")
+/// The SemVer version string (e.g., "0.7.1")
 ///
 /// # Errors
 ///
 /// Returns an error if:
-/// - The workspace Cargo.toml cannot be read
+/// - The wavecraft-core Cargo.toml cannot be read
 /// - The TOML is malformed
-/// - The `workspace.package.version` key is missing
+/// - The `package.version` key is missing
 pub fn read_workspace_version() -> Result<String> {
-    let workspace_toml = paths::engine_dir()?.join("Cargo.toml");
+    let core_toml = paths::engine_dir()?.join("crates/wavecraft-core/Cargo.toml");
     let content =
-        std::fs::read_to_string(&workspace_toml).context("Failed to read workspace Cargo.toml")?;
+        std::fs::read_to_string(&core_toml).context("Failed to read wavecraft-core Cargo.toml")?;
 
     let toml: toml::Value = content.parse().context("Failed to parse Cargo.toml")?;
 
     let version = toml
-        .get("workspace")
-        .and_then(|w| w.get("package"))
+        .get("package")
         .and_then(|p| p.get("version"))
         .and_then(|v| v.as_str())
-        .ok_or_else(|| anyhow::anyhow!("Version not found in workspace Cargo.toml"))?;
+        .ok_or_else(|| anyhow::anyhow!("Version not found in wavecraft-core Cargo.toml"))?;
 
     Ok(version.to_string())
 }

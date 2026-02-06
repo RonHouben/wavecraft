@@ -1,7 +1,7 @@
 //! Platform abstraction for WebView integration.
 //!
 //! Provides a platform-agnostic interface for creating and managing WebViews
-//! across different platforms (macOS, Windows, Linux).
+//! across different platforms (macOS, Windows).
 
 use std::any::Any;
 
@@ -54,8 +54,8 @@ pub struct WebViewConfig<P: Params> {
     pub parent: ParentWindowHandle,
     pub width: u32,
     pub height: u32,
-    /// Shared meter consumer - cloned from the plugin
-    pub meter_consumer: Arc<Mutex<MeterConsumer>>,
+    /// Optional meter consumer for audio metering
+    pub meter_consumer: Option<MeterConsumer>,
     /// Shared editor size - updated on resize requests
     pub editor_size: Arc<Mutex<(u32, u32)>>,
 }
@@ -96,7 +96,7 @@ pub fn create_webview<P: Params>(
 pub fn create_ipc_handler<P: Params>(
     params: Arc<P>,
     context: Arc<dyn GuiContext>,
-    meter_consumer: Arc<Mutex<MeterConsumer>>,
+    meter_consumer: Option<MeterConsumer>,
     editor_size: Arc<Mutex<(u32, u32)>>,
 ) -> IpcHandler<PluginEditorBridge<P>> {
     let bridge = PluginEditorBridge::new(params, context, meter_consumer, editor_size);

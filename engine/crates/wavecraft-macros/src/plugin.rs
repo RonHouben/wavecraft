@@ -7,7 +7,7 @@
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
-    Expr, Ident, LitStr, Result, Token,
+    Expr, Ident, LitStr, Path, Result, Token,
     parse::{Parse, ParseStream},
     parse_macro_input,
 };
@@ -19,6 +19,9 @@ struct PluginDef {
     url: Option<LitStr>,
     email: Option<LitStr>,
     signal: Expr,
+    /// Optional crate path for nih-plug integration crate (default: `::wavecraft_nih_plug`).
+    /// Use `crate: wavecraft` when depending on wavecraft-nih_plug via Cargo rename.
+    krate: Option<Path>,
 }
 
 impl Parse for PluginDef {
@@ -28,9 +31,22 @@ impl Parse for PluginDef {
         let mut url = None;
         let mut email = None;
         let mut signal = None;
+        let mut krate = None;
 
         // Parse key-value pairs
         while !input.is_empty() {
+            // Handle `crate` keyword specially (it's a Rust keyword)
+            if input.peek(Token![crate]) {
+                input.parse::<Token![crate]>()?;
+                input.parse::<Token![:]>()?;
+                krate = Some(input.parse()?);
+
+                if input.peek(Token![,]) {
+                    input.parse::<Token![,]>()?;
+                }
+                continue;
+            }
+
             let key: Ident = input.parse()?;
             input.parse::<Token![:]>()?;
 
@@ -97,6 +113,7 @@ impl Parse for PluginDef {
                      signal: Chain![InputGain, Filter, OutputGain]",
                 )
             })?,
+            krate,
         })
     }
 }
@@ -146,6 +163,11 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
         .unwrap_or_else(|| LitStr::new("", proc_macro2::Span::call_site()));
     let signal_type = &plugin_def.signal;
 
+    // Default krate to ::wavecraft_nih_plug if not specified
+    let krate = plugin_def
+        .krate
+        .unwrap_or_else(|| syn::parse_quote!(::wavecraft_nih_plug));
+
     let vst3_id = generate_vst3_id(&name.value(), &vendor.value());
 
     // Phase 6 Steps 6.1-6.6 Complete:
@@ -164,8 +186,8 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
         const _: () = {
             fn assert_processor_traits<T>()
             where
-                T: ::wavecraft_dsp::Processor + ::std::default::Default + ::std::marker::Send + 'static,
-                T::Params: ::wavecraft_dsp::ProcessorParams + ::std::default::Default + ::std::marker::Send + ::std::marker::Sync + 'static,
+                T: #krate::Processor + ::std::default::Default + ::std::marker::Send + 'static,
+                T::Params: #krate::ProcessorParams + ::std::default::Default + ::std::marker::Send + ::std::marker::Sync + 'static,
             {
             }
 
@@ -178,9 +200,9 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
         pub struct __WavecraftPlugin {
             params: ::std::sync::Arc<__WavecraftParams>,
             processor: __ProcessorType,
-            meter_producer: ::wavecraft_metering::MeterProducer,
+            meter_producer: #krate::MeterProducer,
             #[cfg(any(target_os = "macos", target_os = "windows"))]
-            meter_consumer: ::std::sync::Arc<::std::sync::Mutex<::wavecraft_metering::MeterConsumer>>,
+            meter_consumer: ::std::sync::Mutex<::std::option::Option<#krate::MeterConsumer>>,
         }
 
         /// Generated params struct.
@@ -189,30 +211,30 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
         /// Parameters are discovered at runtime from the processor's param_specs().
         pub struct __WavecraftParams {
             // Store parameters as a vector for dynamic discovery
-            params: ::std::vec::Vec<::nih_plug::prelude::FloatParam>,
+            params: ::std::vec::Vec<#krate::__nih::FloatParam>,
         }
 
         impl __WavecraftParams {
             fn from_processor_specs() -> Self
             where
-                <__ProcessorType as ::wavecraft_dsp::Processor>::Params: ::wavecraft_dsp::ProcessorParams,
+                <__ProcessorType as #krate::Processor>::Params: #krate::ProcessorParams,
             {
-                let specs = <<__ProcessorType as ::wavecraft_dsp::Processor>::Params as ::wavecraft_dsp::ProcessorParams>::param_specs();
+                let specs = <<__ProcessorType as #krate::Processor>::Params as #krate::ProcessorParams>::param_specs();
 
                 let params = specs
                     .iter()
                     .map(|spec| {
-                        use ::wavecraft_dsp::ParamRange;
+                        use #krate::ParamRange;
 
                         let range = match &spec.range {
                             ParamRange::Linear { min, max } => {
-                                ::nih_plug::prelude::FloatRange::Linear {
+                                #krate::__nih::FloatRange::Linear {
                                     min: *min as f32,
                                     max: *max as f32,
                                 }
                             }
                             ParamRange::Skewed { min, max, factor } => {
-                                ::nih_plug::prelude::FloatRange::Skewed {
+                                #krate::__nih::FloatRange::Skewed {
                                     min: *min as f32,
                                     max: *max as f32,
                                     factor: *factor as f32,
@@ -220,14 +242,14 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
                             }
                             ParamRange::Stepped { min, max } => {
                                 // Convert stepped range to linear for now
-                                ::nih_plug::prelude::FloatRange::Linear {
+                                #krate::__nih::FloatRange::Linear {
                                     min: *min as f32,
                                     max: *max as f32,
                                 }
                             }
                         };
 
-                        ::nih_plug::prelude::FloatParam::new(
+                        #krate::__nih::FloatParam::new(
                             spec.name,
                             spec.default as f32,
                             range,
@@ -247,13 +269,13 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
         }
 
         // Manual Params implementation (can't use derive due to Vec)
-        unsafe impl ::nih_plug::prelude::Params for __WavecraftParams {
+        unsafe impl #krate::__nih::Params for __WavecraftParams {
             fn param_map(&self) -> ::std::vec::Vec<(
                 ::std::string::String,
-                ::nih_plug::prelude::ParamPtr,
+                #krate::__nih::ParamPtr,
                 ::std::string::String,
             )> {
-                use ::nih_plug::prelude::Param; // Import trait for as_ptr()
+                use #krate::__nih::Param; // Import trait for as_ptr()
 
                 self.params
                     .iter()
@@ -270,53 +292,56 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
         impl ::std::default::Default for __WavecraftPlugin {
             fn default() -> Self {
                 let (meter_producer, _meter_consumer) =
-                    ::wavecraft_metering::create_meter_channel(64);
+                    #krate::create_meter_channel(64);
                 Self {
                     params: ::std::sync::Arc::new(__WavecraftParams::default()),
                     processor: <__ProcessorType as ::std::default::Default>::default(),
                     meter_producer,
                     #[cfg(any(target_os = "macos", target_os = "windows"))]
-                    meter_consumer: ::std::sync::Arc::new(::std::sync::Mutex::new(_meter_consumer)),
+                    meter_consumer: ::std::sync::Mutex::new(::std::option::Option::Some(_meter_consumer)),
                 }
             }
         }
 
-        impl ::nih_plug::prelude::Plugin for __WavecraftPlugin {
+        impl #krate::__nih::Plugin for __WavecraftPlugin {
             const NAME: &'static str = #name;
             const VENDOR: &'static str = #vendor;
             const URL: &'static str = #url;
             const EMAIL: &'static str = #email;
             const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
-            const AUDIO_IO_LAYOUTS: &'static [::nih_plug::prelude::AudioIOLayout] = &[
-                ::nih_plug::prelude::AudioIOLayout {
+            const AUDIO_IO_LAYOUTS: &'static [#krate::__nih::AudioIOLayout] = &[
+                #krate::__nih::AudioIOLayout {
                     main_input_channels: ::std::num::NonZeroU32::new(2),
                     main_output_channels: ::std::num::NonZeroU32::new(2),
-                    ..::nih_plug::prelude::AudioIOLayout::const_default()
+                    ..#krate::__nih::AudioIOLayout::const_default()
                 }
             ];
 
-            const MIDI_INPUT: ::nih_plug::prelude::MidiConfig =
-                ::nih_plug::prelude::MidiConfig::None;
-            const MIDI_OUTPUT: ::nih_plug::prelude::MidiConfig =
-                ::nih_plug::prelude::MidiConfig::None;
+            const MIDI_INPUT: #krate::__nih::MidiConfig =
+                #krate::__nih::MidiConfig::None;
+            const MIDI_OUTPUT: #krate::__nih::MidiConfig =
+                #krate::__nih::MidiConfig::None;
 
             type SysExMessage = ();
             type BackgroundTask = ();
 
-            fn params(&self) -> ::std::sync::Arc<dyn ::nih_plug::prelude::Params> {
+            fn params(&self) -> ::std::sync::Arc<dyn #krate::__nih::Params> {
                 self.params.clone()
             }
 
             fn editor(
                 &mut self,
-                _async_executor: ::nih_plug::prelude::AsyncExecutor<Self>,
-            ) -> ::std::option::Option<::std::boxed::Box<dyn ::nih_plug::prelude::Editor>> {
+                _async_executor: #krate::__nih::AsyncExecutor<Self>,
+            ) -> ::std::option::Option<::std::boxed::Box<dyn #krate::__nih::Editor>> {
                 #[cfg(any(target_os = "macos", target_os = "windows"))]
                 {
-                    ::wavecraft_core::editor::create_webview_editor(
+                    let meter_consumer = self.meter_consumer.lock().unwrap().take();
+                    #krate::editor::create_webview_editor(
                         self.params.clone(),
-                        self.meter_consumer.clone(),
+                        meter_consumer,
+                        800,
+                        600,
                     )
                 }
 
@@ -328,9 +353,9 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
 
             fn initialize(
                 &mut self,
-                _audio_io_layout: &::nih_plug::prelude::AudioIOLayout,
-                _buffer_config: &::nih_plug::prelude::BufferConfig,
-                _context: &mut impl ::nih_plug::prelude::InitContext<Self>,
+                _audio_io_layout: &#krate::__nih::AudioIOLayout,
+                _buffer_config: &#krate::__nih::BufferConfig,
+                _context: &mut impl #krate::__nih::InitContext<Self>,
             ) -> bool {
                 true
             }
@@ -339,10 +364,10 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
 
             fn process(
                 &mut self,
-                buffer: &mut ::nih_plug::prelude::Buffer,
-                _aux: &mut ::nih_plug::prelude::AuxiliaryBuffers,
-                _context: &mut impl ::nih_plug::prelude::ProcessContext<Self>,
-            ) -> ::nih_plug::prelude::ProcessStatus {
+                buffer: &mut #krate::__nih::Buffer,
+                _aux: &mut #krate::__nih::AuxiliaryBuffers,
+                _context: &mut impl #krate::__nih::ProcessContext<Self>,
+            ) -> #krate::__nih::ProcessStatus {
                 let num_samples = buffer.samples();
                 let channels = buffer.channels();
 
@@ -361,10 +386,10 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
                     let mut sample_ptrs: ::std::vec::Vec<&mut [f32]> =
                         sample_buffers.iter_mut().map(|v| &mut v[..]).collect();
 
-                    let transport = ::wavecraft_dsp::Transport::default();
+                    let transport = #krate::Transport::default();
 
                     // Import Processor trait for process() method
-                    use ::wavecraft_dsp::Processor as _;
+                    use #krate::Processor as _;
                     self.processor.process(&mut sample_ptrs, &transport, &processor_params);
 
                     // Write processed samples back
@@ -392,7 +417,7 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
                     peak_right = buffer.as_slice()[1].iter().map(|&s| s.abs()).fold(0.0, f32::max);
                 }
 
-                let frame = ::wavecraft_metering::MeterFrame {
+                let frame = #krate::MeterFrame {
                     peak_l: peak_left,
                     peak_r: peak_right,
                     rms_l: peak_left * 0.707, // Simplified RMS estimation
@@ -402,39 +427,47 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
 
                 let _ = self.meter_producer.push(frame);
 
-                ::nih_plug::prelude::ProcessStatus::Normal
+                #krate::__nih::ProcessStatus::Normal
             }
         }
 
         impl __WavecraftPlugin {
             /// Build processor parameters from current nih-plug parameter values.
-            fn build_processor_params(&self) -> <__ProcessorType as ::wavecraft_dsp::Processor>::Params {
-                // For now, use default params
-                // TODO: Map nih-plug parameter values to processor params
-                <<__ProcessorType as ::wavecraft_dsp::Processor>::Params as ::std::default::Default>::default()
+            ///
+            /// # Known Limitation
+            ///
+            /// Currently returns default params. Full bidirectional parameter sync
+            /// between nih-plug and processor params is not yet implemented.
+            /// The DSL-generated nih-plug params work correctly for host automation
+            /// and UI display, but processor-level params use defaults.
+            ///
+            /// For custom parameter behavior, implement the `Plugin` trait directly
+            /// instead of using the `wavecraft_plugin!` macro.
+            fn build_processor_params(&self) -> <__ProcessorType as #krate::Processor>::Params {
+                <<__ProcessorType as #krate::Processor>::Params as ::std::default::Default>::default()
             }
         }
 
-        impl ::nih_plug::prelude::ClapPlugin for __WavecraftPlugin {
+        impl #krate::__nih::ClapPlugin for __WavecraftPlugin {
             const CLAP_ID: &'static str = concat!("com.", #vendor, ".", #name);
             const CLAP_DESCRIPTION: Option<&'static str> = None;
             const CLAP_MANUAL_URL: Option<&'static str> = None;
             const CLAP_SUPPORT_URL: Option<&'static str> = None;
-            const CLAP_FEATURES: &'static [::nih_plug::prelude::ClapFeature] = &[
-                ::nih_plug::prelude::ClapFeature::AudioEffect,
-                ::nih_plug::prelude::ClapFeature::Stereo,
+            const CLAP_FEATURES: &'static [#krate::__nih::ClapFeature] = &[
+                #krate::__nih::ClapFeature::AudioEffect,
+                #krate::__nih::ClapFeature::Stereo,
             ];
         }
 
-        impl ::nih_plug::prelude::Vst3Plugin for __WavecraftPlugin {
+        impl #krate::__nih::Vst3Plugin for __WavecraftPlugin {
             const VST3_CLASS_ID: [u8; 16] = #vst3_id;
-            const VST3_SUBCATEGORIES: &'static [::nih_plug::prelude::Vst3SubCategory] = &[
-                ::nih_plug::prelude::Vst3SubCategory::Fx,
+            const VST3_SUBCATEGORIES: &'static [#krate::__nih::Vst3SubCategory] = &[
+                #krate::__nih::Vst3SubCategory::Fx,
             ];
         }
 
-        ::nih_plug::nih_export_clap!(__WavecraftPlugin);
-        ::nih_plug::nih_export_vst3!(__WavecraftPlugin);
+        #krate::__nih::nih_export_clap!(__WavecraftPlugin);
+        #krate::__nih::nih_export_vst3!(__WavecraftPlugin);
     };
 
     TokenStream::from(expanded)

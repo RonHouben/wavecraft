@@ -8,12 +8,11 @@ use std::sync::{Arc, Mutex, Once};
 use nih_plug::prelude::*;
 use wavecraft_bridge::IpcHandler;
 use webview2_com::Microsoft::Web::WebView2::Win32::{
-    COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL, ICoreWebView2, ICoreWebView2Controller,
-    ICoreWebView2WebMessageReceivedEventArgs,
+    ICoreWebView2, ICoreWebView2Controller, ICoreWebView2WebMessageReceivedEventArgs,
 };
 use webview2_com::{
     CreateCoreWebView2ControllerCompletedHandler, CreateCoreWebView2EnvironmentCompletedHandler,
-    WebMessageReceivedEventHandler, WebResourceRequestedEventHandler,
+    WebMessageReceivedEventHandler,
 };
 use windows::Win32::Foundation::{E_FAIL, HWND, LPARAM, LRESULT, RECT, WPARAM};
 use windows::Win32::Graphics::Gdi::{BeginPaint, EndPaint, FillRect, HBRUSH, PAINTSTRUCT};
@@ -30,6 +29,18 @@ use super::assets;
 use super::bridge::PluginEditorBridge;
 use super::webview::{WebViewConfig, WebViewHandle};
 
+/// Trait for handling IPC JSON messages (type-erased interface).
+trait JsonIpcHandler: Send + Sync {
+    fn handle_json(&self, json: &str) -> String;
+}
+
+// Implement for IpcHandler with any ParameterHost
+impl<H: wavecraft_bridge::ParameterHost> JsonIpcHandler for IpcHandler<H> {
+    fn handle_json(&self, json: &str) -> String {
+        IpcHandler::handle_json(self, json)
+    }
+}
+
 /// Windows WebView handle.
 ///
 /// Holds the WebView2 controller and web view instances.
@@ -39,7 +50,7 @@ pub struct WindowsWebView {
     /// Note: Currently unused but required for future Windows platform features.
     #[allow(dead_code)]
     hwnd: HWND,
-    _handler: Arc<Mutex<IpcHandler<PluginEditorBridge>>>,
+    _handler: Arc<Mutex<dyn JsonIpcHandler>>,
     controller: Arc<Mutex<Option<ICoreWebView2Controller>>>,
     webview: Arc<Mutex<Option<ICoreWebView2>>>,
 }
@@ -92,7 +103,9 @@ impl WebViewHandle for WindowsWebView {
 }
 
 /// Create a Windows WebView editor.
-pub fn create_windows_webview(config: WebViewConfig) -> Result<Box<dyn WebViewHandle>, String> {
+pub fn create_windows_webview<P: Params + 'static>(
+    config: WebViewConfig<P>,
+) -> Result<Box<dyn WebViewHandle>, String> {
     static COM_INIT: Once = Once::new();
     COM_INIT.call_once(|| unsafe {
         let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
@@ -102,15 +115,16 @@ pub fn create_windows_webview(config: WebViewConfig) -> Result<Box<dyn WebViewHa
 
     let parent_hwnd = unsafe { get_parent_hwnd(config.parent)? };
 
-    let handler = Arc::new(Mutex::new(super::webview::create_ipc_handler(
-        config.params,
-        config.context,
-        config.meter_consumer,
-        config.editor_size,
-        config.params.clone(),
-        config.context.clone(),
-        config.meter_consumer.clone(),
-    )));
+    let handler: Arc<Mutex<IpcHandler<PluginEditorBridge<P>>>> =
+        Arc::new(Mutex::new(super::webview::create_ipc_handler(
+            config.params,
+            config.context,
+            config.meter_consumer,
+            config.editor_size,
+        )));
+
+    // Convert to trait object for type erasure
+    let handler_trait: Arc<Mutex<dyn JsonIpcHandler>> = handler;
 
     let child_hwnd = unsafe { create_child_window(parent_hwnd, config.width, config.height)? };
 
@@ -121,14 +135,14 @@ pub fn create_windows_webview(config: WebViewConfig) -> Result<Box<dyn WebViewHa
         child_hwnd,
         controller.clone(),
         webview.clone(),
-        handler.clone(),
+        handler_trait.clone(),
         config.width,
         config.height,
     )?;
 
     Ok(Box::new(WindowsWebView {
         hwnd: child_hwnd,
-        _handler: handler,
+        _handler: handler_trait,
         controller,
         webview,
     }))
@@ -139,11 +153,11 @@ fn initialize_webview2(
     hwnd: HWND,
     controller: Arc<Mutex<Option<ICoreWebView2Controller>>>,
     webview: Arc<Mutex<Option<ICoreWebView2>>>,
-    handler: Arc<Mutex<IpcHandler<PluginEditorBridge>>>,
+    handler: Arc<Mutex<dyn JsonIpcHandler>>,
     width: u32,
     height: u32,
 ) -> Result<(), String> {
-    let user_data_folder = std::env::temp_dir().join("VstKit_WebView2_Data");
+    let user_data_folder = std::env::temp_dir().join("Wavecraft_WebView2_Data");
     let user_data_path = HSTRING::from(user_data_folder.to_string_lossy().as_ref());
 
     let controller_clone = controller.clone();
@@ -207,7 +221,6 @@ fn initialize_webview2(
 
                     configure_webview_settings(&wv);
                     setup_web_message_handler(&wv, handler_inner.clone());
-                    setup_url_scheme_handler(&wv);
                     inject_ipc_script(&wv);
                     load_ui_content(&wv);
 
@@ -265,10 +278,7 @@ fn configure_webview_settings(webview: &ICoreWebView2) {
 }
 
 /// Set up the web message handler for IPC communication.
-fn setup_web_message_handler(
-    webview: &ICoreWebView2,
-    handler: Arc<Mutex<IpcHandler<PluginEditorBridge>>>,
-) {
+fn setup_web_message_handler(webview: &ICoreWebView2, handler: Arc<Mutex<dyn JsonIpcHandler>>) {
     let webview_clone = webview.clone();
 
     let message_handler = WebMessageReceivedEventHandler::create(Box::new(
@@ -313,94 +323,43 @@ fn setup_web_message_handler(
     }
 }
 
-/// Set up custom URL scheme handler for vstkit:// protocol.
-fn setup_url_scheme_handler(webview: &ICoreWebView2) {
-    let filter = HSTRING::from("vstkit://*");
-
-    let request_handler =
-        WebResourceRequestedEventHandler::create(Box::new(move |_webview, args| {
-            if let Some(args) = args {
-                unsafe {
-                    let request = match args.Request() {
-                        Ok(r) => r,
-                        Err(_) => return windows::core::HRESULT(0),
-                    };
-
-                    let uri = match request.Uri() {
-                        Ok(u) => u.to_string(),
-                        Err(_) => return windows::core::HRESULT(0),
-                    };
-
-                    nih_trace!("[Asset Handler] Request: {}", uri);
-
-                    let asset_path = uri
-                        .strip_prefix("vstkit://localhost/")
-                        .or_else(|| uri.strip_prefix("vstkit://"))
-                        .unwrap_or(&uri);
-
-                    if let Some((bytes, mime_type)) = assets::get_asset(asset_path) {
-                        nih_trace!(
-                            "[Asset Handler] Found asset: {} ({} bytes, {})",
-                            asset_path,
-                            bytes.len(),
-                            mime_type
-                        );
-                        // Note: Full response creation requires IStream implementation
-                        // For now, we load HTML via NavigateToString instead
-                    } else {
-                        nih_error!("[Asset Handler] Asset not found: {}", asset_path);
-                    }
-                }
-            }
-            windows::core::HRESULT(0)
-        }));
-
-    unsafe {
-        let mut token = windows::Win32::System::WinRT::EventRegistrationToken::default();
-        let _ =
-            webview.AddWebResourceRequestedFilter(&filter, COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
-        let _ = webview.add_WebResourceRequested(&request_handler, &mut token);
-    }
-}
-
-/// Inject IPC primitives JavaScript before page load.
+/// Inject IPC primitives JavaScript into the WebView.
 fn inject_ipc_script(webview: &ICoreWebView2) {
-    let ipc_script = get_windows_ipc_primitives();
-    let script_hstring = HSTRING::from(ipc_script);
-
+    let ipc_js = get_windows_ipc_primitives();
+    let js_hstring = HSTRING::from(ipc_js);
     unsafe {
-        let _ = webview.AddScriptToExecuteOnDocumentCreated(&script_hstring, None);
+        let _ = webview.AddScriptToExecuteOnDocumentCreated(&js_hstring, None);
     }
 }
 
-/// Load the UI content into the WebView.
+/// Load UI content into the WebView.
 fn load_ui_content(webview: &ICoreWebView2) {
-    if let Some((html_bytes, _)) = assets::get_asset("index.html") {
-        let html = String::from_utf8_lossy(html_bytes);
-        let html_hstring = HSTRING::from(html.as_ref());
+    // Try to load index.html from embedded assets
+    if let Some((html_bytes, _mime)) = assets::get_asset("index.html") {
+        let html_string = String::from_utf8_lossy(html_bytes);
+        let ns_html = HSTRING::from(html_string.as_ref());
         unsafe {
-            let _ = webview.NavigateToString(&html_hstring);
+            let _ = webview.NavigateToString(&ns_html);
         }
     } else {
-        let fallback_html = get_fallback_html();
-        let html_hstring = HSTRING::from(fallback_html);
+        // Fallback HTML
+        let fallback_html = HSTRING::from(get_fallback_html());
         unsafe {
-            let _ = webview.NavigateToString(&html_hstring);
+            let _ = webview.NavigateToString(&fallback_html);
         }
     }
 }
 
 /// Check if WebView2 runtime is installed.
 fn check_webview2_runtime() -> Result<(), String> {
-    match webview2_com::get_available_core_webview2_browser_version_string(None) {
+    match webview2_com::get_available_core_webview2_browser_version_string(PCWSTR::null()) {
         Ok(version) => {
-            if let Some(ver) = version {
-                nih_log!("WebView2 runtime found: {}", ver);
-                Ok(())
-            } else {
+            if version.is_empty() {
                 Err("WebView2 runtime not installed. Please install it from:\n\
                      https://developer.microsoft.com/microsoft-edge/webview2/"
                     .to_string())
+            } else {
+                Ok(())
             }
         }
         Err(e) => Err(format!(
@@ -427,7 +386,7 @@ unsafe fn get_parent_hwnd(handle: ParentWindowHandle) -> Result<HWND, String> {
 
 /// Create a child window for hosting the WebView2 control.
 unsafe fn create_child_window(parent: HWND, width: u32, height: u32) -> Result<HWND, String> {
-    let class_name = windows::core::w!("VstKitWebView");
+    let class_name = windows::core::w!("WavecraftWebView");
     let h_instance =
         GetModuleHandleW(None).map_err(|e| format!("GetModuleHandleW failed: {}", e))?;
 
@@ -454,7 +413,7 @@ unsafe fn create_child_window(parent: HWND, width: u32, height: u32) -> Result<H
     let hwnd = CreateWindowExW(
         WINDOW_EX_STYLE(0),
         class_name,
-        windows::core::w!("VstKit Editor"),
+        windows::core::w!("Wavecraft Editor"),
         WS_CHILD | WS_VISIBLE,
         0,
         0,
@@ -554,7 +513,7 @@ fn get_windows_ipc_primitives() -> &'static str {
     try {
       notification = typeof message === 'string' ? JSON.parse(message) : message;
     } catch (e) {
-      console.error('[VSTKIT_IPC] Failed to parse param update:', e);
+      console.error('[WAVECRAFT_IPC] Failed to parse param update:', e);
       return;
     }
     
@@ -562,7 +521,7 @@ fn get_windows_ipc_primitives() -> &'static str {
       try {
         listener(notification);
       } catch (e) {
-        console.error('[VSTKIT_IPC] Listener error:', e);
+        console.error('[WAVECRAFT_IPC] Listener error:', e);
       }
     });
   }
@@ -575,7 +534,7 @@ fn get_windows_ipc_primitives() -> &'static str {
       if (window.chrome && window.chrome.webview) {
         window.chrome.webview.postMessage(message);
       } else {
-        console.error('[VSTKIT_IPC] window.chrome.webview not available');
+        console.error('[WAVECRAFT_IPC] window.chrome.webview not available');
       }
     },
 
@@ -604,9 +563,9 @@ fn get_windows_ipc_primitives() -> &'static str {
   };
 
   Object.freeze(api);
-  window.__WAVECRAFT_IPC__ = api;
+  globalThis.__WAVECRAFT_IPC__ = api;
 
-  console.log('[VSTKIT_IPC] Plugin IPC primitives loaded (WebView2 mode)');
+  console.log('[WAVECRAFT_IPC] Plugin IPC primitives loaded (WebView2 mode)');
 })();
 "#
 }
@@ -617,7 +576,7 @@ fn get_fallback_html() -> &'static str {
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>VstKit Plugin</title>
+    <title>Wavecraft Plugin</title>
     <style>
         body { 
             margin: 0; 
@@ -630,7 +589,7 @@ fn get_fallback_html() -> &'static str {
     </style>
 </head>
 <body>
-    <h1>VstKit WebView Editor</h1>
+    <h1>Wavecraft WebView Editor</h1>
     <p>UI assets not found. Please build the React UI first:</p>
     <pre>cd ui && npm run build</pre>
 </body>

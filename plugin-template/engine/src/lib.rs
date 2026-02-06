@@ -1,5 +1,5 @@
 // Import everything from Wavecraft SDK
-use wavecraft_core::prelude::*;
+use wavecraft::prelude::*;
 
 // Define the processor chain - in this case, just a Gain processor
 wavecraft_processor!({{plugin_name_pascal}}Gain => Gain);
@@ -11,4 +11,5 @@ wavecraft_plugin! {
     url: "{{url}}",
     email: "{{email}}",
     signal: {{plugin_name_pascal}}Gain,
+    crate: wavecraft,
 }

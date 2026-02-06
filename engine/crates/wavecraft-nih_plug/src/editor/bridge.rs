@@ -27,8 +27,8 @@ use wavecraft_protocol::{ParameterInfo, ParameterType};
 pub struct PluginEditorBridge<P: Params> {
     params: Arc<P>,
     context: Arc<dyn GuiContext>,
-    /// Shared meter consumer - same instance used across editor open/close cycles
-    meter_consumer: Arc<Mutex<MeterConsumer>>,
+    /// Optional meter consumer - may be None if metering is disabled
+    meter_consumer: Option<Arc<Mutex<MeterConsumer>>>,
     /// Shared editor size - updated when resize is requested
     editor_size: Arc<Mutex<(u32, u32)>>,
 }
@@ -39,13 +39,13 @@ impl<P: Params> PluginEditorBridge<P> {
     pub fn new(
         params: Arc<P>,
         context: Arc<dyn GuiContext>,
-        meter_consumer: Arc<Mutex<MeterConsumer>>,
+        meter_consumer: Option<MeterConsumer>,
         editor_size: Arc<Mutex<(u32, u32)>>,
     ) -> Self {
         Self {
             params,
             context,
-            meter_consumer,
+            meter_consumer: meter_consumer.map(|c| Arc::new(Mutex::new(c))),
             editor_size,
         }
     }
@@ -142,8 +142,9 @@ impl<P: Params> ParameterHost for PluginEditorBridge<P> {
     }
 
     fn get_meter_frame(&self) -> Option<wavecraft_protocol::MeterFrame> {
-        // Read latest meter frame from the shared consumer
-        let mut consumer = self.meter_consumer.lock().unwrap();
+        // Read latest meter frame from the shared consumer if available
+        let consumer = self.meter_consumer.as_ref()?;
+        let mut consumer = consumer.lock().unwrap();
         consumer
             .read_latest()
             .map(|frame| wavecraft_protocol::MeterFrame {
@@ -174,16 +175,5 @@ impl<P: Params> ParameterHost for PluginEditorBridge<P> {
         }
 
         accepted
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    // Note: Testing PluginEditorBridge requires a mock GuiContext,
-    // which is complex. These tests are placeholders for future integration tests.
-
-    #[test]
-    fn test_placeholder() {
-        // TODO: Add tests once we have a mock GuiContext
     }
 }

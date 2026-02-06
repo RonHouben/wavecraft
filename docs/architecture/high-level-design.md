@@ -52,7 +52,8 @@ wavecraft/
 │   └── guides/                    # User guides
 ├── engine/                        # Rust audio engine & SDK crates
 │   ├── crates/                    # SDK crate workspace
-│   │   ├── wavecraft-core/        # Main framework crate
+│   │   ├── wavecraft-core/        # Core SDK types and macros (publishable)
+│   │   ├── wavecraft-nih_plug/    # nih-plug integration layer (git-only)
 │   │   ├── wavecraft-macros/      # Procedural macros
 │   │   ├── wavecraft-protocol/    # IPC contracts
 │   │   ├── wavecraft-bridge/      # IPC handler
@@ -103,9 +104,12 @@ wavecraft/
 │  │  ┌─────────────┐  ┌─────────────┐  ┌──────────────────┐         │    │
 │  │  │wavecraft-core│  │wavecraft-dsp│  │wavecraft-metering│         │    │
 │  │  └─────────────┘  └─────────────┘  └──────────────────┘         │    │
-│  │  ┌───────────────┐  ┌────────────────┐  ┌─────────────────┐     │    │
-│  │  │wavecraft-macros│  │wavecraft-bridge│  │wavecraft-protocol│    │    │
-│  │  └───────────────┘  └────────────────┘  └─────────────────┘     │    │
+│  │  ┌────────────────┐  ┌────────────────┐  ┌─────────────────┐    │    │
+│  │  │wavecraft-macros│  │wavecraft-bridge│  │wavecraft-protocol│   │    │
+│  │  └────────────────┘  └────────────────┘  └─────────────────┘    │    │
+│  │  ┌─────────────────────────────────────────────────────────┐    │    │
+│  │  │ wavecraft-nih_plug (git-only, wraps nih-plug)           │    │    │
+│  │  └─────────────────────────────────────────────────────────┘    │    │
 │  └─────────────────────────────────────────────────────────────────┘    │
 │                                                                         │
 │  ┌─────────────────────────────────────────────────────────────────┐    │
@@ -277,13 +281,25 @@ Wavecraft distributes its SDK through two channels:
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                 │
 │   ┌───────────────────────┐       ┌───────────────────────┐                     │
-│   │  TEMPLATE REPOSITORY  │       │    GIT / CRATES.IO    │                     │
+│   │  TEMPLATE REPOSITORY  │       │    GIT-ONLY           │                     │
 │   │  plugin-template      │       │                       │                     │
-│   │                        │       │  wavecraft-core          │  ← Rust Framework  │
-│   │  ├── engine/          │──────▶│  wavecraft-bridge        │    (user depends)  │
-│   │  │   └── Cargo.toml   │       │  wavecraft-protocol      │                     │
-│   │  │                    │       │  wavecraft-metering      │                     │
-│   │  │                    │       │  wavecraft-dsp           │                     │
+│   │                       │       │  wavecraft-nih_plug   │  ← User depends     │
+│   │  ├── engine/          │──────▶│  (Cargo rename:       │    (git tag)        │
+│   │  │   └── Cargo.toml   │       │   wavecraft = {...})  │                     │
+│   │  │   wavecraft = {    │       │                       │                     │
+│   │  │     package =      │       └───────────┬───────────┘                     │
+│   │  │     "wavecraft-    │                   │                                 │
+│   │  │     nih_plug"...}  │                   │ depends on                      │
+│   │  │                    │                   ▼                                 │
+│   │  │                    │       ┌───────────────────────┐                     │
+│   │  │                    │       │    CRATES.IO          │                     │
+│   │  │                    │       │                       │                     │
+│   │  │                    │       │  wavecraft-core       │  ← Publishable      │
+│   │  │                    │       │  wavecraft-dsp        │                     │
+│   │  │                    │       │  wavecraft-protocol   │                     │
+│   │  │                    │       │  wavecraft-metering   │                     │
+│   │  │                    │       │  wavecraft-bridge     │                     │
+│   │  │                    │       │  wavecraft-macros     │                     │
 │   │  │                    │       └───────────────────────┘                     │
 │   │  │                    │                                                     │
 │   │  │                    │       ┌───────────────────────┐                     │
@@ -310,14 +326,17 @@ Wavecraft distributes its SDK through two channels:
 
 All SDK crates use the `wavecraft-*` naming convention for clear identification:
 
-| Crate | Purpose | User Interaction |
-|-------|---------|------------------|
-| `wavecraft-core` | Main framework: nih-plug integration, WebView editor, declarative macros | Dependency + `prelude` imports + macros |
-| `wavecraft-macros` | Procedural macros: `ProcessorParams` derive, `wavecraft_plugin!` proc-macro | Used indirectly via `wavecraft-core` |
-| `wavecraft-protocol` | IPC contracts, parameter types, JSON-RPC definitions | Implements `ParamSet` trait |
-| `wavecraft-bridge` | IPC handler, `ParameterHost` trait for parameter management | Rarely used directly |
-| `wavecraft-metering` | Real-time safe SPSC ring buffer for audio → UI metering | Uses `MeterProducer` in DSP |
-| `wavecraft-dsp` | DSP primitives, `Processor` trait, built-in processors, audio utilities | Implements `Processor` trait |
+| Crate | Purpose | Publishable | User Interaction |
+|-------|---------|-------------|------------------|
+| `wavecraft-nih_plug` | nih-plug integration, WebView editor, plugin exports | ❌ Git only | **Primary dependency** — users import via Cargo rename: `wavecraft = { package = "wavecraft-nih_plug" }` |
+| `wavecraft-core` | Core SDK types, declarative macros, no nih_plug dependency | ✅ crates.io | Re-exported via wavecraft-nih_plug |
+| `wavecraft-macros` | Procedural macros: `ProcessorParams` derive, `wavecraft_plugin!` proc-macro | ✅ crates.io | Used indirectly via wavecraft-nih_plug |
+| `wavecraft-protocol` | IPC contracts, parameter types, JSON-RPC definitions | ✅ crates.io | Implements `ParamSet` trait |
+| `wavecraft-bridge` | IPC handler, `ParameterHost` trait for parameter management | ✅ crates.io | Rarely used directly |
+| `wavecraft-metering` | Real-time safe SPSC ring buffer for audio → UI metering | ✅ crates.io | Uses `MeterProducer` in DSP |
+| `wavecraft-dsp` | DSP primitives, `Processor` trait, built-in processors | ✅ crates.io | Implements `Processor` trait |
+
+> **Why the split?** The `nih_plug` crate cannot be published to crates.io (it has unpublished dependencies). By isolating nih_plug integration in `wavecraft-nih_plug` (git-only), all other crates become publishable. User projects depend on `wavecraft-nih_plug` via git tag, while the ecosystem gains crates.io discoverability for the rest of the SDK.
 
 ### npm Package Structure (UI)
 
@@ -367,11 +386,11 @@ function MyPluginUI() {
 
 ### Public API Surface (Rust)
 
-The SDK exposes a minimal, stable API through the `wavecraft_core::prelude` module:
+The SDK exposes a minimal, stable API through the `wavecraft::prelude` module (where `wavecraft` is the Cargo rename for `wavecraft-nih_plug`):
 
 ```rust
-// wavecraft_core::prelude re-exports
-pub use nih_plug::prelude::*;
+// wavecraft::prelude re-exports (via wavecraft-nih_plug)
+pub use nih_plug::prelude::*;  // From wavecraft-nih_plug
 pub use wavecraft_dsp::{Processor, ProcessorParams, Transport, builtins};
 pub use wavecraft_protocol::{ParamId, ParameterInfo, ParameterType, db_to_linear};
 pub use wavecraft_metering::{MeterConsumer, MeterFrame, MeterProducer, create_meter_channel};
@@ -379,9 +398,11 @@ pub use wavecraft_metering::{MeterConsumer, MeterFrame, MeterProducer, create_me
 pub use crate::editor::WavecraftEditor;
 pub use crate::util::calculate_stereo_meters;
 
-// Declarative macros
-pub use crate::{wavecraft_processor, wavecraft_plugin};
+// Declarative macros (from wavecraft-core, re-exported)
+pub use wavecraft_core::{wavecraft_processor, wavecraft_plugin};
 ```
+
+> **Note:** The `wavecraft-nih_plug` crate also exports a hidden `__nih` module containing all nih_plug types needed by proc-macro generated code. This allows the `wavecraft_plugin!` macro to reference types like `Plugin`, `Params`, and `FloatParam` through a stable path.
 
 **Key Traits:**
 
@@ -453,7 +474,7 @@ The template provides a standardized project structure:
 ```
 my-plugin/
 ├── engine/
-│   ├── Cargo.toml           ← Depends on wavecraft-* crates (git tag)
+│   ├── Cargo.toml           ← Depends on wavecraft-nih_plug (git tag, Cargo rename)
 │   └── src/
 │       ├── lib.rs           ← Plugin entry point
 │       └── dsp.rs           ← User's Processor implementation
@@ -465,6 +486,14 @@ my-plugin/
 │       └── App.tsx          ← User's custom UI (imports from npm packages)
 │
 └── xtask/                   ← Build automation (bundle, dev, etc.)
+```
+
+**Template `Cargo.toml` Dependencies:**
+
+```toml
+[dependencies]
+# Single SDK dependency — Cargo rename gives us `use wavecraft::prelude::*`
+wavecraft = { package = "wavecraft-nih_plug", git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.1" }
 ```
 
 **Template `package.json` Dependencies:**

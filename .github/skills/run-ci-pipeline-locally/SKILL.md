@@ -26,7 +26,7 @@ act -j check-engine -W .github/workflows/ci.yml \
     --container-architecture linux/amd64 \
     -P ubuntu-latest=wavecraft-ci:latest \
     --pull=false \
-    --artifact-server-path /tmp/act-artifacts
+    --artifact-server-path ./tmp/act-artifacts
 ```
 
 ### Available CI Jobs
@@ -48,7 +48,7 @@ act -W .github/workflows/ci.yml \
     --container-architecture linux/amd64 \
     -P ubuntu-latest=wavecraft-ci:latest \
     --pull=false \
-    --artifact-server-path /tmp/act-artifacts
+    --artifact-server-path ./tmp/act-artifacts
 ```
 
 ## Building the Custom Image

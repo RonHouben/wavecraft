@@ -79,6 +79,26 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 
 ---
 
+## nih-plug Independence Strategy
+
+**Context:** nih-plug maintenance has slowed significantly (last commit: Sep 2025, 84 open issues, single maintainer risk). Meanwhile, Steinberg released VST3 under MIT license (Oct 2025), removing legal barriers to custom implementations. This epic ensures Wavecraft isn't held hostage by external dependency maintenance.
+
+**Strategy:** Prepare for independence, don't abandon what works.
+
+| Item | Priority | Notes |
+|------|----------|-------|
+| Abstraction Layer for Plugin Host | High | Create `wavecraft-plugin-api` trait abstraction to decouple Wavecraft from nih-plug internals. Enables future backend swapping without breaking user code. **Effort:** 2 weeks |
+| nih-plug Fork Contingency | Medium (On-Trigger) | **Trigger:** Critical bug affecting Wavecraft unresolved upstream >4 weeks. Fork to `wavecraft-org/nih-plug`, apply targeted fixes, contribute upstream. **Effort:** As needed |
+| Native VST3 Spike | Medium | Evaluate MIT-licensed VST3 SDK + bindgen approach. Build minimal PoC (audio passthrough, no GUI), test in Ableton Live. **Timeline:** Q2 2026. **Effort:** 2-4 weeks spike |
+| Monitor nih-plug Health | Low (Ongoing) | Monthly check: commit activity, issue response times, macOS/Ableton-critical issues. Update strategy if activity resumes or stops entirely. |
+
+**Known nih-plug Issues Affecting Wavecraft:**
+- macOS window resize bugs (unresolved)
+- Retina display issues (unresolved)
+- DAW crash reports (multiple hosts)
+
+---
+
 ## DAW Compatibility
 
 | Item | Notes |
@@ -134,6 +154,7 @@ These items are ready to implement but require an Apple Developer Program member
 
 | Date | Update |
 |------|--------|
+| 2026-02-06 | **nih-plug Independence Strategy added**: New epic for defensive architecture — abstraction layer (High), fork contingency (Medium, on-trigger), native VST3 spike (Medium, Q2 2026), health monitoring (Low, ongoing). Motivated by nih-plug maintenance slowdown and VST3 MIT license change. |
 | 2026-02-03 | **CI/CD Optimization complete**: Marked all three CI items as complete — cache optimization, tiered artifact retention, and new `cargo xtask check` command for fast local validation (~52s). |
 | 2026-02-03 | **Code Quality complete**: Marked Logger class (UI) and `tracing` crate (Engine) as complete — both implemented in v0.6.1. |
 | 2026-02-03 | **UI Polish complete**: Marked horizontal scroll fix as complete — implemented in v0.6.1. |
