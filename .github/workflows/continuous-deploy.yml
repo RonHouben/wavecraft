@@ -106,6 +106,12 @@ jobs:
           git commit -m "chore(cli): release v$NEW_VERSION [skip ci]"
           git push
 
+      - name: Create and push git tag
+        run: |
+          NEW_VERSION=$(cargo metadata --manifest-path cli/Cargo.toml --no-deps --format-version 1 | jq -r '.packages[0].version')
+          git tag "wavecraft-cli-v$NEW_VERSION"
+          git push origin "wavecraft-cli-v$NEW_VERSION"
+
   # ============================================================================
   # Job 3: Publish engine crates to crates.io
   # ============================================================================
@@ -114,82 +120,54 @@ jobs:
     if: needs.detect-changes.outputs.engine == 'true'
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Required for version bump commits
+      contents: write  # For version bump commits and git tags
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      
+          fetch-depth: 0  # Full history for cargo-workspaces version detection
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-      
+
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: engine
-      
-      - name: Get current version
-        id: version
-        working-directory: engine
-        run: |
-          VERSION=$(grep -E '^version = "' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
-          echo "current=$VERSION" >> $GITHUB_OUTPUT
-          echo "Current engine version: $VERSION"
-      
-      - name: Check if already published
-        id: check
-        run: |
-          if cargo search wavecraft-protocol --limit 1 | grep -q "wavecraft-protocol = \"${{ steps.version.outputs.current }}\""; then
-            echo "published=true" >> $GITHUB_OUTPUT
-            echo "Version ${{ steps.version.outputs.current }} already published"
-          else
-            echo "published=false" >> $GITHUB_OUTPUT
-            echo "Version ${{ steps.version.outputs.current }} not yet published"
-          fi
-      
-      - name: Bump workspace version
-        if: steps.check.outputs.published == 'true'
-        working-directory: engine
-        run: |
-          CURRENT="${{ steps.version.outputs.current }}"
-          NEW=$(echo $CURRENT | awk -F. '{print $1"."$2"."$3+1}')
-          sed -i "s/^version = \"$CURRENT\"/version = \"$NEW\"/" Cargo.toml
-          echo "Bumped workspace version: $CURRENT -> $NEW"
-      
-      - name: Publish crates in dependency order
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        working-directory: engine
-        run: |
-          # Order matters! Publish dependencies first.
-          CRATES=(
-            "wavecraft-protocol"
-            "wavecraft-macros"
-            "wavecraft-metering"
-            "wavecraft-dsp"
-            "wavecraft-bridge"
-            "wavecraft-core"
-          )
-          
-          for crate in "${CRATES[@]}"; do
-            echo "========================================="
-            echo "Publishing $crate..."
-            echo "========================================="
-            cargo publish -p $crate --token "$CARGO_REGISTRY_TOKEN"
-            # Wait for crates.io to index (required for dependent crates)
-            echo "Waiting 30s for crates.io to index..."
-            sleep 30
-          done
-      
-      - name: Commit version bump
-        if: steps.check.outputs.published == 'true'
+
+      - name: Install cargo-workspaces
+        run: cargo install cargo-workspaces
+
+      - name: Configure git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add engine/Cargo.toml
-          NEW_VERSION=$(grep -E '^version = "' engine/Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
-          git commit -m "chore(engine): release v$NEW_VERSION [skip ci]"
-          git push
+
+      - name: Verify publishability (dry-run)
+        working-directory: engine
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          cargo ws publish \
+            --from-git \
+            --dry-run \
+            --yes \
+            --allow-branch main
+
+      - name: Publish to crates.io (with version bump and tags)
+        working-directory: engine
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          cargo ws publish \
+            --from-git \
+            --yes \
+            --allow-branch main
+          # cargo-workspaces automatically:
+          # - Bumps patch version if current version already published
+          # - Creates git tags: wavecraft-protocol-v0.7.2, wavecraft-core-v0.7.2, etc.
+          # - Commits version changes
+          # - Pushes commits and tags
 
   # ============================================================================
   # Job 4: Publish @wavecraft/core to npm
@@ -259,6 +237,12 @@ jobs:
           NEW_VERSION=$(node -p "require('./ui/packages/core/package.json').version")
           git commit -m "chore(npm-core): release v$NEW_VERSION [skip ci]"
           git push
+
+      - name: Create and push git tag
+        run: |
+          NEW_VERSION=$(node -p "require('./ui/packages/core/package.json').version")
+          git tag "@wavecraft/core-v$NEW_VERSION"
+          git push origin "@wavecraft/core-v$NEW_VERSION"
 
   # ============================================================================
   # Job 5: Publish @wavecraft/components to npm
@@ -335,3 +319,9 @@ jobs:
           NEW_VERSION=$(node -p "require('./ui/packages/components/package.json').version")
           git commit -m "chore(npm-components): release v$NEW_VERSION [skip ci]"
           git push
+
+      - name: Create and push git tag
+        run: |
+          NEW_VERSION=$(node -p "require('./ui/packages/components/package.json').version")
+          git tag "@wavecraft/components-v$NEW_VERSION"
+          git push origin "@wavecraft/components-v$NEW_VERSION"

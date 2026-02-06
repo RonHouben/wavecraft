@@ -4,8 +4,8 @@
 
 Tracking progress for migrating to cargo-workspaces for crates.io publishing.
 
-**Status:** Not Started  
-**Started:** -  
+**Status:** In Progress (Phases 1-3 Complete)  
+**Started:** 2026-02-06  
 **Completed:** -
 
 ---
@@ -14,15 +14,15 @@ Tracking progress for migrating to cargo-workspaces for crates.io publishing.
 
 | Step | Description | Status | Notes |
 |------|-------------|--------|-------|
-| 1.1 | Update workspace root (remove version, add repository) | ⬜ Not Started | |
-| 1.2 | Update wavecraft-protocol | ⬜ Not Started | |
-| 1.3 | Update wavecraft-macros (add description, authors) | ⬜ Not Started | |
-| 1.4 | Update wavecraft-metering (add description) | ⬜ Not Started | |
-| 1.5 | Update wavecraft-dsp | ⬜ Not Started | |
-| 1.6 | Update wavecraft-bridge | ⬜ Not Started | |
-| 1.7 | Update wavecraft-core | ⬜ Not Started | |
-| 1.8 | Exclude standalone from publishing | ⬜ Not Started | |
-| 1.9 | Verify workspace compiles | ⬜ Not Started | |
+| 1.1 | Update workspace root (remove version, add repository) | ✅ Done | Also updated xtask + vite.config.ts |
+| 1.2 | Update wavecraft-protocol | ✅ Done | |
+| 1.3 | Update wavecraft-macros (add description, authors) | ✅ Done | |
+| 1.4 | Update wavecraft-metering (add description) | ✅ Done | |
+| 1.5 | Update wavecraft-dsp | ✅ Done | |
+| 1.6 | Update wavecraft-bridge | ✅ Done | |
+| 1.7 | Update wavecraft-core | ✅ Done | |
+| 1.8 | Exclude standalone from publishing | ✅ Done | |
+| 1.9 | Verify workspace compiles | ✅ Done | cargo check + clippy pass |
 
 ---
 
@@ -30,7 +30,7 @@ Tracking progress for migrating to cargo-workspaces for crates.io publishing.
 
 | Step | Description | Status | Notes |
 |------|-------------|--------|-------|
-| 2.1 | Rewrite publish-engine job with cargo-workspaces | ⬜ Not Started | |
+| 2.1 | Rewrite publish-engine job with cargo-workspaces | ✅ Done | Includes dry-run step |
 
 ---
 
@@ -38,9 +38,9 @@ Tracking progress for migrating to cargo-workspaces for crates.io publishing.
 
 | Step | Description | Status | Notes |
 |------|-------------|--------|-------|
-| 3.1 | Add git tag to publish-cli job | ⬜ Not Started | |
-| 3.2 | Add git tag to publish-npm-core job | ⬜ Not Started | |
-| 3.3 | Add git tag to publish-npm-components job | ⬜ Not Started | |
+| 3.1 | Add git tag to publish-cli job | ✅ Done | |
+| 3.2 | Add git tag to publish-npm-core job | ✅ Done | |
+| 3.3 | Add git tag to publish-npm-components job | ✅ Done | |
 
 ---
 
@@ -50,7 +50,7 @@ Tracking progress for migrating to cargo-workspaces for crates.io publishing.
 |------|-------------|--------|-------|
 | 4.1 | Install cargo-workspaces locally | ⬜ Not Started | |
 | 4.2 | Verify crate metadata locally | ⬜ Not Started | |
-| 4.3 | Dry-run publish locally | ⬜ Not Started | |
+| 4.3 | Dry-run publish locally | ⬜ Not Started | Requires crates.io token |
 | 4.4 | Check crate name availability | ⬜ Not Started | |
 | 4.5 | Test workflow on feature branch | ⬜ Not Started | |
 

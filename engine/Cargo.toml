@@ -3,10 +3,10 @@ members = ["crates/*", "xtask"]
 resolver = "2"
 
 [workspace.package]
-version = "0.7.1"
 edition = "2024"
 license = "MIT"
 authors = ["Wavecraft Team"]
+repository = "https://github.com/RonHouben/wavecraft"
 
 [workspace.dependencies]
 # nih-plug framework - pinned to specific commit for stability
