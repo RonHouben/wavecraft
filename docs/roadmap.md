@@ -689,6 +689,7 @@ Based on internal testing, the CLI was improved for better developer experience:
 | **Git tag format** | `wavecraft-cli-v{version}` (matches repo convention) | Consistent release tagging |
 | **Clean interface** | `--local-sdk` boolean flag (hidden), no `--sdk-version` | Less confusing help output |
 | **PATH troubleshooting** | Clear documentation in Getting Started guide | Better error handling |
+| **Embedded dev server** | `wavecraft start` builds plugin, loads params via FFI, starts WS + Vite | Enables browser dev from plugin projects |
 
 **Test Results (M13 Complete):**
 ```
@@ -807,6 +808,7 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 | Date | Update |
 |------|--------|
+| 2026-02-06 | **Embedded Dev Server (v0.8.0)**: Added `wavecraft start` embedded WebSocket dev server with FFI parameter discovery. CLI now builds the plugin dylib, loads parameters via FFI, and starts WS + Vite for browser dev in plugin projects. Manual test plan updated and passing. Architecture docs updated (High-Level Design). |
 | 2026-02-06 | **Milestone 13 complete (v0.8.0)**: CLI UX Improvements. Internal testing revealed friction points in CLI workflow, resulting in 4 targeted improvements: (1) Zero prompts — removed `dialoguer` dependency, uses placeholder defaults, (2) SDK version auto-determined from CLI version, (3) Cleaner interface — removed `--sdk-version`, `--local-sdk` hidden boolean flag, (4) PATH troubleshooting guidance added to docs. 10/10 manual tests passing, QA approved with zero issues. Documentation updated (Getting Started, High-Level Design). Archived to `_archive/cli-ux-improvements/`. Progress: 87% (13/15 milestones). |
 | 2026-02-06 | **CI Build Stage Removal (v0.7.2)**: Removed redundant `build-plugin` job from CI workflow. Job never executed (workflow triggers on PRs, job condition required main branch). Simplifies CI from 7 jobs to 6, reduces confusion. Updated ci-pipeline.md, high-level-design.md, skill documentation. Version bumped to 0.7.2. PR #30. Archived to `_archive/ci-build-stage-removal/`. |
 | 2026-02-06 | **Template Reorganization**: Restructured CLI template from `cli/plugin-template/` to `cli/sdk-templates/new-project/react/` for better organization and future extensibility (vanilla, svelte variants). Fixed template xtask hardcoded plugin names (Issue #1) — now uses `{{plugin_name}}` and `{{plugin_name_snake}}` variables. Updated CLI default SDK version from v0.7.0 to v0.7.1 (Issue #2). CI path filters updated. All documentation updated (high-level-design.md, README.md, ci-pipeline.md). 10/10 tests passing, QA approved. Archived to `_archive/template-relocation-docs/`. |

@@ -1,4 +1,4 @@
-//! Standalone application entry point
+//! Wavecraft dev server entry point
 
 use clap::Parser;
 use std::sync::Arc;
@@ -14,10 +14,10 @@ use app::AppState;
 use wavecraft_bridge::IpcHandler;
 use ws_server::WsServer;
 
-/// VstKit Standalone - Audio plugin UI testing tool
+/// Wavecraft dev server - Audio plugin UI testing tool
 #[derive(Parser, Debug)]
-#[command(name = "standalone")]
-#[command(about = "VstKit standalone app for UI development and testing")]
+#[command(name = "wavecraft-dev-server")]
+#[command(about = "Wavecraft development server for plugin UI testing")]
 struct Args {
     /// Run in dev server mode (headless, WebSocket only)
     #[arg(long)]
@@ -53,7 +53,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 /// Run headless dev server mode (WebSocket only, no GUI)
 fn run_dev_server(port: u16, verbose: bool) -> Result<(), Box<dyn std::error::Error>> {
-    info!("Starting VstKit dev server on port {}", port);
+    info!("Starting Wavecraft dev server on port {}", port);
     if verbose {
         debug!("Verbose mode: showing all JSON-RPC messages");
     }
@@ -85,6 +85,6 @@ fn run_dev_server(port: u16, verbose: bool) -> Result<(), Box<dyn std::error::Er
 fn run_gui_app() -> Result<(), Box<dyn std::error::Error>> {
     let state = Arc::new(AppState::new());
 
-    info!("Starting VstKit Standalone...");
+    info!("Starting Wavecraft Dev Server (GUI mode)...");
     webview::run_app(state)
 }

@@ -1,4 +1,4 @@
-//! Standalone app library
+//! Wavecraft dev server library
 //!
 //! Exports modules for testing and integration.
 

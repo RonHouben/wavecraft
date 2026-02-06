@@ -28,7 +28,7 @@ wavecraft-metering = { path = "crates/wavecraft-metering", version = "0.7.3" }
 
 # Internal crates (not published to crates.io)
 wavecraft-nih_plug = { path = "crates/wavecraft-nih_plug" }
-standalone = { path = "crates/standalone" }
+wavecraft-dev-server = { path = "crates/wavecraft-dev-server" }
 
 [profile.release]
 lto = "thin"
