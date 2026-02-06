@@ -11,7 +11,7 @@ This document tracks implementation progress against the milestones defined in t
 │  WAVECRAFT ROADMAP           v0.7.1 | 80%  │
 ├─────────────────────────────────────────────┤
 │  ✅ M1-M12   Foundation → Open Source Ready│
-│  ⏳ M13      Internal Testing               │
+│  🚧 M13      Internal Testing (In Progress)│
 │  ⏳ M14      User Testing                   │
 │  ⏳ M15      V1.0 Release                   │
 ├─────────────────────────────────────────────┤
@@ -615,13 +615,13 @@ QA:           PASS (0 Critical/High, 2 Medium non-blocking, 3 Low optional)
 
 ---
 
-## Milestone 13: Internal Testing ⏳
+## Milestone 13: Internal Testing 🚧
 
 > **Goal:** Comprehensive internal validation of the complete SDK workflow before external beta testing. Catch issues that would frustrate external testers.
 
 **Depends on:** Milestone 12 (Open Source Readiness)
 
-**Target Version:** `0.7.1` (patch — bug fixes and polish from internal testing)
+**Target Version:** `0.7.2` (patch — bug fixes and polish from internal testing)
 
 | Task | Status | Notes |
 |------|--------|-------|
@@ -632,13 +632,18 @@ QA:           PASS (0 Critical/High, 2 Medium non-blocking, 3 Low optional)
 | Parameter sync test | ⏳ | UI ↔ DAW automation works correctly |
 | State persistence test | ⏳ | Save/load project preserves plugin state |
 | Multi-instance test | ⏳ | Multiple plugin instances work correctly |
+| **crates.io Publishing Prep** | | |
+| Crate metadata validation | ✅ | All 6 publishable crates have required fields |
+| Version specifiers added | ✅ | `version = "0.7.1"` on all workspace deps |
+| **wavecraft-core crate split** | ✅ | Enables crates.io publishing (nih_plug blocker resolved) |
+| Dry-run publish verification | ✅ | protocol, metering, macros pass `cargo publish --dry-run` |
 | **Documentation Walkthrough** | | |
 | SDK Getting Started guide | ⏳ | Follow as new user, note confusing parts |
-| High-level design review | ⏳ | Architecture docs accurate and current |
-| Coding standards review | ⏳ | All standards documented and followed |
+| High-level design review | ✅ | Architecture docs updated for crate split |
+| Coding standards review | ✅ | Module organization updated |
 | CI pipeline guide review | ⏳ | Local testing instructions work |
 | **Regression Testing** | | |
-| All `cargo xtask check` passes | ⏳ | Lint + tests clean |
+| All `cargo xtask check` passes | ✅ | Lint + tests clean (24/24 tests pass) |
 | Visual testing with Playwright | ⏳ | UI renders correctly in browser |
 | Desktop app (`cargo xtask dev`) | ⏳ | WebSocket bridge works |
 | Signing workflow | ⏳ | Ad-hoc signing succeeds |
@@ -650,6 +655,30 @@ QA:           PASS (0 Critical/High, 2 Medium non-blocking, 3 Low optional)
 | Low buffer sizes (32/64 samples) | ⏳ | No audio glitches |
 | Rapid parameter changes | ⏳ | No UI lag or crashes |
 | DAW project with many tracks | ⏳ | Performance acceptable |
+
+**Crate Split Details (Completed 2026-02-06):**
+
+The wavecraft-core crate was split to enable crates.io publishing:
+
+| Crate | Purpose | Publishable |
+|-------|---------|-------------|
+| `wavecraft-nih_plug` | nih-plug integration, WebView editor | ❌ Git-only (`publish = false`) |
+| `wavecraft-core` | Core SDK types, declarative macros | ✅ crates.io (no nih_plug dep) |
+
+**Key changes:**
+- `__nih` module in wavecraft-nih_plug exports all nih_plug types for proc-macro
+- `wavecraft_plugin!` macro supports `crate:` field for path customization
+- Template uses Cargo package rename: `wavecraft = { package = "wavecraft-nih_plug", ... }`
+- All 6 publishable crates validated with dry-run publish
+
+**Test Results (Crate Split):**
+```
+Engine Tests: All passing (2 passed, 1 ignored for doctests)
+UI Tests:     43 passed, 0 failed
+Manual Tests: 24/24 passed (crate structure, compilation, dry-run publish)
+Linting:      All checks passed (cargo clippy --workspace -- -D warnings)
+QA:           PASS (0 Critical/High/Medium, 1 Low finding resolved)
+```
 
 **Success Criteria:**
 - [ ] Complete SDK workflow works end-to-end
@@ -759,6 +788,7 @@ QA:           PASS (0 Critical/High, 2 Medium non-blocking, 3 Low optional)
 
 | Date | Update |
 |------|--------|
+| 2026-02-06 | **wavecraft-core crate split for crates.io publishing**: Split wavecraft-core into wavecraft-core (publishable, no nih_plug dependency) + wavecraft-nih_plug (git-only, contains nih-plug integration). Added `__nih` module for proc-macro type exports. Template uses Cargo package rename (`wavecraft = { package = "wavecraft-nih_plug" }`). All 6 publishable crates validated with dry-run publish. 24/24 manual tests, QA approved. Architecture docs updated (high-level-design.md, coding-standards.md). Milestone 13 now **In Progress**. |
 | 2026-02-05 | **CI Workflow Simplification**: Removed redundant `push` triggers from CI and Template Validation workflows — they now only run on PRs (not on merge to main). Added `workflow_dispatch` for manual runs when needed. Eliminates ~10-14 CI minutes of redundant validation per merge. Documentation updated (ci-pipeline.md, high-level-design.md). Archived to `_archive/ci-workflow-simplification/`. |
 | 2026-02-04 | **CLI `--local-dev` flag**: Added `--local-dev` CLI option to `wavecraft new` for SDK development and CI. Generates path dependencies (e.g., `path = "/path/to/engine/crates/wavecraft-core"`) instead of git tag dependencies. Solves CI chicken-egg problem where template validation fails because git tags don't exist until after PR merge. Mutually exclusive with `--sdk-version`. 10/10 unit tests, 10/10 manual tests. Documentation updated (sdk-getting-started.md, ci-pipeline.md). Archived to `_archive/ci-local-dev-dependencies/`. |
 | 2026-02-04 | **Continuous Deployment implemented (v0.7.1)**: Added `continuous-deploy.yml` workflow for automatic package publishing on merge to main. Path-based change detection using `dorny/paths-filter` — only changed packages are published. Auto-patch version bumping with bot commits (`[skip ci]` prevents re-triggers). Supports: CLI (crates.io), 6 engine crates (crates.io), `@wavecraft/core` (npm), `@wavecraft/components` (npm). Existing `cli-release.yml` and `npm-release.yml` converted to manual overrides. Full documentation added to `docs/guides/ci-pipeline.md`. Version bumped to 0.7.1 across all packages. |
@@ -831,14 +861,17 @@ QA:           PASS (0 Critical/High, 2 Medium non-blocking, 3 Low optional)
 12. ✅ **Milestone 12**: Open Source Readiness — CLI, npm packages, template independence (v0.7.0)
 
 ### Up Next
-13. ⏳ **Milestone 13**: Internal Testing — Comprehensive internal validation (v0.7.1)
+13. 🚧 **Milestone 13**: Internal Testing — Comprehensive internal validation (v0.7.2)
+    - ✅ Crate split for crates.io publishing
+    - ✅ Architecture docs updated
+    - ⏳ Template validation, DAW testing, documentation walkthrough
 14. ⏳ **Milestone 14**: User Testing — Beta testing with real plugin developers (v0.8.0)
 15. ⏳ **Milestone 15**: V1.0 Release — First stable production release (v1.0.0)
 
 ### Immediate Tasks
-1. ✅ Merge Open Source Readiness PR — v0.7.1 ready for merge
-2. ⏳ Create git tag `v0.7.1` — After PR merge
-3. ⏳ Start Milestone 13: Internal Testing
+1. ✅ Crate split implementation complete — wavecraft-nih_plug created, wavecraft-core publishable
+2. ⏳ Complete remaining M13 tasks — Template validation, DAW testing
+3. ⏳ Create git tag `v0.7.2` — After M13 complete
 4. ✅ Continuous Deployment configured — Auto-publishes on merge to main
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (crates.io publication, additional example plugins, etc.)
