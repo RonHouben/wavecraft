@@ -83,6 +83,27 @@ wavecraft new my-plugin --sdk-version "v0.7.0"
 
 ---
 
+### 5. CLI: `--local-dev` flag is confusing for users
+
+**Severity:** Medium  
+**Status:** 🔴 Open
+
+**Issue:** The `--local-dev` flag is an internal SDK development option but is exposed to end users. Regular users have no use for this and it clutters the CLI interface.
+
+**Current behavior:**
+```bash
+wavecraft new my-plugin --local-dev
+```
+
+**Recommendation:** 
+- Hide `--local-dev` from regular help output
+- This is purely for SDK developers and CI pipelines
+- Consider using an environment variable instead (e.g., `WAVECRAFT_LOCAL_DEV=1`)
+
+**Impact:** Confuses new users who don't understand what "local dev" means in this context.
+
+---
+
 ## Test Environment
 
 - macOS
