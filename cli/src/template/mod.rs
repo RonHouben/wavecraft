@@ -94,6 +94,18 @@ fn apply_local_dev_overrides(content: &str, vars: &TemplateVariables) -> Result<
     
     let mut result = content.to_string();
     
+    // Replace the main wavecraft dependency (with Cargo rename)
+    // Match: wavecraft = { package = "wavecraft-nih_plug", git = "...", tag = "..." }
+    let wavecraft_git_pattern = r#"wavecraft\s*=\s*\{\s*package\s*=\s*"wavecraft-nih_plug"\s*,\s*git\s*=\s*"https://github\.com/RonHouben/wavecraft"\s*,\s*tag\s*=\s*"[^"]*"\s*\}"#;
+    let wavecraft_path_replacement = format!(
+        r#"wavecraft = {{ package = "wavecraft-nih_plug", path = "{}/wavecraft-nih_plug" }}"#,
+        sdk_path.display()
+    );
+    let wavecraft_re = Regex::new(wavecraft_git_pattern)
+        .context("Invalid regex pattern for wavecraft-nih_plug")?;
+    result = wavecraft_re.replace_all(&result, wavecraft_path_replacement.as_str()).to_string();
+    
+    // Replace individual SDK crate dependencies
     for crate_name in &SDK_CRATES {
         // Match: crate_name = { git = "https://github.com/RonHouben/wavecraft", tag = "..." }
         let git_pattern = format!(
@@ -142,6 +154,10 @@ mod tests {
     fn test_apply_local_dev_overrides() {
         let content = r#"
 [dependencies]
+# Main SDK dependency with Cargo rename
+wavecraft = { package = "wavecraft-nih_plug", git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.0" }
+
+# Individual SDK crates
 wavecraft-core = { git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.0" }
 wavecraft-protocol = { git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.0" }
 wavecraft-dsp = { git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.0" }
@@ -157,6 +173,7 @@ wavecraft-metering = { git = "https://github.com/RonHouben/wavecraft", tag = "v0
         for crate_name in &SDK_CRATES {
             fs::create_dir_all(sdk_path.join(crate_name)).unwrap();
         }
+        fs::create_dir_all(sdk_path.join("wavecraft-nih_plug")).unwrap();
         
         let vars = TemplateVariables::new(
             "test-plugin".to_string(),
@@ -169,7 +186,19 @@ wavecraft-metering = { git = "https://github.com/RonHouben/wavecraft", tag = "v0
         
         let result = apply_local_dev_overrides(content, &vars).unwrap();
         
-        // Verify all git deps were replaced with path deps
+        // Verify main wavecraft dependency was replaced
+        assert!(
+            result.contains(r#"wavecraft = { package = "wavecraft-nih_plug", path ="#),
+            "Expected main wavecraft dependency to have path, got: {}",
+            result
+        );
+        assert!(
+            !result.contains(r#"wavecraft = { package = "wavecraft-nih_plug", git ="#),
+            "Expected main wavecraft git dep to be removed, got: {}",
+            result
+        );
+        
+        // Verify all individual SDK crate git deps were replaced with path deps
         for crate_name in &SDK_CRATES {
             assert!(
                 result.contains(&format!("{} = {{ path =", crate_name)),
