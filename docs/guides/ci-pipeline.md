@@ -23,20 +23,14 @@ The CI pipeline runs on all pull requests to `main` (not on merge/push). It cons
 │  ┌─────────┐                         ┌──────────────┐                       │
 │  │ test-ui │                         │ check-engine │                       │
 │  │ ~15s    │                         │ ~30s         │                       │
-│  └────┬────┘                         └───────┬──────┘                       │
-│       │                                      │                              │
-│       │                                      ▼                              │
-│       │                              ┌─────────────┐                        │
-│       │                              │ test-engine │                        │
-│       │                              │ ~1min       │                        │
-│       │                              └──────┬──────┘                        │
-│       │                                     │                               │
-│       └─────────────┬───────────────────────┘                               │
-│                     ▼                                                       │
-│             ┌──────────────┐                                                │
-│             │ build-plugin │  (main branch only)                            │
-│             │ ~5min        │                                                │
-│             └──────────────┘                                                │
+│  └─────────┘                         └───────┬──────┘                       │
+│                                              │                              │
+│                                              ▼                              │
+│                                      ┌─────────────┐                        │
+│                                      │ test-engine │                        │
+│                                      │ ~1min       │                        │
+│                                      └─────────────┘                        │
+│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -56,7 +50,6 @@ The CI pipeline runs on all pull requests to `main` (not on merge/push). It cons
 | **prepare-engine** | ubuntu-latest | ~4min | Build UI dist + compile with clippy |
 | **check-engine** | ubuntu-latest | ~30s | `cargo fmt --check` → `cargo clippy -D warnings` |
 | **test-engine** | ubuntu-latest | ~1min | `cargo test --workspace` |
-| **build-plugin** | macos-latest | ~5min | Bundle VST3/CLAP + ad-hoc signing (main only) |
 
 ## Design Principles
 
@@ -105,15 +98,8 @@ Downstream jobs (`check-engine`, `test-engine`) download these artifacts to avoi
 
 | Artifact | Source | Used By |
 |----------|--------|---------|
-| `ui-dist` | prepare-engine | check-engine, test-engine, build-plugin |
+| `ui-dist` | prepare-engine | check-engine, test-engine |
 | `engine-target` | prepare-engine | check-engine, test-engine |
-
-### Release Artifacts (30 day retention)
-
-| Artifact | Description |
-|----------|-------------|
-| `wavecraft-vst3-adhoc-signed` | VST3 plugin bundle (ad-hoc signed) |
-| `wavecraft-clap-adhoc-signed` | CLAP plugin bundle (ad-hoc signed) |
 
 ## Concurrency
 
@@ -243,7 +229,6 @@ act -j check-engine -W .github/workflows/ci.yml \
 | prepare-engine | ✅ Works |
 | check-engine | ✅ Works |
 | test-engine | ✅ Works |
-| build-plugin | ❌ Requires macOS |
 
 For detailed local testing instructions, see the [Run CI Pipeline Locally skill](/.github/skills/run-ci-pipeline-locally/SKILL.md).
 
