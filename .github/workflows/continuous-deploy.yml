@@ -210,6 +210,8 @@ jobs:
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
+          scope: '@wavecraft'
+          always-auth: true
       
       - name: Install dependencies
         working-directory: ui
@@ -244,6 +246,8 @@ jobs:
       
       - name: Publish to npm
         working-directory: ui/packages/core
+        env:
+          NPM_CONFIG_PROVENANCE: true
         run: npm publish --access public --provenance
 
       - name: Commit version bump
@@ -282,6 +286,8 @@ jobs:
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
+          scope: '@wavecraft'
+          always-auth: true
       
       - name: Install dependencies
         working-directory: ui
@@ -316,6 +322,8 @@ jobs:
       
       - name: Publish to npm
         working-directory: ui/packages/components
+        env:
+          NPM_CONFIG_PROVENANCE: true
         run: npm publish --access public --provenance
 
       - name: Commit version bump
