@@ -27,7 +27,7 @@ jobs:
             cli:
               - 'cli/src/**'
               - 'cli/Cargo.toml'
-              - 'plugin-template/**'
+              - 'cli/plugin-template/**'
             engine:
               - 'engine/crates/wavecraft-core/**'
               - 'engine/crates/wavecraft-dsp/**'
@@ -89,14 +89,6 @@ jobs:
           NEW=$(echo $CURRENT | awk -F. '{print $1"."$2"."$3+1}')
           sed -i "s/^version = \"$CURRENT\"/version = \"$NEW\"/" Cargo.toml
           echo "Bumped version: $CURRENT -> $NEW"
-      
-      - name: Copy plugin-template into CLI crate
-        run: |
-          # cargo publish only packages files within the crate directory.
-          # Copy the template so it's included in the tarball.
-          cp -r plugin-template cli/plugin-template
-          echo "Copied plugin-template to cli/plugin-template"
-          ls -la cli/plugin-template
       
       - name: Publish to crates.io
         env:
