@@ -4,14 +4,12 @@
 /engine/crates/wavecraft-core/tests/trybuild/full/target/
 /engine/crates/wavecraft-core/tests/trybuild/full/target/
 /cli/target/
-
-
-/target/
 /packaging/macos/au-wrapper/build
-/build
 /ui/node_modules
 /ui/dist
 /ui/coverage
+/ui/packages/components/dist
+/ui/packages/core/dist
 
 # Playwright
 /ui/playwright-report/

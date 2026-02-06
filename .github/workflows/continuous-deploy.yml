@@ -36,9 +36,9 @@ jobs:
               - 'engine/crates/wavecraft-metering/**'
               - 'engine/crates/wavecraft-macros/**'
             npm-core:
-              - 'ui/packages/core/src/**'
+              - 'ui/packages/core/**'
             npm-components:
-              - 'ui/packages/components/src/**'
+              - 'ui/packages/components/**'
 
   # ============================================================================
   # Job 2: Publish CLI to crates.io
@@ -245,7 +245,7 @@ jobs:
       - name: Publish to npm
         working-directory: ui/packages/core
         run: npm publish --access public --provenance
-      
+
       - name: Commit version bump
         if: steps.check.outputs.published == 'true'
         run: |
@@ -317,7 +317,7 @@ jobs:
       - name: Publish to npm
         working-directory: ui/packages/components
         run: npm publish --access public --provenance
-      
+
       - name: Commit version bump
         if: steps.check.outputs.published == 'true'
         run: |
