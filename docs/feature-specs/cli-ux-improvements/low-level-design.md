@@ -184,37 +184,17 @@ pub struct NewCommand {
 
 **Add helper function to detect SDK path:**
 ```rust
-use std::process::Command;
-
 fn find_local_sdk_path() -> Result<PathBuf> {
-    // Get git repository root
-    let output = Command::new("git")
-        .args(["rev-parse", "--show-toplevel"])
-        .output()
-        .context("Failed to run git rev-parse")?;
-    
-    if !output.status.success() {
-        anyhow::bail!(
-            "Error: --local-sdk requires running from within a git repository."
-        );
-    }
-    
-    let repo_root = String::from_utf8(output.stdout)
-        .context("Invalid UTF-8 in git output")?
-        .trim()
-        .to_string();
-    
-    let sdk_path = PathBuf::from(&repo_root).join("engine/crates");
+    let sdk_path = PathBuf::from("engine/crates");
     
     if !sdk_path.exists() {
         anyhow::bail!(
-            "Error: --local-sdk requires running from within the wavecraft repository.\n\
-             Could not find engine/crates directory at: {}",
-            sdk_path.display()
+            "Error: --local-sdk must be run from the wavecraft repository root.\n\
+             Could not find: engine/crates"
         );
     }
     
-    Ok(sdk_path)
+    sdk_path.canonicalize().context("Failed to resolve SDK path")
 }
 ```
 

@@ -76,7 +76,8 @@ Internal testing of the Wavecraft CLI revealed several friction points in the de
 - [ ] CLI automatically determines SDK version from its own version (`env!("CARGO_PKG_VERSION")`)
 - [ ] Generated projects use git tag matching CLI version (e.g., CLI v0.8.0 → `tag = "0.8.0"`)
 - [ ] `--local-dev` is **renamed to `--local-sdk`** as a boolean flag
-- [ ] `--local-sdk` auto-detects SDK path from git repository root (`engine/crates`)
+- [ ] `--local-sdk` checks for `engine/crates` in current working directory
+- [ ] `--local-sdk` requires running from repo root (CI and developers already do this)
 - [ ] `--local-sdk` is hidden from `wavecraft new --help` output
 - [ ] `--local-sdk` errors clearly if not run from within wavecraft repository
 - [ ] Documentation removes references to `--sdk-version` from user-facing sections
@@ -86,10 +87,10 @@ Internal testing of the Wavecraft CLI revealed several friction points in the de
 
 - `--sdk-version` removal: The CLI version *is* the SDK version. No user decision needed.
 - `--local-sdk` behavior:
-  1. Run `git rev-parse --show-toplevel` to find repo root
-  2. Check for `engine/crates` directory
-  3. Use that path for dependencies
-  4. Error if not found: "Error: --local-sdk requires running from within the wavecraft repository."
+  1. Check if `./engine/crates` exists from current directory
+  2. Use that path for dependencies
+  3. Error if not found: "Error: --local-sdk must be run from the wavecraft repository root."
+  4. Requires running from repo root (CI and developers already do this)
 - Implementation: Use `const SDK_VERSION: &str = env!("CARGO_PKG_VERSION");` at compile time
 
 ### Notes
