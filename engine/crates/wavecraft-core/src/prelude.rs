@@ -3,15 +3,16 @@
 //! This module re-exports the most commonly used types and traits for building
 //! plugins with Wavecraft. Import this to get started quickly:
 //!
-//! ```rust
+//! ```rust,ignore
 //! use wavecraft_core::prelude::*;
 //! ```
-
-// Re-export nih-plug essentials (everything from nih_plug::prelude)
-pub use nih_plug::prelude::*;
-
-// Re-export nih-plug export macros (needed at crate root)
-pub use nih_plug::{nih_export_clap, nih_export_vst3};
+//!
+//! For full plugin development with nih-plug integration, use the
+//! `wavecraft-nih_plug` crate's prelude instead:
+//!
+//! ```rust,ignore
+//! use wavecraft::prelude::*;  // via wavecraft-nih_plug
+//! ```
 
 // Re-export Wavecraft DSP traits and types
 pub use wavecraft_dsp::{Chain, ParamRange, ParamSpec, Processor, ProcessorParams, Transport};
@@ -22,18 +23,11 @@ pub use wavecraft_dsp::builtins::{GainDsp, PassthroughDsp};
 // Re-export Wavecraft protocol types
 pub use wavecraft_protocol::{ParamId, ParameterInfo, ParameterType, db_to_linear};
 
-// Re-export metering
+// Re-export metering types
 pub use wavecraft_metering::{MeterConsumer, MeterFrame, MeterProducer, create_meter_channel};
 
-// Re-export editor (platform-specific)
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-pub use crate::editor::WavecraftEditor;
-
-// Re-export utility functions
-pub use crate::util::calculate_stereo_meters;
-
-// Re-export DSL macros
-pub use wavecraft_macros::{ProcessorParams as DeriveProcessorParams, wavecraft_plugin};
+// Re-export ProcessorParams derive macro
+pub use wavecraft_macros::ProcessorParams as DeriveProcessorParams;
 
 // Re-export wavecraft_processor! declarative macro (exported at crate root due to #[macro_export])
 pub use crate::wavecraft_processor;

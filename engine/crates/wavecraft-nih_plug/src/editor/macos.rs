@@ -237,7 +237,7 @@ fn load_ui(webview: &WKWebView) -> Result<(), String> {
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>VstKit Plugin</title>
+    <title>Wavecraft Plugin</title>
     <style>
         body { 
             margin: 0; 
@@ -250,7 +250,7 @@ fn load_ui(webview: &WKWebView) -> Result<(), String> {
     </style>
 </head>
 <body>
-    <h1>VstKit WebView Editor</h1>
+    <h1>Wavecraft WebView Editor</h1>
     <p>UI assets not found. Please build the React UI first:</p>
     <pre>cd ui && npm run build</pre>
 </body>
@@ -305,7 +305,7 @@ declare_class!(
     unsafe impl ClassType for IpcMessageHandler {
         type Super = NSObject;
         type Mutability = mutability::InteriorMutable;
-        const NAME: &'static str = "VstKitIpcMessageHandler";
+        const NAME: &'static str = "WavecraftIpcMessageHandler";
     }
 
     impl DeclaredClass for IpcMessageHandler {
@@ -393,7 +393,7 @@ declare_class!(
     unsafe impl ClassType for AssetSchemeHandler {
         type Super = NSObject;
         type Mutability = mutability::InteriorMutable;
-        const NAME: &'static str = "VstKitAssetSchemeHandler";
+        const NAME: &'static str = "WavecraftAssetSchemeHandler";
     }
 
     impl DeclaredClass for AssetSchemeHandler {
@@ -425,13 +425,16 @@ declare_class!(
                 nih_trace!("[Asset Handler] Request: {}", path);
 
                 // Remove the vstkit://localhost/ prefix
-                let asset_path = path
-                    .strip_prefix("vstkit://localhost/")
-                    .unwrap_or(&path);
+                let asset_path = path.strip_prefix("vstkit://localhost/").unwrap_or(&path);
 
                 // Try to load the asset
                 if let Some((bytes, mime_type)) = assets::get_asset(asset_path) {
-                    nih_trace!("[Asset Handler] Found asset: {} ({} bytes, {})", asset_path, bytes.len(), mime_type);
+                    nih_trace!(
+                        "[Asset Handler] Found asset: {} ({} bytes, {})",
+                        asset_path,
+                        bytes.len(),
+                        mime_type
+                    );
 
                     // Create NSData from bytes
                     // SAFETY: NSData::with_bytes is safe to call
@@ -461,7 +464,7 @@ declare_class!(
 
                     // Send 404 error
                     let error = unsafe {
-                        let error_domain = NSString::from_str("VstKitErrorDomain");
+                        let error_domain = NSString::from_str("WavecraftErrorDomain");
                         let error_code = 404i64;
                         let error: Retained<AnyObject> = msg_send_id![
                             msg_send_id![objc2::class!(NSError), alloc],

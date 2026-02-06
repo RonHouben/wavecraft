@@ -9,16 +9,8 @@ name = "{{plugin_name_snake}}"
 crate-type = ["cdylib"]
 
 [dependencies]
-# Wavecraft SDK dependencies (version-locked to {{sdk_version}})
-wavecraft-core = { git = "https://github.com/RonHouben/wavecraft", tag = "{{sdk_version}}" }
-wavecraft-protocol = { git = "https://github.com/RonHouben/wavecraft", tag = "{{sdk_version}}" }
-wavecraft-dsp = { git = "https://github.com/RonHouben/wavecraft", tag = "{{sdk_version}}" }
-wavecraft-bridge = { git = "https://github.com/RonHouben/wavecraft", tag = "{{sdk_version}}" }
-wavecraft-metering = { git = "https://github.com/RonHouben/wavecraft", tag = "{{sdk_version}}" }
-
-# Note: nih-plug MUST be present for derive macros to work (Params, etc.)
-# Use the EXACT same version as wavecraft-core to avoid type conflicts
-nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28b149ec4d62757d0b448809148a0c3ca6e09a95" }
+# Single SDK dependency — Cargo rename gives us `use wavecraft::prelude::*`
+wavecraft = { package = "wavecraft-nih_plug", git = "https://github.com/RonHouben/wavecraft", tag = "{{sdk_version}}" }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -28,7 +20,7 @@ serde_json = "1.0"
 log = "0.4"
 
 [build-dependencies]
-# Note: Use the nih_plug_xtask from wavecraft-core's dependency tree
+# Note: Use the nih_plug_xtask from wavecraft's dependency tree
 # This ensures version consistency with the Wavecraft SDK
 nih_plug_xtask = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28b149ec4d62757d0b448809148a0c3ca6e09a95" }
 

@@ -1,20 +1,18 @@
 [package]
 name = "wavecraft-core"
-version = "0.7.1"
+version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-description = "Wavecraft audio plugin - nih-plug VST3/CLAP integration"
+description = "Wavecraft audio plugin SDK - core types and macros"
 
 [lib]
 name = "wavecraft_core"
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [features]
 default = []
-# Enable runtime allocation detection on audio thread (debug builds)
-assert_process_allocs = ["nih_plug/assert_process_allocs"]
 
 [dependencies]
 wavecraft-protocol.workspace = true
@@ -22,31 +20,6 @@ wavecraft-dsp.workspace = true
 wavecraft-metering.workspace = true
 wavecraft-bridge.workspace = true
 wavecraft-macros.workspace = true
-nih_plug.workspace = true
-wry = { version = "0.47", default-features = false, features = ["os-webview"] }
-raw-window-handle = "0.6"
-serde_json = "1.0"
-include_dir = "0.7"
+
 # Used by macro helper to construct identifiers
 paste = "1.0"
-
-[dev-dependencies]
-trybuild = "1.0"
-
-[target.'cfg(target_os = "macos")'.dependencies]
-objc2 = "0.5"
-objc2-foundation = "0.2"
-objc2-app-kit = "0.2"
-objc2-web-kit = "0.2"
-block2 = "0.5"
-
-[target.'cfg(target_os = "windows")'.dependencies]
-windows = { version = "0.58", features = [
-    "Win32_Foundation",
-    "Win32_Graphics_Gdi",
-    "Win32_System_Com",
-    "Win32_System_LibraryLoader",
-    "Win32_System_WinRT",
-    "Win32_UI_WindowsAndMessaging",
-] }
-webview2-com = "0.33"

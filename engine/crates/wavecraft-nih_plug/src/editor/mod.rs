@@ -2,23 +2,6 @@
 //!
 //! This module provides the nih-plug Editor implementation, bridging
 //! the WebView UI with the plugin's parameter system and metering.
-//!
-//! # Example
-//!
-//! ```rust,ignore
-//! use wavecraft_core::editor::WavecraftEditor;
-//! use std::sync::{Arc, Mutex};
-//!
-//! // In your Plugin::editor() implementation:
-//! # /*
-//! fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-//!     Some(Box::new(WavecraftEditor::new(
-//!         self.params.clone(),
-//!         self.meter_consumer.clone(),
-//!     )))
-//! }
-//! # */
-//! ```
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use std::any::Any;
@@ -52,8 +35,8 @@ pub use webview::{WebViewConfig, WebViewHandle, create_webview};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub struct WavecraftEditor<P: Params> {
     params: Arc<P>,
-    /// Shared meter consumer - cloned to each bridge instance
-    meter_consumer: Arc<Mutex<MeterConsumer>>,
+    /// Meter consumer for audio metering - taken on first editor spawn
+    meter_consumer: Mutex<Option<MeterConsumer>>,
     size: Arc<Mutex<(u32, u32)>>,
     /// Handle to the WebView for resize operations
     webview_handle: Arc<Mutex<Option<Box<dyn WebViewHandle>>>>,
@@ -61,12 +44,24 @@ pub struct WavecraftEditor<P: Params> {
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 impl<P: Params> WavecraftEditor<P> {
-    /// Create a new WebView editor.
-    pub fn new(params: Arc<P>, meter_consumer: Arc<Mutex<MeterConsumer>>) -> Self {
+    /// Create a new WebView editor with specified dimensions.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` - Shared parameter state
+    /// * `meter_consumer` - Optional meter consumer for audio metering
+    /// * `width` - Initial editor width in pixels
+    /// * `height` - Initial editor height in pixels
+    pub fn new(
+        params: Arc<P>,
+        meter_consumer: Option<MeterConsumer>,
+        width: u32,
+        height: u32,
+    ) -> Self {
         Self {
             params,
-            meter_consumer,
-            size: Arc::new(Mutex::new((800, 800))), // Default size - increased to show all content
+            meter_consumer: Mutex::new(meter_consumer),
+            size: Arc::new(Mutex::new((width, height))),
             webview_handle: Arc::new(Mutex::new(None)),
         }
     }
@@ -79,8 +74,8 @@ impl<P: Params> Editor for WavecraftEditor<P> {
         parent: ParentWindowHandle,
         context: Arc<dyn GuiContext>,
     ) -> Box<dyn Any + Send> {
-        // Clone the shared meter consumer for this editor instance
-        let meter_consumer = self.meter_consumer.clone();
+        // Take the meter consumer (only works for first editor instance)
+        let meter_consumer = self.meter_consumer.lock().unwrap().take();
 
         let size = *self.size.lock().unwrap();
 
@@ -187,7 +182,14 @@ impl<P: Params> Editor for WavecraftEditor<P> {
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub fn create_webview_editor<P: Params + 'static>(
     params: Arc<P>,
-    meter_consumer: Arc<Mutex<MeterConsumer>>,
+    meter_consumer: Option<MeterConsumer>,
+    width: u32,
+    height: u32,
 ) -> Option<Box<dyn Editor>> {
-    Some(Box::new(WavecraftEditor::new(params, meter_consumer)))
+    Some(Box::new(WavecraftEditor::new(
+        params,
+        meter_consumer,
+        width,
+        height,
+    )))
 }
