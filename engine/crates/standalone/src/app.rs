@@ -3,27 +3,52 @@
 //! This simulates plugin parameter state using thread-safe atomics,
 //! demonstrating the pattern that will be used in the actual plugin.
 
-use atomic_float::AtomicF32;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use wavecraft_bridge::{BridgeError, ParameterHost, ParameterInfo, ParameterType};
+use wavecraft_bridge::{
+    BridgeError, InMemoryParameterHost, ParameterHost, ParameterInfo, ParameterType,
+};
 
-/// Application state with simulated plugin parameters
+/// Application state with simulated plugin parameters.
 #[derive(Clone)]
 pub struct AppState {
-    // Parameters (simulating a simple gain/mix plugin)
-    gain: Arc<AtomicF32>,
-    bypass: Arc<AtomicBool>,
-    mix: Arc<AtomicF32>,
+    host: Arc<InMemoryParameterHost>,
 }
 
 impl AppState {
     /// Create new application state with default values
     pub fn new() -> Self {
+        let parameters = vec![
+            ParameterInfo {
+                id: "gain".to_string(),
+                name: "Gain".to_string(),
+                param_type: ParameterType::Float,
+                value: 0.7,
+                default: 0.7,
+                unit: Some("dB".to_string()),
+                group: None,
+            },
+            ParameterInfo {
+                id: "bypass".to_string(),
+                name: "Bypass".to_string(),
+                param_type: ParameterType::Bool,
+                value: 0.0,
+                default: 0.0,
+                unit: None,
+                group: None,
+            },
+            ParameterInfo {
+                id: "mix".to_string(),
+                name: "Mix".to_string(),
+                param_type: ParameterType::Float,
+                value: 1.0,
+                default: 1.0,
+                unit: Some("%".to_string()),
+                group: None,
+            },
+        ];
+
         Self {
-            gain: Arc::new(AtomicF32::new(0.7)), // Default gain: 0.7 normalized (-2.6 dB)
-            bypass: Arc::new(AtomicBool::new(false)),
-            mix: Arc::new(AtomicF32::new(1.0)), // Default mix: 100% wet
+            host: Arc::new(InMemoryParameterHost::new(parameters)),
         }
     }
 }
@@ -36,85 +61,23 @@ impl Default for AppState {
 
 impl ParameterHost for AppState {
     fn get_parameter(&self, id: &str) -> Option<ParameterInfo> {
-        match id {
-            "gain" => Some(ParameterInfo {
-                id: "gain".to_string(),
-                name: "Gain".to_string(),
-                param_type: ParameterType::Float,
-                value: self.gain.load(Ordering::Relaxed),
-                default: 0.7,
-                unit: Some("dB".to_string()),
-                group: None,
-            }),
-            "bypass" => Some(ParameterInfo {
-                id: "bypass".to_string(),
-                name: "Bypass".to_string(),
-                param_type: ParameterType::Bool,
-                value: if self.bypass.load(Ordering::Relaxed) {
-                    1.0
-                } else {
-                    0.0
-                },
-                default: 0.0,
-                unit: None,
-                group: None,
-            }),
-            "mix" => Some(ParameterInfo {
-                id: "mix".to_string(),
-                name: "Mix".to_string(),
-                param_type: ParameterType::Float,
-                value: self.mix.load(Ordering::Relaxed),
-                default: 1.0,
-                unit: Some("%".to_string()),
-                group: None,
-            }),
-            _ => None,
-        }
+        self.host.get_parameter(id)
     }
 
     fn set_parameter(&self, id: &str, value: f32) -> Result<(), BridgeError> {
-        // Validate range
-        if !(0.0..=1.0).contains(&value) {
-            return Err(BridgeError::ParameterOutOfRange {
-                id: id.to_string(),
-                value,
-            });
-        }
-
-        match id {
-            "gain" => {
-                self.gain.store(value, Ordering::Relaxed);
-                Ok(())
-            }
-            "bypass" => {
-                self.bypass.store(value >= 0.5, Ordering::Relaxed);
-                Ok(())
-            }
-            "mix" => {
-                self.mix.store(value, Ordering::Relaxed);
-                Ok(())
-            }
-            _ => Err(BridgeError::ParameterNotFound(id.to_string())),
-        }
+        self.host.set_parameter(id, value)
     }
 
     fn get_all_parameters(&self) -> Vec<ParameterInfo> {
-        vec![
-            self.get_parameter("gain").unwrap(),
-            self.get_parameter("bypass").unwrap(),
-            self.get_parameter("mix").unwrap(),
-        ]
+        self.host.get_all_parameters()
     }
 
     fn get_meter_frame(&self) -> Option<wavecraft_protocol::MeterFrame> {
-        // Desktop POC doesn't have metering yet
-        None
+        self.host.get_meter_frame()
     }
 
     fn request_resize(&self, _width: u32, _height: u32) -> bool {
-        // Desktop POC doesn't support dynamic resizing
-        // (The desktop app has fixed window size)
-        false
+        self.host.request_resize(_width, _height)
     }
 }
 

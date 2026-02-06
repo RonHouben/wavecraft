@@ -31,17 +31,6 @@ nix = { version = "0.29", features = ["signal"] }
 [dev-dependencies]
 tempfile = "3.8"
 
-# Dev server dependencies
-[dependencies.libloading]
-version = "0.8"
-
-[dependencies.serde]
-version = "1.0"
-features = ["derive"]
-
-[dependencies.serde_json]
-version = "1.0"
-
 [dependencies.toml]
 version = "0.8"
 
@@ -55,6 +44,9 @@ path = "../engine/crates/wavecraft-protocol"
 
 [dependencies.wavecraft-bridge]
 path = "../engine/crates/wavecraft-bridge"
+
+[dependencies.wavecraft-metering]
+path = "../engine/crates/wavecraft-metering"
 
 [dependencies.standalone]
 path = "../engine/crates/standalone"

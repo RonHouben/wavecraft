@@ -57,11 +57,15 @@
 pub mod error;
 pub mod handler;
 pub mod host;
+pub mod in_memory_host;
+pub mod plugin_loader;
 
 // Re-export key types for convenience
 pub use error::BridgeError;
 pub use handler::IpcHandler;
 pub use host::ParameterHost;
+pub use in_memory_host::{InMemoryParameterHost, MeterProvider};
+pub use plugin_loader::{PluginLoaderError, PluginParamLoader};
 
 // Re-export protocol types used in bridge API
 pub use wavecraft_protocol::{

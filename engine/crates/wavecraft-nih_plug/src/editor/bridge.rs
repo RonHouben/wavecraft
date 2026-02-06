@@ -145,15 +145,7 @@ impl<P: Params> ParameterHost for PluginEditorBridge<P> {
         // Read latest meter frame from the shared consumer if available
         let consumer = self.meter_consumer.as_ref()?;
         let mut consumer = consumer.lock().unwrap();
-        consumer
-            .read_latest()
-            .map(|frame| wavecraft_protocol::MeterFrame {
-                peak_l: frame.peak_l,
-                peak_r: frame.peak_r,
-                rms_l: frame.rms_l,
-                rms_r: frame.rms_r,
-                timestamp: frame.timestamp,
-            })
+        consumer.read_latest()
     }
 
     fn request_resize(&self, width: u32, height: u32) -> bool {

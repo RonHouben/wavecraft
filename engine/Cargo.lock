@@ -1577,6 +1577,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bcc35a38544a891a5f7c865aca548a982ccb3b8650a5b06d0fd33a10283c56fc"
 
 [[package]]
+name = "libloading"
+version = "0.8.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7c4b02199fee7c5d21a5ae7d8cfa79a6ef5bb2fc834d6e9058e89c825efdc55"
+dependencies = [
+ "cfg-if",
+ "windows-link",
+]
+
+[[package]]
 name = "libredox"
 version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3541,8 +3551,9 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-bridge"
-version = "0.7.2"
+version = "0.7.3"
 dependencies = [
+ "libloading",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
@@ -3551,7 +3562,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-core"
-version = "0.7.2"
+version = "0.7.3"
 dependencies = [
  "paste",
  "wavecraft-bridge",
@@ -3563,7 +3574,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-dsp"
-version = "0.7.2"
+version = "0.7.3"
 dependencies = [
  "wavecraft-macros",
  "wavecraft-protocol",
@@ -3571,7 +3582,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-macros"
-version = "0.7.2"
+version = "0.7.3"
 dependencies = [
  "convert_case 0.6.0",
  "proc-macro2",
@@ -3582,14 +3593,15 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-metering"
-version = "0.7.2"
+version = "0.7.3"
 dependencies = [
  "rtrb",
+ "wavecraft-protocol",
 ]
 
 [[package]]
 name = "wavecraft-nih_plug"
-version = "0.7.2"
+version = "0.7.3"
 dependencies = [
  "block2 0.5.1",
  "include_dir",
@@ -3616,7 +3628,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-protocol"
-version = "0.7.2"
+version = "0.7.3"
 dependencies = [
  "paste",
  "serde",

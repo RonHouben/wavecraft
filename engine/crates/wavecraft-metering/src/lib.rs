@@ -3,24 +3,9 @@
 //! Provides lock-free SPSC ring buffers for transferring peak/RMS meter data
 //! from the audio thread to the UI thread without allocations or blocking.
 
-/// Frame of stereo metering data.
-///
-/// Sent from audio thread → UI thread via SPSC ring buffer.
-/// All values are linear (not dB) for real-time efficiency.
-#[derive(Clone, Copy, Default, Debug)]
-#[repr(C)]
-pub struct MeterFrame {
-    /// Left channel peak (linear, 0.0 to 1.0+)
-    pub peak_l: f32,
-    /// Right channel peak (linear, 0.0 to 1.0+)
-    pub peak_r: f32,
-    /// Left channel RMS (linear, 0.0 to 1.0+)
-    pub rms_l: f32,
-    /// Right channel RMS (linear, 0.0 to 1.0+)
-    pub rms_r: f32,
-    /// Sample timestamp (monotonic, for UI interpolation)
-    pub timestamp: u64,
-}
+pub mod dev;
+
+pub use wavecraft_protocol::MeterFrame;
 
 /// Producer side of meter channel (audio thread).
 ///
@@ -95,6 +80,16 @@ pub fn create_meter_channel(capacity: usize) -> (MeterProducer, MeterConsumer) {
 mod tests {
     use super::*;
 
+    fn empty_frame() -> MeterFrame {
+        MeterFrame {
+            peak_l: 0.0,
+            peak_r: 0.0,
+            rms_l: 0.0,
+            rms_r: 0.0,
+            timestamp: 0,
+        }
+    }
+
     #[test]
     fn meter_ring_push_pop() {
         let (mut producer, mut consumer) = create_meter_channel(4);
@@ -124,17 +119,17 @@ mod tests {
         // Fill buffer
         producer.push(MeterFrame {
             peak_l: 1.0,
-            ..Default::default()
+            ..empty_frame()
         });
         producer.push(MeterFrame {
             peak_l: 2.0,
-            ..Default::default()
+            ..empty_frame()
         });
 
         // Overflow silently drops (ring buffer behavior)
         producer.push(MeterFrame {
             peak_l: 3.0,
-            ..Default::default()
+            ..empty_frame()
         });
 
         // First two frames should still be readable
@@ -153,7 +148,7 @@ mod tests {
         for i in 0..5 {
             producer.push(MeterFrame {
                 peak_l: i as f32,
-                ..Default::default()
+                ..empty_frame()
             });
         }
 
@@ -178,8 +173,8 @@ mod tests {
 
         assert_eq!(consumer.available_read(), 0);
 
-        producer.push(MeterFrame::default());
-        producer.push(MeterFrame::default());
+        producer.push(empty_frame());
+        producer.push(empty_frame());
 
         assert_eq!(consumer.available_read(), 2);
 

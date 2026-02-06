@@ -4,12 +4,20 @@
 //! development server. It stores parameter values in memory and generates
 //! synthetic metering data for UI testing.
 
-use std::collections::HashMap;
-use std::sync::RwLock;
-use wavecraft_bridge::{BridgeError, ParameterHost};
+use std::sync::{Arc, RwLock};
+use wavecraft_bridge::{BridgeError, InMemoryParameterHost, MeterProvider, ParameterHost};
+use wavecraft_metering::dev::MeterGenerator;
 use wavecraft_protocol::{MeterFrame, ParameterInfo};
 
-use super::MeterGenerator;
+struct MeterGeneratorProvider {
+    generator: Arc<RwLock<MeterGenerator>>,
+}
+
+impl MeterProvider for MeterGeneratorProvider {
+    fn get_meter_frame(&self) -> Option<MeterFrame> {
+        self.generator.read().ok().map(|gen| gen.frame())
+    }
+}
 
 /// Development server host for browser-based UI testing
 ///
@@ -22,12 +30,8 @@ use super::MeterGenerator;
 /// All state is protected by RwLock for concurrent access from
 /// the IPC handler and any background tasks.
 pub struct DevServerHost {
-    /// Parameter metadata loaded from the plugin
-    parameters: Vec<ParameterInfo>,
-    /// Current parameter values (normalized 0.0-1.0)
-    values: RwLock<HashMap<String, f32>>,
-    /// Synthetic meter generator
-    meter_generator: RwLock<MeterGenerator>,
+    inner: InMemoryParameterHost,
+    meter_generator: Arc<RwLock<MeterGenerator>>,
 }
 
 impl DevServerHost {
@@ -37,16 +41,15 @@ impl DevServerHost {
     ///
     /// * `parameters` - Parameter metadata loaded from the plugin FFI
     pub fn new(parameters: Vec<ParameterInfo>) -> Self {
-        // Initialize values map with defaults
-        let values: HashMap<String, f32> = parameters
-            .iter()
-            .map(|p| (p.id.clone(), p.default))
-            .collect();
+        let meter_generator = Arc::new(RwLock::new(MeterGenerator::new()));
+        let provider = Arc::new(MeterGeneratorProvider {
+            generator: Arc::clone(&meter_generator),
+        });
+        let inner = InMemoryParameterHost::with_meter_provider(parameters, provider);
 
         Self {
-            parameters,
-            values: RwLock::new(values),
-            meter_generator: RwLock::new(MeterGenerator::new()),
+            inner,
+            meter_generator,
         }
     }
 
@@ -63,83 +66,23 @@ impl DevServerHost {
 
 impl ParameterHost for DevServerHost {
     fn get_parameter(&self, id: &str) -> Option<ParameterInfo> {
-        // Find the parameter metadata
-        let param = self.parameters.iter().find(|p| p.id == id)?;
-
-        // Get current value
-        let value = self
-            .values
-            .read()
-            .ok()?
-            .get(id)
-            .copied()
-            .unwrap_or(param.default);
-
-        // Return updated parameter info with current value
-        Some(ParameterInfo {
-            id: param.id.clone(),
-            name: param.name.clone(),
-            param_type: param.param_type,
-            value,
-            default: param.default,
-            unit: param.unit.clone(),
-            group: param.group.clone(),
-        })
+        self.inner.get_parameter(id)
     }
 
     fn set_parameter(&self, id: &str, value: f32) -> Result<(), BridgeError> {
-        // Validate parameter exists
-        if !self.parameters.iter().any(|p| p.id == id) {
-            return Err(BridgeError::ParameterNotFound(id.to_string()));
-        }
-
-        // Validate value range (normalized 0.0-1.0)
-        if !(0.0..=1.0).contains(&value) {
-            return Err(BridgeError::ParameterOutOfRange {
-                id: id.to_string(),
-                value,
-            });
-        }
-
-        // Update value
-        if let Ok(mut values) = self.values.write() {
-            values.insert(id.to_string(), value);
-        }
-
-        Ok(())
+        self.inner.set_parameter(id, value)
     }
 
     fn get_all_parameters(&self) -> Vec<ParameterInfo> {
-        let values = self.values.read().ok();
-
-        self.parameters
-            .iter()
-            .map(|p| {
-                let value = values
-                    .as_ref()
-                    .and_then(|v| v.get(&p.id).copied())
-                    .unwrap_or(p.default);
-
-                ParameterInfo {
-                    id: p.id.clone(),
-                    name: p.name.clone(),
-                    param_type: p.param_type,
-                    value,
-                    default: p.default,
-                    unit: p.unit.clone(),
-                    group: p.group.clone(),
-                }
-            })
-            .collect()
+        self.inner.get_all_parameters()
     }
 
     fn get_meter_frame(&self) -> Option<MeterFrame> {
-        self.meter_generator.read().ok().map(|gen| gen.frame())
+        self.inner.get_meter_frame()
     }
 
     fn request_resize(&self, _width: u32, _height: u32) -> bool {
-        // Dev server doesn't support window resize
-        false
+        self.inner.request_resize(_width, _height)
     }
 }
 

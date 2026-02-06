@@ -7,10 +7,10 @@
 //! # Architecture
 //!
 //! ```text
-//! ┌─────────────────┐     FFI      ┌──────────────┐
-//! │  PluginLoader   │─────────────►│ User Plugin  │
-//! │  (libloading)   │◄─────────────│  (dylib)     │
-//! └────────┬────────┘  JSON params └──────────────┘
+//! ┌────────────────────┐     FFI      ┌──────────────┐
+//! │ PluginParamLoader  │─────────────►│ User Plugin  │
+//! │ (wavecraft-bridge) │◄─────────────│  (dylib)     │
+//! └─────────┬──────────┘  JSON params └──────────────┘
 //!          │
 //!          ▼
 //! ┌─────────────────┐
@@ -32,9 +32,6 @@
 //! ```
 
 mod host;
-mod loader;
-mod meter;
 
 pub use host::DevServerHost;
-pub use loader::PluginLoader;
-pub use meter::MeterGenerator;
+pub use wavecraft_bridge::PluginParamLoader as PluginLoader;
