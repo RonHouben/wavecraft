@@ -104,6 +104,38 @@ wavecraft new my-plugin --local-dev
 
 ---
 
+### 6. CLI: PATH setup not automatic after `cargo install`
+
+**Severity:** High  
+**Status:** 🔴 Open
+
+**Issue:** After running `cargo install wavecraft`, users see:
+```
+warning: be sure to add `/Users/ronhouben/.cargo/bin` to your PATH to be able to run the installed binaries
+```
+
+Then running `wavecraft` fails:
+```
+zsh: command not found: wavecraft
+```
+
+**Root cause:** This is a Cargo ecosystem limitation - `cargo install` places binaries in `~/.cargo/bin`, but users must manually add this to their PATH.
+
+**Recommendations:**
+1. **Documentation:** Add a "Verify Installation" step in `sdk-getting-started.md` with PATH setup instructions for different shells (zsh, bash, fish)
+2. **Alternative approach:** Consider providing an install script that handles PATH setup:
+   ```bash
+   curl -sSf https://wavecraft.dev/install.sh | sh
+   ```
+3. **Workaround for docs:** Suggest users can run directly without PATH:
+   ```bash
+   ~/.cargo/bin/wavecraft new my-plugin
+   ```
+
+**Impact:** Blocks new users immediately after installation - critical friction point in onboarding.
+
+---
+
 ## Test Environment
 
 - macOS
