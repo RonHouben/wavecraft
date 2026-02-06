@@ -98,8 +98,9 @@ wavecraft/
 │  │                 │                    │                           │   │
 │  │  • validation   │                    │ [dependencies]            │   │
 │  │  • templates    │                    │ wavecraft-core = {        │   │
-│  │  • interactive  │                    │   git = "...wavecraft",  │   │
-│  │    prompts      │                    │   tag = "v0.7.0" }       │   │
+│  │  • defaults     │                    │   git = "...wavecraft",  │   │
+│  │    (no prompts) │                    │   tag = "wavecraft-cli-  │   │
+│  │                 │                    │         v0.7.1" }         │   │
 │  └─────────────────┘                    └───────────────────────────┘   │
 │                                                     │                   │
 │                                          depends on │ (git)             │
@@ -136,10 +137,11 @@ wavecraft/
 | Aspect | Phase 1 (Current) | Phase 2 (Post-1.0) |
 |--------|-------------------|---------------------|
 | Template location | Embedded in CLI binary | Same (embedded) |
-| Rust SDK dependencies | Git tag (`tag = "v0.7.0"`) | Published crates (crates.io) |
+| Rust SDK dependencies | Git tag (`tag = "wavecraft-cli-v0.7.1"`) | Published crates (crates.io) |
 | UI SDK dependencies | **npm packages** (`@wavecraft/core`, `@wavecraft/components`) | Same (npm) |
 | Development | Rapid iteration | Stable API |
 | User workflow | `cargo install wavecraft && wavecraft new` | Same, with crates.io deps |
+| CLI behavior | No prompts, uses placeholder defaults | Same |
 
 ⸻
 
@@ -498,7 +500,7 @@ my-plugin/
 ```toml
 [dependencies]
 # Single SDK dependency — Cargo rename gives us `use wavecraft::prelude::*`
-wavecraft = { package = "wavecraft-nih_plug", git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.1" }
+wavecraft = { package = "wavecraft-nih_plug", git = "https://github.com/RonHouben/wavecraft", tag = "wavecraft-cli-v0.7.1" }
 ```
 
 **Template `package.json` Dependencies:**
