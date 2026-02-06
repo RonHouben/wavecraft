@@ -10,7 +10,8 @@ use commands::NewCommand;
 
 /// SDK version derived from CLI package version at compile time.
 /// Used for git tag dependencies in generated projects.
-const SDK_VERSION: &str = env!("CARGO_PKG_VERSION");
+/// Format: "wavecraft-cli-v{version}" to match repository tag convention.
+const SDK_VERSION: &str = concat!("wavecraft-cli-v", env!("CARGO_PKG_VERSION"));
 
 #[derive(Parser)]
 #[command(
