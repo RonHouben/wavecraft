@@ -1,0 +1,26 @@
+[package]
+name = "{{plugin_name}}"
+version.workspace = true
+edition.workspace = true
+license = "MIT"
+
+[lib]
+name = "{{plugin_name_snake}}"
+crate-type = ["cdylib"]
+
+[dependencies]
+# Single SDK dependency — Cargo rename gives us `use wavecraft::prelude::*`
+wavecraft = { package = "wavecraft-nih_plug", git = "https://github.com/RonHouben/wavecraft", tag = "{{sdk_version}}" }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Logging
+log = "0.4"
+
+[build-dependencies]
+# Note: Use the nih_plug_xtask from wavecraft's dependency tree
+# This ensures version consistency with the Wavecraft SDK
+nih_plug_xtask = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28b149ec4d62757d0b448809148a0c3ca6e09a95" }
+

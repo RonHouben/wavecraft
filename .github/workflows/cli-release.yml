@@ -43,6 +43,14 @@ jobs:
           fi
           echo "✅ Versions match"
       
+      - name: Copy plugin-template into CLI crate
+        run: |
+          # cargo publish only packages files within the crate directory.
+          # Copy the template so it's included in the tarball.
+          cp -r plugin-template cli/plugin-template
+          echo "Copied plugin-template to cli/plugin-template"
+          ls -la cli/plugin-template
+      
       - name: Publish to crates.io
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

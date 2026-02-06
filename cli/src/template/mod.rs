@@ -8,7 +8,10 @@ use std::path::Path;
 
 use crate::template::variables::TemplateVariables;
 
-static TEMPLATE_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/../plugin-template");
+// Note: The template is copied into cli/plugin-template by build.rs during local development,
+// and by the CI workflow before publishing. This ensures `cargo publish` includes the template
+// in the tarball (cargo only packages files within the crate directory).
+static TEMPLATE_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/plugin-template");
 
 /// Extracts the embedded template to the target directory and applies variable replacement.
 pub fn extract_template(target_dir: &Path, vars: &TemplateVariables) -> Result<()> {

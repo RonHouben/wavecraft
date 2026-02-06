@@ -1,0 +1,26 @@
+# Rust
+/engine/target/
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# Node.js
+/ui/node_modules/
+/ui/dist/
+/ui/coverage/
+/ui/.eslintcache
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Plugin bundles (keep in target/bundled/)
+*.vst3
+*.clap
+*.component
