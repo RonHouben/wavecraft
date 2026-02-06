@@ -95,31 +95,42 @@ Internal testing of the Wavecraft CLI revealed several friction points in the de
 
 ---
 
-## User Story 4: Installation PATH Guidance
+## User Story 4: Installation Troubleshooting Guidance
 
 **As a** plugin developer  
-**I want** clear guidance on PATH setup after installing the CLI  
-**So that** I can successfully run `wavecraft` without troubleshooting
+**I want** to know how to fix "command not found" after installing the CLI  
+**So that** I can quickly resolve PATH issues if they occur
 
 ### Acceptance Criteria
 
-- [ ] `sdk-getting-started.md` includes a "Verify Installation" section after the install step
-- [ ] Documentation covers PATH setup for common shells:
-  - zsh (default on macOS)
-  - bash
-  - fish (optional)
-- [ ] Documentation includes a "Quick workaround" for users who don't want to modify PATH:
-  ```bash
-  ~/.cargo/bin/wavecraft new my-plugin
-  ```
-- [ ] Consider: Provide alternative installation method that handles PATH automatically (discuss with architect)
+- [ ] `sdk-getting-started.md` includes a troubleshooting note after the install step
+- [ ] Troubleshooting covers:
+  - What the error looks like ("command not found: wavecraft")
+  - Why it happens (PATH not configured)
+  - How to fix it for zsh and bash
+  - Quick workaround (run via full path)
+- [ ] Keep it brief — this is an edge case, not the main flow
+
+### Documentation Content
+
+After the install step, add:
+
+```markdown
+> **Troubleshooting:** If you see `command not found: wavecraft`, your shell PATH 
+> may not include Cargo's bin directory. Either restart your terminal, or add it manually:
+>
+> **zsh:** `echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc`
+>
+> **bash:** `echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc`
+>
+> Or run directly: `~/.cargo/bin/wavecraft new my-plugin`
+```
 
 ### Notes
 
-- This is a Cargo ecosystem limitation, not something we can fix in CLI code
-- The primary solution is better documentation
-- The architect should evaluate whether an install script (`curl | sh`) is worth the effort
-- Keep the happy path simple — most Rust developers already have `~/.cargo/bin` in PATH
+- Most users won't need this — rustup configures PATH during Rust installation
+- This is a safety net for edge cases, not the primary flow
+- No CLI changes required — documentation only
 
 ---
 
@@ -138,6 +149,7 @@ Internal testing of the Wavecraft CLI revealed several friction points in the de
 
 ## Out of Scope
 
-- Install script (`curl | sh`) — to be evaluated separately by architect
+- Install script (`curl | sh`) — unnecessary, rustup handles PATH
 - Windows/Linux-specific PATH instructions — macOS is primary focus
+- CLI `setup` command — overkill for an edge case
 - Additional CLI commands beyond `new` — future work
