@@ -5,6 +5,10 @@
 [![crates.io](https://img.shields.io/crates/v/wavecraft.svg)](https://crates.io/crates/wavecraft)
 [![npm](https://img.shields.io/npm/v/@wavecraft/core.svg)](https://www.npmjs.com/package/@wavecraft/core)
 
+> **🚧 Under Construction — Not Production Ready**
+>
+> Wavecraft is in active development. See the [Roadmap](docs/roadmap.md) for current status. Expect breaking changes until v1.0.
+
 A cross-platform audio effects plugin framework built with **Rust** and **React**.
 
 ## Overview
