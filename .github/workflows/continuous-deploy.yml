@@ -48,6 +48,7 @@ jobs:
     if: needs.detect-changes.outputs.cli == 'true'
     runs-on: ubuntu-latest
     permissions:
+      id-token: write  # Required for crates.io trusted publishing (OIDC)
       contents: write  # Required for version bump commits
     steps:
       - uses: actions/checkout@v4
@@ -143,11 +144,15 @@ jobs:
         working-directory: cli
         run: cargo publish --dry-run
       
+      - name: Authenticate with crates.io (OIDC)
+        id: crates-auth
+        uses: rust-lang/crates-io-auth-action@v1
+
       - name: Publish to crates.io
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         working-directory: cli
-        run: cargo publish --token "$CARGO_REGISTRY_TOKEN"
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.crates-auth.outputs.token }}
+        run: cargo publish
       
       - name: Commit version bump
         if: steps.bump.outputs.bumped == 'true'
@@ -173,6 +178,7 @@ jobs:
     if: needs.detect-changes.outputs.engine == 'true'
     runs-on: ubuntu-latest
     permissions:
+      id-token: write  # Required for crates.io trusted publishing (OIDC)
       contents: write  # For version bump commits and git tags
     steps:
       - uses: actions/checkout@v4
@@ -198,8 +204,6 @@ jobs:
 
       - name: Verify publishability (dry-run)
         working-directory: engine
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
           cargo ws publish \
             --from-git \
@@ -207,10 +211,14 @@ jobs:
             --yes \
             --allow-branch main
 
+      - name: Authenticate with crates.io (OIDC)
+        id: crates-auth
+        uses: rust-lang/crates-io-auth-action@v1
+
       - name: Publish to crates.io (with version bump and tags)
         working-directory: engine
         env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ steps.crates-auth.outputs.token }}
         run: |
           cargo ws publish \
             --from-git \
@@ -229,6 +237,9 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.npm-core == 'true'
     runs-on: ubuntu-latest
+    env:
+      NODE_AUTH_TOKEN: ""
+      NPM_TOKEN: ""
     permissions:
       id-token: write  # Required for npm OIDC trusted publishing + provenance
       contents: write  # Required for version bump commits
@@ -242,6 +253,7 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
           scope: '@wavecraft'
+          always-auth: false
       
       - name: Install dependencies
         working-directory: ui
@@ -310,6 +322,9 @@ jobs:
       needs.detect-changes.outputs.npm-components == 'true' &&
       (needs.publish-npm-core.result == 'success' || needs.publish-npm-core.result == 'skipped')
     runs-on: ubuntu-latest
+    env:
+      NODE_AUTH_TOKEN: ""
+      NPM_TOKEN: ""
     permissions:
       id-token: write  # Required for npm OIDC trusted publishing + provenance
       contents: write  # Required for version bump commits
@@ -327,6 +342,7 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
           scope: '@wavecraft'
+          always-auth: false
       
       - name: Install dependencies
         working-directory: ui
