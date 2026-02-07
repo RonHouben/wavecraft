@@ -4,7 +4,7 @@
 //! into the Rust binary using `include_dir!`. Assets are served via a
 //! custom protocol handler in the WebView.
 
-use include_dir::{include_dir, Dir};
+use include_dir::{Dir, include_dir};
 use std::borrow::Cow;
 use std::path::{Component, Path, PathBuf};
 
