@@ -2896,26 +2896,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 
 [[package]]
-name = "standalone"
-version = "0.7.2"
-dependencies = [
- "atomic_float 1.1.0",
- "clap",
- "futures-util",
- "include_dir",
- "parking_lot",
- "serde_json",
- "tao",
- "tokio",
- "tokio-tungstenite",
- "tracing",
- "tracing-subscriber",
- "wavecraft-bridge",
- "wavecraft-protocol",
- "wry",
-]
-
-[[package]]
 name = "string_cache"
 version = "0.8.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3570,6 +3550,26 @@ dependencies = [
  "wavecraft-macros",
  "wavecraft-metering",
  "wavecraft-protocol",
+]
+
+[[package]]
+name = "wavecraft-dev-server"
+version = "0.7.2"
+dependencies = [
+ "atomic_float 1.1.0",
+ "clap",
+ "futures-util",
+ "include_dir",
+ "parking_lot",
+ "serde_json",
+ "tao",
+ "tokio",
+ "tokio-tungstenite",
+ "tracing",
+ "tracing-subscriber",
+ "wavecraft-bridge",
+ "wavecraft-protocol",
+ "wry",
 ]
 
 [[package]]

@@ -660,7 +660,7 @@ By reusing `wavecraft-dev-server`, we get the WebSocket server code "for free" b
 - **Cons**: ~2-3 MB larger than writing a minimal WsServer (wry/tao overhead)
 
 **Acceptable for v0.8.0.** If binary size becomes a concern:
-1. Add feature flags to `standalone` to exclude `wry`/`tao` when only WsServer is needed
+1. Add feature flags to `wavecraft-dev-server` to exclude `wry`/`tao` when only WsServer is needed
 2. Or extract `WsServer` into a separate `wavecraft-ws-server` crate
 
 ---
@@ -746,10 +746,10 @@ The template validation workflow will catch regressions:
 - Unit tests for FFI calling convention
 
 ### Phase 3: DevServerHost + MeterGenerator (1-2 hours)
-- Add `standalone` as dependency for `WsServer` reuse
+- Add `wavecraft-dev-server` as dependency for `WsServer` reuse
 - Implement `DevServerHost` (ParameterHost trait)
 - Implement `MeterGenerator` for synthetic meter data
-- No WebSocket code needed — reuse `standalone::ws_server::WsServer`
+- No WebSocket code needed — reuse `wavecraft_dev_server::ws_server::WsServer`
 
 ### Phase 4: Integration (2-3 hours)
 - Update `start.rs` to use embedded server
@@ -772,7 +772,7 @@ The template validation workflow will catch regressions:
 | Metering data | Synthetic sine wave simulation | Better dev experience than silence |
 | Build mode | Debug by default | Faster iteration (~3s vs ~15s) |
 | Hot reload params | Manual restart (v1) | Complex; defer to future enhancement |
-| WebSocket server | Reuse `standalone::ws_server` | Avoid code duplication, tested implementation |
+| WebSocket server | Reuse `wavecraft_dev_server::ws_server` | Avoid code duplication, tested implementation |
 
 ---
 
@@ -782,4 +782,4 @@ The template validation workflow will catch regressions:
 2. **Parameter hot reload**: Watch `src/` for changes, auto-rebuild and reload
 3. **Audio file playback**: Play audio files through plugin for real metering
 4. **Multiple clients**: Broadcast parameter changes to all connected browsers
-5. **Feature-flag standalone**: Extract `WsServer` to reduce CLI binary size
+5. **Feature-flag wavecraft-dev-server**: Extract `WsServer` to reduce CLI binary size

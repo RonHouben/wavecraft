@@ -1,6 +1,6 @@
 # QA Report: CLI Dev Server Reuse
 
-**Date**: 2026-02-06
+**Date**: 2026-02-07
 **Reviewer**: QA Agent
 **Status**: FAIL
 
@@ -9,11 +9,11 @@
 | Severity | Count |
 |----------|-------|
 | Critical | 0 |
-| High | 1 |
+| High | 0 |
 | Medium | 1 |
 | Low | 0 |
 
-**Overall**: FAIL (High/Medium findings present)
+**Overall**: FAIL (Medium findings present)
 
 ## Automated Check Results
 
@@ -26,16 +26,13 @@
 
 | ID | Severity | Category | Description | Location | Recommendation |
 |----|----------|----------|-------------|----------|----------------|
-| 1 | High | Process Compliance | `docs/roadmap.md` is modified, but roadmap updates are restricted to the Product Owner. This violates repository policy. *User notes this change was made by another agent.* | `docs/roadmap.md` | Revert roadmap changes or hand off to PO for proper update. |
-| 2 | Medium | Architecture | The crate rename/move (`standalone` → `wavecraft-dev-server`) is an architectural change outside the original scope. It can affect workspace dependencies and design docs. *User notes this change was made by another agent.* | `engine/crates/wavecraft-dev-server/**`, `engine/xtask/src/commands/dev.rs`, `engine/Cargo.toml` | Route to Architect for review; update architecture docs if change is accepted. |
+| 1 | Medium | Process Compliance | Unrelated feature-spec edits are present in the same change set (e.g., `standalone-rename` and `audio-input-via-wasm` docs). This makes it harder to review and track scope. | `docs/feature-specs/standalone-rename/**`, `docs/feature-specs/audio-input-via-wasm/high-level-design.md` | Split unrelated doc edits into separate PRs or revert them from this change set. |
 
 ## Architectural Concerns
 
-> ⚠️ **The following items require architect review before implementation.**
-
-- Renaming/moving the `standalone` crate to `wavecraft-dev-server` changes the workspace structure and likely impacts the high-level design and build tooling assumptions. *User notes this change was made by another agent.*
+None. Architect review approved the `wavecraft-dev-server` rename and confirmed architecture docs are aligned.
 
 ## Handoff Decision
 
 **Target Agent**: coder
-**Reasoning**: Needs to remove or revert the unauthorized roadmap edit, and coordinate with Architect on the crate rename (or revert if not intended). If these changes are intentionally external to this scope, they should be split into a separate PR and reviewed by the appropriate agent (PO/Architect).
+**Reasoning**: Clean up scope by splitting or reverting unrelated feature-spec edits, then re-run QA for final PASS.

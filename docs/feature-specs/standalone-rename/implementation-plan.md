@@ -416,61 +416,56 @@ cargo run -p wavecraft-dev-server -- --dev-server --port 9000
 
 #### 4.5 Update roadmap.md crate references
 **File:** `docs/roadmap.md`  
-**Why:** Documentation must match actual crate structure  
+**Why:** Roadmap updates are PO-only  
 **Dependencies:** Phase 1 complete  
 **Risk:** Low
 
-**Multiple updates needed — search for "standalone" and update non-historical references.**
+**Note:** Skip in coder work; hand off to PO if needed.
 
 ---
 
-#### 4.6 Update cli-start-command spec references
-**File:** `docs/feature-specs/cli-start-command/user-stories.md`  
-**Why:** Active spec must reference correct crate  
+#### 4.6 Update CLI dev server reuse specs
+**Files:**
+- `docs/feature-specs/cli-dev-server-reuse/implementation-plan.md`
+- `docs/feature-specs/cli-dev-server-reuse/implementation-progress.md`
+**Why:** Active specs reference the old crate name  
 **Dependencies:** Phase 1 complete  
 **Risk:** Low
 
-**Update line 124:**
+**Change examples:**
 ```markdown
-# Before:
-   - `cargo run -p standalone -- --dev-server --port <PORT>` in `engine/`
-
-# After:
-   - `cargo run -p wavecraft-dev-server -- --dev-server --port <PORT>` in `engine/`
+- Optional cleanups cover meter frame type unification and wavecraft-dev-server host reuse.
+- Align wavecraft-dev-server host with shared host
 ```
 
 ---
 
-#### 4.7 Update cli-start-command implementation plan
-**File:** `docs/feature-specs/cli-start-command/implementation-plan.md`  
-**Why:** Active spec must reference correct crate  
+#### 4.7 Update embedded dev server specs
+**Files:**
+- `docs/feature-specs/embedded-dev-server/low-level-design-embedded-dev-server.md`
+- `docs/feature-specs/embedded-dev-server/implementation-plan.md`
+- `docs/feature-specs/embedded-dev-server/implementation-progress.md`
+**Why:** Active specs reference the old crate name and paths  
 **Dependencies:** Phase 1 complete  
 **Risk:** Low
 
-**Update line 138:**
+**Change examples:**
 ```markdown
-# Before:
-- Spawn `cargo run -p standalone --release -- --dev-server --port <PORT>` in engine/
-
-# After:
-- Spawn `cargo run -p wavecraft-dev-server --release -- --dev-server --port <PORT>` in engine/
+use wavecraft_dev_server::ws_server::WsServer;
+wavecraft-dev-server = { path = "../engine/crates/wavecraft-dev-server" }
 ```
 
 ---
 
-#### 4.8 Update internal-testing user stories
-**File:** `docs/feature-specs/internal-testing/user-stories.md`  
-**Why:** Active spec must reference correct crate  
+#### 4.8 Update audio-input-via-wasm spec
+**File:** `docs/feature-specs/audio-input-via-wasm/high-level-design.md`  
+**Why:** Spec references the old "standalone" dev server name  
 **Dependencies:** Phase 1 complete  
 **Risk:** Low
 
-**Update line 192:**
+**Update examples:**
 ```markdown
-# Before:
-- [ ] Desktop standalone app (`cargo run -p standalone`) works
-
-# After:
-- [ ] Desktop dev server (`cargo run -p wavecraft-dev-server`) works
+Currently, the only way to test with real audio is through the dev server (`cargo xtask dev`), which:
 ```
 
 ---

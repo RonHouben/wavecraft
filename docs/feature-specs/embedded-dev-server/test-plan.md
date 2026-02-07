@@ -120,7 +120,12 @@ None.
 
 ## Testing Notes
 
-- Manual UI verification (browser interactions) was not performed.
+- Visual UI check via Playwright MCP:
+   - Page loaded at http://localhost:5173
+   - Status showed Connected (WebSocket)
+   - Meters and diagnostics rendered
+   - Screenshot captured: `wavecraft-ui-visual-check.png`
+   - Console noted missing `favicon.ico` (404), otherwise no blocking issues
 
 ## Sign-off
 

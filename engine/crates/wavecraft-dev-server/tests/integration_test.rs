@@ -1,7 +1,7 @@
 //! Integration tests for IPC communication
 
-use wavecraft_dev_server::AppState;
 use wavecraft_bridge::{IpcHandler, ParameterHost};
+use wavecraft_dev_server::AppState;
 use wavecraft_protocol::{
     IpcRequest, METHOD_GET_ALL_PARAMETERS, METHOD_GET_PARAMETER, METHOD_SET_PARAMETER, RequestId,
 };

@@ -1,8 +1,8 @@
 //! Latency benchmarks for IPC communication
 
-use wavecraft_dev_server::AppState;
 use std::time::Instant;
 use wavecraft_bridge::IpcHandler;
+use wavecraft_dev_server::AppState;
 use wavecraft_protocol::{IpcRequest, METHOD_GET_PARAMETER, RequestId};
 
 #[test]

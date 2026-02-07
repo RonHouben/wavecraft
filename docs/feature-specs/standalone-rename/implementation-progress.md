@@ -1,6 +1,6 @@
 # Implementation Progress: Rename `standalone` → `wavecraft-dev-server`
 
-**Status:** Not Started  
+**Status:** In Progress  
 **Last Updated:** 2026-02-06
 
 ---
@@ -11,48 +11,48 @@
 
 | Step | Description | Status | Notes |
 |------|-------------|--------|-------|
-| 1.1 | Rename folder via `git mv` | ⬜ | |
-| 1.2 | Update crate `Cargo.toml` (name, description, binary) | ⬜ | |
-| 1.3 | Update workspace `Cargo.toml` | ⬜ | |
-| 1.4 | Update `integration_test.rs` imports | ⬜ | |
-| 1.5 | Update `latency_bench.rs` imports | ⬜ | |
-| 1.6 | Verify Phase 1 build | ⬜ | |
+| 1.1 | Rename folder via `git mv` | ✅ | |
+| 1.2 | Update crate `Cargo.toml` (name, description, binary) | ✅ | |
+| 1.3 | Update workspace `Cargo.toml` | ✅ | |
+| 1.4 | Update `integration_test.rs` imports | ✅ | |
+| 1.5 | Update `latency_bench.rs` imports | ✅ | |
+| 1.6 | Verify Phase 1 build | ✅ | `cargo build -p wavecraft-dev-server`
 
 ### Phase 2: xtask & CLI Updates
 
 | Step | Description | Status | Notes |
 |------|-------------|--------|-------|
-| 2.1 | Update `xtask/commands/dev.rs` | ⬜ | |
-| 2.2 | Update `cli/Cargo.toml` dependency | ⬜ | |
-| 2.3 | Update `cli/commands/start.rs` import | ⬜ | |
-| 2.4 | Update `cli/dev_server/mod.rs` comments | ⬜ | |
-| 2.5 | Update `cli/Cargo.lock` | ⬜ | |
+| 2.1 | Update `xtask/commands/dev.rs` | ✅ | |
+| 2.2 | Update `cli/Cargo.toml` dependency | ✅ | |
+| 2.3 | Update `cli/commands/start.rs` import | ✅ | |
+| 2.4 | Update `cli/dev_server/mod.rs` comments | ✅ | |
+| 2.5 | Update `cli/Cargo.lock` | ✅ | `cargo build` in `cli/`
 | 2.6 | Verify Phase 2 functionality | ⬜ | |
 
 ### Phase 3: Source Comments & CLI Metadata
 
 | Step | Description | Status | Notes |
 |------|-------------|--------|-------|
-| 3.1 | Update `main.rs` doc comment | ⬜ | |
-| 3.2 | Update CLI command metadata | ⬜ | |
-| 3.3 | Update dev server log message | ⬜ | |
-| 3.4 | Update GUI app log message | ⬜ | |
-| 3.5 | Update `lib.rs` doc comment | ⬜ | |
-| 3.6 | Update crate README | ⬜ | |
+| 3.1 | Update `main.rs` doc comment | ✅ | |
+| 3.2 | Update CLI command metadata | ✅ | |
+| 3.3 | Update dev server log message | ✅ | |
+| 3.4 | Update GUI app log message | ✅ | |
+| 3.5 | Update `lib.rs` doc comment | ✅ | |
+| 3.6 | Update crate README | ✅ | |
 
 ### Phase 4: Documentation Updates
 
 | Step | Description | Status | Notes |
 |------|-------------|--------|-------|
-| 4.1 | Update root `README.md` project structure | ⬜ | |
-| 4.2 | Update `coding-standards.md` crate list | ⬜ | |
-| 4.3 | Update `high-level-design.md` diagram | ⬜ | |
-| 4.4 | Update `high-level-design.md` command example | ⬜ | |
-| 4.5 | Update `roadmap.md` references | ⬜ | |
-| 4.6 | Update `cli-start-command/user-stories.md` | ⬜ | |
-| 4.7 | Update `cli-start-command/implementation-plan.md` | ⬜ | |
-| 4.8 | Update `internal-testing/user-stories.md` | ⬜ | |
-| 4.9 | Update `WebSocketTransport.ts` comments | ⬜ | |
+| 4.1 | Update root `README.md` project structure | ✅ | |
+| 4.2 | Update `coding-standards.md` crate list | ✅ | |
+| 4.3 | Update `high-level-design.md` diagram | ✅ | |
+| 4.4 | Update `high-level-design.md` command example | ✅ | |
+| 4.5 | Update `roadmap.md` references | ⏭️ | PO-only change (skipped)
+| 4.6 | Update `cli-dev-server-reuse` specs | ✅ | |
+| 4.7 | Update `embedded-dev-server` specs | ✅ | |
+| 4.8 | Update audio-input-via-wasm spec | ✅ | |
+| 4.9 | Update `WebSocketTransport.ts` comments | ✅ | |
 
 ### Phase 5: Final Verification
 
@@ -69,12 +69,12 @@
 
 | Phase | Steps | Completed | Progress |
 |-------|-------|-----------|----------|
-| Phase 1 | 6 | 0 | 0% |
-| Phase 2 | 6 | 0 | 0% |
-| Phase 3 | 6 | 0 | 0% |
-| Phase 4 | 9 | 0 | 0% |
+| Phase 1 | 6 | 6 | 100% |
+| Phase 2 | 6 | 5 | 83% |
+| Phase 3 | 6 | 6 | 100% |
+| Phase 4 | 9 | 8 | 89% |
 | Phase 5 | 4 | 0 | 0% |
-| **Total** | **31** | **0** | **0%** |
+| **Total** | **31** | **25** | **81%** |
 
 ---
 
