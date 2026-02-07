@@ -4,7 +4,7 @@
 //! into the Rust binary using `include_dir!`. Assets are served via a
 //! custom protocol handler in the WebView.
 
-use include_dir::{Dir, include_dir};
+use include_dir::{include_dir, Dir};
 use std::borrow::Cow;
 use std::path::{Component, Path, PathBuf};
 
@@ -58,8 +58,7 @@ fn try_disk_asset(path: &str) -> Option<Vec<u8>> {
 }
 
 fn ui_dist_dir() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../ui/dist")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../ui/dist")
 }
 
 fn is_safe_relative_path(path: &str) -> bool {
