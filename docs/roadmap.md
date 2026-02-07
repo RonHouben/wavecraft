@@ -808,6 +808,7 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 | Date | Update |
 |------|--------|
+| 2026-02-07 | **Doctest cleanup + documentation guidance**: Replaced ignored Rust doctests with `rust,no_run` or `text` blocks where appropriate, updated examples to compile, and documented doctest conventions in coding standards. `cargo xtask ci-check` now runs with zero ignored doctests. |
 | 2026-02-07 | **Dev server rename (v0.7.2)**: Renamed `standalone` crate to `wavecraft-dev-server` to clarify purpose. Updated CLI/xtask wiring, docs/specs, and verified help output + dev server smoke tests. Test plan and QA report completed. |
 | 2026-02-07 | **CLI dev server reuse (v0.7.3)**: Refactored CLI dev server to reuse engine crates (shared in-memory host, FFI parameter loader, synthetic meter generator). Unified MeterFrame via protocol re-export and removed duplication. Tests and manual dev-server checks passing. |
 | 2026-02-06 | **Embedded Dev Server (v0.8.0)**: Added `wavecraft start` embedded WebSocket dev server with FFI parameter discovery. CLI now builds the plugin dylib, loads parameters via FFI, and starts WS + Vite for browser dev in plugin projects. Manual test plan updated and passing. Architecture docs updated (High-Level Design). |

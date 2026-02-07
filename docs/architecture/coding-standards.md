@@ -708,6 +708,30 @@ Code running on the audio thread must:
 
 Wavecraft uses Vitest and React Testing Library for UI unit testing.
 
+### Documentation Examples (Rust doctests)
+
+**Rule:** Prefer compiling doctests over ignored ones.
+
+Use the following conventions for Rust doc examples:
+
+- **`rust,no_run`** for examples that should compile but don’t need to execute.
+- **`text`** for cross-crate or illustrative snippets that cannot compile in the current crate.
+- **Avoid `ignore`** unless there’s a hard external dependency that can’t be represented.
+
+**Do:**
+```rust
+/// ```rust,no_run
+/// use wavecraft_core::prelude::*;
+/// ```
+```
+
+**Do (non-compiling illustration):**
+```text
+/// ```text
+/// use wavecraft::prelude::*; // via Cargo rename in downstream crate
+/// ```
+```
+
 ### Pre-Push Validation
 
 **Rule:** Always run `cargo xtask ci-check` before pushing changes.
