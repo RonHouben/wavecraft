@@ -16,6 +16,7 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 
 | Item | Notes |
 |------|-------|
+| CLI `-v`/`--version` flag | Add a quick way for users to verify installed Wavecraft CLI version. Expected output like `wavecraft 0.x.y`. |
 | Browser audio input via WASM | Enable testing UI with real audio input (mic, files, test tones) in browser dev mode. Tiered architecture: Mock DSP (JS) for fast HMR, optional WASM DSP for integration testing. Rust remains parameter source of truth. See [high-level design](feature-specs/audio-input-via-wasm/high-level-design.md). |
 | Extend `cargo xtask clean` to cover full workspace | Currently only cleans `engine/target`. Should also clean `cli/target` and `ui/node_modules`+`ui/dist`. Single command to reclaim all build artifacts. |
 | ~~Rename `wavecraft-plugin-template` → `plugin-template`~~ | ✅ **Done in Milestone 12**. |
@@ -154,6 +155,7 @@ These items are ready to implement but require an Apple Developer Program member
 
 | Date | Update |
 |------|--------|
+| 2026-02-07 | **Backlog addition:** Add CLI `-v`/`--version` flag so users can easily verify installed version. |
 | 2026-02-06 | **nih-plug Independence Strategy added**: New epic for defensive architecture — abstraction layer (High), fork contingency (Medium, on-trigger), native VST3 spike (Medium, Q2 2026), health monitoring (Low, ongoing). Motivated by nih-plug maintenance slowdown and VST3 MIT license change. |
 | 2026-02-03 | **CI/CD Optimization complete**: Marked all three CI items as complete — cache optimization, tiered artifact retention, and new `cargo xtask check` command for fast local validation (~52s). |
 | 2026-02-03 | **Code Quality complete**: Marked Logger class (UI) and `tracing` crate (Engine) as complete — both implemented in v0.6.1. |
