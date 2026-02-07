@@ -132,25 +132,25 @@ On completion, PO archives the entire feature folder to `docs/feature-specs/_arc
 - **Use Architect** when: Design decisions needed, architectural review, defining boundaries
 - **Use Planner** when: Complex feature needs breakdown, multi-step implementation
 - **Use Coder** when: Ready to implement, bug fixes, code changes
-- **Use Tester** when: Feature ready for testing, runs `cargo xtask check` first, then manual testing
+- **Use Tester** when: Feature ready for testing, runs `cargo xtask ci-check` first, then manual testing
 - **Use QA** when: Code review needed, static analysis, quality verification
 
 ## Testing Workflow
 
 The Tester agent uses the following workflow for feature validation:
 
-### Primary Testing Method: `cargo xtask check`
+### Primary Testing Method: `cargo xtask ci-check`
 
 ```bash
 # Run all checks locally (fast, ~1 minute)
-cargo xtask check
+cargo xtask ci-check
 
 # Run with auto-fix for linting issues
-cargo xtask check --fix
+cargo xtask ci-check --fix
 
 # Skip certain phases
-cargo xtask check --skip-lint
-cargo xtask check --skip-tests
+cargo xtask ci-check --skip-lint
+cargo xtask ci-check --skip-tests
 ```
 
 This command runs:
@@ -183,11 +183,11 @@ pkill -f "cargo xtask dev"
 
 ### Why Not Docker/act?
 
-The `cargo xtask check` approach is **~26x faster** than running the full CI pipeline via Docker:
+The `cargo xtask ci-check` approach is **~26x faster** than running the full CI pipeline via Docker:
 
 | Method | Time | Use Case |
 |--------|------|----------|
-| `cargo xtask check` | ~52s | Daily testing, pre-push validation |
+| `cargo xtask ci-check` | ~52s | Daily testing, pre-push validation |
 | `act` (Docker CI) | ~9-12 min | CI performance comparison, debugging GitHub Actions |
 
 Docker-based testing is only needed for:

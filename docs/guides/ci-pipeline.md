@@ -172,21 +172,21 @@ on:
 
 ### Fast Local Validation (Recommended)
 
-Use `cargo xtask check` for fast pre-push validation that simulates CI checks locally:
+Use `cargo xtask ci-check` for fast pre-push validation that simulates CI checks locally:
 
 ```bash
 # Run all checks (~52 seconds)
-cargo xtask check
+cargo xtask ci-check
 
 # Auto-fix linting issues
-cargo xtask check --fix
+cargo xtask ci-check --fix
 
 # Skip phases
-cargo xtask check --skip-lint
-cargo xtask check --skip-tests
+cargo xtask ci-check --skip-lint
+cargo xtask ci-check --skip-tests
 ```
 
-**Why use `cargo xtask check`:**
+**Why use `cargo xtask ci-check`:**
 - **26x faster** than Docker-based CI testing (~52s vs ~9-12 min)
 - Runs natively on your machine (no Docker overhead)
 - Same checks as CI pipeline (lint + tests)

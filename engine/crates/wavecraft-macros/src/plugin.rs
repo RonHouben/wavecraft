@@ -516,11 +516,9 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
         /// # Safety
         /// The pointer must have been returned by `wavecraft_get_params_json`.
         #[unsafe(no_mangle)]
-        pub extern "C" fn wavecraft_free_string(ptr: *mut ::std::ffi::c_char) {
+        pub unsafe extern "C" fn wavecraft_free_string(ptr: *mut ::std::ffi::c_char) {
             if !ptr.is_null() {
-                unsafe {
-                    let _ = ::std::ffi::CString::from_raw(ptr);
-                }
+                let _ = ::std::ffi::CString::from_raw(ptr);
             }
         }
     };

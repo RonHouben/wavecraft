@@ -827,7 +827,7 @@ Wavecraft uses a Rust-based build system (`xtask`) that provides a unified inter
 
 | Command | Description |
 |---------|-------------|
-| `cargo xtask check` | **Pre-push validation** — Run lint + tests locally (~52s, 26x faster than Docker CI) |
+| `cargo xtask ci-check` | **Pre-push validation** — Run lint + tests locally (~52s, 26x faster than Docker CI) |
 | `cargo xtask dev` | Start WebSocket + Vite dev servers for browser development |
 | `cargo xtask bundle` | Build and bundle VST3/CLAP plugins |
 | `cargo xtask test` | Run all tests (Engine + UI) |
@@ -847,8 +847,8 @@ Wavecraft uses a Rust-based build system (`xtask`) that provides a unified inter
 
 ```bash
 # Pre-push validation (recommended before every push)
-cargo xtask check            # Run lint + tests (~52s)
-cargo xtask check --fix      # Auto-fix linting issues
+cargo xtask ci-check            # Run lint + tests (~52s)
+cargo xtask ci-check --fix      # Auto-fix linting issues
 
 # Browser-based UI development (recommended for UI work)
 cargo xtask dev              # Starts WebSocket server + Vite

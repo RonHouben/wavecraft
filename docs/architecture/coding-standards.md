@@ -710,20 +710,20 @@ Wavecraft uses Vitest and React Testing Library for UI unit testing.
 
 ### Pre-Push Validation
 
-**Rule:** Always run `cargo xtask check` before pushing changes.
+**Rule:** Always run `cargo xtask ci-check` before pushing changes.
 
 This command simulates CI checks locally and runs ~26x faster than Docker-based CI:
 
 ```bash
 # Run all checks (lint + tests, ~1 minute)
-cargo xtask check
+cargo xtask ci-check
 
 # Run with auto-fix for linting issues
-cargo xtask check --fix
+cargo xtask ci-check --fix
 
 # Skip certain phases
-cargo xtask check --skip-lint
-cargo xtask check --skip-tests
+cargo xtask ci-check --skip-lint
+cargo xtask ci-check --skip-tests
 ```
 
 **What it runs:**
