@@ -12,10 +12,10 @@
 ///
 /// # Syntax
 ///
-/// ```ignore
+/// ```text
 /// vstkit_params! {
 ///     ParamSetName;
-///     
+///
 ///     ParameterName {
 ///         id: 0,
 ///         name: "Display Name",
@@ -26,7 +26,7 @@
 ///         max: 10.0,
 ///         step: 0.1,
 ///     },
-///     
+///
 ///     // ... more parameters
 /// }
 /// ```

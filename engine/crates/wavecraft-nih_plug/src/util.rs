@@ -21,7 +21,13 @@ use wavecraft_metering::MeterFrame;
 pub fn calculate_stereo_meters(buffer: &Buffer) -> MeterFrame {
     let num_samples = buffer.samples();
     if num_samples == 0 {
-        return MeterFrame::default();
+        return MeterFrame {
+            peak_l: 0.0,
+            peak_r: 0.0,
+            rms_l: 0.0,
+            rms_r: 0.0,
+            timestamp: 0,
+        };
     }
 
     let mut peak_l = 0.0f32;

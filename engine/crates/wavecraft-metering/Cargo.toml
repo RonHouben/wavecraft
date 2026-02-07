@@ -1,6 +1,6 @@
 [package]
 name = "wavecraft-metering"
-version = "0.7.2"
+version = "0.7.3"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
@@ -10,3 +10,4 @@ description = "Real-time safe SPSC metering for Wavecraft audio plugins"
 [dependencies]
 # Lock-free SPSC ring buffer for real-time audio→UI metering
 rtrb = "0.3"
+wavecraft-protocol.workspace = true

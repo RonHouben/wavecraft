@@ -14,8 +14,9 @@
 use anyhow::Result;
 use std::time::{Duration, Instant};
 
-use super::{lint, test};
+use super::{build_ui, lint, test};
 use xtask::output::*;
+use xtask::paths;
 
 /// Check configuration options.
 #[derive(Debug, Clone, Default)]
@@ -62,6 +63,8 @@ pub fn run(config: CheckConfig) -> Result<()> {
     println!("Running local CI checks (faster than Docker-based CI)");
     println!();
 
+    ensure_ui_dist(config.verbose)?;
+
     let mut results = CheckResults::new();
     let total_start = Instant::now();
 
@@ -90,6 +93,21 @@ pub fn run(config: CheckConfig) -> Result<()> {
     } else {
         anyhow::bail!("Some checks failed. See summary above.");
     }
+}
+
+fn ensure_ui_dist(verbose: bool) -> Result<()> {
+    let ui_dir = paths::ui_dir()?;
+    let dist_dir = ui_dir.join("dist");
+
+    if dist_dir.exists() {
+        if verbose {
+            print_status("UI dist already present - skipping build");
+        }
+        return Ok(());
+    }
+
+    print_status("UI dist missing - building UI for embedded asset tests");
+    build_ui::run(verbose)
 }
 
 /// Run the linting phase.

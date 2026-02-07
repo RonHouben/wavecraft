@@ -16,47 +16,9 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 
 | Item | Notes |
 |------|-------|
+| CLI `-v`/`--version` flag | Add a quick way for users to verify installed Wavecraft CLI version. Expected output like `wavecraft 0.x.y`. |
 | Browser audio input via WASM | Enable testing UI with real audio input (mic, files, test tones) in browser dev mode. Tiered architecture: Mock DSP (JS) for fast HMR, optional WASM DSP for integration testing. Rust remains parameter source of truth. See [high-level design](feature-specs/audio-input-via-wasm/high-level-design.md). |
 | Extend `cargo xtask clean` to cover full workspace | Currently only cleans `engine/target`. Should also clean `cli/target` and `ui/node_modules`+`ui/dist`. Single command to reclaim all build artifacts. |
-| ~~Rename `wavecraft-plugin-template` → `plugin-template`~~ | ✅ **Done in Milestone 12**. |
-
----
-
-## SDK Publication (Future)
-
-| Item | Notes |
-|------|-------|
-| CLI scaffolding tool | `cargo wavecraft new my-plugin` — Scaffolds new plugin project from template. Required before crates.io publication for good developer UX. |
-| End-to-end SDK testing in Ableton | Create plugin from template as end-user developer, test full workflow in Ableton Live. Validates SDK is production-ready. |
-| Publish to crates.io | Publish `wavecraft-*` crates. Requires CLI and Ableton validation first. |
-| Documentation site | Consider `wavecraft.dev` domain (available at €10.89/yr). Host API docs, guides, examples. |
-
----
-
-## UI Polish
-
-| Item | Notes |
-|------|-------|
-| ~~Disable horizontal scroll/wiggle~~ | ✅ **Complete** in v0.6.1 — CSS `overflow-x: hidden` on `#root` prevents macOS elastic scrolling wiggle. |
-
----
-
-## Code Quality
-
-| Item | Notes |
-|------|-------|
-| ~~Replace console.log with Logger class (UI)~~ | ✅ **Complete** in v0.6.1 — `Logger` class in `@wavecraft/core` with `debug/info/warn/error` methods. Documented in coding-standards.md. (Note: Migrated from `@wavecraft/ipc` to `@wavecraft/core` in v0.7.0) |
-| ~~Use `log` or `tracing` crate (Engine)~~ | ✅ **Complete** in v0.6.1 — `tracing` crate in standalone crate (24 calls migrated). `xtask` CLI keeps `println!` for user-facing output as intended. |
-
----
-
-## CI/CD Optimization
-
-| Item | Notes |
-|------|-------|
-| ~~CI pipeline cache optimization~~ | ✅ **Addressed** in v0.6.2 — `prepare-engine` job now pre-compiles test binaries with `cargo test --no-run`, eliminating rebuild in `test-engine` (~3-5 min savings per PR). |
-| ~~GitHub artifacts storage alternative~~ | ✅ **Partially addressed** in v0.6.2 — Implemented tiered retention (7 days main / 90 days tags), reducing storage by ~75-80%. External storage (R2/S3) deferred unless limits become critical again. |
-| ~~Local CI validation command~~ | ✅ **Complete** in v0.6.2 — `cargo xtask check` command runs lint + tests locally in ~52s (26x faster than Docker CI). Tester agent workflow updated to use this as primary validation method. |
 
 ---
 
@@ -121,11 +83,8 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 
 ## Project Rename
 
-**Status:** ✅ Complete — [Milestone 9](roadmap.md#milestone-9-project-rename-vstkit--wavecraft) implemented, PR #17 pending merge
-
 | Item | Notes |
 |------|-------|
-| ~~Rename VstKit → Wavecraft~~ | ✅ **Complete** — Version 0.5.0, PR #17 pending merge |
 | Request GitHub `wavecraft` username | GitHub username `WaveCraft` is held by an inactive user (no activity since 2020, 1 repo about electronics). Submit request via [GitHub's Name Squatting Policy](https://docs.github.com/en/site-policy/other-site-policies/github-username-policy) after project is stable/public. Current repo: `RonHouben/wavecraft`. |
 | Register `wavecraft.dev` domain | Available at €10.89/yr on Namecheap. Optional — register when ready for public docs site. |
 
@@ -137,23 +96,15 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 
 ---
 
-## Deferred (Requires Apple Developer Account)
-
-These items are ready to implement but require an Apple Developer Program membership:
-
-| Item | Notes |
-|------|-------|
-| Developer ID signing validation | Phase 3 of macOS hardening |
-| Notarization submission | Phase 4 of macOS hardening |
-| Gatekeeper testing | Verify signed/notarized plugin works for end users |
-| Signed release CI/CD pipeline | Phase 5b — automated signed releases |
-
----
-
 ## Changelog
 
 | Date | Update |
 |------|--------|
+| 2026-02-07 | **Backlog cleanup:** Removed the SDK Publication chapter. |
+| 2026-02-07 | **Backlog cleanup:** Removed the Apple Developer Account deferred chapter. |
+| 2026-02-07 | **Backlog cleanup:** Removed completed SDK publication items (CLI scaffolding, crates.io publish). |
+| 2026-02-07 | **Backlog cleanup:** Removed completed items to keep the backlog focused on pending work. |
+| 2026-02-07 | **Backlog addition:** Add CLI `-v`/`--version` flag so users can easily verify installed version. |
 | 2026-02-06 | **nih-plug Independence Strategy added**: New epic for defensive architecture — abstraction layer (High), fork contingency (Medium, on-trigger), native VST3 spike (Medium, Q2 2026), health monitoring (Low, ongoing). Motivated by nih-plug maintenance slowdown and VST3 MIT license change. |
 | 2026-02-03 | **CI/CD Optimization complete**: Marked all three CI items as complete — cache optimization, tiered artifact retention, and new `cargo xtask check` command for fast local validation (~52s). |
 | 2026-02-03 | **Code Quality complete**: Marked Logger class (UI) and `tracing` crate (Engine) as complete — both implemented in v0.6.1. |

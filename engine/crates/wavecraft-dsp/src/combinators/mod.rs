@@ -7,13 +7,19 @@ pub use chain::Chain;
 /// Combines processors into a serial chain.
 ///
 /// Single processor optimization:
-/// ```ignore
-/// Chain![MyGain]  // Compiles to just `MyGain`, no wrapper overhead
+/// ```rust,no_run
+/// use wavecraft_dsp::builtins::GainDsp;
+/// use wavecraft_dsp::Chain;
+///
+/// type Single = Chain![GainDsp]; // Compiles to just `GainDsp`, no wrapper overhead
 /// ```
 ///
 /// Multiple processors:
-/// ```ignore
-/// Chain![Gain, Filter, Limiter]  // Nests as Chain<Gain, Chain<Filter, Limiter>>
+/// ```rust,no_run
+/// use wavecraft_dsp::builtins::{GainDsp, PassthroughDsp};
+/// use wavecraft_dsp::Chain;
+///
+/// type Multiple = Chain![GainDsp, PassthroughDsp];
 /// ```
 #[macro_export]
 macro_rules! Chain {

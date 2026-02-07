@@ -407,7 +407,7 @@ mod tests {
 /// Meter frame data for UI visualization.
 ///
 /// All values are in linear scale (not dB).
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 pub struct MeterFrame {
     /// Left channel peak (linear, 0.0 to 1.0+)
     pub peak_l: f32,

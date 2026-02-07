@@ -32,7 +32,7 @@ pub fn run(port: u16, verbose: bool) -> Result<()> {
     let mut ws_args = vec![
         "run",
         "-p",
-        "standalone",
+        "wavecraft-dev-server",
         "--release",
         "--",
         "--dev-server",

@@ -13,7 +13,7 @@ When developing Wavecraft plugin UIs, developers need to:
 2. Maintain fast Hot Module Reloading (HMR) for UI iteration
 3. Optionally test actual DSP algorithms in the browser
 
-Currently, the only way to test with real audio is through the standalone server (`cargo xtask dev`), which:
+Currently, the only way to test with real audio is through the dev server (`cargo xtask dev`), which:
 - Requires Rust compilation for DSP changes
 - Doesn't support browser audio input (microphone, audio files)
 - Tightly couples UI development to the Rust toolchain
@@ -36,7 +36,7 @@ Currently, the only way to test with real audio is through the standalone server
 ## Non-Goals
 
 - Real-time remote audio processing via WebSocket (latency makes this impractical)
-- Replacing the standalone server for IPC testing
+- Replacing the dev server for IPC testing
 - TypeScript-defined parameter schemas
 
 ---
@@ -86,7 +86,7 @@ Currently, the only way to test with real audio is through the standalone server
 |------|--------------|-------------|----------|------|
 | **Mock** (default) | Browser (mic/file/tone) | JS AudioWorklet | UI development | ✅ Full |
 | **WASM** | Browser (mic/file/tone) | Rust→WASM | DSP integration testing | ✅ UI only |
-| **Standalone** | Rust audio engine | Rust plugin via WebSocket | Full IPC testing | ✅ UI only |
+| **Dev Server** | Rust audio engine | Rust plugin via WebSocket | Full IPC testing | ✅ UI only |
 
 ---
 

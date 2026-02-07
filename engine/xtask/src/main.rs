@@ -205,7 +205,10 @@ enum Commands {
     },
 
     /// Pre-push validation (fast local CI simulation)
-    #[command(about = "Pre-push validation - runs linting and automated tests")]
+    #[command(
+        about = "Pre-push validation - runs linting and automated tests",
+        name = "ci-check"
+    )]
     Check {
         /// Auto-fix linting issues where possible
         #[arg(long)]
@@ -221,7 +224,10 @@ enum Commands {
     },
 
     /// Validate CLI template generation
-    #[command(about = "Validate CLI template generation (replicates CI workflow)")]
+    #[command(
+        about = "Validate CLI template generation (replicates CI workflow)",
+        name = "ci-validate-template"
+    )]
     ValidateTemplate {
         /// Keep the generated test project (don't clean up)
         #[arg(long)]

@@ -92,7 +92,7 @@ impl NewCommand {
         println!();
         println!("Next steps:");
         println!("  cd {}", self.name);
-        println!("  cargo xtask dev    # Start development servers");
+        println!("  wavecraft start    # Start development servers");
         println!();
         println!("Documentation: https://github.com/RonHouben/wavecraft/tree/main/docs");
 

@@ -174,7 +174,7 @@ Values that need to be injected at build time (e.g., version from Cargo.toml) sh
 ```typescript
 export default defineConfig({
   define: {
-    // Compile-time replacement, falls back to 'dev' for standalone npm run dev
+    // Compile-time replacement, falls back to 'dev' for local npm run dev
     '__APP_VERSION__': JSON.stringify(process.env.VITE_APP_VERSION || 'dev'),
   },
 });
@@ -538,7 +538,7 @@ Follow the existing crate structure:
 - `wavecraft-dsp` — Pure DSP code, `Processor` trait, built-in processors
 - `wavecraft-bridge` — IPC handling
 - `wavecraft-metering` — SPSC ring buffer for audio → UI metering
-- `standalone` — Standalone desktop app for browser-based development
+- `wavecraft-dev-server` — Development server for browser-based UI testing
 
 ### Declarative Plugin DSL
 
@@ -708,22 +708,46 @@ Code running on the audio thread must:
 
 Wavecraft uses Vitest and React Testing Library for UI unit testing.
 
+### Documentation Examples (Rust doctests)
+
+**Rule:** Prefer compiling doctests over ignored ones.
+
+Use the following conventions for Rust doc examples:
+
+- **`rust,no_run`** for examples that should compile but don’t need to execute.
+- **`text`** for cross-crate or illustrative snippets that cannot compile in the current crate.
+- **Avoid `ignore`** unless there’s a hard external dependency that can’t be represented.
+
+**Do:**
+```rust
+/// ```rust,no_run
+/// use wavecraft_core::prelude::*;
+/// ```
+```
+
+**Do (non-compiling illustration):**
+```text
+/// ```text
+/// use wavecraft::prelude::*; // via Cargo rename in downstream crate
+/// ```
+```
+
 ### Pre-Push Validation
 
-**Rule:** Always run `cargo xtask check` before pushing changes.
+**Rule:** Always run `cargo xtask ci-check` before pushing changes.
 
 This command simulates CI checks locally and runs ~26x faster than Docker-based CI:
 
 ```bash
 # Run all checks (lint + tests, ~1 minute)
-cargo xtask check
+cargo xtask ci-check
 
 # Run with auto-fix for linting issues
-cargo xtask check --fix
+cargo xtask ci-check --fix
 
 # Skip certain phases
-cargo xtask check --skip-lint
-cargo xtask check --skip-tests
+cargo xtask ci-check --skip-lint
+cargo xtask ci-check --skip-tests
 ```
 
 **What it runs:**

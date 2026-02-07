@@ -468,6 +468,59 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
 
         #krate::__nih::nih_export_clap!(__WavecraftPlugin);
         #krate::__nih::nih_export_vst3!(__WavecraftPlugin);
+
+        // ================================================================
+        // FFI Exports for Parameter Discovery (used by `wavecraft start`)
+        // ================================================================
+
+        /// Returns JSON-serialized parameter specifications.
+        ///
+        /// This function is called by the `wavecraft start` command to discover
+        /// the plugin's parameters without loading it into a DAW.
+        ///
+        /// # Safety
+        /// The returned pointer must be freed with `wavecraft_free_string`.
+        #[unsafe(no_mangle)]
+        pub extern "C" fn wavecraft_get_params_json() -> *mut ::std::ffi::c_char {
+            let specs = <<__ProcessorType as #krate::Processor>::Params as #krate::ProcessorParams>::param_specs();
+
+            // Convert signal type name to snake_case for ID prefix
+            let signal_name = stringify!(#signal_type);
+            let id_prefix = signal_name
+                .chars()
+                .enumerate()
+                .flat_map(|(i, c)| {
+                    if c.is_uppercase() && i > 0 {
+                        vec!['_', c.to_ascii_lowercase()]
+                    } else {
+                        vec![c.to_ascii_lowercase()]
+                    }
+                })
+                .collect::<String>();
+
+            let params: ::std::vec::Vec<#krate::__internal::ParameterInfo> = specs
+                .iter()
+                .map(|spec| #krate::__internal::param_spec_to_info(spec, &id_prefix))
+                .collect();
+
+            let json = #krate::__internal::serde_json::to_string(&params)
+                .unwrap_or_else(|_| "[]".to_string());
+
+            ::std::ffi::CString::new(json)
+                .map(|s| s.into_raw())
+                .unwrap_or(::std::ptr::null_mut())
+        }
+
+        /// Frees a string returned by `wavecraft_get_params_json`.
+        ///
+        /// # Safety
+        /// The pointer must have been returned by `wavecraft_get_params_json`.
+        #[unsafe(no_mangle)]
+        pub unsafe extern "C" fn wavecraft_free_string(ptr: *mut ::std::ffi::c_char) {
+            if !ptr.is_null() {
+                let _ = ::std::ffi::CString::from_raw(ptr);
+            }
+        }
     };
 
     TokenStream::from(expanded)

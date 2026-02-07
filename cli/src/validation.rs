@@ -2,7 +2,8 @@ use anyhow::{bail, Result};
 use regex::Regex;
 
 /// Validates that the name is a valid Rust crate name.
-/// Rules: lowercase, alphanumeric + underscore/hyphen, starts with letter, not reserved.
+/// Rules: alphanumeric + underscore/hyphen, starts with letter, not reserved.
+/// Note: Crate names are case-insensitive on crates.io, but we allow mixed case.
 pub fn validate_crate_name(name: &str) -> Result<()> {
     if name.is_empty() {
         bail!("Plugin name cannot be empty");
@@ -12,11 +13,12 @@ pub fn validate_crate_name(name: &str) -> Result<()> {
         bail!("Plugin name cannot exceed 64 characters");
     }
 
-    let pattern = Regex::new(r"^[a-z][a-z0-9_-]*$").unwrap();
+    // Allow mixed case: must start with a letter, then letters/numbers/hyphens/underscores
+    let pattern = Regex::new(r"^[a-zA-Z][a-zA-Z0-9_-]*$").unwrap();
     if !pattern.is_match(name) {
         bail!(
-            "Invalid plugin name '{}'. Must start with a lowercase letter \
-             and contain only lowercase letters, numbers, hyphens, or underscores.",
+            "Invalid plugin name '{}'. Must start with a letter \
+             and contain only letters, numbers, hyphens, or underscores.",
             name
         );
     }
@@ -53,12 +55,15 @@ mod tests {
         assert!(validate_crate_name("my_plugin").is_ok());
         assert!(validate_crate_name("plugin123").is_ok());
         assert!(validate_crate_name("a").is_ok());
+        // Mixed case is allowed
+        assert!(validate_crate_name("MyPlugin").is_ok());
+        assert!(validate_crate_name("myCoolPlugin").is_ok());
+        assert!(validate_crate_name("My-Cool-Plugin").is_ok());
     }
 
     #[test]
     fn invalid_names() {
         assert!(validate_crate_name("").is_err());
-        assert!(validate_crate_name("MyPlugin").is_err());
         assert!(validate_crate_name("123plugin").is_err());
         assert!(validate_crate_name("-plugin").is_err());
         assert!(validate_crate_name("std").is_err());

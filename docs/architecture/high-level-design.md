@@ -42,12 +42,12 @@ wavecraft/
 │   │   ├── validation.rs          # Crate name validation (syn-based)
 │   │   ├── commands/              # Command implementations
 │   │   │   ├── mod.rs
-│   │   │   └── new.rs             # `wavecraft new` command
+│   │   │   └── create.rs          # `wavecraft create` command
 │   │   └── template/              # Template extraction & variables
 │   │       ├── mod.rs
 │   │       └── variables.rs
 │   └── sdk-templates/             # Embedded project templates
-│       └── new-project/           # `wavecraft new` templates
+│       └── new-project/           # `wavecraft create` templates
 │           └── react/             # React UI variant (default)
 │               ├── Cargo.toml.template
 │               ├── engine/        # Rust audio engine template
@@ -64,6 +64,7 @@ wavecraft/
 │   │   ├── wavecraft-protocol/    # IPC contracts
 │   │   ├── wavecraft-bridge/      # IPC handler
 │   │   ├── wavecraft-metering/    # Real-time metering
+│   │   ├── wavecraft-dev-server/  # Browser dev server (WebSocket transport)
 │   │   └── wavecraft-dsp/         # DSP primitives
 │   └── xtask/                     # Build automation
 ├── packaging/                     # AU wrapper, installers
@@ -94,7 +95,7 @@ wavecraft/
 │                                                                         │
 │  ┌─────────────────┐     scaffolds      ┌───────────────────────────┐   │
 │  │   CLI           │ ──────────────────►│ New Plugin Project        │   │
-│  │ (wavecraft new) │                    │ (uses git tag deps)       │   │
+│  │(wavecraft create)│                    │ (uses git tag deps)       │   │
 │  │                 │                    │                           │   │
 │  │  • validation   │                    │ [dependencies]            │   │
 │  │  • templates    │                    │ wavecraft-core = {        │   │
@@ -113,6 +114,9 @@ wavecraft/
 │  │  ┌────────────────┐  ┌────────────────┐  ┌─────────────────┐    │    │
 │  │  │wavecraft-macros│  │wavecraft-bridge│  │wavecraft-protocol│   │    │
 │  │  └────────────────┘  └────────────────┘  └─────────────────┘    │    │
+│  │  ┌───────────────────────────────────────────────┐             │    │
+│  │  │ wavecraft-dev-server (browser WebSocket dev) │             │    │
+│  │  └───────────────────────────────────────────────┘             │    │
 │  │  ┌─────────────────────────────────────────────────────────┐    │    │
 │  │  │ wavecraft-nih_plug (git-only, wraps nih-plug)           │    │    │
 │  │  └─────────────────────────────────────────────────────────┘    │    │
@@ -140,7 +144,7 @@ wavecraft/
 | Rust SDK dependencies | Git tag (`tag = "wavecraft-cli-v0.7.1"`) | Published crates (crates.io) |
 | UI SDK dependencies | **npm packages** (`@wavecraft/core`, `@wavecraft/components`) | Same (npm) |
 | Development | Rapid iteration | Stable API |
-| User workflow | `cargo install wavecraft && wavecraft new` | Same, with crates.io deps |
+| User workflow | `cargo install wavecraft && wavecraft create` | Same, with crates.io deps |
 | CLI behavior | No prompts, uses placeholder defaults | Same |
 
 ⸻
@@ -720,7 +724,7 @@ Wavecraft supports running the UI in a standard browser for rapid development it
              │                                      │
              ▼                                      ▼
   ┌─────────────────────┐                ┌─────────────────────┐
-  │ Standalone Dev      │                │ Plugin Binary       │
+  │ Dev Server          │                │ Plugin Binary       │
   │ Server (Rust)       │                │ (Embedded WebView)  │
   │ IpcHandler          │                │ IpcHandler          │
   └─────────────────────┘                └─────────────────────┘
@@ -786,12 +790,15 @@ The IPC system uses a factory pattern to automatically select the appropriate tr
 ### Development Workflow
 
 ```bash
-# Start both servers (recommended)
+# Start both servers (recommended for SDK development)
 cargo xtask dev
+
+# Start embedded dev server from a plugin project (recommended for plugin authors)
+wavecraft start
 
 # Or manually:
 # Terminal 1: Start WebSocket server
-cargo run -p standalone -- --dev-server --port 9000
+cargo run -p wavecraft-dev-server -- --dev-server --port 9000
 
 # Terminal 2: Start Vite dev server
 cd ui && npm run dev
@@ -820,7 +827,7 @@ Wavecraft uses a Rust-based build system (`xtask`) that provides a unified inter
 
 | Command | Description |
 |---------|-------------|
-| `cargo xtask check` | **Pre-push validation** — Run lint + tests locally (~52s, 26x faster than Docker CI) |
+| `cargo xtask ci-check` | **Pre-push validation** — Run lint + tests locally (~52s, 26x faster than Docker CI) |
 | `cargo xtask dev` | Start WebSocket + Vite dev servers for browser development |
 | `cargo xtask bundle` | Build and bundle VST3/CLAP plugins |
 | `cargo xtask test` | Run all tests (Engine + UI) |
@@ -840,12 +847,15 @@ Wavecraft uses a Rust-based build system (`xtask`) that provides a unified inter
 
 ```bash
 # Pre-push validation (recommended before every push)
-cargo xtask check            # Run lint + tests (~52s)
-cargo xtask check --fix      # Auto-fix linting issues
+cargo xtask ci-check            # Run lint + tests (~52s)
+cargo xtask ci-check --fix      # Auto-fix linting issues
 
 # Browser-based UI development (recommended for UI work)
 cargo xtask dev              # Starts WebSocket server + Vite
 cargo xtask dev --verbose    # With detailed IPC logging
+
+# Plugin project development (embedded server + FFI parameter discovery)
+wavecraft start
 
 # Fast iteration (debug build, no signing)
 cargo xtask bundle --debug

@@ -135,11 +135,9 @@ fn generate_test_plugin(cli_binary: &Path, parent_dir: &Path, verbose: bool) -> 
         println!("Generating test plugin in: {}", parent_dir.display());
     }
 
-    // Use a fake version tag - we'll override with local paths anyway
-    // This avoids issues when the actual version tag doesn't exist yet
     let status = Command::new(cli_binary)
         .args([
-            "new",
+            "create",
             "test-plugin",
             "--vendor",
             "Test Vendor",
@@ -148,12 +146,10 @@ fn generate_test_plugin(cli_binary: &Path, parent_dir: &Path, verbose: bool) -> 
             "--url",
             "https://example.com",
             "--no-git",
-            "--sdk-version",
-            "v0.0.0-local-test", // Placeholder version - will be patched
         ])
         .current_dir(parent_dir)
         .status()
-        .context("Failed to run wavecraft new")?;
+        .context("Failed to run wavecraft create")?;
 
     if !status.success() {
         bail!("Failed to generate test plugin");
@@ -188,33 +184,27 @@ fn add_workspace_overrides(project_dir: &Path, workspace_root: &Path) -> Result<
     let engine_crates = workspace_root.join("engine/crates");
 
     // Read the current Cargo.toml
-    let mut content =
+    let content =
         fs::read_to_string(&engine_cargo_toml).context("Failed to read engine/Cargo.toml")?;
 
-    // Replace git dependencies with path dependencies
-    // This is simpler and more reliable than using [patch] sections
-    content = content.replace(
-        r#"wavecraft-core = { git = "https://github.com/RonHouben/wavecraft", tag = "v0.0.0-local-test" }"#,
-        &format!(r#"wavecraft-core = {{ path = "{}/wavecraft-core" }}"#, engine_crates.display())
-    );
-    content = content.replace(
-        r#"wavecraft-protocol = { git = "https://github.com/RonHouben/wavecraft", tag = "v0.0.0-local-test" }"#,
-        &format!(r#"wavecraft-protocol = {{ path = "{}/wavecraft-protocol" }}"#, engine_crates.display())
-    );
-    content = content.replace(
-        r#"wavecraft-dsp = { git = "https://github.com/RonHouben/wavecraft", tag = "v0.0.0-local-test" }"#,
-        &format!(r#"wavecraft-dsp = {{ path = "{}/wavecraft-dsp" }}"#, engine_crates.display())
-    );
-    content = content.replace(
-        r#"wavecraft-bridge = { git = "https://github.com/RonHouben/wavecraft", tag = "v0.0.0-local-test" }"#,
-        &format!(r#"wavecraft-bridge = {{ path = "{}/wavecraft-bridge" }}"#, engine_crates.display())
-    );
-    content = content.replace(
-        r#"wavecraft-metering = { git = "https://github.com/RonHouben/wavecraft", tag = "v0.0.0-local-test" }"#,
-        &format!(r#"wavecraft-metering = {{ path = "{}/wavecraft-metering" }}"#, engine_crates.display())
-    );
+    let mut updated_lines = Vec::new();
+    for line in content.lines() {
+        if line
+            .trim_start()
+            .starts_with("wavecraft = { package = \"wavecraft-nih_plug\"")
+        {
+            updated_lines.push(format!(
+                "wavecraft = {{ package = \"wavecraft-nih_plug\", path = \"{}/wavecraft-nih_plug\" }}",
+                engine_crates.display()
+            ));
+            continue;
+        }
 
-    fs::write(&engine_cargo_toml, content).context("Failed to write engine/Cargo.toml")?;
+        updated_lines.push(line.to_string());
+    }
+
+    fs::write(&engine_cargo_toml, updated_lines.join("\n"))
+        .context("Failed to write engine/Cargo.toml")?;
 
     Ok(())
 }
@@ -267,7 +257,7 @@ fn validate_ui(project_dir: &Path, verbose: bool) -> Result<()> {
     if verbose {
         println!("Installing UI dependencies...");
     }
-    run_command("npm", &["ci"], &ui_dir)?;
+    run_command("npm", &["install"], &ui_dir)?;
 
     // Lint
     if verbose {

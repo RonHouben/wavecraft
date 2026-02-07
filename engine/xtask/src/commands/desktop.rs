@@ -1,6 +1,6 @@
 //! Desktop POC command.
 //!
-//! Builds and runs the standalone desktop application that demonstrates
+//! Builds and runs the dev-server desktop application that demonstrates
 //! WebView ↔ Rust IPC communication.
 
 use anyhow::{Context, Result};

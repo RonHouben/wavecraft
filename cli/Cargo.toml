@@ -1,6 +1,6 @@
 [package]
 name = "wavecraft"
-version = "0.7.2"
+version = "0.8.0"
 edition = "2021"
 description = "CLI tool for creating Wavecraft audio plugins"
 license = "MIT"
@@ -23,6 +23,31 @@ regex = "1.10"
 heck = "0.5"
 chrono = "0.4"
 syn = "2.0"
+ctrlc = "3"
+
+[target.'cfg(unix)'.dependencies]
+nix = { version = "0.29", features = ["signal"] }
 
 [dev-dependencies]
 tempfile = "3.8"
+
+[dependencies.toml]
+version = "0.8"
+
+[dependencies.tokio]
+version = "1"
+features = ["full"]
+
+# Engine crates (path dependencies)
+[dependencies.wavecraft-protocol]
+path = "../engine/crates/wavecraft-protocol"
+
+[dependencies.wavecraft-bridge]
+path = "../engine/crates/wavecraft-bridge"
+
+[dependencies.wavecraft-metering]
+path = "../engine/crates/wavecraft-metering"
+
+[dependencies.wavecraft-dev-server]
+path = "../engine/crates/wavecraft-dev-server"
+

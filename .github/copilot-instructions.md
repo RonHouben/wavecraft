@@ -4,7 +4,7 @@ applyTo: "**"
 
 # MOST Important guidelines
 The following are the MOST important guidelines to follow when editing files in this repository:
-- never update files under the `/docs/feature-specs/_archive/` directory. They are kept for historical reference only.
+- do not edit the contents of files under the `/docs/feature-specs/_archive/` directory. They are kept for historical reference only. Moving completed feature spec folders into `_archive` is allowed, but once archived the files should not be modified.
 - ONLY the Product Owner agent is allowed to edit the roadmap file located at `/docs/roadmap.md`! When any other agent needs changes to the roadmap, they must hand off to the Product Owner agent.
 - Before making changes in the code, check the #file:../docs/architecture/coding-standards.md file for relevant coding standards and conventions.
 - For understanding the overall project architecture, SDK structure, and design decisions, refer to #file:../docs/architecture/high-level-design.md document.

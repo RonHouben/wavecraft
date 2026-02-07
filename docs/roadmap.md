@@ -331,7 +331,7 @@ Linting:      All checks passed (cargo fmt, clippy, ESLint, Prettier)
 
 Potential areas:
 - Publish SDK crates to crates.io
-- CLI tool for project scaffolding (`cargo wavecraft new my-plugin`)
+- CLI tool for project scaffolding (`cargo wavecraft create my-plugin`)
 - Additional example plugins (EQ, synth starter)
 - Migration guides for SDK updates
 
@@ -341,7 +341,7 @@ Potential areas:
 
 Potential areas:
 - Publish SDK crates to crates.io
-- CLI tool for project scaffolding (`cargo wavecraft new my-plugin`)
+- CLI tool for project scaffolding (`cargo wavecraft create my-plugin`)
 - Additional example plugins (EQ, synth starter)
 - Migration guides for SDK updates
 
@@ -539,7 +539,7 @@ QA:           5 findings (1 Critical, 4 Medium) — all resolved
 | Template variable system | ✅ | `{{plugin_name}}`, `{{vendor}}`, etc. |
 | **CLI Tool** | | |
 | Create `cli/` crate | ✅ | `wavecraft` CLI crate with `include_dir!` template |
-| `wavecraft new <name>` command | ✅ | Interactive project creation with prompts |
+| `wavecraft create <name>` command | ✅ | Interactive project creation with prompts |
 | Plugin name/vendor/email/URL prompts | ✅ | Optional fields handled gracefully |
 | Template variable replacement | ✅ | heck crate for case conversions |
 | Crate name validation | ✅ | syn-based keyword validation (authoritative) |
@@ -577,7 +577,7 @@ QA:           5 findings (1 Critical, 4 Medium) — all resolved
 | CI pipeline documentation | ✅ | Full CD section in ci-pipeline.md |
 
 **Key Deliverables:**
-- **`wavecraft` CLI** — `cargo install wavecraft && wavecraft new my-plugin` project scaffolding
+- **`wavecraft` CLI** — `cargo install wavecraft && wavecraft create my-plugin` project scaffolding
 - **Independent template** — Builds without monorepo, uses git dependencies
 - **Fixed documentation** — All links work, written for external users
 - **Version-locked deps** — Stable builds with git tags
@@ -601,7 +601,7 @@ QA:           PASS (0 Critical/High, 2 Medium non-blocking, 3 Low optional)
 - Reserved keyword validation uses syn crate (future-proof)
 
 **Success Criteria:**
-- [x] External developer can: `cargo install wavecraft && wavecraft new my-plugin && cd my-plugin && cargo xtask bundle`
+- [x] External developer can: `cargo install wavecraft && wavecraft create my-plugin && cd my-plugin && cargo xtask bundle`
 - [x] Template builds in < 5 minutes (first time, with downloads)
 - [x] Zero broken documentation links
 - [x] `@wavecraft/core` published to npm (v0.7.1)
@@ -629,7 +629,7 @@ QA:           PASS (0 Critical/High, 2 Medium non-blocking, 3 Low optional)
 |------|--------|-------|
 | **SDK Workflow Validation** | | |
 | Fresh clone & setup | ✅ | Template validated with CLI |
-| Build plugin from template | ✅ | `wavecraft new` → `cargo xtask bundle` succeeds |
+| Build plugin from template | ✅ | `wavecraft create` → `cargo xtask bundle` succeeds |
 | Load in Ableton Live | ✅ | Plugin loads, UI renders, no crashes |
 | Parameter sync test | ✅ | UI ↔ DAW automation works correctly |
 | State persistence test | ✅ | Save/load project preserves plugin state |
@@ -689,6 +689,7 @@ Based on internal testing, the CLI was improved for better developer experience:
 | **Git tag format** | `wavecraft-cli-v{version}` (matches repo convention) | Consistent release tagging |
 | **Clean interface** | `--local-sdk` boolean flag (hidden), no `--sdk-version` | Less confusing help output |
 | **PATH troubleshooting** | Clear documentation in Getting Started guide | Better error handling |
+| **Embedded dev server** | `wavecraft start` builds plugin, loads params via FFI, starts WS + Vite | Enables browser dev from plugin projects |
 
 **Test Results (M13 Complete):**
 ```
@@ -807,14 +808,18 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 | Date | Update |
 |------|--------|
+| 2026-02-07 | **Doctest cleanup + documentation guidance**: Replaced ignored Rust doctests with `rust,no_run` or `text` blocks where appropriate, updated examples to compile, and documented doctest conventions in coding standards. `cargo xtask ci-check` now runs with zero ignored doctests. |
+| 2026-02-07 | **Dev server rename (v0.7.2)**: Renamed `standalone` crate to `wavecraft-dev-server` to clarify purpose. Updated CLI/xtask wiring, docs/specs, and verified help output + dev server smoke tests. Test plan and QA report completed. |
+| 2026-02-07 | **CLI dev server reuse (v0.7.3)**: Refactored CLI dev server to reuse engine crates (shared in-memory host, FFI parameter loader, synthetic meter generator). Unified MeterFrame via protocol re-export and removed duplication. Tests and manual dev-server checks passing. |
+| 2026-02-06 | **Embedded Dev Server (v0.8.0)**: Added `wavecraft start` embedded WebSocket dev server with FFI parameter discovery. CLI now builds the plugin dylib, loads parameters via FFI, and starts WS + Vite for browser dev in plugin projects. Manual test plan updated and passing. Architecture docs updated (High-Level Design). |
 | 2026-02-06 | **Milestone 13 complete (v0.8.0)**: CLI UX Improvements. Internal testing revealed friction points in CLI workflow, resulting in 4 targeted improvements: (1) Zero prompts — removed `dialoguer` dependency, uses placeholder defaults, (2) SDK version auto-determined from CLI version, (3) Cleaner interface — removed `--sdk-version`, `--local-sdk` hidden boolean flag, (4) PATH troubleshooting guidance added to docs. 10/10 manual tests passing, QA approved with zero issues. Documentation updated (Getting Started, High-Level Design). Archived to `_archive/cli-ux-improvements/`. Progress: 87% (13/15 milestones). |
 | 2026-02-06 | **CI Build Stage Removal (v0.7.2)**: Removed redundant `build-plugin` job from CI workflow. Job never executed (workflow triggers on PRs, job condition required main branch). Simplifies CI from 7 jobs to 6, reduces confusion. Updated ci-pipeline.md, high-level-design.md, skill documentation. Version bumped to 0.7.2. PR #30. Archived to `_archive/ci-build-stage-removal/`. |
 | 2026-02-06 | **Template Reorganization**: Restructured CLI template from `cli/plugin-template/` to `cli/sdk-templates/new-project/react/` for better organization and future extensibility (vanilla, svelte variants). Fixed template xtask hardcoded plugin names (Issue #1) — now uses `{{plugin_name}}` and `{{plugin_name_snake}}` variables. Updated CLI default SDK version from v0.7.0 to v0.7.1 (Issue #2). CI path filters updated. All documentation updated (high-level-design.md, README.md, ci-pipeline.md). 10/10 tests passing, QA approved. Archived to `_archive/template-relocation-docs/`. |
 | 2026-02-06 | **wavecraft-core crate split for crates.io publishing**: Split wavecraft-core into wavecraft-core (publishable, no nih_plug dependency) + wavecraft-nih_plug (git-only, contains nih-plug integration). Added `__nih` module for proc-macro type exports. Template uses Cargo package rename (`wavecraft = { package = "wavecraft-nih_plug" }`). All 6 publishable crates validated with dry-run publish. 24/24 manual tests, QA approved. Architecture docs updated (high-level-design.md, coding-standards.md). Milestone 13 now **In Progress**. |
 | 2026-02-05 | **CI Workflow Simplification**: Removed redundant `push` triggers from CI and Template Validation workflows — they now only run on PRs (not on merge to main). Added `workflow_dispatch` for manual runs when needed. Eliminates ~10-14 CI minutes of redundant validation per merge. Documentation updated (ci-pipeline.md, high-level-design.md). Archived to `_archive/ci-workflow-simplification/`. |
-| 2026-02-04 | **CLI `--local-dev` flag**: Added `--local-dev` CLI option to `wavecraft new` for SDK development and CI. Generates path dependencies (e.g., `path = "/path/to/engine/crates/wavecraft-core"`) instead of git tag dependencies. Solves CI chicken-egg problem where template validation fails because git tags don't exist until after PR merge. Mutually exclusive with `--sdk-version`. 10/10 unit tests, 10/10 manual tests. Documentation updated (sdk-getting-started.md, ci-pipeline.md). Archived to `_archive/ci-local-dev-dependencies/`. |
+| 2026-02-04 | **CLI `--local-dev` flag**: Added `--local-dev` CLI option to `wavecraft create` for SDK development and CI. Generates path dependencies (e.g., `path = "/path/to/engine/crates/wavecraft-core"`) instead of git tag dependencies. Solves CI chicken-egg problem where template validation fails because git tags don't exist until after PR merge. Mutually exclusive with `--sdk-version`. 10/10 unit tests, 10/10 manual tests. Documentation updated (sdk-getting-started.md, ci-pipeline.md). Archived to `_archive/ci-local-dev-dependencies/`. |
 | 2026-02-04 | **Continuous Deployment implemented (v0.7.1)**: Added `continuous-deploy.yml` workflow for automatic package publishing on merge to main. Path-based change detection using `dorny/paths-filter` — only changed packages are published. Auto-patch version bumping with bot commits (`[skip ci]` prevents re-triggers). Supports: CLI (crates.io), 6 engine crates (crates.io), `@wavecraft/core` (npm), `@wavecraft/components` (npm). Existing `cli-release.yml` and `npm-release.yml` converted to manual overrides. Full documentation added to `docs/guides/ci-pipeline.md`. Version bumped to 0.7.1 across all packages. |
-| 2026-02-04 | **Milestone 12 complete (v0.7.0)**: Open Source Readiness fully implemented. **wavecraft CLI** published to crates.io (`cargo install wavecraft && wavecraft new my-plugin`). **npm packages** published: `@wavecraft/core@0.7.0` (IPC bridge, hooks, Logger, utilities) and `@wavecraft/components@0.7.0` (Meter, ParameterSlider, ParameterGroup, VersionBadge). **Template system** converted to use npm packages instead of bundled UI copy. **CI workflows** for template validation and CLI release. 75/75 implementation tasks complete. 20/20 manual tests passing. QA approved (0 Critical/High issues). Architecture docs updated (npm package imports, subpath exports). Archived to `_archive/open-source-readiness/`. |
+| 2026-02-04 | **Milestone 12 complete (v0.7.0)**: Open Source Readiness fully implemented. **wavecraft CLI** published to crates.io (`cargo install wavecraft && wavecraft create my-plugin`). **npm packages** published: `@wavecraft/core@0.7.0` (IPC bridge, hooks, Logger, utilities) and `@wavecraft/components@0.7.0` (Meter, ParameterSlider, ParameterGroup, VersionBadge). **Template system** converted to use npm packages instead of bundled UI copy. **CI workflows** for template validation and CLI release. 75/75 implementation tasks complete. 20/20 manual tests passing. QA approved (0 Critical/High issues). Architecture docs updated (npm package imports, subpath exports). Archived to `_archive/open-source-readiness/`. |
 | 2026-02-03 | **CI Pipeline Optimization complete**: Added `cargo xtask check` command for fast local validation (~52s, 26x faster than Docker CI). Pre-compile test binaries in CI with `cargo test --no-run`. Tiered artifact retention (7 days main / 90 days tags, ~75-80% storage reduction). Updated agent documentation (Tester uses `cargo xtask check`, QA focuses on manual review). Architecture docs updated (high-level-design.md, ci-pipeline.md, coding-standards.md). Version 0.6.2. |
 | 2026-02-03 | **Milestone 11 complete**: Code Quality & OSS Prep fully implemented. UI Logger (`Logger` class in `@wavecraft/ipc` with debug/info/warn/error methods), Engine logging (`tracing` crate, 24 println! calls migrated), open source infrastructure (LICENSE, CONTRIBUTING.md, CODE_OF_CONDUCT.md, issue/PR templates), README polish. Horizontal scroll fix applied. Template project synchronized. 110+ engine tests, 43 UI tests, 19/19 manual tests passing. QA approved (5 findings resolved). Logging standards documented in coding-standards.md. Version 0.6.1. Archived to `_archive/code-quality-polish/`. |
 | 2026-02-03 | **Added Milestones 12 & 13**: User Testing (v0.7.0) and V1.0 Release (v1.0.0). User Testing focuses on validating SDK with 3-5 beta testers before stable release. V1.0 is the final milestone marking first production-ready release. Updated progress to 77% (10/13 milestones complete). |

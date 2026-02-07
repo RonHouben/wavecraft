@@ -1,7 +1,7 @@
 /**
  * WebSocketTransport - Browser WebSocket IPC transport
  *
- * Connects to the standalone dev server over WebSocket for
+ * Connects to the Wavecraft dev server over WebSocket for
  * browser-based UI development with real engine communication.
  */
 
@@ -28,7 +28,7 @@ interface WebSocketTransportOptions {
 /**
  * WebSocket transport implementation with automatic reconnection
  *
- * Connects to the standalone dev server for browser-based UI development.
+ * Connects to the Wavecraft dev server for browser-based UI development.
  */
 export class WebSocketTransport implements Transport {
   private readonly url: string;

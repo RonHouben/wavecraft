@@ -58,7 +58,7 @@ When starting a new testing session:
 
 ### Phase 2: Run Automated Checks
 
-**Primary testing method**: Run `cargo xtask check` for fast local validation (~52 seconds).
+**Primary testing method**: Run `cargo xtask ci-check` for fast local validation (~52 seconds).
 
 This command runs all the checks that would run in the CI pipeline:
 - Linting (ESLint, Prettier, cargo fmt, clippy)
@@ -68,14 +68,14 @@ This command runs all the checks that would run in the CI pipeline:
 
 ```bash
 # Run all checks (~52 seconds)
-cargo xtask check
+cargo xtask ci-check
 
 # Auto-fix linting issues
-cargo xtask check --fix
+cargo xtask ci-check --fix
 
 # Skip phases if needed
-cargo xtask check --skip-lint
-cargo xtask check --skip-tests
+cargo xtask ci-check --skip-lint
+cargo xtask ci-check --skip-tests
 ```
 
 #### macOS-Only Testing (Plugin Build & Signing)
@@ -135,7 +135,7 @@ Create the test plan at `docs/feature-specs/{feature}/test-plan.md`:
 
 ## Prerequisites
 
-- [ ] `cargo xtask check` passes (all lint + tests)
+- [ ] `cargo xtask ci-check` passes (all lint + tests)
 - [ ] macOS-only checks pass (if applicable): bundle, sign, install
 
 ## Test Cases
@@ -197,18 +197,18 @@ Create the test plan at `docs/feature-specs/{feature}/test-plan.md`:
 
 You have permission to execute terminal commands to verify behavior.
 
-### Primary: cargo xtask check (Recommended)
+### Primary: cargo xtask ci-check (Recommended)
 
 ```bash
 # Run all checks (~52 seconds) - RECOMMENDED
-cargo xtask check
+cargo xtask ci-check
 
 # Auto-fix linting issues
-cargo xtask check --fix
+cargo xtask ci-check --fix
 
 # Skip phases if needed
-cargo xtask check --skip-lint
-cargo xtask check --skip-tests
+cargo xtask ci-check --skip-lint
+cargo xtask ci-check --skip-tests
 ```
 
 ### Fallback: Individual Commands (for debugging failures)
@@ -255,7 +255,7 @@ For tests requiring UI interaction or visual verification, use Playwright MCP to
 ## Guidelines
 
 ### DO:
-- **Run `cargo xtask check` first** as the primary validation method (~52s)
+- **Run `cargo xtask ci-check` first** as the primary validation method (~52s)
 - Use individual commands only to debug failures
 - Execute commands yourself to verify behavior
 - Document EVERY test result in test-plan.md
@@ -268,7 +268,7 @@ For tests requiring UI interaction or visual verification, use Playwright MCP to
 ### DON'T:
 - **NEVER modify source code** — not even "quick fixes" or "obvious bugs"
 - **NEVER fix bugs yourself** — always hand off to the coder agent
-- Don't skip the `cargo xtask check` validation
+- Don't skip the `cargo xtask ci-check` validation
 - Don't skip documenting failures
 - Don't assume tests pass without verification
 - Don't make code changes "just to make tests pass"

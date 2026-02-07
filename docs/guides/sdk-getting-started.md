@@ -26,7 +26,7 @@ cargo install wavecraft
 >
 > **bash:** `echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc`
 >
-> Or run directly: `~/.cargo/bin/wavecraft new my-plugin`
+> Or run directly: `~/.cargo/bin/wavecraft create my-plugin`
 
 To verify installation:
 ```bash
@@ -37,10 +37,10 @@ wavecraft --help
 
 ```bash
 # Simple - uses placeholder values for vendor/email/url
-wavecraft new my-plugin
+wavecraft create my-plugin
 
 # With custom vendor information (optional)
-wavecraft new my-plugin \
+wavecraft create my-plugin \
   --vendor "My Company" \
   --email "info@example.com" \
   --url "https://example.com"
@@ -91,22 +91,22 @@ cargo xtask install
 
 ```bash
 # Simple - uses placeholder values
-wavecraft new my-plugin
+wavecraft create my-plugin
 
 # With custom vendor information
-wavecraft new my-plugin \
+wavecraft create my-plugin \
   --vendor "My Company" \
   --email "info@example.com" \
   --url "https://example.com"
 
 # Custom output directory
-wavecraft new my-plugin --output ~/projects/my-plugin
+wavecraft create my-plugin --output ~/projects/my-plugin
 
 # Skip git initialization
-wavecraft new my-plugin --no-git
+wavecraft create my-plugin --no-git
 
 # View all options
-wavecraft new --help
+wavecraft create --help
 ```
 
 ### CLI Options
