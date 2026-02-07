@@ -265,7 +265,9 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           scope: '@wavecraft'
           always-auth: false
-          token: ''
+
+      - name: Update npm to latest
+        run: npm install -g npm@latest
 
       - name: Clear npm auth token
         run: |
@@ -362,7 +364,9 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           scope: '@wavecraft'
           always-auth: false
-          token: ''
+
+      - name: Update npm to latest
+        run: npm install -g npm@latest
 
       - name: Clear npm auth token
         run: |
