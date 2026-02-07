@@ -80,13 +80,25 @@ impl ProcessorParams for () {
 ///
 /// # Example
 ///
-/// ```rust,ignore
-/// use wavecraft_dsp::{Processor, ProcessorParams, Transport};
+/// ```rust,no_run
+/// use wavecraft_dsp::{ParamRange, ParamSpec, Processor, ProcessorParams, Transport};
 ///
-/// #[derive(ProcessorParams, Default)]
+/// #[derive(Default)]
 /// struct MyGainParams {
-///     #[param(range = 0.0..=2.0, default = 1.0)]
 ///     level: f32,
+/// }
+///
+/// impl ProcessorParams for MyGainParams {
+///     fn param_specs() -> &'static [ParamSpec] {
+///         &[ParamSpec {
+///             name: "Level",
+///             id_suffix: "level",
+///             range: ParamRange::Linear { min: 0.0, max: 2.0 },
+///             default: 1.0,
+///             unit: "x",
+///             group: None,
+///         }]
+///     }
 /// }
 ///
 /// struct MyGain {
@@ -95,8 +107,13 @@ impl ProcessorParams for () {
 ///
 /// impl Processor for MyGain {
 ///     type Params = MyGainParams;
-///     
-///     fn process(&mut self, buffer: &mut [&mut [f32]], _transport: &Transport, params: &Self::Params) {
+///
+///     fn process(
+///         &mut self,
+///         buffer: &mut [&mut [f32]],
+///         _transport: &Transport,
+///         params: &Self::Params,
+///     ) {
 ///         for channel in buffer.iter_mut() {
 ///             for sample in channel.iter_mut() {
 ///                 *sample *= params.level;

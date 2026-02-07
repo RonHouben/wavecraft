@@ -3,14 +3,14 @@
 //! This module re-exports the most commonly used types and traits for building
 //! plugins with Wavecraft. Import this to get started quickly:
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! use wavecraft_core::prelude::*;
 //! ```
 //!
 //! For full plugin development with nih-plug integration, use the
 //! `wavecraft-nih_plug` crate's prelude instead:
 //!
-//! ```rust,ignore
+//! ```text
 //! use wavecraft::prelude::*;  // via wavecraft-nih_plug
 //! ```
 

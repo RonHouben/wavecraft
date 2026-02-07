@@ -8,7 +8,7 @@
 //!
 //! # Quick Start
 //!
-//! ```rust,ignore
+//! ```text
 //! // In your plugin crate, depend on wavecraft-nih_plug:
 //! // [dependencies]
 //! // wavecraft = { package = "wavecraft-nih_plug", git = "...", tag = "v0.8.0" }

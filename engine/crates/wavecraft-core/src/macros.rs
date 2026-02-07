@@ -13,13 +13,13 @@
 ///
 /// # Syntax
 ///
-/// ```ignore
+/// ```text
 /// wavecraft_processor!(MyGain => Gain);
 /// ```
 ///
 /// # Generated Code
 ///
-/// ```ignore
+/// ```text
 /// pub struct MyGain(wavecraft_dsp::builtins::GainDsp);
 ///
 /// impl Default for MyGain {
@@ -44,7 +44,7 @@
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```rust,no_run
 /// use wavecraft_core::wavecraft_processor;
 /// use wavecraft_dsp::{Processor, Transport};
 ///

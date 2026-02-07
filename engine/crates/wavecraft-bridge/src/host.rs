@@ -19,9 +19,9 @@ use wavecraft_protocol::{MeterFrame, ParameterInfo};
 ///
 /// # Example
 ///
-/// ```rust,ignore
-/// use wavecraft_bridge::{ParameterHost, BridgeError};
-/// use wavecraft_protocol::{ParameterInfo, ParameterType, MeterFrame};
+/// ```rust,no_run
+/// use wavecraft_bridge::{BridgeError, ParameterHost};
+/// use wavecraft_protocol::{MeterFrame, ParameterInfo, ParameterType};
 /// use std::sync::{Arc, Mutex};
 ///
 /// struct MyHost {
@@ -35,24 +35,25 @@ use wavecraft_protocol::{MeterFrame, ParameterInfo};
 ///         Some(ParameterInfo {
 ///             id: id.to_string(),
 ///             name: format!("Param {}", idx),
+///             param_type: ParameterType::Float,
 ///             value: params.get(idx).copied()?,
 ///             default: 0.5,
-///             min: 0.0,
-///             max: 1.0,
-///             param_type: ParameterType::Float,
-///             unit: String::new(),
+///             unit: None,
+///             group: None,
 ///         })
 ///     }
 ///
 ///     fn set_parameter(&self, id: &str, value: f32) -> Result<(), BridgeError> {
-///         let idx: usize = id.parse()
-///             .map_err(|_| BridgeError::InvalidParameter(id.to_string()))?;
+///         let idx: usize = id.parse().map_err(|_| BridgeError::InvalidParams {
+///             method: "setParameter".to_string(),
+///             reason: format!("Invalid parameter id: {}", id),
+///         })?;
 ///         let mut params = self.params.lock().unwrap();
 ///         if let Some(param) = params.get_mut(idx) {
 ///             *param = value;
 ///             Ok(())
 ///         } else {
-///             Err(BridgeError::InvalidParameter(id.to_string()))
+///             Err(BridgeError::ParameterNotFound(id.to_string()))
 ///         }
 ///     }
 ///

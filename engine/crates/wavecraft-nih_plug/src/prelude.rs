@@ -5,7 +5,7 @@
 //!
 //! # Usage
 //!
-//! ```rust,ignore
+//! ```text
 //! use wavecraft::prelude::*;  // via Cargo rename
 //! ```
 

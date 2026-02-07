@@ -17,7 +17,7 @@ use proc_macro::TokenStream;
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```text
 /// use wavecraft_macros::ProcessorParams;
 ///
 /// #[derive(ProcessorParams, Default)]
@@ -38,7 +38,7 @@ pub fn derive_processor_params(input: TokenStream) -> TokenStream {
 ///
 /// # Syntax
 ///
-/// ```ignore
+/// ```text
 /// wavecraft_plugin! {
 ///     name: "My Plugin",
 ///     vendor: "My Company",
