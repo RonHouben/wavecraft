@@ -39,6 +39,12 @@ jobs:
             engine
             cli
 
+      - name: Install Linux dependencies for CLI build
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libglib2.0-dev pkg-config
+          version: 1.0
+
       # ═════════════════════════════════════════════════════════════
       # Build CLI
       # ═════════════════════════════════════════════════════════════
