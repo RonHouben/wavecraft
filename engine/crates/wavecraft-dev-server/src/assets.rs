@@ -104,7 +104,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // Only run when ui/dist exists
     fn test_get_index_html() {
         let (content, mime_type) =
             get_asset("index.html").expect("index.html should exist after React build");
