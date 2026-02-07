@@ -17,6 +17,7 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 | Item | Notes |
 |------|-------|
 | CLI `-v`/`--version` flag | Add a quick way for users to verify installed Wavecraft CLI version. Expected output like `wavecraft 0.x.y`. |
+| CLI `update` command | Add a `wavecraft update` command to update all project dependencies and packages in a plugin workspace (Rust crates + npm packages). |
 | Browser audio input via WASM | Enable testing UI with real audio input (mic, files, test tones) in browser dev mode. Tiered architecture: Mock DSP (JS) for fast HMR, optional WASM DSP for integration testing. Rust remains parameter source of truth. See [high-level design](feature-specs/audio-input-via-wasm/high-level-design.md). |
 | Extend `cargo xtask clean` to cover full workspace | Currently only cleans `engine/target`. Should also clean `cli/target` and `ui/node_modules`+`ui/dist`. Single command to reclaim all build artifacts. |
 
@@ -100,6 +101,7 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 
 | Date | Update |
 |------|--------|
+| 2026-02-07 | **Backlog addition:** Add CLI `update` command to update all project dependencies and packages (Rust + npm) in a plugin workspace. |
 | 2026-02-07 | **Backlog cleanup:** Removed the SDK Publication chapter. |
 | 2026-02-07 | **Backlog cleanup:** Removed the Apple Developer Account deferred chapter. |
 | 2026-02-07 | **Backlog cleanup:** Removed completed SDK publication items (CLI scaffolding, crates.io publish). |
