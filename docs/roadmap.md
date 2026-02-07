@@ -808,6 +808,7 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 | Date | Update |
 |------|--------|
+| 2026-02-07 | **npm OIDC trusted publishing validation**: Branch run succeeded for `@wavecraft/components` and confirmed provenance publishing; `@wavecraft/core` publish on `main` still fails due to token injection. Workflow fix pending merge to `main` before re-validating OIDC publishes. |
 | 2026-02-07 | **Doctest cleanup + documentation guidance**: Replaced ignored Rust doctests with `rust,no_run` or `text` blocks where appropriate, updated examples to compile, and documented doctest conventions in coding standards. `cargo xtask ci-check` now runs with zero ignored doctests. |
 | 2026-02-07 | **Dev server rename (v0.7.2)**: Renamed `standalone` crate to `wavecraft-dev-server` to clarify purpose. Updated CLI/xtask wiring, docs/specs, and verified help output + dev server smoke tests. Test plan and QA report completed. |
 | 2026-02-07 | **CLI dev server reuse (v0.7.3)**: Refactored CLI dev server to reuse engine crates (shared in-memory host, FFI parameter loader, synthetic meter generator). Unified MeterFrame via protocol re-export and removed duplication. Tests and manual dev-server checks passing. |
@@ -898,5 +899,6 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 3. ⏳ Merge `feature/cli-ux-improvements` to main
 4. ⏳ Create git tag `v0.8.0` — Version bump after merge
 5. ✅ Continuous Deployment configured — Auto-publishes on merge to main
+6. ⏳ Merge npm OIDC workflow fix to `main` and re-run publish validation
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (crates.io publication, additional example plugins, etc.)

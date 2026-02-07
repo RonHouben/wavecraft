@@ -1,19 +1,22 @@
 [package]
 name = "wavecraft-dev-server"
-version = "0.7.2"
+version = "0.7.3"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 description = "Development server for Wavecraft plugin UI testing"
-publish = false
+repository = "https://github.com/RonHouben/wavecraft"
+homepage = "https://github.com/RonHouben/wavecraft"
+documentation = "https://github.com/RonHouben/wavecraft/blob/main/README.md"
+publish = true
 
 [[bin]]
 name = "wavecraft-dev-server"
 path = "src/main.rs"
 
 [dependencies]
-wavecraft-bridge = { path = "../wavecraft-bridge" }
-wavecraft-protocol = { path = "../wavecraft-protocol" }
+wavecraft-bridge = { path = "../wavecraft-bridge", version = "0.7.3" }
+wavecraft-protocol = { path = "../wavecraft-protocol", version = "0.7.3" }
 wry = "0.47"
 tao = "0.30"
 include_dir = "0.7"

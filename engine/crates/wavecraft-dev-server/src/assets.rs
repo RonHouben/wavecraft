@@ -5,12 +5,13 @@
 //! custom protocol handler in the WebView.
 
 use include_dir::{Dir, include_dir};
+use std::borrow::Cow;
+use std::path::{Component, Path, PathBuf};
 
-/// Embedded UI assets from `ui/dist/`
+/// Embedded fallback UI assets bundled with the crate.
 ///
-/// This directory is populated by running `npm run build` in the `ui/` folder.
-/// If the directory doesn't exist yet, the build will fail with a clear error.
-static UI_ASSETS: Dir = include_dir!("$CARGO_MANIFEST_DIR/../../../ui/dist");
+/// These assets are used when `ui/dist` is not available on disk.
+static UI_ASSETS: Dir = include_dir!("$CARGO_MANIFEST_DIR/assets/ui-dist");
 
 /// Get an embedded asset by path
 ///
@@ -20,20 +21,52 @@ static UI_ASSETS: Dir = include_dir!("$CARGO_MANIFEST_DIR/../../../ui/dist");
 /// # Returns
 /// * `Some((bytes, mime_type))` if asset exists
 /// * `None` if asset not found
-pub fn get_asset(path: &str) -> Option<(&'static [u8], &'static str)> {
+pub fn get_asset(path: &str) -> Option<(Cow<'static, [u8]>, &'static str)> {
     // Normalize path (remove leading slash)
     let path = path.trim_start_matches('/');
 
     // Special case: empty path or "/" -> index.html
     let path = if path.is_empty() { "index.html" } else { path };
 
-    // Get file from embedded directory
+    if let Some(contents) = try_disk_asset(path) {
+        let mime_type = mime_type_from_path(path);
+        return Some((Cow::Owned(contents), mime_type));
+    }
+
+    // Get file from embedded fallback directory
     let file = UI_ASSETS.get_file(path)?;
 
     // Infer MIME type from extension
     let mime_type = mime_type_from_path(path);
 
-    Some((file.contents(), mime_type))
+    Some((Cow::Borrowed(file.contents()), mime_type))
+}
+
+fn try_disk_asset(path: &str) -> Option<Vec<u8>> {
+    if !is_safe_relative_path(path) {
+        return None;
+    }
+
+    let base_dir = ui_dist_dir();
+    let asset_path = base_dir.join(path);
+
+    if !asset_path.exists() {
+        return None;
+    }
+
+    std::fs::read(asset_path).ok()
+}
+
+fn ui_dist_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../ui/dist")
+}
+
+fn is_safe_relative_path(path: &str) -> bool {
+    let candidate = Path::new(path);
+    !candidate.is_absolute()
+        && candidate
+            .components()
+            .all(|component| component != Component::ParentDir)
 }
 
 /// Infer MIME type from file extension
@@ -112,7 +145,7 @@ mod tests {
         assert!(!content.is_empty());
 
         // Verify it's valid HTML
-        let html = std::str::from_utf8(content).unwrap();
+        let html = std::str::from_utf8(content.as_ref()).unwrap();
         assert!(html.contains("<!DOCTYPE html") || html.contains("<!doctype html"));
     }
 }
