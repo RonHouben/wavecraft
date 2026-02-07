@@ -113,7 +113,7 @@ fn handle_asset_request(
             .status(200)
             .header("Content-Type", mime_type)
             .header("Access-Control-Allow-Origin", "*")
-            .body(Cow::Borrowed(content))
+            .body(content)
             .unwrap(),
         None => {
             warn!("Asset not found: {}", path);

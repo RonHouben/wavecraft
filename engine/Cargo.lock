@@ -3554,7 +3554,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-dev-server"
-version = "0.7.2"
+version = "0.7.3"
 dependencies = [
  "atomic_float 1.1.0",
  "clap",

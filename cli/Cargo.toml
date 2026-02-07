@@ -41,13 +41,17 @@ features = ["full"]
 # Engine crates (path dependencies)
 [dependencies.wavecraft-protocol]
 path = "../engine/crates/wavecraft-protocol"
+version = "0.7.3"
 
 [dependencies.wavecraft-bridge]
 path = "../engine/crates/wavecraft-bridge"
+version = "0.7.3"
 
 [dependencies.wavecraft-metering]
 path = "../engine/crates/wavecraft-metering"
+version = "0.7.3"
 
 [dependencies.wavecraft-dev-server]
 path = "../engine/crates/wavecraft-dev-server"
+version = "0.7.3"
 
