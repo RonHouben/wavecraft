@@ -45,6 +45,14 @@ jobs:
           packages: libglib2.0-dev pkg-config libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libx11-xcb-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
           version: 1.0
 
+      - name: Install UI dependencies (repo)
+        run: npm install
+        working-directory: ui
+
+      - name: Build UI assets (repo)
+        run: npm run build
+        working-directory: ui
+
       # ═════════════════════════════════════════════════════════════
       # Build CLI
       # ═════════════════════════════════════════════════════════════
