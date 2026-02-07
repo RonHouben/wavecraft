@@ -10,7 +10,7 @@ import React from 'react';
 export function VersionBadge(): React.JSX.Element {
   return (
     <span data-testid="version-badge" className="text-sm font-medium text-accent">
-      v{__APP_VERSION__} TEST
+      v{__APP_VERSION__}
     </span>
   );
 }

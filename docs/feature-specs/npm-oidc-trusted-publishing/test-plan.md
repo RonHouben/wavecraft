@@ -12,8 +12,8 @@
 |--------|-------|
 | ✅ PASS | 2 |
 | ❌ FAIL | 0 |
-| ⏸️ BLOCKED | 1 |
-| ⬜ NOT RUN | 0 |
+| ⏸️ BLOCKED | 0 |
+| ⬜ NOT RUN | 1 |
 
 ## Prerequisites
 
@@ -75,28 +75,17 @@
 
 **Expected Result**: Jobs succeed and publish using OIDC.
 
-**Status**: ⏸️ BLOCKED
+**Status**: ⬜ NOT RUN
 
-**Actual Result**: `publish-npm-core` and `publish-npm-components` were skipped because the workflow failed earlier at `publish-cli`.
+**Actual Result**: `publish-npm-core` and `publish-npm-components` were skipped because there were no changes under `ui/packages/*` on the branch.
 
-**Notes**: Blocked by CI failure in `publish-cli` (missing GTK/GLib system libs on Linux runner).
+**Notes**: Workflow run 21778865123 succeeded; npm jobs skipped by change detection.
 
 ---
 
 ## Issues Found
 
-### Issue #1: CI OIDC validation blocked by earlier workflow failure
-
-- **Severity**: Medium
-- **Test Case**: TC-003
-- **Description**: NPM OIDC publish jobs were skipped because the workflow failed in `publish-cli` before reaching npm jobs.
-- **Expected**: `publish-npm-core` and `publish-npm-components` run and succeed using OIDC.
-- **Actual**: Jobs skipped due to upstream failure.
-- **Steps to Reproduce**:
-	1. Trigger `continuous-deploy.yml` on `fix/publish-packages-workflow`.
-	2. Observe `publish-cli` failure; npm jobs skipped.
-- **Evidence**: Workflow run 21778718367 shows `publish-cli` failure and npm jobs skipped.
-- **Suggested Fix**: Resolve `publish-cli` dry-run failure, then rerun workflow.
+_None_
 
 ## Testing Notes
 
