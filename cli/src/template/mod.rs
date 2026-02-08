@@ -148,7 +148,7 @@ fn apply_local_dev_overrides(content: &str, vars: &TemplateVariables) -> Result<
             .replace_all(&result, |caps: &regex::Captures| {
                 let prefix = &caps[1]; // "crate = { "
                 let optional = &caps[3]; // ", optional = true" or empty
-                
+
                 // Check if package attribute exists in the original
                 let package_attr = if caps[0].contains("package") {
                     format!(r#"package = "{}", "#, crate_name)
@@ -207,6 +207,7 @@ wavecraft-protocol = { git = "https://github.com/RonHouben/wavecraft", tag = "v0
 wavecraft-dsp = { git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.0" }
 wavecraft-bridge = { git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.0" }
 wavecraft-metering = { git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.0" }
+wavecraft-dev-server = { git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.0" }
 "#;
 
         // Create a temp directory to use as the SDK path

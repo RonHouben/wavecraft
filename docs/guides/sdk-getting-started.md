@@ -136,19 +136,26 @@ wavecraft start --install
 `wavecraft start` will exit with an error. Stop the other process or pass
 `--ui-port` to choose a different port.
 
-### Updating Dependencies
+### Updating CLI and Dependencies
 
 ```bash
-# Update all project dependencies (Rust + npm)
+# Update CLI + project dependencies (works from any directory)
 wavecraft update
 ```
 
-This command automatically:
-- Updates Rust dependencies if `engine/Cargo.toml` exists (runs `cargo update` in `engine/`)
-- Updates npm dependencies if `ui/package.json` exists (runs `npm update` in `ui/`)
-- Reports success/failure for each component
+This command runs in two phases:
 
-**Use case:** Regularly update dependencies to get bug fixes and improvements from the Wavecraft SDK and other libraries.
+1. **CLI self-update** — Runs `cargo install wavecraft` to ensure you have the latest CLI version. Shows version change (e.g., "updated to 0.9.1, was 0.9.0") or confirms you're up to date.
+2. **Project dependency update** — If run from inside a Wavecraft plugin project:
+   - Updates Rust dependencies if `engine/Cargo.toml` exists (runs `cargo update` in `engine/`)
+   - Updates npm dependencies if `ui/package.json` exists (runs `npm update` in `ui/`)
+
+**Key behaviors:**
+- Works from **any directory** — outside a project, only the CLI is updated
+- CLI self-update failures are non-fatal — project dependency updates still proceed
+- Reports success/failure for each phase independently
+
+**Use case:** Run `wavecraft update` regularly to keep both the CLI tool and your project dependencies current.
 
 ### CLI Options
 

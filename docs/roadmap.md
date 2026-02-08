@@ -8,7 +8,7 @@ This document tracks implementation progress against the milestones defined in t
 
 ```
 ┌─────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP           v0.9.0 | 94%  │
+│  WAVECRAFT ROADMAP           v0.9.1 | 94%  │
 ├─────────────────────────────────────────────┤
 │  ✅ M1-M17   Foundation → OS Audio Input   │
 │  ⏳ M18      User Testing                   │
@@ -645,6 +645,13 @@ QA:           PASS (0 Critical/High, 2 Medium non-blocking, 3 Low optional)
 | Update npm packages (package.json) | ✅ | Runs `npm update` in ui/ |
 | Detect workspace structure | ✅ | File-based detection (engine/Cargo.toml, ui/package.json) |
 | Error handling for missing dirs | ✅ | Graceful failures with context |
+| **CLI Self-Update (v0.9.1 Enhancement)** | | |
+| Self-update CLI via `cargo install` | ✅ | Runs before project deps, non-fatal on failure |
+| Work from any directory | ✅ | No longer errors outside projects |
+| Version change notification | ✅ | Shows old→new version, re-run hint |
+| Graceful error handling | ✅ | Self-update failure doesn't block project deps |
+| Output parsing + version detection | ✅ | `is_already_up_to_date()`, `parse_version_output()` |
+| 19 unit + integration tests | ✅ | +12 tests from QA findings (was 7) |
 | **Testing** | | |
 | CLI unit tests for version flag | ✅ | 4 integration tests (TC-014) |
 | Integration tests for update command | ✅ | 5 integration tests (TC-015) |
@@ -679,6 +686,15 @@ QA:                    APPROVED (0 Critical/High, 2 Medium non-blocking)
 - [x] Documentation reflects new commands
 - [x] QA approval received
 - [x] Architectural review approved (5/5 rating)
+
+**CLI Self-Update Enhancement (v0.9.1, completed 2026-02-08):**
+- `wavecraft update` now self-updates the CLI first via `cargo install wavecraft`
+- Works from any directory (no longer errors outside plugin projects)
+- Non-fatal: self-update failure doesn't block project dependency updates
+- Clear version change notification with re-run hint
+- 19 tests total (7 original + 12 added from QA findings)
+- QA approved (PASS — 0 Critical/High/Medium after fixes)
+- Architecture docs updated (high-level-design.md, sdk-getting-started.md)
 
 **Completed:** 2026-02-08
 
@@ -1108,6 +1124,7 @@ Manual Tests:   Full flow validated (microphone → processor → UI)
 
 | Date | Update |
 |------|--------|
+| 2026-02-08 | **CLI Self-Update enhancement (v0.9.1)**: Enhanced `wavecraft update` to self-update the CLI binary via `cargo install wavecraft` before updating project dependencies. Command now works from any directory (self-updates CLI only when outside a project). Two-phase execution: Phase 1 (CLI self-update) is non-fatal, Phase 2 (project deps) preserved from M14. Version change notification with re-run hint. 19 tests (12 added from QA findings). QA approved (0 Critical/High/Medium). Architecture docs updated (high-level-design.md, sdk-getting-started.md). Also fixed pre-existing `test_apply_local_dev_overrides` test. Archived to `_archive/cli-self-update/`. |
 | 2026-02-08 | **Milestone 17 complete (v0.8.0)**: OS Audio Input for Dev Mode fully implemented. `wavecraft start` automatically detects, compiles, and starts audio-dev binary if present in plugin projects. Audio flows from OS microphone → user's Processor → meters → WebSocket → UI. Zero configuration required (always-on design with feature flags). Real-time safe (no tokio panics from audio thread). Protocol extensions: `registerAudio` method and `meterUpdate` notification. Audio server with cpal integration. WebSocket client for binary communication. SDK templates with optional audio-dev binary. 10 commits on feature branch. End-to-end testing complete (WebSocket client received meter updates). All template projects compile successfully. Manual testing validates full flow. Ready to archive feature spec and merge to main. Progress: 94% (17/18 milestones). |
 | 2026-02-08 | **Milestone 16 complete (v0.9.0)**: Macro API Simplification fully implemented. Plugin definition reduced from 9 lines to 4 lines (56% reduction). Metadata auto-derived from `Cargo.toml` (`CARGO_PKG_AUTHORS`, `CARGO_PKG_HOMEPAGE`). `SignalChain!` replaces `Chain!` (backward compatible with deprecation). Compile-time validation rejects bare processors. Breaking change: VST3 Class IDs now use package name. Implementation: 4 phases (Core macro, SignalChain rename, CLI template, QA docs). Testing: 107 tests passing (69 engine + 28 UI + 10 doctests), 10/10 functional tests. QA approved (9 findings, all addressed). Known limitation documented: DSL-generated plugins have parameters visible in DAW/UI but DSP receives defaults (workaround: manual `Plugin` trait implementation). Architecture docs updated (high-level-design.md, coding-standards.md). Archived to `_archive/macro-api-simplification/`. Progress: 89% (16/18 milestones). |
 | 2026-02-08 | **Milestone 16 created: Macro API Simplification**: New milestone for reducing boilerplate in `wavecraft_plugin!` macro. Based on user feedback, removes unnecessary properties (`vendor`, `url`, `email`), derives metadata from `Cargo.toml`, enforces consistent `SignalChain!` syntax, and renames `Chain!` → `SignalChain!`. Also makes `crate` property optional (hidden). Target version 0.9.0 (minor — breaking API change). Planning complete (user stories, low-level design by Architect, implementation plan by Planner). Renumbered User Testing (M16→M17) and V1.0 Release (M17→M18). Progress: 83% (15/18 milestones). Design decisions: metadata from `CARGO_PKG_*` env vars, VST3 ID uses package name instead of vendor (breaking), compile-time signal validation. Feature request from developer feedback about reducing boilerplate. |
@@ -1198,7 +1215,7 @@ Manual Tests:   Full flow validated (microphone → processor → UI)
 11. ✅ **Milestone 11**: Code Quality & OSS Prep — Logging, CI optimization, open-source readiness (v0.6.2)
 12. ✅ **Milestone 12**: Open Source Readiness — CLI, npm packages, template independence (v0.7.0)
 13. ✅ **Milestone 13**: Internal Testing — CLI UX improvements, comprehensive validation (v0.8.0)
-14. ✅ **Milestone 14**: CLI Enhancements — Version flags and update command (v0.8.5)
+14. ✅ **Milestone 14**: CLI Enhancements — Version flags, update command, CLI self-update (v0.9.1)
 15. ✅ **Milestone 15**: Developer Tooling Polish — Comprehensive workspace cleanup (v0.8.6)
 16. ✅ **Milestone 16**: Macro API Simplification — Reduced boilerplate, automatic metadata (v0.9.0)
 17. ✅ **Milestone 17**: OS Audio Input for Dev Mode — Automatic audio input detection and processing (v0.8.0)
@@ -1210,7 +1227,7 @@ Manual Tests:   Full flow validated (microphone → processor → UI)
 ### Immediate Tasks
 1. ✅ Milestone 16 complete — Macro API Simplification
 2. ✅ Milestone 17 complete — OS Audio Input for Dev Mode
-3. ⏳ Archive feature spec to `docs/feature-specs/_archive/dev-audio-os-input/`
+3. ✅ CLI Self-Update enhancement (v0.9.1) — `wavecraft update` now self-updates CLI first
 4. ⏳ Begin Milestone 18 (User Testing) — recruit beta testers
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (crates.io publication, additional example plugins, etc.)

@@ -92,10 +92,7 @@ fn try_start_audio_server(project: &ProjectMarkers, ws_port: u16, verbose: bool)
 
     // Step 1: Check if audio binary exists
     if !has_audio_binary(project) {
-        println!(
-            "{}",
-            style("ℹ Audio binary not found").blue().bold()
-        );
+        println!("{}", style("ℹ Audio binary not found").blue().bold());
         println!("  To enable real-time audio input:");
         println!("  1. Add to engine/Cargo.toml:");
         println!("     [[bin]]");
@@ -127,10 +124,7 @@ fn try_start_audio_server(project: &ProjectMarkers, ws_port: u16, verbose: bool)
             println!("{} Audio binary compiled", style("✓").green());
         }
         Ok(_) | Err(_) => {
-            println!(
-                "{}",
-                style("⚠ Audio binary compilation failed").yellow()
-            );
+            println!("{}", style("⚠ Audio binary compilation failed").yellow());
             println!("  Continuing without audio...");
             println!();
             return None;
@@ -141,7 +135,14 @@ fn try_start_audio_server(project: &ProjectMarkers, ws_port: u16, verbose: bool)
     println!("{} Starting audio server...", style("→").cyan());
     let ws_url = format!("ws://127.0.0.1:{}", ws_port);
     let spawn_result = Command::new("cargo")
-        .args(["run", "--bin", "dev-audio", "--features", "audio-dev", "--quiet"])
+        .args([
+            "run",
+            "--bin",
+            "dev-audio",
+            "--features",
+            "audio-dev",
+            "--quiet",
+        ])
         .current_dir(&project.engine_dir)
         .env("WAVECRAFT_WS_URL", ws_url)
         .env("RUST_LOG", if verbose { "debug" } else { "info" })
@@ -155,7 +156,11 @@ fn try_start_audio_server(project: &ProjectMarkers, ws_port: u16, verbose: bool)
 
     match spawn_result {
         Ok(child) => {
-            println!("{} Audio server started (PID: {})", style("✓").green(), child.id());
+            println!(
+                "{} Audio server started (PID: {})",
+                style("✓").green(),
+                child.id()
+            );
             println!();
             Some(child)
         }
@@ -524,7 +529,10 @@ fn wait_for_shutdown(
 
                 // Check audio server (if present)
                 if let Some(ref mut audio) = audio_server {
-                    if let Some(status) = audio.try_wait().context("Failed to check audio server status")? {
+                    if let Some(status) = audio
+                        .try_wait()
+                        .context("Failed to check audio server status")?
+                    {
                         println!();
                         println!(
                             "{} Audio server exited unexpectedly ({}).",

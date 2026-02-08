@@ -12,10 +12,26 @@ fn test_help_shows_update_command() {
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("update"));
-    assert!(stdout.contains("Update all project dependencies"));
+    assert!(stdout.contains("Update the CLI and project dependencies"));
 }
 
 #[test]
+fn test_update_help_shows_any_directory_info() {
+    let mut cmd = Command::new(cargo_bin!("wavecraft"));
+    cmd.args(["update", "--help"]);
+
+    let output = cmd.output().expect("Failed to execute");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("any directory"),
+        "Help should mention running from any directory"
+    );
+    assert!(stdout.contains("CLI"), "Help should mention CLI update");
+}
+
+#[test]
+#[ignore] // Triggers `cargo install wavecraft` which requires network access and crates.io
 fn test_update_outside_plugin_project() {
     let temp_dir = TempDir::new().expect("Failed to create temporary directory");
 
@@ -24,14 +40,24 @@ fn test_update_outside_plugin_project() {
     cmd.arg("update");
 
     let output = cmd.output().unwrap();
-    assert!(!output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("Not a Wavecraft plugin project"));
-    assert!(stderr.contains("engine/Cargo.toml"));
-    assert!(stderr.contains("ui/package.json"));
+    let combined = format!("{}{}", stdout, stderr);
+
+    // New behavior: running outside a project is no longer an error.
+    // Phase 1 (CLI self-update) runs, then Phase 2 detects not in a project.
+    assert!(
+        combined.contains("Not in a Wavecraft plugin project"),
+        "Should show info message about not being in a project"
+    );
+    assert!(
+        combined.contains("skipping dependency updates"),
+        "Should mention skipping dependency updates"
+    );
 }
 
 #[test]
+#[ignore] // Triggers `cargo install wavecraft` which requires network access and crates.io
 fn test_update_detects_engine_directory() {
     let temp_dir = TempDir::new().expect("Failed to create temporary directory");
 
@@ -64,6 +90,7 @@ fn test_update_detects_engine_directory() {
 }
 
 #[test]
+#[ignore] // Triggers `cargo install wavecraft` which requires network access and crates.io
 fn test_update_detects_ui_directory() {
     let temp_dir = TempDir::new().expect("Failed to create temporary directory");
 
@@ -95,6 +122,7 @@ fn test_update_detects_ui_directory() {
 }
 
 #[test]
+#[ignore] // Triggers `cargo install wavecraft` which requires network access and crates.io
 fn test_update_command_output_format() {
     let temp_dir = TempDir::new().expect("Failed to create temporary directory");
 
