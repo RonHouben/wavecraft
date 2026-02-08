@@ -157,40 +157,10 @@ fn try_start_audio_in_process(
 
     let has_output = server.has_output();
 
-    // Create a meter channel. Meter updates from the audio callback
-    // are forwarded to the WebSocket server for the browser UI.
-    let (meter_tx, mut meter_rx) = tokio::sync::mpsc::unbounded_channel();
-
-    // Spawn a task that forwards meter updates to WebSocket clients
-    tokio::spawn(async move {
-        use wavecraft_protocol::{IpcNotification, NOTIFICATION_METER_UPDATE};
-
-        while let Some(notification) = meter_rx.recv().await {
-            if let Ok(json) = serde_json::to_string(&IpcNotification::new(
-                NOTIFICATION_METER_UPDATE,
-                notification,
-            )) {
-                ws_handle.broadcast(&json).await;
-            }
-        }
-    });
-
-    match server.start(meter_tx) {
-        Ok(handle) => {
-            if has_output {
-                println!(
-                    "{} Audio server started — full-duplex (input + output)",
-                    style("✓").green()
-                );
-            } else {
-                println!(
-                    "{} Audio server started — input-only (metering)",
-                    style("✓").green()
-                );
-            }
-            println!();
-            Some(handle)
-        }
+    // Start audio server. Returns a lock-free ring buffer consumer for
+    // meter data (RT-safe: audio thread writes without allocations).
+    let (handle, mut meter_consumer) = match server.start() {
+        Ok((h, c)) => (h, c),
         Err(e) => {
             println!(
                 "{}",
@@ -198,9 +168,47 @@ fn try_start_audio_in_process(
             );
             println!("  Continuing without audio...");
             println!();
-            None
+            return None;
         }
+    };
+
+    // Spawn a task that drains the lock-free meter ring buffer and
+    // forwards updates to WebSocket clients.
+    tokio::spawn(async move {
+        use wavecraft_protocol::{IpcNotification, NOTIFICATION_METER_UPDATE};
+
+        let mut interval = tokio::time::interval(std::time::Duration::from_millis(16));
+        loop {
+            interval.tick().await;
+            // Drain all available meter frames, keeping only the latest.
+            let mut latest = None;
+            while let Ok(notification) = meter_consumer.pop() {
+                latest = Some(notification);
+            }
+            if let Some(notification) = latest {
+                if let Ok(json) = serde_json::to_string(&IpcNotification::new(
+                    NOTIFICATION_METER_UPDATE,
+                    notification,
+                )) {
+                    ws_handle.broadcast(&json).await;
+                }
+            }
+        }
+    });
+
+    if has_output {
+        println!(
+            "{} Audio server started — full-duplex (input + output)",
+            style("✓").green()
+        );
+    } else {
+        println!(
+            "{} Audio server started — input-only (metering)",
+            style("✓").green()
+        );
     }
+    println!();
+    Some(handle)
 }
 
 /// Install npm dependencies in the ui/ directory.

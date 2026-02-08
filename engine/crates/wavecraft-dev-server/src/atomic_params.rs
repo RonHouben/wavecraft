@@ -56,12 +56,16 @@ pub mod implementation {
         }
     }
 
-    // SAFETY: AtomicParameterBridge is safe to share between threads.
+    // Compile-time assertion: AtomicParameterBridge is Send + Sync.
     // The HashMap is immutable after construction, and all values are
-    // accessed through atomic operations. Arc<AtomicF32> is Send + Sync.
-    // These impls are auto-derived, but stated explicitly for clarity.
-    unsafe impl Send for AtomicParameterBridge {}
-    unsafe impl Sync for AtomicParameterBridge {}
+    // accessed through atomic operations. Arc<AtomicF32> is Send + Sync,
+    // so Rust auto-derives these traits correctly.
+    const _: () = {
+        fn _assert_send_sync<T: Send + Sync>() {}
+        fn _check() {
+            _assert_send_sync::<AtomicParameterBridge>();
+        }
+    };
 
     #[cfg(test)]
     mod tests {

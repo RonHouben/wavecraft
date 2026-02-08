@@ -134,14 +134,12 @@ pub mod implementation {
 
         /// Start audio capture, processing, and playback.
         ///
-        /// Returns an `AudioHandle` that keeps both streams alive, plus sends
-        /// meter updates through the provided sender.
+        /// Returns an `AudioHandle` that keeps both streams alive, plus a
+        /// `MeterConsumer` for draining meter frames from a lock-free ring
+        /// buffer (RT-safe: no allocations on the audio thread).
         ///
         /// Drop the handle to stop audio.
-        pub fn start(
-            mut self,
-            meter_tx: tokio::sync::mpsc::UnboundedSender<MeterUpdateNotification>,
-        ) -> Result<AudioHandle> {
+        pub fn start(mut self) -> Result<(AudioHandle, rtrb::Consumer<MeterUpdateNotification>)> {
             // Set sample rate from the actual input device config
             let actual_sample_rate = self.input_config.sample_rate.0 as f32;
             self.processor.set_sample_rate(actual_sample_rate);
@@ -156,6 +154,13 @@ pub mod implementation {
             // Data format: interleaved f32 samples (matches cpal output).
             let ring_capacity = buffer_size * num_channels.max(2) * 4;
             let (mut ring_producer, mut ring_consumer) = rtrb::RingBuffer::new(ring_capacity);
+
+            // --- SPSC ring buffer for meter data (audio → consumer task) ---
+            // Capacity: 64 frames — sufficient for ~1s at 60 Hz update rate.
+            // Uses rtrb (lock-free, zero-allocation) instead of tokio channels
+            // to maintain real-time safety on the audio thread.
+            let (mut meter_producer, meter_consumer) =
+                rtrb::RingBuffer::<MeterUpdateNotification>::new(64);
 
             let mut frame_counter = 0u64;
 
@@ -220,8 +225,11 @@ pub mod implementation {
                         let rms_right =
                             (right.iter().map(|x| x * x).sum::<f32>() / right.len() as f32).sqrt();
 
-                        // Send meter update every ~16ms (60 Hz)
-                        if frame_counter % 60 == 0 {
+                        // Send meter update approximately every other callback.
+                        // At 44100 Hz / 512 samples per buffer ≈ 86 callbacks/sec,
+                        // firing every 2nd callback gives ~43 Hz visual updates.
+                        // The WebSocket/UI side already rate-limits display.
+                        if frame_counter % 2 == 0 {
                             let notification = MeterUpdateNotification {
                                 timestamp_us: frame_counter,
                                 left_peak: peak_left,
@@ -229,7 +237,10 @@ pub mod implementation {
                                 right_peak: peak_right,
                                 right_rms: rms_right,
                             };
-                            let _ = meter_tx.send(notification);
+                            // Push to lock-free ring buffer — RT-safe, no allocation.
+                            // If the consumer is slow, older frames are silently
+                            // dropped (acceptable for metering data).
+                            let _ = meter_producer.push(notification);
                         }
 
                         // Interleave processed audio and write to ring buffer.
@@ -297,10 +308,13 @@ pub mod implementation {
             };
             tracing::info!("Audio server started in {} mode", mode);
 
-            Ok(AudioHandle {
-                _input_stream: input_stream,
-                _output_stream: output_stream,
-            })
+            Ok((
+                AudioHandle {
+                    _input_stream: input_stream,
+                    _output_stream: output_stream,
+                },
+                meter_consumer,
+            ))
         }
 
         /// Returns true if an output device is available for audio playback.
