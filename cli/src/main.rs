@@ -82,6 +82,9 @@ enum Commands {
         #[arg(short, long)]
         verbose: bool,
     },
+
+    /// Update all project dependencies (Rust crates + npm packages)
+    Update,
 }
 
 fn main() -> Result<()> {
@@ -125,6 +128,10 @@ fn main() -> Result<()> {
                 verbose,
             };
             cmd.execute()?;
+        }
+
+        Commands::Update => {
+            commands::update::run()?;
         }
     }
 
