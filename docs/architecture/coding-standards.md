@@ -844,9 +844,10 @@ When SDK changes affect generated plugins (templates, CLI, or engine crates), va
 
 ```bash
 # Generate test plugin into SDK's build directory (gitignored)
+# Note: --local-sdk is NOT needed when running via `cargo run` — the CLI
+# auto-detects SDK development mode and uses path dependencies automatically.
 cargo run --manifest-path cli/Cargo.toml -- create TestPlugin \
-  --output target/tmp/test-plugin \
-  --local-sdk
+  --output target/tmp/test-plugin
 
 # Test the generated plugin
 cd target/tmp/test-plugin
@@ -856,7 +857,8 @@ cargo run --manifest-path /path/to/wavecraft/cli/Cargo.toml -- start --install
 **Why use `--output`:**
 - Test artifacts live in `target/tmp/` (gitignored)
 - Easy cleanup: `rm -rf target/tmp/test-plugin`
-- `--local-sdk` uses path dependencies, so local changes are tested without publishing
+- Auto-detection uses path dependencies, so local changes are tested without publishing
+- `--local-sdk` is still available as a manual override but is no longer needed
 
 **Test checklist for CLI/template changes:**
 1. `wavecraft create` completes without errors

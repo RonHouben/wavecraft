@@ -189,9 +189,10 @@ When SDK changes affect generated plugins (templates, engine crates, CLI), you m
 
 ```bash
 # Generate test plugin into SDK's build directory (gitignored)
+# Note: --local-sdk is NOT needed when running via `cargo run` — the CLI
+# auto-detects SDK development mode and uses path dependencies automatically.
 cargo run --manifest-path cli/Cargo.toml -- create TestPlugin \
-  --output target/tmp/test-plugin \
-  --local-sdk
+  --output target/tmp/test-plugin
 
 # Test the generated plugin
 cd target/tmp/test-plugin
