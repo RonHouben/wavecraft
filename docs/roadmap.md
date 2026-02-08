@@ -8,13 +8,14 @@ This document tracks implementation progress against the milestones defined in t
 
 ```
 ┌─────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP           v0.8.0 | 87%  │
+│  WAVECRAFT ROADMAP           v0.8.0 | 81%  │
 ├─────────────────────────────────────────────┤
 │  ✅ M1-M13   Foundation → Internal Testing │
-│  ⏳ M14      User Testing                   │
-│  ⏳ M15      V1.0 Release                   │
+│  ⏳ M14      CLI Enhancements              │
+│  ⏳ M15      User Testing                   │
+│  ⏳ M16      V1.0 Release                   │
 ├─────────────────────────────────────────────┤
-│  [███████████████████████████████░░░] 13/15 │
+│  [███████████████████████████████░░░] 13/16 │
 └─────────────────────────────────────────────┘
 ```
 
@@ -620,7 +621,44 @@ QA:           PASS (0 Critical/High, 2 Medium non-blocking, 3 Low optional)
 
 ---
 
-## Milestone 13: Internal Testing ✅
+## Milestone 14: CLI Enhancements ⏳
+
+> **Goal:** Improve CLI developer experience with version checking and dependency management. Small quality-of-life improvements before user testing.
+
+**Depends on:** Milestone 13 (Internal Testing) ✅
+
+**Target Version:** `0.8.1` (patch — CLI improvements, no breaking changes)
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Version Flag** | | |
+| Add `-v` flag (short form) | ⏳ | Quick version check |
+| Add `--version` flag (long form) | ⏳ | Quick version check |
+| Display format: `wavecraft 0.x.y` | ⏳ | Clean, standard output |
+| Update CLI help text | ⏳ | Document both flags |
+| **Update Command** | | |
+| Add `wavecraft update` subcommand | ⏳ | Update all project dependencies |
+| Update Rust crates (Cargo.toml) | ⏳ | Run `cargo update` |
+| Update npm packages (package.json) | ⏳ | Run `npm update` |
+| Detect workspace structure | ⏳ | Find engine/ and ui/ directories |
+| Error handling for missing dirs | ⏳ | Graceful failures with helpful messages |
+| **Testing** | | |
+| CLI unit tests for version flag | ⏳ | Verify output format |
+| Integration tests for update command | ⏳ | Test on sample plugin project |
+| Manual testing in plugin project | ⏳ | Real-world validation |
+| Documentation updates | ⏳ | Getting Started guide |
+
+**Success Criteria:**
+- [ ] `wavecraft -v` and `wavecraft --version` display correct version
+- [ ] `wavecraft update` successfully updates both Rust and npm dependencies
+- [ ] Error messages are clear and actionable
+- [ ] Documentation reflects new commands
+
+**Estimated Effort:** 3-4 days
+
+---
+
+## Milestone 15: User Testing ⏳
 
 > **Goal:** Comprehensive internal validation of the complete SDK workflow before external beta testing. Catch issues that would frustrate external testers.
 
@@ -723,7 +761,7 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 **Depends on:** Milestone 13 (Internal Testing) ✅
 
-**Target Version:** `0.9.0` (minor — pre-release milestone with potential breaking changes from feedback)
+**Target Version:** `0.9.0` (minor — user feedback may drive breaking changes)
 
 | Task | Status | Notes |
 |------|--------|-------|
@@ -758,11 +796,11 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 ---
 
-## Milestone 15: V1.0 Release 🎯
+## Milestone 16: V1.0 Release 🎯
 
 > **Goal:** Ship Wavecraft 1.0 — the first stable, production-ready release of the Rust + React audio plugin framework.
 
-**Depends on:** Milestone 14 (User Testing) — all critical feedback addressed.
+**Depends on:** Milestone 15 (User Testing) — all critical feedback addressed.
 
 **Target Version:** `1.0.0` (major — first stable release)
 
@@ -814,6 +852,7 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 | Date | Update |
 |------|--------|
+| 2026-02-08 | **Milestone 14 added: CLI Enhancements**: New milestone for version flag (`-v`/`--version`) and `wavecraft update` command to update all project dependencies (Rust + npm). Small quality-of-life improvements before user testing. Renumbered User Testing (M14→M15) and V1.0 Release (M15→M16). Progress: 81% (13/16 milestones). Target version 0.8.1 (patch). Items moved from backlog with documentation that `-v`/`--version` should display format `wavecraft 0.x.y`. |
 | 2026-02-09 | **CD CLI cascade publish**: Enhanced Continuous Deployment pipeline with CLI cascade trigger, `[auto-bump]` loop prevention, and publish-only npm model. CLI now re-publishes whenever _any_ SDK component changes (engine crates, npm packages, or CLI itself), ensuring the git tag always reflects the latest SDK state. Replaced `[skip ci]` with `[auto-bump]` commit marker so other workflows (CI, template validation) still run on auto-bump commits. npm jobs switched to publish-only model (no build step — relies on pre-built `dist/` in repo). Added upstream failure guards (`!cancelled()` instead of `always()`). 12/12 test cases passing, QA approved (0 Critical/High/Medium). Architecture docs updated (high-level-design.md, ci-pipeline.md). Archived to `_archive/cd-cli-cascade-publish/`. |
 | 2026-02-08 | **CLI auto-detect local SDK**: CLI now auto-detects when running from monorepo source checkout (`cargo run` or `target/debug/wavecraft`) and uses path dependencies instead of git tags. Eliminates the need for `--local-sdk` flag during SDK development. Runtime binary path inspection with SDK marker validation (`engine/crates/wavecraft-nih_plug/Cargo.toml`). 9/9 manual tests, 32 CLI unit tests, QA approved. Architecture docs updated (high-level-design.md, coding-standards.md, agent-development-flow.md). Archived to `_archive/cli-auto-local-sdk/`. |
 | 2026-02-08 | **CLI `wavecraft start` port preflight**: Added preflight port checks and strict UI port binding. Startup now fails fast when UI or WS ports are in use, avoiding partial startup and Vite auto-port switching. Docs updated (High-Level Design, Getting Started, coding standards/agent flow). Test plan re-run and QA completed. |
@@ -899,8 +938,9 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 13. ✅ **Milestone 13**: Internal Testing — CLI UX improvements, comprehensive validation (v0.8.0)
 
 ### Up Next
-14. ⏳ **Milestone 14**: User Testing — Beta testing with real plugin developers (v0.9.0)
-15. ⏳ **Milestone 15**: V1.0 Release — First stable production release (v1.0.0)
+14. ⏳ **Milestone 14**: CLI Enhancements — Version flag and update command (v0.8.1)
+15. ⏳ **Milestone 15**: User Testing — Beta testing with real plugin developers (v0.9.0)
+16. ⏳ **Milestone 16**: V1.0 Release — First stable production release (v1.0.0)
 
 ### Immediate Tasks
 1. ✅ Milestone 13 complete — Internal testing + CLI UX improvements
