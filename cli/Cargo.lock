@@ -3264,7 +3264,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-bridge"
-version = "0.7.4"
+version = "0.8.6"
 dependencies = [
  "libloading",
  "serde",
@@ -3275,7 +3275,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-dev-server"
-version = "0.7.4"
+version = "0.8.6"
 dependencies = [
  "atomic_float",
  "clap",
@@ -3295,7 +3295,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-metering"
-version = "0.7.4"
+version = "0.8.6"
 dependencies = [
  "rtrb",
  "wavecraft-protocol",
@@ -3303,7 +3303,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-protocol"
-version = "0.7.4"
+version = "0.8.6"
 dependencies = [
  "paste",
  "serde",
