@@ -20,6 +20,8 @@ This document tracks implementation progress against the milestones defined in t
 
 **See also:** [Backlog](backlog.md) — unprioritized ideas for future consideration
 
+> **Note:** CI/CD workflow verification in progress (2026-02-08)
+
 ---
 
 ## Status Legend
