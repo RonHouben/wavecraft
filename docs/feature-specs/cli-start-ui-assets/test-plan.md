@@ -3,7 +3,7 @@
 ## Overview
 - **Feature**: CLI `wavecraft start` should build without `ui/dist` present by using embedded fallback UI assets.
 - **Spec Location**: `docs/feature-specs/cli-start-ui-assets/`
-- **Date**: 2026-02-08
+- **Date**: 2026-02-08 (re-run)
 - **Tester**: Tester Agent
 
 ## Test Summary
@@ -59,6 +59,7 @@ cargo run --manifest-path /path/to/wavecraft/cli/Cargo.toml -- start --install
 **Actual Result**: `cargo xtask ci-check` completed successfully from `engine/`; linting and all tests passed.
 
 **Notes**: Running from repo root failed with `error: no such command: xtask` (exit 101). Re-ran from `engine/` on 2026-02-08; all checks green.
+Re-ran on 2026-02-08 from `engine/`; all checks passed.
 
 ---
 
@@ -102,6 +103,7 @@ cargo run --manifest-path /path/to/wavecraft/cli/Cargo.toml -- start --install
 **Actual Result**: `cargo test -p wavecraft-nih_plug --lib` passed, including `test_index_html_exists`.
 
 **Notes**: Also covered as part of `cargo xtask ci-check`.
+Re-ran on 2026-02-08; tests passed.
 
 ---
 
@@ -123,6 +125,7 @@ cargo run --manifest-path /path/to/wavecraft/cli/Cargo.toml -- start --install
 **Actual Result**: Command failed immediately with `UI dev server port 5173 is already in use` before building the plugin or starting any servers.
 
 **Notes**: Observed on 2026-02-08. Preflight check now fails fast.
+Re-validated on 2026-02-08 with identical fail-fast behavior.
 
 ---
 
@@ -145,6 +148,7 @@ cargo run --manifest-path /path/to/wavecraft/cli/Cargo.toml -- start --install
 **Actual Result**: Vite started successfully with `Local: http://localhost:5173/` and no port switching.
 
 **Notes**: Observed on 2026-02-08 after clearing ports 9000 and 5173.
+Re-validated on 2026-02-08; initial attempt failed because 5173 was still in use, then passed after freeing the port.
 
 ## Issues Found
 
