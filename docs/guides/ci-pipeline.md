@@ -389,25 +389,26 @@ Each distribution package (CLI, npm-core, npm-components) uses a three-step auto
 
 1. **Determine version** — Compare local version against the published registry version (crates.io or npm)
 2. **Auto-bump** (if needed) — If local version ≤ published, increment patch from published version
-3. **Commit + push** — Commit the version bump as `github-actions[bot]`, then push to `main`
+3. **Commit locally** — Commit the version bump locally for publish tooling; version is **not** pushed to `main`
+4. **Push tag only** — After publishing, create a git tag and push it (tags are not subject to branch protection)
 
 A "set final version" step consolidates the version (whether from determine or bump) for use by downstream steps (publish, git tag).
+
+**Why local-only commit?** Branch protection rulesets on `main` prevent direct pushes. The local commit is needed so `cargo publish` / `npm publish` see the correct version in the committed working tree. The published version is recorded in the git tag and the registry — `main` retains the product baseline version.
 
 **Developer override:** If a developer manually bumps the version in their PR (e.g., minor bump for breaking changes), CI detects the local version is already ahead and publishes it as-is without auto-bumping.
 
 ### Infinite Loop Prevention
 
-Auto-bump commits push to `main`, which would re-trigger the CD pipeline. This is prevented by checking the commit author:
+Since auto-bump commits are no longer pushed to `main`, the infinite loop scenario (auto-bump commit re-triggers CD pipeline) no longer applies. The `detect-changes` guard is kept as defense-in-depth:
 
 ```
-Auto-bump commit author: "github-actions[bot]"
-
 detect-changes job:
   if: github.event.head_commit.author.name != 'github-actions[bot]'
-  → Job skips → All downstream jobs skip → No further commits → Loop terminated
+  → Skips if the triggering commit was authored by the bot
 ```
 
-**Why author check instead of commit message markers?** Commit messages are free-text — a PR mentioning `[auto-bump]` in its description would falsely skip the CD pipeline (squash merges include the full PR body). Checking the commit author is deterministic and immune to message content. This approach also avoids `[skip ci]` which would suppress _all_ GitHub Actions workflows.
+**Why keep the guard?** Defense-in-depth — if the workflow is ever modified to push commits again, the guard prevents infinite loops without requiring additional changes.
 
 ### CLI Cascade Trigger
 
@@ -421,11 +422,7 @@ This ensures the CLI's git tag always reflects the latest SDK state, so `wavecra
 
 ### Git Conflict Prevention
 
-Multiple auto-bump commits from parallel jobs could conflict. Mitigation:
-
-- Each auto-bump step runs `git pull --rebase origin main` before pushing
-- Parallel npm jobs modify different files (`core/package.json` vs `components/package.json`)
-- CLI runs last (waits for all upstream jobs via `needs`)
+Since no commits are pushed to `main`, parallel job conflicts for version bumps are no longer possible. Only tag pushes remain, and each job uses a unique tag prefix per package (e.g., `wavecraft-cli-v`, `@wavecraft/core-v`), so tag conflicts cannot occur.
 
 ### Secrets Required
 

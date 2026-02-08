@@ -1007,13 +1007,14 @@ The CD pipeline (`continuous-deploy.yml`) automatically patches and publishes di
 
 **What CI does:**
 - Auto-patches CLI, `@wavecraft/core`, `@wavecraft/components` when their local version ≤ registry version
-- Commits version bumps as `github-actions[bot]` author
-- Uses `git pull --rebase` before each push to handle parallel job conflicts
+- Commits version bumps **locally only** (not pushed to `main`) — branch protection rulesets prevent direct pushes
+- Pushes **git tags only** for each published version (tags are not subject to branch protection)
+- The version in source files on `main` is the "product baseline" — the registry holds the authoritative published version
 
 **Infinite loop prevention:**
-- Commits authored by `github-actions[bot]` are skipped by the `detect-changes` job
-- This is more robust than commit message markers (which can false-match on squash merge bodies)
-- Preferred over `[skip ci]` because other workflows (CI, template validation) should still run on auto-bump commits
+- Auto-bump commits are no longer pushed to `main`, so the infinite loop scenario does not arise
+- The `detect-changes` guard (`github-actions[bot]` author check) is kept as defense-in-depth
+- Preferred over `[skip ci]` because other workflows (CI, template validation) should still run normally
 
 ---
 

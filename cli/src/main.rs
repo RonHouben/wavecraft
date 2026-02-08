@@ -30,20 +30,25 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Create a new plugin project from the template
+    /// Create a new plugin project from the Wavecraft template
+    #[command(
+        long_about = "Scaffold a new audio plugin project with Rust engine and React UI.\n\n\
+        The generated project includes a complete build system (xtask), \
+        development servers, and example DSP code ready to customize."
+    )]
     Create {
         /// Plugin name (lowercase, alphanumeric + underscore/hyphen)
         name: String,
 
-        /// Vendor name (company or developer name)
+        /// Vendor name for plugin metadata (company or developer name)
         #[arg(short, long)]
         vendor: Option<String>,
 
-        /// Contact email (optional)
+        /// Contact email for plugin metadata
         #[arg(short, long)]
         email: Option<String>,
 
-        /// Website URL (optional)
+        /// Website URL for plugin metadata
         #[arg(short, long)]
         url: Option<String>,
 
@@ -51,7 +56,7 @@ enum Commands {
         #[arg(short, long)]
         output: Option<PathBuf>,
 
-        /// Skip git initialization
+        /// Skip git repository initialization
         #[arg(long)]
         no_git: bool,
 
@@ -61,12 +66,16 @@ enum Commands {
     },
 
     /// Start development servers (WebSocket + UI)
+    #[command(
+        long_about = "Launch the Rust WebSocket server and Vite UI dev server \
+        for browser-based plugin UI development with hot module reloading."
+    )]
     Start {
-        /// WebSocket server port (default: 9000)
+        /// WebSocket server port for engine communication
         #[arg(short, long, default_value = "9000")]
         port: u16,
 
-        /// Vite UI server port (default: 5173)
+        /// Vite UI dev server port
         #[arg(long, default_value = "5173")]
         ui_port: u16,
 
