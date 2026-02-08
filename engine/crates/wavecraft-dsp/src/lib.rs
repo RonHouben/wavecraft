@@ -20,3 +20,6 @@ pub use builtins::*;
 
 // Re-export combinators
 pub use combinators::Chain;
+
+// Note: SignalChain! and Chain! macros are automatically exported at crate root
+// via #[macro_export] in combinators/mod.rs

@@ -10,9 +10,9 @@ pub struct TemplateVariables {
     pub plugin_name_snake: String,
     pub plugin_name_pascal: String,
     pub plugin_name_title: String,
-    pub vendor: String,
-    pub email: Option<String>,
-    pub url: Option<String>,
+    pub author_name: String,
+    pub author_email: String,
+    pub homepage: String,
     pub sdk_version: String,
     /// Local SDK path for development (generates path deps instead of git deps)
     pub local_dev: Option<PathBuf>,
@@ -22,9 +22,9 @@ pub struct TemplateVariables {
 impl TemplateVariables {
     pub fn new(
         plugin_name: String,
-        vendor: String,
-        email: Option<String>,
-        url: Option<String>,
+        author_name: String,
+        author_email: String,
+        homepage: String,
         sdk_version: String,
         local_dev: Option<PathBuf>,
     ) -> Self {
@@ -38,9 +38,9 @@ impl TemplateVariables {
             plugin_name_snake,
             plugin_name_pascal,
             plugin_name_title,
-            vendor,
-            email,
-            url,
+            author_name,
+            author_email,
+            homepage,
             sdk_version,
             local_dev,
             year,
@@ -56,13 +56,11 @@ impl TemplateVariables {
         result = Self::replace_variable(result, "plugin_name_snake", &self.plugin_name_snake);
         result = Self::replace_variable(result, "plugin_name_pascal", &self.plugin_name_pascal);
         result = Self::replace_variable(result, "plugin_name_title", &self.plugin_name_title);
-        result = Self::replace_variable(result, "vendor", &self.vendor);
+        result = Self::replace_variable(result, "author_name", &self.author_name);
+        result = Self::replace_variable(result, "author_email", &self.author_email);
+        result = Self::replace_variable(result, "homepage", &self.homepage);
         result = Self::replace_variable(result, "sdk_version", &self.sdk_version);
         result = Self::replace_variable(result, "year", &self.year);
-
-        // Optional variables - replace with empty string if None
-        result = Self::replace_variable(result, "email", self.email.as_deref().unwrap_or(""));
-        result = Self::replace_variable(result, "url", self.url.as_deref().unwrap_or(""));
 
         // Check for unreplaced variables
         let unreplaced = Regex::new(r"\{\{\s*(\w+)\s*\}\}").unwrap();
@@ -90,9 +88,9 @@ mod tests {
         let vars = TemplateVariables::new(
             "my-plugin".to_string(),
             "My Company".to_string(),
-            None,
-            None,
-            "0.7.0".to_string(),
+            "info@example.com".to_string(),
+            "https://example.com".to_string(),
+            "0.9.0".to_string(),
             None, // local_dev
         );
 
@@ -107,13 +105,13 @@ mod tests {
         let vars = TemplateVariables::new(
             "my-plugin".to_string(),
             "My Company".to_string(),
-            Some("info@example.com".to_string()),
-            Some("https://example.com".to_string()),
-            "0.7.0".to_string(),
+            "info@example.com".to_string(),
+            "https://example.com".to_string(),
+            "0.9.0".to_string(),
             None, // local_dev
         );
 
-        let template = "# {{plugin_name_title}} by {{vendor}}";
+        let template = "# {{plugin_name_title}} by {{author_name}}";
         let result = vars.apply(template).unwrap();
         assert_eq!(result, "# My Plugin by My Company");
     }
@@ -123,9 +121,9 @@ mod tests {
         let vars = TemplateVariables::new(
             "my-plugin".to_string(),
             "My Company".to_string(),
-            None,
-            None,
-            "0.7.0".to_string(),
+            "info@example.com".to_string(),
+            "https://example.com".to_string(),
+            "0.9.0".to_string(),
             None, // local_dev
         );
 
@@ -134,24 +132,24 @@ mod tests {
     }
 
     #[test]
-    fn test_empty_optional_variables() {
+    fn test_metadata_fields() {
         let vars = TemplateVariables::new(
             "my-plugin".to_string(),
-            "My Company".to_string(),
-            None, // No email
-            None, // No URL
-            "0.7.0".to_string(),
+            "Developer Name".to_string(),
+            "dev@example.com".to_string(),
+            "https://myplugin.com".to_string(),
+            "0.9.0".to_string(),
             None, // local_dev
         );
 
-        // Template with optional variables should replace with empty string
-        let template = "Email: {{email}}, URL: {{url}}";
+        // Test Cargo.toml author field template
+        let template = r#"authors = ["{{author_name}} <{{author_email}}>"]"#;
         let result = vars.apply(template).unwrap();
-        assert_eq!(result, "Email: , URL: ");
+        assert_eq!(result, r#"authors = ["Developer Name <dev@example.com>"]"#);
 
-        // Should not error on templates with optional variables
-        let template_with_url = "url: \"{{url}}\",";
-        let result = vars.apply(template_with_url).unwrap();
-        assert_eq!(result, "url: \"\",");
+        // Test homepage field
+        let template = r#"homepage = "{{homepage}}""#;
+        let result = vars.apply(template).unwrap();
+        assert_eq!(result, r#"homepage = "https://myplugin.com""#);
     }
 }

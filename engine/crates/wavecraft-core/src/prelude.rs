@@ -15,7 +15,10 @@
 //! ```
 
 // Re-export Wavecraft DSP traits and types
-pub use wavecraft_dsp::{Chain, ParamRange, ParamSpec, Processor, ProcessorParams, Transport};
+#[allow(deprecated)] // Chain! is deprecated but maintained for backward compatibility
+pub use wavecraft_dsp::{
+    Chain, ParamRange, ParamSpec, Processor, ProcessorParams, SignalChain, Transport,
+};
 
 // Re-export built-in processors
 pub use wavecraft_dsp::builtins::{GainDsp, PassthroughDsp};

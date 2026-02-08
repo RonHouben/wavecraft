@@ -3,6 +3,8 @@ name = "{{plugin_name}}"
 version.workspace = true
 edition.workspace = true
 license = "MIT"
+authors = ["{{author_name}} <{{author_email}}>"]
+homepage = "{{homepage}}"
 
 [lib]
 name = "{{plugin_name_snake}}"

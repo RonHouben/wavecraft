@@ -702,6 +702,74 @@ Code running on the audio thread must:
 - Use atomic types for shared state
 - Use SPSC ring buffers for data transfer
 
+### nih-plug Buffer Write Pattern
+
+**Rule:** When converting nih-plug buffers to wavecraft DSP format, use the unsafe pointer write pattern with comprehensive safety documentation.
+
+nih-plug's `Buffer` API only provides immutable slices via `as_slice()`, but plugin processing requires in-place modification. The cast from `*const f32` to `*mut f32` is safe because the DAW host guarantees exclusive buffer access during the `process()` callback.
+
+**Why unsafe is necessary:**
+
+1. nih-plug's `Buffer` API only provides `as_slice() -> &[&[f32]]` (immutable references)
+2. The wavecraft DSP API requires mutable slices: `process(&mut self, buffer: &mut [&mut [f32]])`
+3. Plugin contract allows (and expects) in-place modification during `process()` callback
+
+**Do:**
+```rust
+// Bounds check before unsafe block
+if let Some(channel) = buffer.as_slice().get(ch) {
+    if sample_idx < channel.len() {
+        // SAFETY JUSTIFICATION:
+        //
+        // 1. Exclusive Access: nih-plug's process() callback guarantees exclusive
+        //    buffer access (no concurrent reads/writes from other threads).
+        //
+        // 2. Bounds Check: The `if` guards above ensure:
+        //    - `ch` is a valid channel index (within buffer.channels())
+        //    - `sample_idx < channel.len()` (within channel sample count)
+        //
+        // 3. Pointer Validity:
+        //    - `channel.as_ptr()` is from nih-plug's Buffer allocation (valid)
+        //    - `.add(sample_idx)` offset is within bounds (checked above)
+        //    - Pointer is properly aligned (f32 alignment guaranteed by host)
+        //
+        // 4. Write Safety:
+        //    - f32 is Copy (atomic write, no drop required)
+        //    - No aliasing: Buffer<'a> lifetime ensures no other refs exist
+        //    - Host expects in-place modification (plugin contract)
+        //
+        // 5. Why unsafe is necessary:
+        //    nih-plug's Buffer API only provides immutable refs (as_slice()).
+        //    However, the plugin contract allows (and expects) in-place writes.
+        //    Casting *const → *mut is sound because we have exclusive access
+        //    during process() callback (guaranteed by DAW host).
+        unsafe {
+            let channel_ptr = channel.as_ptr() as *mut f32;
+            *channel_ptr.add(sample_idx) = value;
+        }
+    }
+}
+```
+
+**Don't:**
+```rust
+// ❌ Minimal safety comment (insufficient justification)
+unsafe {
+    let channel_ptr = channel.as_ptr() as *mut f32;
+    *channel_ptr.add(sample_idx) = value; // we're within bounds
+}
+
+// ❌ Copying buffer to avoid unsafe (allocates on audio thread)
+let mut temp_buffer = vec![0.0; buffer.samples()]; // VIOLATES REAL-TIME SAFETY
+// ... copy input, process, copy back (defeats zero-copy design)
+```
+
+**Rationale:**
+- nih-plug's immutable refs are a convenience API, not an ownership guarantee
+- The DAW host provides exclusive access during `process()` (single-threaded audio callback)
+- Alternative approaches (copying buffers) violate real-time safety (allocations on audio thread)
+- This pattern is used in the macro-generated code (`wavecraft-macros/src/plugin.rs`)
+
 ---
 
 ## Testing

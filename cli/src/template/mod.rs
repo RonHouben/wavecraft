@@ -163,9 +163,9 @@ mod tests {
         let vars = TemplateVariables::new(
             "my-plugin".to_string(),
             "My Company".to_string(),
-            Some("info@example.com".to_string()),
-            Some("https://example.com".to_string()),
-            "0.7.0".to_string(),
+            "info@example.com".to_string(),
+            "https://example.com".to_string(),
+            "0.9.0".to_string(),
             None, // local_dev
         );
 
@@ -202,9 +202,9 @@ wavecraft-metering = { git = "https://github.com/RonHouben/wavecraft", tag = "v0
         let vars = TemplateVariables::new(
             "test-plugin".to_string(),
             "Test Vendor".to_string(),
-            None,
-            None,
-            "v0.7.0".to_string(),
+            "test@example.com".to_string(),
+            "https://test.com".to_string(),
+            "v0.9.0".to_string(),
             Some(sdk_path.clone()),
         );
 
@@ -246,9 +246,9 @@ wavecraft-metering = { git = "https://github.com/RonHouben/wavecraft", tag = "v0
         let vars = TemplateVariables::new(
             "test-plugin".to_string(),
             "Test Vendor".to_string(),
-            None,
-            None,
-            "v0.7.0".to_string(),
+            "test@example.com".to_string(),
+            "https://test.com".to_string(),
+            "v0.9.0".to_string(),
             None, // No local_dev
         );
 
@@ -265,9 +265,9 @@ wavecraft-metering = { git = "https://github.com/RonHouben/wavecraft", tag = "v0
         let vars = TemplateVariables::new(
             "test-plugin".to_string(),
             "Test Vendor".to_string(),
-            None,
-            None,
-            "v0.7.0".to_string(),
+            "test@example.com".to_string(),
+            "https://test.com".to_string(),
+            "v0.9.0".to_string(),
             Some(PathBuf::from("/nonexistent/path/that/does/not/exist")),
         );
 
