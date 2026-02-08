@@ -33,6 +33,13 @@ To verify installation:
 wavecraft --help
 ```
 
+To check the installed version:
+```bash
+wavecraft --version
+# or
+wavecraft -V
+```
+
 ### 2. Create a New Plugin Project
 
 ```bash
@@ -128,6 +135,20 @@ wavecraft start --install
 **Note:** The UI dev server requires a free port. If the port is already in use,
 `wavecraft start` will exit with an error. Stop the other process or pass
 `--ui-port` to choose a different port.
+
+### Updating Dependencies
+
+```bash
+# Update all project dependencies (Rust + npm)
+wavecraft update
+```
+
+This command automatically:
+- Updates Rust dependencies if `engine/Cargo.toml` exists (runs `cargo update` in `engine/`)
+- Updates npm dependencies if `ui/package.json` exists (runs `npm update` in `ui/`)
+- Reports success/failure for each component
+
+**Use case:** Regularly update dependencies to get bug fixes and improvements from the Wavecraft SDK and other libraries.
 
 ### CLI Options
 

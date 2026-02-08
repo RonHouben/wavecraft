@@ -44,7 +44,8 @@ wavecraft/
 │   │   ├── commands/              # Command implementations
 │   │   │   ├── mod.rs
 │   │   │   ├── create.rs          # `wavecraft create` command
-│   │   │   └── start.rs           # `wavecraft start` dev servers
+│   │   │   ├── start.rs           # `wavecraft start` dev servers
+│   │   │   └── update.rs          # `wavecraft update` dependency updates
 │   │   └── template/              # Template extraction & variables
 │   │       ├── mod.rs
 │   │       └── variables.rs
