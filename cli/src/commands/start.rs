@@ -85,6 +85,104 @@ fn prompt_install() -> Result<bool> {
     Ok(response.is_empty() || response == "y" || response == "yes")
 }
 
+/// Try to start audio server (with graceful fallback on any error)
+fn try_start_audio_server(project: &ProjectMarkers, ws_port: u16, verbose: bool) -> Option<Child> {
+    println!();
+    println!("{} Checking for audio binary...", style("→").cyan());
+
+    // Step 1: Check if audio binary exists
+    if !has_audio_binary(project) {
+        println!(
+            "{}",
+            style("ℹ Audio binary not found").blue().bold()
+        );
+        println!("  To enable real-time audio input:");
+        println!("  1. Add to engine/Cargo.toml:");
+        println!("     [[bin]]");
+        println!("     name = \"dev-audio\"");
+        println!("     path = \"src/bin/dev-audio.rs\"");
+        println!("  2. Create engine/src/bin/dev-audio.rs");
+        println!("     (See SDK docs for template)");
+        println!();
+        println!("  Continuing without audio...");
+        println!();
+        return None;
+    }
+
+    // Step 2: Try to compile
+    println!("{} Compiling audio binary...", style("→").cyan());
+    let compile_result = Command::new("cargo")
+        .args(["build", "--bin", "dev-audio"])
+        .current_dir(&project.engine_dir)
+        .stdout(if verbose {
+            Stdio::inherit()
+        } else {
+            Stdio::null()
+        })
+        .stderr(Stdio::inherit())
+        .status();
+
+    match compile_result {
+        Ok(status) if status.success() => {
+            println!("{} Audio binary compiled", style("✓").green());
+        }
+        Ok(_) | Err(_) => {
+            println!(
+                "{}",
+                style("⚠ Audio binary compilation failed").yellow()
+            );
+            println!("  Continuing without audio...");
+            println!();
+            return None;
+        }
+    }
+
+    // Step 3: Try to spawn
+    println!("{} Starting audio server...", style("→").cyan());
+    let ws_url = format!("ws://127.0.0.1:{}", ws_port);
+    let spawn_result = Command::new("cargo")
+        .args(["run", "--bin", "dev-audio", "--quiet"])
+        .current_dir(&project.engine_dir)
+        .env("WAVECRAFT_WS_URL", ws_url)
+        .env("RUST_LOG", if verbose { "debug" } else { "info" })
+        .stdout(if verbose {
+            Stdio::inherit()
+        } else {
+            Stdio::null()
+        })
+        .stderr(Stdio::inherit())
+        .spawn();
+
+    match spawn_result {
+        Ok(child) => {
+            println!("{} Audio server started (PID: {})", style("✓").green(), child.id());
+            println!();
+            Some(child)
+        }
+        Err(e) => {
+            println!(
+                "{}",
+                style(format!("⚠ Failed to start audio server: {}", e)).yellow()
+            );
+            println!("  Continuing without audio...");
+            println!();
+            None
+        }
+    }
+}
+
+/// Check if the project has a dev-audio binary configured
+fn has_audio_binary(project: &ProjectMarkers) -> bool {
+    let cargo_toml_path = project.engine_dir.join("Cargo.toml");
+    match std::fs::read_to_string(&cargo_toml_path) {
+        Ok(contents) => {
+            // Simple check: look for [[bin]] section with name = "dev-audio"
+            contents.contains("[[bin]]") && contents.contains("name = \"dev-audio\"")
+        }
+        Err(_) => false,
+    }
+}
+
 /// Install npm dependencies in the ui/ directory.
 fn install_dependencies(project: &ProjectMarkers) -> Result<()> {
     println!("{} Installing dependencies...", style("→").cyan());
@@ -170,7 +268,10 @@ fn run_dev_servers(
         }
     }
 
-    // 4. Start embedded WebSocket server
+    // 4. Try to start audio binary (optional, with graceful fallback)
+    let audio_child = try_start_audio_server(project, ws_port, verbose);
+
+    // 5. Start embedded WebSocket server
     println!(
         "{} Starting WebSocket server on port {}...",
         style("→").cyan(),
@@ -188,7 +289,7 @@ fn run_dev_servers(
 
     println!("{} WebSocket server running", style("✓").green());
 
-    // 5. Start UI dev server
+    // 6. Start UI dev server
     println!(
         "{} Starting UI dev server on port {}...",
         style("→").cyan(),
@@ -215,16 +316,19 @@ fn run_dev_servers(
 
     // Print success message
     println!();
-    println!("{}", style("✓ Both servers running!").green().bold());
+    println!("{}", style("✓ All servers running!").green().bold());
     println!();
     println!("  WebSocket: ws://127.0.0.1:{}", ws_port);
     println!("  UI:        http://localhost:{}", ui_port);
+    if audio_child.is_some() {
+        println!("  Audio:     Real-time OS input");
+    }
     println!();
     println!("{}", style("Press Ctrl+C to stop").dim());
     println!();
 
     // Wait for shutdown (keeps runtime alive)
-    wait_for_shutdown(ui_server, runtime)
+    wait_for_shutdown(ui_server, audio_child, runtime)
 }
 
 fn ensure_port_available(port: u16, label: &str, flag: &str) -> Result<()> {
@@ -371,7 +475,11 @@ fn library_matches_name(path: &Path, expected_stem: &str, extension: &str) -> bo
 }
 
 /// Set up Ctrl+C handler and wait for shutdown.
-fn wait_for_shutdown(mut ui_server: Child, _runtime: tokio::runtime::Runtime) -> Result<()> {
+fn wait_for_shutdown(
+    mut ui_server: Child,
+    mut audio_server: Option<Child>,
+    _runtime: tokio::runtime::Runtime,
+) -> Result<()> {
     let (tx, rx) = mpsc::channel();
 
     ctrlc::set_handler(move || {
@@ -384,11 +492,15 @@ fn wait_for_shutdown(mut ui_server: Child, _runtime: tokio::runtime::Runtime) ->
             Ok(_) => {
                 println!();
                 println!("{} Shutting down servers...", style("→").cyan());
+                if let Some(audio) = audio_server.take() {
+                    kill_process(audio)?;
+                }
                 kill_process(ui_server)?;
                 println!("{} Servers stopped", style("✓").green());
                 return Ok(());
             }
             Err(mpsc::RecvTimeoutError::Timeout) => {
+                // Check UI server
                 if let Some(status) = ui_server
                     .try_wait()
                     .context("Failed to check UI dev server status")?
@@ -400,16 +512,36 @@ fn wait_for_shutdown(mut ui_server: Child, _runtime: tokio::runtime::Runtime) ->
                         status
                     );
                     println!("{} Shutting down servers...", style("→").cyan());
+                    if let Some(audio) = audio_server.take() {
+                        kill_process(audio)?;
+                    }
                     println!("{} Servers stopped", style("✓").green());
                     return Err(anyhow::anyhow!(
                         "UI dev server exited unexpectedly with status {}",
                         status
                     ));
                 }
+
+                // Check audio server (if present)
+                if let Some(ref mut audio) = audio_server {
+                    if let Some(status) = audio.try_wait().context("Failed to check audio server status")? {
+                        println!();
+                        println!(
+                            "{} Audio server exited unexpectedly ({}).",
+                            style("⚠").yellow(),
+                            status
+                        );
+                        println!("  Continuing without audio...");
+                        audio_server = None;
+                    }
+                }
             }
             Err(mpsc::RecvTimeoutError::Disconnected) => {
                 println!();
                 println!("{} Shutting down servers...", style("→").cyan());
+                if let Some(audio) = audio_server.take() {
+                    kill_process(audio)?;
+                }
                 kill_process(ui_server)?;
                 println!("{} Servers stopped", style("✓").green());
                 return Ok(());
