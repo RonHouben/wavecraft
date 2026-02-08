@@ -78,9 +78,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0  # Full history for git tagging
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: Install Linux system dependencies
         run: |
@@ -287,6 +292,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0  # Full history for git tagging
       
       - uses: actions/setup-node@v4
         with:
@@ -379,7 +385,7 @@ jobs:
   publish-npm-components:
     needs: [detect-changes, publish-npm-core]
     if: |
-      always() &&
+      !cancelled() &&
       needs.detect-changes.outputs.npm-components == 'true' &&
       (needs.publish-npm-core.result == 'success' || needs.publish-npm-core.result == 'skipped' ||
        (needs.publish-npm-core.result == 'failure' && needs.detect-changes.outputs.npm-core != 'true'))

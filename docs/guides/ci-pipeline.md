@@ -307,20 +307,36 @@ Wavecraft uses automatic continuous deployment for all publishable packages. Whe
 │  PR merged to main                                                          │
 │        │                                                                    │
 │        ▼                                                                    │
-│  ┌─────────────────┐                                                        │
-│  │ detect-changes  │  Analyzes which paths changed                          │
-│  └────────┬────────┘                                                        │
+│  ┌──────────────────────────────────────────────────┐                        │
+│  │ detect-changes                                   │                        │
+│  │ • Skips if commit contains [auto-bump]           │                        │
+│  │ • Outputs: cli, engine, npm-core, npm-components │                        │
+│  │ • Computes: any_sdk_changed (OR of all four)     │                        │
+│  └────────┬─────────────────────────────────────────┘                        │
 │           │                                                                 │
-│     ┌─────┼─────┬─────────────┬─────────────┐                               │
-│     ▼     ▼     ▼             ▼             ▼                               │
-│  ┌─────┐ ┌──────┐ ┌───────────┐ ┌───────────┐                               │
-│  │ CLI │ │Engine│ │ npm-core  │ │npm-comps  │                               │
-│  └──┬──┘ └──┬───┘ └─────┬─────┘ └─────┬─────┘                               │
-│     │       │           │             │                                     │
-│     ▼       ▼           ▼             ▼                                     │
-│  crates.io  crates.io   npmjs.org     npmjs.org                             │
-│  (wavecraft) (6 crates) (@wavecraft/  (@wavecraft/                          │
-│                          core)         components)                          │
+│     ┌─────┼──────────────┬─────────────┐                                    │
+│     ▼     ▼              ▼             ▼                                    │
+│  ┌──────┐ ┌───────────┐ ┌───────────────┐                                   │
+│  │Engine│ │ npm-core  │ │npm-components │                                   │
+│  └──┬───┘ └─────┬─────┘ └──────┬────────┘                                   │
+│     │           │              │                                            │
+│     └───────────┼──────────────┘                                            │
+│                 │                                                           │
+│                 ▼                                                           │
+│         ┌──────────────┐                                                    │
+│         │  publish-cli │  Cascade: triggers on ANY SDK change               │
+│         │  (last)      │  Waits for all upstream jobs                       │
+│         └──────┬───────┘                                                    │
+│                │                                                            │
+│                ▼                                                            │
+│         Git tag: wavecraft-cli-vX.Y.Z                                       │
+│         (template references this tag)                                      │
+│                                                                             │
+│  Registry targets:                                                          │
+│    Engine → crates.io (6 crates)                                            │
+│    npm-core → npmjs.org (@wavecraft/core)                                   │
+│    npm-components → npmjs.org (@wavecraft/components)                       │
+│    CLI → crates.io (wavecraft)                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -328,12 +344,14 @@ Wavecraft uses automatic continuous deployment for all publishable packages. Whe
 
 **Trigger:** Push to `main` branch (i.e., PR merge)
 
-| Job | Path Filter | Publishes To |
-|-----|-------------|--------------|
-| `publish-cli` | `cli/**` (includes `sdk-templates/`) | crates.io (`wavecraft`) |
-| `publish-engine` | `engine/crates/**` | crates.io (6 crates) |
-| `publish-npm-core` | `ui/packages/core/**` | npm (`@wavecraft/core`) |
-| `publish-npm-components` | `ui/packages/components/**` | npm (`@wavecraft/components`) |
+| Job | Trigger Condition | Publishes To |
+|-----|-------------------|--------------|
+| `publish-engine` | `engine` or `cli` changed | crates.io (6 crates) |
+| `publish-npm-core` | `npm-core` changed | npm (`@wavecraft/core`) |
+| `publish-npm-components` | `npm-components` changed | npm (`@wavecraft/components`) |
+| `publish-cli` | **Any** SDK component changed (`any_sdk_changed`) | crates.io (`wavecraft`) |
+
+**Key difference:** `publish-cli` is a cascade job — it triggers whenever _any_ SDK package (engine, npm-core, npm-components, or CLI itself) changes. This ensures the CLI git tag always points to the latest SDK state, since scaffolded projects depend on that tag.
 
 ### Packages Published
 
@@ -356,63 +374,74 @@ Wavecraft uses automatic continuous deployment for all publishable packages. Whe
 | `wavecraft-bridge` | IPC handling |
 | `wavecraft-core` | Core SDK types and macros |
 
-### Version Bumping
+### Two Version Domains
 
-Versions are managed **automatically**:
+The CD pipeline operates with two distinct version domains:
 
-1. **On merge:** Workflow checks if current version is already published
-2. **If published:** Automatically bumps patch version (e.g., `0.7.1` → `0.7.2`)
-3. **If not published:** Publishes current version as-is
-4. **Commits:** Bot commits version bump with `[skip ci]` to prevent re-triggers
+| Domain | Packages | Ownership | Bumped By |
+|--------|----------|-----------|-----------|
+| **Product Version** | `engine/Cargo.toml` workspace version | PO decides, Coder implements | Manual — during feature development |
+| **Distribution Version** | CLI, `@wavecraft/core`, `@wavecraft/components` | CI | Automatic — patch bump on any SDK change |
 
-#### Manual Version Control
+### Auto-Bump Pattern
 
-For **minor or major** version bumps (breaking changes, new features), bump the version manually in your PR:
+Each distribution package (CLI, npm-core, npm-components) uses a three-step auto-bump pattern:
 
-```bash
-# npm packages
-cd ui/packages/core
-npm version minor --no-git-tag-version  # 0.7.x → 0.8.0
-git add package.json
-git commit -m "chore(core): bump to 0.8.0 for new API"
+1. **Determine version** — Compare local version against the published registry version (crates.io or npm)
+2. **Auto-bump** (if needed) — If local version ≤ published, increment patch from published version
+3. **Commit + push** — Commit the version bump with `[auto-bump]` in the message, then push to `main`
 
-# Rust crates (workspace version)
-# Edit engine/Cargo.toml directly
+A "set final version" step consolidates the version (whether from determine or bump) for use by downstream steps (publish, git tag).
+
+**Developer override:** If a developer manually bumps the version in their PR (e.g., minor bump for breaking changes), CI detects the local version is already ahead and publishes it as-is without auto-bumping.
+
+### Infinite Loop Prevention
+
+Auto-bump commits push to `main`, which would re-trigger the CD pipeline. This is prevented by:
+
+```
+Auto-bump commit: "chore(cli): auto-bump to 0.8.6 [auto-bump]"
+                                                    ^^^^^^^^^^^^
+detect-changes job:
+  if: "!contains(github.event.head_commit.message, '[auto-bump]')"
+  → Job skips → All downstream jobs skip → No further commits → Loop terminated
 ```
 
-The workflow will detect the new version isn't published and publish it without auto-bumping.
+**Why `[auto-bump]` instead of `[skip ci]`?** The `[skip ci]` marker would suppress _all_ GitHub Actions workflows (CI, template validation, etc.). The `[auto-bump]` marker only affects the CD workflow, allowing other quality checks to still run.
+
+### CLI Cascade Trigger
+
+The `publish-cli` job has special behavior:
+
+- **`needs`**: Depends on all four jobs (`detect-changes`, `publish-engine`, `publish-npm-core`, `publish-npm-components`)
+- **Trigger**: `any_sdk_changed == 'true'` (fires on _any_ SDK change, not just CLI source changes)
+- **Safety**: Uses `!cancelled()` with individual upstream result checks (`success || skipped`) to avoid running if an upstream job failed
+
+This ensures the CLI's git tag always reflects the latest SDK state, so `wavecraft create` scaffolds projects with up-to-date dependencies.
+
+### Git Conflict Prevention
+
+Multiple auto-bump commits from parallel jobs could conflict. Mitigation:
+
+- Each auto-bump step runs `git pull --rebase origin main` before pushing
+- Parallel npm jobs modify different files (`core/package.json` vs `components/package.json`)
+- CLI runs last (waits for all upstream jobs via `needs`)
 
 ### Secrets Required
 
 | Secret | Purpose |
 |--------|---------|
-| `GITHUB_TOKEN` | Commit version bumps (built-in) |
+| `GITHUB_TOKEN` | Commit version bumps + git push (built-in) |
 
 **Note:** crates.io publishing uses OIDC trusted publishing (no `CARGO_REGISTRY_TOKEN` required).
 
 **Note:** npm publishing uses OIDC trusted publishing (no secret required). Packages are published with `--provenance` for cryptographic attestation.
 
-### Manual Override Workflows
-
-For emergency releases or specific version publishing, use the tag-based workflows:
-
-```bash
-# CLI release
-git tag cli-v0.8.0
-git push origin cli-v0.8.0
-
-# npm release (both packages)
-git tag npm-v0.8.0
-git push origin npm-v0.8.0
-```
-
-These trigger `cli-release.yml` and `npm-release.yml` respectively.
-
 ### Idempotency
 
 The workflow is **idempotent** — running it multiple times won't cause issues:
 
-1. **Already published?** Skips publishing, bumps version for next time
+1. **Already published?** Auto-bumps to next patch and publishes
 2. **Publish failed?** Next run detects unpublished version and retries
 3. **No changes?** Jobs skip entirely (path filter returns false)
 
