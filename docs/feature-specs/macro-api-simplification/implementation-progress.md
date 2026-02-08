@@ -2,7 +2,7 @@
 
 **Feature:** Macro API Simplification  
 **Target Version:** 0.9.0  
-**Status:** In Progress (Phase 1 & 2 Complete)  
+**Status:** In Progress (Phases 1-3 Complete)  
 **Started:** 2026-02-08
 
 ---
@@ -85,11 +85,26 @@ This document tracks the implementation progress of the Macro API Simplification
 
 ---
 
-## Phase 3: CLI Template Updates (MEDIUM PRIORITY)
+## Phase 3: CLI Template Updates (MEDIUM PRIORITY) ✅
 
 ### Template Modernization
 
-- [ ] **Task 3.1**: Update template plugin code
+- [x] **Task 3.1**: Update template plugin code
+  - File: `cli/sdk-templates/new-project/react/engine/src/lib.rs`
+  - Use simplified `wavecraft_plugin!` API
+  - Use `SignalChain![]` wrapper
+  - Remove vendor/url/email/crate properties
+
+- [x] **Task 3.2**: Update template Cargo.toml
+  - File: `cli/sdk-templates/new-project/react/engine/Cargo.toml.template`
+  - Add `authors` field
+  - Add `homepage` field
+
+- [x] **Task 3.3**: Update template variables
+  - File: `cli/src/template/variables.rs`
+  - Rename `vendor` → `author_name`, `email` → `author_email`, `url` → `homepage`
+  - Update `TemplateVariables` struct and all usages
+  - Update tests in variables.rs, mod.rs, and commands/create.rs
   - File: `cli/sdk-templates/new-project/react/engine/src/lib.rs`
   - Use simplified `wavecraft_plugin!` API
   - Use `SignalChain![]` wrapper

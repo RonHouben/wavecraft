@@ -19,13 +19,13 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 
 # Internal crates (publishable - version required for crates.io)
-wavecraft-protocol = { path = "crates/wavecraft-protocol", version = "0.8.6" }
-wavecraft-dsp = { path = "crates/wavecraft-dsp", version = "0.8.6" }
-wavecraft-bridge = { path = "crates/wavecraft-bridge", version = "0.8.6" }
-wavecraft-macros = { path = "crates/wavecraft-macros", version = "0.8.6" }
-wavecraft-core = { path = "crates/wavecraft-core", version = "0.8.6" }
-wavecraft-metering = { path = "crates/wavecraft-metering", version = "0.8.6" }
-wavecraft-dev-server = { path = "crates/wavecraft-dev-server", version = "0.8.6" }
+wavecraft-protocol = { path = "crates/wavecraft-protocol", version = "0.9.0" }
+wavecraft-dsp = { path = "crates/wavecraft-dsp", version = "0.9.0" }
+wavecraft-bridge = { path = "crates/wavecraft-bridge", version = "0.9.0" }
+wavecraft-macros = { path = "crates/wavecraft-macros", version = "0.9.0" }
+wavecraft-core = { path = "crates/wavecraft-core", version = "0.9.0" }
+wavecraft-metering = { path = "crates/wavecraft-metering", version = "0.9.0" }
+wavecraft-dev-server = { path = "crates/wavecraft-dev-server", version = "0.9.0" }
 
 # Internal crates (not published to crates.io)
 wavecraft-nih_plug = { path = "crates/wavecraft-nih_plug" }
