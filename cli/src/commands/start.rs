@@ -112,7 +112,7 @@ fn try_start_audio_server(project: &ProjectMarkers, ws_port: u16, verbose: bool)
     // Step 2: Try to compile
     println!("{} Compiling audio binary...", style("→").cyan());
     let compile_result = Command::new("cargo")
-        .args(["build", "--bin", "dev-audio"])
+        .args(["build", "--bin", "dev-audio", "--features", "audio-dev"])
         .current_dir(&project.engine_dir)
         .stdout(if verbose {
             Stdio::inherit()
@@ -141,7 +141,7 @@ fn try_start_audio_server(project: &ProjectMarkers, ws_port: u16, verbose: bool)
     println!("{} Starting audio server...", style("→").cyan());
     let ws_url = format!("ws://127.0.0.1:{}", ws_port);
     let spawn_result = Command::new("cargo")
-        .args(["run", "--bin", "dev-audio", "--quiet"])
+        .args(["run", "--bin", "dev-audio", "--features", "audio-dev", "--quiet"])
         .current_dir(&project.engine_dir)
         .env("WAVECRAFT_WS_URL", ws_url)
         .env("RUST_LOG", if verbose { "debug" } else { "info" })

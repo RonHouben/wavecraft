@@ -108,10 +108,7 @@ pub mod implementation {
                             };
 
                             // Non-blocking send (best effort)
-                            let ws = ws_client_clone.clone();
-                            tokio::spawn(async move {
-                                let _ = ws.send_meter_update(notification).await;
-                            });
+                            ws_client_clone.send_meter_update_sync(notification);
                         }
                     },
                     |err| {
@@ -227,6 +224,15 @@ pub mod implementation {
             let _ = self.tx.send(json);
             
             Ok(())
+        }
+        
+        /// Send meter update synchronously (for use from audio thread)
+        pub fn send_meter_update_sync(&self, notification: MeterUpdateNotification) {
+            use wavecraft_protocol::{IpcNotification, NOTIFICATION_METER_UPDATE};
+            
+            if let Ok(json) = serde_json::to_string(&IpcNotification::new(NOTIFICATION_METER_UPDATE, notification)) {
+                let _ = self.tx.send(json);
+            }
         }
     }
 }
