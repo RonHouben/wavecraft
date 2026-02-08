@@ -1,10 +1,10 @@
 ## Summary
 
-Enhance the Continuous Deployment pipeline with CLI cascade triggers, `[auto-bump]` loop prevention, and a publish-only npm model. This ensures that when **any** SDK component changes (engine crates, npm packages, or CLI itself), the CLI is also re-published with an updated git tag — keeping the SDK distribution consistent.
+Enhance the Continuous Deployment pipeline with CLI cascade triggers, author-based loop prevention, and a publish-only npm model. This ensures that when **any** SDK component changes (engine crates, npm packages, or CLI itself), the CLI is also re-published with an updated git tag — keeping the SDK distribution consistent.
 
 Key improvements:
 - **CLI cascade trigger** — CLI re-publishes whenever any SDK component changes, ensuring the git tag always references the latest SDK state
-- **`[auto-bump]` loop prevention** — Replaces `[skip ci]` with `[auto-bump]` commit marker so other workflows (CI, template validation) still run on auto-bump commits
+- **Author-based loop prevention** — `detect-changes` skips when commit author is `github-actions[bot]` (deterministic, immune to commit message content)
 - **Publish-only npm model** — npm jobs no longer build; they publish the pre-built `dist/` already committed in the repo
 - **Upstream failure guards** — `!cancelled()` replaces `always()` to prevent cascade publishing when upstream jobs fail
 
@@ -22,6 +22,8 @@ Key improvements:
 - `56f551d` feat(cd): implement publish-only model for npm packages and CLI
 - `45acf45` fix: update .gitignore to include target/tmp and revise test plan results
 - `735f9a6` docs: update roadmap and archive cd-cli-cascade-publish feature spec
+- `aa2a35e` docs: add PR summary for cd-cli-cascade-publish
+- `34020ce` fix(cd): use author check instead of commit message for loop prevention
 
 ## Related Documentation
 
