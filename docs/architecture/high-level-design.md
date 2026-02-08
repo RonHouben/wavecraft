@@ -804,6 +804,10 @@ cargo run -p wavecraft-dev-server -- --dev-server --port 9000
 cd ui && npm run dev
 ```
 
+**Dev server startup behavior (CLI `wavecraft start`):**
+- Performs preflight checks to ensure the WebSocket and UI ports are free before starting any servers.
+- Starts the UI dev server with strict port binding (no auto-switching). If the UI port is in use, startup fails fast with a clear error and no servers are left running.
+
 ### Why Module-Level Detection?
 
 The environment constant is evaluated at module scope (not inside hooks) to comply with React's Rules of Hooks. This ensures consistent hook call order across renders.
