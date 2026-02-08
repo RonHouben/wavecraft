@@ -17,6 +17,7 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 | Item | Notes |
 |------|-------|
 | Browser audio input via WASM | Enable testing UI with real audio input (mic, files, test tones) in browser dev mode. Tiered architecture: Mock DSP (JS) for fast HMR, optional WASM DSP for integration testing. Rust remains parameter source of truth. See [high-level design](feature-specs/audio-input-via-wasm/high-level-design.md). |
+| SDK dev mode: crate version mismatch in `wavecraft start` audio binary | In SDK dev mode (CLI run via `cargo run`), the main `wavecraft` dependency is patched to use local **path** deps, but `wavecraft-dev-server` and `wavecraft-dsp` still resolve via **git tag**. Cargo treats these as separate crates, making their `Processor` trait incompatible (`E0277`). Fix: CLI's auto-detection should also patch transitive dev deps to path dependencies. **Does not affect end users** (git tag deps are consistent). Only affects SDK contributors testing locally. |
 
 ---
 
@@ -98,6 +99,7 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 
 | Date | Update |
 |------|--------|
+| 2026-02-08 | **Bug found**: SDK dev mode crate version mismatch — `wavecraft start` audio binary fails when CLI is run via `cargo run` due to mixed path/git dependency resolution. Added to Developer Experience section. Does not affect end users. |
 | 2026-02-08 | **Item promoted to Milestone 15**: Comprehensive workspace cleanup (`cargo xtask clean` extension) moved from backlog to roadmap as new Milestone 15 (Developer Tooling Polish). Target version 0.8.6. User stories created at `docs/feature-specs/workspace-cleanup/user-stories.md`. |
 | 2026-02-08 | **Items promoted to Milestone 14**: CLI `-v`/`--version` flag and CLI `update` command moved from backlog to new Milestone 14 (CLI Enhancements). Target version 0.8.1. |
 | 2026-02-07 | **Backlog addition:** Add CLI `update` command to update all project dependencies and packages (Rust + npm) in a plugin workspace. |
