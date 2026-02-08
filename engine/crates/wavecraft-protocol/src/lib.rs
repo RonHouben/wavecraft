@@ -3,6 +3,7 @@
 //! This crate contains the canonical definitions for all parameters,
 //! ensuring consistency between DSP, plugin, and UI layers.
 
+pub mod dev_audio_ffi;
 pub mod ipc;
 pub mod macros;
 pub mod params;
@@ -10,6 +11,9 @@ pub mod params;
 pub use params::{
     PARAM_SPECS, ParamId, ParamSet, ParamSpec, WavecraftParamId, WavecraftParams, db_to_linear,
 };
+
+// Re-export dev audio FFI types for convenience
+pub use dev_audio_ffi::{DEV_PROCESSOR_SYMBOL, DEV_PROCESSOR_VTABLE_VERSION, DevProcessorVTable};
 
 // Re-export key IPC types for convenience
 pub use ipc::{

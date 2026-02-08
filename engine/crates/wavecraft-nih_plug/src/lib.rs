@@ -84,6 +84,10 @@ pub mod __internal {
     pub use wavecraft_protocol::ParameterInfo;
     pub use wavecraft_protocol::ParameterType;
 
+    // Dev audio FFI types (used by macro-generated vtable export)
+    pub use wavecraft_protocol::DEV_PROCESSOR_VTABLE_VERSION;
+    pub use wavecraft_protocol::DevProcessorVTable;
+
     use wavecraft_dsp::ParamSpec;
 
     /// Convert ParamSpec to ParameterInfo for JSON serialization.

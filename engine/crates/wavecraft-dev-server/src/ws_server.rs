@@ -30,6 +30,28 @@ impl ServerState {
     }
 }
 
+/// A lightweight, cloneable handle to the WebSocket server's broadcast
+/// capability. Non-generic — can be passed across async task boundaries.
+///
+/// Constructed via [`WsServer::handle()`]. Used by the CLI to forward
+/// meter updates from the in-process audio callback to browser clients.
+#[derive(Clone)]
+#[allow(dead_code)] // Used by CLI crate (outside engine workspace)
+pub struct WsHandle {
+    state: Arc<ServerState>,
+}
+
+#[allow(dead_code)] // Used by CLI crate (outside engine workspace)
+impl WsHandle {
+    /// Broadcast a JSON string to all connected browser clients.
+    pub async fn broadcast(&self, json: &str) {
+        let clients = self.state.browser_clients.read().await;
+        for client in clients.iter() {
+            let _ = client.send(json.to_owned());
+        }
+    }
+}
+
 /// WebSocket server for browser-based UI development
 pub struct WsServer<H: ParameterHost + 'static> {
     /// Port the server listens on
@@ -54,6 +76,17 @@ impl<H: ParameterHost + 'static> WsServer<H> {
             shutdown_tx,
             verbose,
             state: Arc::new(ServerState::new()),
+        }
+    }
+
+    /// Get a lightweight handle for broadcasting to connected clients.
+    ///
+    /// The returned `WsHandle` is non-generic, `Clone`, and can be moved
+    /// into async tasks (e.g., for forwarding meter updates from audio).
+    #[allow(dead_code)] // Used by CLI crate (outside engine workspace)
+    pub fn handle(&self) -> WsHandle {
+        WsHandle {
+            state: Arc::clone(&self.state),
         }
     }
 

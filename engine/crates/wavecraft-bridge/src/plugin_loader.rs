@@ -4,7 +4,7 @@ use libloading::{Library, Symbol};
 use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::path::Path;
-use wavecraft_protocol::ParameterInfo;
+use wavecraft_protocol::{DEV_PROCESSOR_VTABLE_VERSION, DevProcessorVTable, ParameterInfo};
 
 /// Errors that can occur during plugin loading.
 #[derive(Debug)]
@@ -46,17 +46,28 @@ impl std::error::Error for PluginLoaderError {
 
 type GetParamsJsonFn = unsafe extern "C" fn() -> *mut c_char;
 type FreeStringFn = unsafe extern "C" fn(*mut c_char);
+type DevProcessorVTableFn = unsafe extern "C" fn() -> DevProcessorVTable;
 
-/// Plugin loader that extracts parameter metadata via FFI.
+/// Plugin loader that extracts parameter metadata and optionally the
+/// dev audio processor vtable via FFI.
 ///
 /// # Safety
 ///
 /// This struct manages the lifecycle of a dynamically loaded library.
 /// The library must remain loaded while any data from it is in use.
 /// The `PluginParamLoader` ensures proper cleanup via Drop.
+///
+/// # Drop Ordering
+///
+/// `_library` is listed first and is therefore dropped last (Rust drops
+/// fields in declaration order). Any `FfiProcessor` created from the
+/// vtable must be dropped *before* this loader to keep function pointers
+/// valid.
 pub struct PluginParamLoader {
     _library: Library,
     parameters: Vec<ParameterInfo>,
+    /// Audio processor vtable (None if symbol not found — older plugins).
+    dev_processor_vtable: Option<DevProcessorVTable>,
 }
 
 impl PluginParamLoader {
@@ -94,9 +105,13 @@ impl PluginParamLoader {
             params
         };
 
+        // Try to load audio processor vtable (optional — graceful fallback)
+        let dev_processor_vtable = Self::try_load_processor_vtable(&library);
+
         Ok(Self {
             _library: library,
             parameters: params,
+            dev_processor_vtable,
         })
     }
 
@@ -109,6 +124,39 @@ impl PluginParamLoader {
     #[allow(dead_code)]
     pub fn get_parameter(&self, id: &str) -> Option<&ParameterInfo> {
         self.parameters.iter().find(|p| p.id == id)
+    }
+
+    /// Returns the dev processor vtable if the plugin exports it.
+    ///
+    /// Returns `None` if:
+    /// - The plugin was built with an older SDK that doesn't export the symbol
+    /// - The vtable version doesn't match (ABI incompatibility)
+    pub fn dev_processor_vtable(&self) -> Option<&DevProcessorVTable> {
+        self.dev_processor_vtable.as_ref()
+    }
+
+    /// Attempt to load the dev audio processor vtable from the library.
+    ///
+    /// This is a best-effort operation: if the symbol isn't found or the
+    /// version doesn't match, we return `None` and continue without audio.
+    fn try_load_processor_vtable(library: &Library) -> Option<DevProcessorVTable> {
+        let symbol: Symbol<DevProcessorVTableFn> =
+            unsafe { library.get(b"wavecraft_dev_create_processor\0").ok()? };
+
+        let vtable = unsafe { symbol() };
+
+        // Version check — catch ABI mismatches early
+        if vtable.version != DEV_PROCESSOR_VTABLE_VERSION {
+            tracing::warn!(
+                "Plugin dev-audio vtable version {} != expected {}. \
+                 Audio processing disabled. Update your SDK dependency.",
+                vtable.version,
+                DEV_PROCESSOR_VTABLE_VERSION
+            );
+            return None;
+        }
+
+        Some(vtable)
     }
 }
 

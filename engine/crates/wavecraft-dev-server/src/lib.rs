@@ -8,6 +8,9 @@ pub mod webview;
 pub mod ws_server;
 
 #[cfg(feature = "audio")]
+pub mod ffi_processor;
+
+#[cfg(feature = "audio")]
 pub mod audio_server;
 
 pub use app::AppState;
