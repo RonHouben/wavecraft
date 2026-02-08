@@ -157,13 +157,12 @@ async fn handle_connection<H: ParameterHost>(
                     // Parse to extract client_id
                     if let Ok(req) = serde_json::from_str::<wavecraft_protocol::IpcRequest>(&json)
                         && let Some(params) = req.params
-                            && let Ok(audio_params) = serde_json::from_value::<
-                                wavecraft_protocol::RegisterAudioParams,
-                            >(params)
-                            {
-                                *state.audio_client.write().await =
-                                    Some(audio_params.client_id.clone());
-                            }
+                        && let Ok(audio_params) = serde_json::from_value::<
+                            wavecraft_protocol::RegisterAudioParams,
+                        >(params)
+                    {
+                        *state.audio_client.write().await = Some(audio_params.client_id.clone());
+                    }
 
                     // Send success response
                     let response = wavecraft_protocol::IpcResponse::success(
