@@ -1254,18 +1254,6 @@ The version is defined in `engine/Cargo.toml` under `[workspace.package]` and pr
 - Commits version bumps **locally only** (not pushed to `main`) — branch protection rulesets prevent direct pushes
 - Pushes **git tags only** for each published version (tags are not subject to branch protection)
 
-**Milestone version bumps (minor versions):**
-
-The only exception to automated versioning is **milestone bumps**. The PO bumps the minor version during the archive phase when major capabilities are complete.
-
-| Criteria for a milestone bump | Examples |
-|-------------------------------|----------|
-| API breaking changes | New parameter API, transport protocol change |
-| Major feature completions | Full-duplex audio, new plugin format support |
-| Documentation completeness | SDK getting-started guide, architecture docs |
-
-Milestones are **feature-based** — triggered when significant capabilities are ready, not on a fixed schedule.
-
 **Infinite loop prevention:**
 - Auto-bump commits are no longer pushed to `main`, so the infinite loop scenario does not arise
 - The `detect-changes` guard (`github-actions[bot]` author check) is kept as defense-in-depth

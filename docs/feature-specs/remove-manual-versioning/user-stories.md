@@ -4,7 +4,7 @@
 
 Manual per-feature version bumping adds unnecessary ceremony to the development flow. The CD pipeline already handles version bumping automatically for all distribution packages (CLI, npm, Rust crates). This feature removes manual version bumping from the documentation, agent roles, and user story templates, simplifying the development process.
 
-The workspace version (`engine/Cargo.toml`) should align with the CLI version since the CLI (`cargo install wavecraft`) is the user's primary entry point to the SDK. Milestone version bumps (minor versions) are the only exception — the PO bumps those during the archive phase when major capabilities are complete.
+The workspace version (`engine/Cargo.toml`) should align with the CLI version since the CLI (`cargo install wavecraft`) is the user's primary entry point to the SDK. All version bumping is fully automated by the CD pipeline — no manual bumps are needed.
 
 ---
 
@@ -31,8 +31,7 @@ The workspace version (`engine/Cargo.toml`) should align with the CLI version si
 ### Acceptance Criteria
 - [ ] Coding standards "Versioning" section describes the automated CI model
 - [ ] The two-tier version domain table is replaced with a single automated model
-- [ ] Milestone bumps are documented as the only manual version action (PO only, during archive phase)
-- [ ] Milestone criteria are defined: API breaking changes, major feature completions, documentation completeness
+- [ ] Documentation confirms all versioning is fully CI-automated with no manual exceptions
 
 ---
 
@@ -51,7 +50,6 @@ The workspace version (`engine/Cargo.toml`) should align with the CLI version si
 
 ## Notes
 
-- **Milestones are feature-based** — triggered when major capabilities are complete
-- **Milestone criteria** — API breaking changes, major feature completions, documentation completeness
-- **Only the PO** bumps the workspace version, and only at milestones (during archive phase)
-- All other version bumping is fully automated by the CD pipeline
+- All version bumping is fully automated by the CD pipeline
+- No manual version bumps are needed — not per feature, not at milestones
+- If a specific version is needed (e.g., minor bump for a breaking change), bump it in the PR — CI will respect the manual bump

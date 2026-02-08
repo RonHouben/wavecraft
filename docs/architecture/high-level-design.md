@@ -272,7 +272,7 @@ Wavecraft uses semantic versioning (SemVer) with automated version management vi
 
 ### Key Design Decisions
 
-1. **CI-automated versioning** — All version bumps are handled by the CD pipeline. Developers do not manually bump versions during feature development. The PO bumps minor versions only at milestones (major capability completions).
+1. **CI-automated versioning** — All version bumps are handled by the CD pipeline. No manual version bumping is required — not per feature, not at milestones.
 
 2. **CLI as entry point** — The CLI version (`cargo install wavecraft`) is the user-facing version. The workspace version is aligned with the CLI version.
 
