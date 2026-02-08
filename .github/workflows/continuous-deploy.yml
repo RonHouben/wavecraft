@@ -173,15 +173,15 @@ jobs:
           echo "bumped=true" >> $GITHUB_OUTPUT
           echo "Auto-bumped CLI to $NEW"
 
-      - name: Commit and push auto-bump
+      - name: Commit auto-bump locally
         if: steps.bump.outputs.bumped == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add cli/Cargo.toml
           git commit -m "chore: bump wavecraft CLI to ${{ steps.bump.outputs.version }} [auto-bump]"
-          git pull --rebase origin main
-          git push origin main
+          # NOTE: No push to main — branch protection prevents direct pushes.
+          # The version bump exists locally for cargo publish and tagging only.
 
       - name: Set final version
         id: final
@@ -205,7 +205,6 @@ jobs:
 
       - name: Create and push git tag
         run: |
-          git pull --rebase origin main
           git tag "wavecraft-cli-v${{ steps.final.outputs.version }}"
           git push origin "wavecraft-cli-v${{ steps.final.outputs.version }}"
 
@@ -259,6 +258,7 @@ jobs:
             --from-git \
             --dry-run \
             --yes \
+            --no-git-push \
             --allow-branch main
 
       - name: Authenticate with crates.io (OIDC)
@@ -273,7 +273,14 @@ jobs:
           cargo ws publish \
             --from-git \
             --yes \
+            --no-git-push \
             --allow-branch main
+
+      - name: Push tags only
+        run: |
+          # Push tags created by cargo-workspaces without pushing commits to main.
+          # Tags are not subject to branch protection rules.
+          git push origin --tags
 
   # ============================================================================
   # Job 4: Publish @wavecraft/core to npm
@@ -343,15 +350,15 @@ jobs:
           echo "bumped=true" >> $GITHUB_OUTPUT
           echo "Auto-bumped @wavecraft/core to $NEW"
 
-      - name: Commit and push auto-bump
+      - name: Commit auto-bump locally
         if: steps.bump.outputs.bumped == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add ui/packages/core/package.json
           git commit -m "chore: bump @wavecraft/core to ${{ steps.bump.outputs.version }} [auto-bump]"
-          git pull --rebase origin main
-          git push origin main
+          # NOTE: No push to main — branch protection prevents direct pushes.
+          # The version bump exists locally for npm publish and tagging only.
 
       - name: Set final version
         id: final
@@ -375,7 +382,6 @@ jobs:
 
       - name: Create and push git tag
         run: |
-          git pull --rebase origin main
           git tag "@wavecraft/core-v${{ steps.final.outputs.version }}"
           git push origin "@wavecraft/core-v${{ steps.final.outputs.version }}"
 
@@ -451,15 +457,15 @@ jobs:
           echo "bumped=true" >> $GITHUB_OUTPUT
           echo "Auto-bumped @wavecraft/components to $NEW"
 
-      - name: Commit and push auto-bump
+      - name: Commit auto-bump locally
         if: steps.bump.outputs.bumped == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add ui/packages/components/package.json
           git commit -m "chore: bump @wavecraft/components to ${{ steps.bump.outputs.version }} [auto-bump]"
-          git pull --rebase origin main
-          git push origin main
+          # NOTE: No push to main — branch protection prevents direct pushes.
+          # The version bump exists locally for npm publish and tagging only.
 
       - name: Set final version
         id: final
@@ -483,6 +489,5 @@ jobs:
 
       - name: Create and push git tag
         run: |
-          git pull --rebase origin main
           git tag "@wavecraft/components-v${{ steps.final.outputs.version }}"
           git push origin "@wavecraft/components-v${{ steps.final.outputs.version }}"
