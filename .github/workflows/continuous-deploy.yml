@@ -50,7 +50,6 @@ jobs:
     permissions:
       id-token: write  # Required for crates.io trusted publishing (OIDC)
       contents: write  # Required for version bump commits
-      pull-requests: write  # Required for PRs created by workflow
     steps:
       - uses: actions/checkout@v4
         with:
@@ -151,7 +150,6 @@ jobs:
           sed -i "s/^version = \"$CURRENT\"/version = \"$NEW\"/" Cargo.toml
           echo "Bumped version: $CURRENT -> $NEW"
           echo "bumped=true" >> $GITHUB_OUTPUT
-          echo "new=$NEW" >> $GITHUB_OUTPUT
 
       - name: Verify publishability (dry-run)
         working-directory: cli
@@ -167,18 +165,21 @@ jobs:
           CARGO_REGISTRY_TOKEN: ${{ steps.crates-auth.outputs.token }}
         run: cargo publish
       
-      - name: Create PR for version bump
+      - name: Commit version bump
         if: steps.bump.outputs.bumped == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore(cli): release v${{ steps.bump.outputs.new }} [skip ci]"
-          title: "chore(cli): release v${{ steps.bump.outputs.new }}"
-          body: "Automated version bump for CLI after publishing."
-          branch: "ci/bump-cli-v${{ steps.bump.outputs.new }}"
-          base: main
-          add-paths: |
-            cli/Cargo.toml
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add cli/Cargo.toml
+          NEW_VERSION=$(cargo metadata --manifest-path cli/Cargo.toml --no-deps --format-version 1 | jq -r '.packages[0].version')
+          git commit -m "chore(cli): release v$NEW_VERSION [skip ci]"
+          git push
+
+      - name: Create and push git tag
+        run: |
+          NEW_VERSION=$(cargo metadata --manifest-path cli/Cargo.toml --no-deps --format-version 1 | jq -r '.packages[0].version')
+          git tag "wavecraft-cli-v$NEW_VERSION"
+          git push origin "wavecraft-cli-v$NEW_VERSION"
 
   # ============================================================================
   # Job 3: Publish engine crates to crates.io
@@ -189,8 +190,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write  # Required for crates.io trusted publishing (OIDC)
-      contents: write  # For version bump commits
-      pull-requests: write  # Required for PRs created by workflow
+      contents: write  # For version bump commits and git tags
     steps:
       - uses: actions/checkout@v4
         with:
@@ -245,23 +245,7 @@ jobs:
           cargo ws publish \
             --from-git \
             --yes \
-            --allow-branch main \
-            --no-git-commit \
-            --no-git-tag \
-            --no-git-push
-
-      - name: Create PR for engine version bumps
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore(engine): release workspace versions [skip ci]"
-          title: "chore(engine): release workspace versions"
-          body: "Automated workspace version bump after publishing engine crates."
-          branch: "ci/bump-engine-versions"
-          base: main
-          add-paths: |
-            engine/Cargo.toml
-            engine/crates/**/Cargo.toml
+            --allow-branch main
 
   # ============================================================================
   # Job 4: Publish @wavecraft/core to npm
@@ -276,7 +260,6 @@ jobs:
     permissions:
       id-token: write  # Required for npm OIDC trusted publishing + provenance
       contents: write  # Required for version bump commits
-      pull-requests: write  # Required for PRs created by workflow
     steps:
       - uses: actions/checkout@v4
         with:
@@ -322,13 +305,9 @@ jobs:
           fi
       
       - name: Bump patch version
-        id: bump
         if: steps.check.outputs.published == 'true'
         working-directory: ui/packages/core
-        run: |
-          npm version patch --no-git-tag-version
-          NEW_VERSION=$(node -p "require('./package.json').version")
-          echo "new=$NEW_VERSION" >> $GITHUB_OUTPUT
+        run: npm version patch --no-git-tag-version
       
       - name: Build package
         working-directory: ui/packages/core
@@ -344,18 +323,21 @@ jobs:
           NPM_CONFIG_PROVENANCE: true
         run: npm publish --access public --provenance
 
-      - name: Create PR for version bump
+      - name: Commit version bump
         if: steps.check.outputs.published == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore(npm-core): release v${{ steps.bump.outputs.new }} [skip ci]"
-          title: "chore(npm-core): release v${{ steps.bump.outputs.new }}"
-          body: "Automated version bump for @wavecraft/core after publishing."
-          branch: "ci/bump-npm-core-v${{ steps.bump.outputs.new }}"
-          base: main
-          add-paths: |
-            ui/packages/core/package.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ui/packages/core/package.json
+          NEW_VERSION=$(node -p "require('./ui/packages/core/package.json').version")
+          git commit -m "chore(npm-core): release v$NEW_VERSION [skip ci]"
+          git push
+
+      - name: Create and push git tag
+        run: |
+          NEW_VERSION=$(node -p "require('./ui/packages/core/package.json').version")
+          git tag "@wavecraft/core-v$NEW_VERSION"
+          git push origin "@wavecraft/core-v$NEW_VERSION"
 
   # ============================================================================
   # Job 5: Publish @wavecraft/components to npm
@@ -373,7 +355,6 @@ jobs:
     permissions:
       id-token: write  # Required for npm OIDC trusted publishing + provenance
       contents: write  # Required for version bump commits
-      pull-requests: write  # Required for PRs created by workflow
     steps:
       - uses: actions/checkout@v4
         with:
@@ -423,13 +404,9 @@ jobs:
           fi
       
       - name: Bump patch version
-        id: bump
         if: steps.check.outputs.published == 'true'
         working-directory: ui/packages/components
-        run: |
-          npm version patch --no-git-tag-version
-          NEW_VERSION=$(node -p "require('./package.json').version")
-          echo "new=$NEW_VERSION" >> $GITHUB_OUTPUT
+        run: npm version patch --no-git-tag-version
       
       - name: Build package
         working-directory: ui/packages/components
@@ -445,15 +422,18 @@ jobs:
           NPM_CONFIG_PROVENANCE: true
         run: npm publish --access public --provenance
 
-      - name: Create PR for version bump
+      - name: Commit version bump
         if: steps.check.outputs.published == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore(npm-components): release v${{ steps.bump.outputs.new }} [skip ci]"
-          title: "chore(npm-components): release v${{ steps.bump.outputs.new }}"
-          body: "Automated version bump for @wavecraft/components after publishing."
-          branch: "ci/bump-npm-components-v${{ steps.bump.outputs.new }}"
-          base: main
-          add-paths: |
-            ui/packages/components/package.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ui/packages/components/package.json
+          NEW_VERSION=$(node -p "require('./ui/packages/components/package.json').version")
+          git commit -m "chore(npm-components): release v$NEW_VERSION [skip ci]"
+          git push
+
+      - name: Create and push git tag
+        run: |
+          NEW_VERSION=$(node -p "require('./ui/packages/components/package.json').version")
+          git tag "@wavecraft/components-v$NEW_VERSION"
+          git push origin "@wavecraft/components-v$NEW_VERSION"
