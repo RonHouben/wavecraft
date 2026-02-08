@@ -3,7 +3,7 @@
 ## Overview
 - **Feature**: Template Processors Module
 - **Spec Location**: `docs/feature-specs/template-processors-module/`
-- **Date**: 2026-02-08 (Re-test #2 after doc fixes)
+- **Date**: 2026-02-08 (Re-test #3 — final)
 - **Tester**: Tester Agent
 - **Branch**: `feature/template-processors-module`
 
@@ -11,8 +11,8 @@
 
 | Status | Count |
 |--------|-------|
-| ✅ PASS | 11 |
-| ❌ FAIL | 1 |
+| ✅ PASS | 12 |
+| ❌ FAIL | 0 |
 | ⏸️ BLOCKED | 0 |
 | ⬜ NOT RUN | 0 |
 
@@ -34,7 +34,7 @@
 
 **Status**: ✅ PASS
 
-**Actual Result**: All checks passed in 12.2s. Linting: Engine PASSED (fmt + clippy), UI PASSED (ESLint + Prettier). Tests: 148 engine tests (including doctests) + 28 UI tests all pass. Zero failures.
+**Actual Result**: All checks passed in 12.1s. Linting: Engine PASSED (fmt + clippy), UI PASSED (ESLint + Prettier). Tests: 148 engine tests (including doctests) + 28 UI tests all pass. Zero failures. (Re-test #3 confirmed identical results.)
 
 ---
 
@@ -211,7 +211,7 @@ These are all expected since Oscillator is imported but not used in the default 
 
 **Description**: Verify SDK getting started guide reflects the new processors module structure.
 
-**Preconditions**: Previously ❌ FAIL (Issue #3) — Partially fixed in this iteration.
+**Preconditions**: Previously ❌ FAIL (Issue #3) — Fixed in commit `fix: remove wavecraft_processor wrapping in getting-started guide step 4`.
 
 **Steps**:
 1. Reviewed `docs/guides/sdk-getting-started.md` main lib.rs example (lines 210–228)
@@ -220,22 +220,12 @@ These are all expected since Oscillator is imported but not used in the default 
 
 **Expected Result**: All code examples correctly use custom processors directly (no `wavecraft_processor!` wrapping).
 
-**Status**: ❌ FAIL
+**Status**: ✅ PASS
 
-**Actual Result**: The **main** lib.rs example (lines 210–228) was correctly fixed — Oscillator is used directly without wrapping. However, the **"Adding a Processor to Your Project"** subsection (lines 315–319) was NOT fixed and still shows incorrect code:
-
-```rust
-// lines 315-319 — STILL INCORRECT
-use processors::{Oscillator, Filter};
-wavecraft_processor!(MyFilter => Filter);
-// signal: SignalChain![InputGain, MyOscillator, MyFilter, OutputGain],
-```
-
-Two errors remain:
-1. `wavecraft_processor!(MyFilter => Filter)` — `Filter` is a custom type, this won't compile
-2. `MyOscillator` — references a non-existent wrapper type (no `wavecraft_processor!(MyOscillator => ...)` is defined)
-
-See Issue #1 below.
+**Actual Result**: All three sections are now correct:
+- **Main lib.rs example** (lines 210–228): Oscillator used directly, `wavecraft_processor!` only wraps built-in `Gain`. ✓
+- **Oscillator code example** (lines 241–290): Complete and correct. ✓
+- **"Adding a Processor to Your Project" step 4** (lines 315–319): Now reads `use processors::{Oscillator, Filter};` with comment "Custom processors are used directly in SignalChain (no wavecraft_processor! wrapper needed)" and `SignalChain![InputGain, Oscillator, Filter, OutputGain]`. No more `MyFilter`/`MyOscillator` references. ✓
 
 ---
 
@@ -261,45 +251,20 @@ See Issue #1 below.
 
 ## Issues Found
 
-### Issue #1: SDK Getting Started guide — "Adding a Processor" section still uses incorrect `wavecraft_processor!` wrapping
-
-- **Severity**: Medium
-- **Test Case**: TC-011
-- **Description**: The "Adding a Processor to Your Project" subsection in `docs/guides/sdk-getting-started.md` (lines 315–319) still shows wrapping a custom `Filter` processor with `wavecraft_processor!`, which only supports built-in types (`Gain` and `Passthrough`). It also references `MyOscillator` which doesn't exist.
-- **Expected**:
-  ```rust
-  use processors::{Oscillator, Filter};
-  // Custom processors are used directly — no wavecraft_processor! wrapper needed.
-  // signal: SignalChain![InputGain, Oscillator, Filter, OutputGain],
-  ```
-- **Actual**:
-  ```rust
-  use processors::{Oscillator, Filter};
-  wavecraft_processor!(MyFilter => Filter);
-  // signal: SignalChain![InputGain, MyOscillator, MyFilter, OutputGain],
-  ```
-- **Location**: `docs/guides/sdk-getting-started.md` lines 315–319
-- **Steps to Reproduce**:
-  1. Open `docs/guides/sdk-getting-started.md`
-  2. Navigate to "Adding a Processor to Your Project" → step 4
-  3. Observe incorrect `wavecraft_processor!` wrapping of custom type and non-existent `MyOscillator` reference
-- **Suggested Fix**:
-  - Remove the `wavecraft_processor!(MyFilter => Filter);` line
-  - Change `MyOscillator` → `Oscillator` and `MyFilter` → `Filter`
-  - Optionally add a comment: "Custom processors are used directly — no wavecraft_processor! wrapper needed."
+No issues found. All previously reported issues have been resolved.
 
 ## Testing Notes
 
 - **Test run #1** (pre-fix): 9/12 PASS, 3/12 FAIL — Issues #1 (README `wavecraft_processor!`), #2 (README Processor trait), #3 (Getting Started guide `wavecraft_processor!`)
-- **Test run #2** (this run, after doc fixes): 11/12 PASS, 1/12 FAIL — 2 of 3 issues fixed (TC-009 README ✓). 1 remaining issue in TC-011.
-- **Remaining issue**: The "Adding a Processor to Your Project" step 4 in `sdk-getting-started.md` (lines 315–319) was missed during the fix pass. The main lib.rs example in the same file was corrected, but the shorter subsection still has the old pattern.
-- The remaining fix is a **3-line documentation change** — no code changes needed.
-- All automated checks pass (lint + tests). All template generation and compilation tests pass.
+- **Test run #2** (after doc fixes): 11/12 PASS, 1/12 FAIL — 2 of 3 issues fixed (TC-009 README ✓). 1 remaining issue in TC-011.
+- **Test run #3** (final, after step-4 fix): **12/12 PASS** — All issues resolved. TC-011 now passes.
+- All automated checks pass (lint + tests in 12.1s). All template generation and compilation tests pass.
 - The core implementation (derive macro paths, re-exports, oscillator template, version bumps, template code) is excellent and well-done.
+- Generated test plugin compiles cleanly with zero errors.
 
 ## Sign-off
 
 - [x] All critical tests pass
-- [x] All high-priority tests pass (no critical issues)
-- [x] Issues documented for coder agent
-- [ ] Ready for release: **NO** — 1 medium-severity documentation issue needs fixing first
+- [x] All high-priority tests pass
+- [x] No issues remaining
+- [x] Ready for release: **YES** — 12/12 tests pass, all issues resolved
