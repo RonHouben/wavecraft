@@ -45,7 +45,7 @@ wavecraft/
 │   │   │   ├── mod.rs
 │   │   │   ├── create.rs          # `wavecraft create` command
 │   │   │   ├── start.rs           # `wavecraft start` dev servers
-│   │   │   └── update.rs          # `wavecraft update` dependency updates
+│   │   │   └── update.rs          # `wavecraft update` CLI self-update + dependency updates
 │   │   └── template/              # Template extraction & variables
 │   │       ├── mod.rs
 │   │       └── variables.rs
@@ -148,6 +148,7 @@ wavecraft/
 | UI SDK dependencies | **npm packages** (`@wavecraft/core`, `@wavecraft/components`) | Same (npm) |
 | Development | Rapid iteration | Stable API |
 | User workflow | `cargo install wavecraft && wavecraft create` | Same, with crates.io deps |
+| CLI updates | `wavecraft update` (self-updates CLI first, then project deps) | Same |
 | CLI behavior | No prompts, uses placeholder defaults | Same |
 | SDK dev mode | Auto-detected via `cargo run` (path deps) | Same |
 
