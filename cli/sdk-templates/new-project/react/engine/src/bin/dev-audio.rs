@@ -15,13 +15,13 @@ async fn main() -> Result<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     // Get WebSocket URL from environment (set by CLI)
-    let websocket_url = std::env::var("WAVECRAFT_WS_URL")
-        .unwrap_or_else(|_| "ws://127.0.0.1:9000".to_string());
+    let websocket_url =
+        std::env::var("WAVECRAFT_WS_URL").unwrap_or_else(|_| "ws://127.0.0.1:9000".to_string());
 
     // Configure audio server
     let config = AudioConfig {
         websocket_url,
-        sample_rate: 44100.0,  // Will use system default if available
+        sample_rate: 44100.0, // Will use system default if available
         buffer_size: 512,
     };
 
@@ -32,7 +32,7 @@ async fn main() -> Result<()> {
     // Create and run audio server
     log::info!("Starting audio server...");
     let server = AudioServer::new(processor, config)?;
-    
+
     log::info!("Audio server running. Press Ctrl+C to stop.");
     server.run().await?;
 
