@@ -70,6 +70,7 @@ pub use plugin_loader::{PluginLoaderError, PluginParamLoader};
 // Re-export protocol types used in bridge API
 pub use wavecraft_protocol::{
     GetAllParametersResult, GetParameterParams, GetParameterResult, IpcError, IpcNotification,
-    IpcRequest, IpcResponse, ParameterChangedNotification, ParameterInfo, ParameterType, RequestId,
-    SetParameterParams, SetParameterResult,
+    IpcRequest, IpcResponse, MeterUpdateNotification, ParameterChangedNotification, ParameterInfo,
+    ParameterType, RegisterAudioParams, RegisterAudioResult, RequestId, SetParameterParams,
+    SetParameterResult,
 };

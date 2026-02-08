@@ -17,7 +17,9 @@ pub use ipc::{
     ERROR_PARAM_NOT_FOUND, ERROR_PARAM_OUT_OF_RANGE, ERROR_PARSE, GetAllParametersResult,
     GetMeterFrameResult, GetParameterParams, GetParameterResult, IpcError, IpcNotification,
     IpcRequest, IpcResponse, METHOD_GET_ALL_PARAMETERS, METHOD_GET_METER_FRAME,
-    METHOD_GET_PARAMETER, METHOD_REQUEST_RESIZE, METHOD_SET_PARAMETER, MeterFrame,
+    METHOD_GET_PARAMETER, METHOD_REGISTER_AUDIO, METHOD_REQUEST_RESIZE, METHOD_SET_PARAMETER,
+    MeterFrame, MeterUpdateNotification, NOTIFICATION_METER_UPDATE,
     NOTIFICATION_PARAMETER_CHANGED, ParameterChangedNotification, ParameterInfo, ParameterType,
-    RequestId, RequestResizeParams, RequestResizeResult, SetParameterParams, SetParameterResult,
+    RegisterAudioParams, RegisterAudioResult, RequestId, RequestResizeParams, RequestResizeResult,
+    SetParameterParams, SetParameterResult,
 };

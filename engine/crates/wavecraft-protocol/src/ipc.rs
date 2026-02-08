@@ -210,8 +210,12 @@ pub const METHOD_GET_ALL_PARAMETERS: &str = "getAllParameters";
 pub const METHOD_GET_METER_FRAME: &str = "getMeterFrame";
 /// Method: Request resize of editor window
 pub const METHOD_REQUEST_RESIZE: &str = "requestResize";
+/// Method: Register audio client with dev server
+pub const METHOD_REGISTER_AUDIO: &str = "registerAudio";
 /// Notification: Parameter changed (push from Rust to UI)
 pub const NOTIFICATION_PARAMETER_CHANGED: &str = "parameterChanged";
+/// Notification: Meter update from audio binary (push to browser)
+pub const NOTIFICATION_METER_UPDATE: &str = "meterUpdate";
 
 // ============================================================================
 // Helper Constructors
@@ -398,6 +402,41 @@ mod tests {
         // The ParameterChangedNotification has an "id" field, which is OK
         // We're checking that the notification itself doesn't have a request id
     }
+
+    #[test]
+    fn test_register_audio_serialization() {
+        let req = IpcRequest::new(
+            RequestId::String("audio-1".to_string()),
+            METHOD_REGISTER_AUDIO,
+            Some(serde_json::json!({
+                "client_id": "dev-audio",
+                "sample_rate": 44100.0,
+                "buffer_size": 512
+            })),
+        );
+
+        let json = serde_json::to_string(&req).unwrap();
+        assert!(json.contains("\"method\":\"registerAudio\""));
+        assert!(json.contains("\"sample_rate\":44100"));
+    }
+
+    #[test]
+    fn test_meter_update_notification() {
+        let notif = IpcNotification::new(
+            NOTIFICATION_METER_UPDATE,
+            MeterUpdateNotification {
+                timestamp_us: 1000,
+                left_peak: 0.5,
+                left_rms: 0.3,
+                right_peak: 0.6,
+                right_rms: 0.4,
+            },
+        );
+
+        let json = serde_json::to_string(&notif).unwrap();
+        assert!(json.contains("\"method\":\"meterUpdate\""));
+        assert!(json.contains("\"left_peak\":0.5"));
+    }
 }
 
 // ============================================================================
@@ -446,4 +485,45 @@ pub struct RequestResizeParams {
 pub struct RequestResizeResult {
     /// Whether the host approved the resize
     pub accepted: bool,
+}
+
+// ----------------------------------------------------------------------------
+// registerAudio
+// ----------------------------------------------------------------------------
+
+/// Parameters for registerAudio request (audio binary → dev server)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RegisterAudioParams {
+    /// Unique client identifier
+    pub client_id: String,
+    /// Audio sample rate (e.g., 44100.0)
+    pub sample_rate: f32,
+    /// Buffer size in samples
+    pub buffer_size: u32,
+}
+
+/// Result of registerAudio request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RegisterAudioResult {
+    /// Acknowledgment message
+    pub status: String,
+}
+
+// ----------------------------------------------------------------------------
+// Notification: meterUpdate
+// ----------------------------------------------------------------------------
+
+/// Notification sent from audio binary to browser via dev server
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeterUpdateNotification {
+    /// Timestamp in microseconds
+    pub timestamp_us: u64,
+    /// Left channel peak (linear scale)
+    pub left_peak: f32,
+    /// Left channel RMS (linear scale)
+    pub left_rms: f32,
+    /// Right channel peak (linear scale)
+    pub right_peak: f32,
+    /// Right channel RMS (linear scale)
+    pub right_rms: f32,
 }
