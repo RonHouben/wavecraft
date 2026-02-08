@@ -12,10 +12,11 @@ This document tracks implementation progress against the milestones defined in t
 ├──────────────────────────────────────────────┤
 │  ✅ M1-M18   Foundation → Audio Pipeline    │
 │  ⏳ M18.5    Template Structure Improvement │
+│  ⏳ M18.6    Documentation Architecture     │
 │  ⏳ M19      User Testing                   │
 │  ⏳ M20      V1.0 Release                   │
 ├──────────────────────────────────────────────┤
-│  [█████████████████████████████████] 18/21  │
+│  [█████████████████████████████████] 18/22  │
 └──────────────────────────────────────────────┘
 ```
 
@@ -1154,6 +1155,80 @@ Architecture: APPROVED (full compliance with coding standards)
 
 ---
 
+## Milestone 18.6: Documentation Architecture Split ⏳
+
+> **Goal:** Split large architecture documents (~1,500 lines each) into focused, topic-specific files to improve navigation for both human developers and AI agents, reducing token consumption by 80-90%.
+
+**Status: ⏳ Not Started**
+
+**Depends on:** None — pure documentation refactoring
+
+**Branch:** `feature/docs-split-architecture`  
+**Target Version:** `0.10.1` (patch — documentation-only change)
+
+**User Stories:** [docs/feature-specs/docs-split-architecture/user-stories.md](feature-specs/docs-split-architecture/user-stories.md)
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Phase 1: Coding Standards Split** | | |
+| Create `coding-standards-typescript.md` (~400 lines) | ⏳ | TypeScript, React, hooks, build constants |
+| Create `coding-standards-css.md` (~150 lines) | ⏳ | TailwindCSS, theming, WebView styling |
+| Create `coding-standards-rust.md` (~600 lines) | ⏳ | Module org, DSL, xtask, FFI safety |
+| Create `coding-standards-testing.md` (~300 lines) | ⏳ | Testing, logging, error handling |
+| Update `coding-standards.md` to overview (~200 lines) | ⏳ | Navigation hub with quick reference |
+| **Phase 2: High-Level Design Split** | | |
+| Create `sdk-architecture.md` (~500 lines) | ⏳ | SDK distribution, crates, npm packages |
+| Create `declarative-plugin-dsl.md` (~300 lines) | ⏳ | DSL architecture, macros, discovery |
+| Create `development-workflows.md` (~400 lines) | ⏳ | Browser dev, FFI audio, build system |
+| Create `plugin-formats.md` (~300 lines) | ⏳ | VST3, CLAP, AU specifics |
+| Create `versioning-and-distribution.md` (~200 lines) | ⏳ | Version flow, packaging, signing |
+| Update `high-level-design.md` to overview (~400 lines) | ⏳ | Architecture diagram + navigation |
+| **Phase 3: Cross-Reference Updates** | | |
+| Update `.github/copilot-instructions.md` | ⏳ | Reference new document structure |
+| Update `.github/skills/**/SKILL.md` | ⏳ | Update architecture doc links |
+| Update `docs/guides/*.md` | ⏳ | Update all cross-references |
+| Update `README.md` | ⏳ | Documentation links section |
+| Update archived feature specs if needed | ⏳ | Low priority (historical docs) |
+| **Phase 4: Validation** | | |
+| Run `scripts/check-links.sh` | ⏳ | Zero broken links |
+| Grep for old references | ⏳ | `rg 'coding-standards\.md'` etc |
+| Test with AI agents | ⏳ | Verify token reduction |
+| Manual navigation testing | ⏳ | Hub documents are clear |
+| Add documentation structure guide | ⏳ | `CONTRIBUTING.md` section |
+
+**Key Deliverables:**
+- **9 new focused documents** (150-600 lines each)
+- **2 updated overview documents** (navigation hubs)
+- **Zero broken links** (validated by check-links.sh)
+- **80-90% token reduction** for focused documentation reads
+- **Clear navigation structure** (Related Documents sections)
+
+**Success Metrics:**
+
+| Metric | Baseline | Target |
+|--------|----------|--------|
+| Largest doc size | 1,562 lines | <600 lines |
+| Token usage (typical read) | 3,000-6,000 | 200-600 |
+| Broken links | N/A | 0 |
+| Time to find info | ~2-3 min | <30 sec |
+| Docs in architecture/ | 3 | 14 |
+
+**Estimated Effort:** 4-6 hours (careful extraction, link updates, validation)
+
+**Rationale:**
+- **Developer friction:** Scrolling through 1,500+ line docs is slow and overwhelming
+- **AI token waste:** Agents load 3,000-6,000 tokens even for narrow queries
+- **Maintenance difficulty:** Contributors struggle to find and update specific topics
+- **Scalability:** Documentation will only grow; needs proper structure now
+
+**Benefits:**
+- Developers find information in <30 seconds (vs ~2-3 minutes scrolling)
+- AI agents consume 80-90% fewer tokens per documentation read
+- Contributors can quickly locate and update specific topics
+- Documentation scales naturally as project grows
+
+---
+
 ## Milestone 19: User Testing ⏳
 
 > **Goal:** Validate Wavecraft with real plugin developers before V1 release. Gather feedback on SDK usability, documentation quality, and overall developer experience.
@@ -1251,6 +1326,7 @@ Architecture: APPROVED (full compliance with coding standards)
 
 | Date | Update |
 |------|--------|
+| 2026-02-08 | **Milestone 18.6 added: Documentation Architecture Split**: New infrastructure milestone to split large architecture documents into focused, topic-specific files. `coding-standards.md` (1,511 lines) splits into 5 documents (overview + TypeScript/CSS/Rust/Testing), `high-level-design.md` (1,562 lines) splits into 6 documents (overview + SDK/DSL/Workflows/Formats/Versioning). Target: 80-90% token reduction for AI agents, <30s navigation time for developers. Target version 0.10.1 (patch — documentation-only). 24 tasks across 4 phases (extraction, cross-references, validation). Milestone inserted between M18 (Complete) and M18.5 (Template Structure). Progress: 18/22 milestones (82%). Estimated effort: 4-6 hours. |
 | 2026-02-08 | **Milestone 18 complete (v0.10.0)**: Audio Pipeline Fixes & Mocking Cleanup fully implemented. (1) Full-duplex `AudioServer` with separate cpal input/output streams connected by `rtrb` SPSC ring buffer — audio now flows input → FfiProcessor::process() → output. (2) `AtomicParameterBridge` with `Arc<AtomicF32>` per parameter for lock-free WebSocket→audio thread parameter sync. (3) `MeterGenerator` deleted, fallback = silent zeros. (4) `useAllParameters` re-fetches on WebSocket reconnection. QA found 3 Medium issues (meter rate, tokio allocating on audio thread, unnecessary unsafe impl) — all fixed. 146 engine + 28 UI + 57 CLI tests passing. Architecture docs updated (high-level-design.md full-duplex diagram, coding-standards.md new patterns). Archived to `_archive/audio-pipeline-fixes/`. Progress: 86% (18/21 milestones). |
 | 2026-02-08 | **Milestone 18.5 added: Template Structure Improvement (Processors Module)**: New quality-of-life milestone to improve CLI template structure with `processors/` module and complete oscillator example. Teaches proper code organization from day one while providing engaging learning experience with real audio generation. Post-M18 feature per user request and architectural approval. Includes ~60-line oscillator implementation with phase accumulation, complete Processor trait example, safe defaults (gain-only chain), and comprehensive documentation updates. Target version 0.11.0 (minor — breaking template change). Renumbered User Testing (M19→M20) and V1.0 Release (M20→M21). Priority: Medium (quality improvement). Estimated effort: 3-5 days. Progress: 81% (17/21 milestones). |
 | 2026-02-08 | **Milestone 18 created: Audio Pipeline Fixes & Mocking Cleanup**: New milestone to fix two critical audio architecture gaps before user testing. (1) Add audio output stream to `AudioServer` (input → process → output), (2) Bridge parameter changes from WebSocket to audio thread via lock-free mechanism, (3) Remove synthetic `MeterGenerator` and related mocking infrastructure (YAGNI cleanup), (4) Fix `useAllParameters()` race condition on WebSocket connect. Items promoted from backlog. User Testing renumbered to M19, V1.0 Release to M20. Target version 0.10.0. Progress: 85% (17/20 milestones). |
