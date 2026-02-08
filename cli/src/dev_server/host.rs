@@ -1,65 +1,68 @@
 //! Development server host implementing ParameterHost trait
 //!
 //! This module provides a ParameterHost implementation for the embedded
-//! development server. It stores parameter values in memory and generates
-//! synthetic metering data for UI testing.
+//! development server. It stores parameter values in memory and forwards
+//! parameter changes to an optional AtomicParameterBridge for lock-free
+//! audio-thread access.
 
-use std::sync::{Arc, RwLock};
-use wavecraft_bridge::{BridgeError, InMemoryParameterHost, MeterProvider, ParameterHost};
-use wavecraft_metering::dev::MeterGenerator;
+use std::sync::Arc;
+use wavecraft_bridge::{BridgeError, InMemoryParameterHost, ParameterHost};
 use wavecraft_protocol::{MeterFrame, ParameterInfo};
 
-struct MeterGeneratorProvider {
-    generator: Arc<RwLock<MeterGenerator>>,
-}
-
-impl MeterProvider for MeterGeneratorProvider {
-    fn get_meter_frame(&self) -> Option<MeterFrame> {
-        self.generator.read().ok().map(|gen| gen.frame())
-    }
-}
+#[cfg(feature = "audio-dev")]
+use wavecraft_dev_server::atomic_params::AtomicParameterBridge;
 
 /// Development server host for browser-based UI testing
 ///
-/// This implementation stores parameter values locally and provides
-/// synthetic metering data. It's designed for rapid UI iteration
-/// without requiring a full audio engine.
+/// This implementation stores parameter values locally and optionally
+/// forwards updates to an `AtomicParameterBridge` for lock-free reads
+/// on the audio thread. Meter data is provided externally via the audio
+/// server's meter channel (not generated synthetically).
 ///
 /// # Thread Safety
 ///
-/// All state is protected by RwLock for concurrent access from
-/// the IPC handler and any background tasks.
+/// Parameter state is protected by RwLock (in `InMemoryParameterHost`).
+/// The `AtomicParameterBridge` uses lock-free atomics for audio thread.
 pub struct DevServerHost {
     inner: InMemoryParameterHost,
-    meter_generator: Arc<RwLock<MeterGenerator>>,
+    #[cfg(feature = "audio-dev")]
+    param_bridge: Option<Arc<AtomicParameterBridge>>,
 }
 
 impl DevServerHost {
-    /// Create a new dev server host with parameter metadata
+    /// Create a new dev server host with parameter metadata.
     ///
     /// # Arguments
     ///
     /// * `parameters` - Parameter metadata loaded from the plugin FFI
+    ///
+    /// Used by tests and the non-audio-dev build path. When `audio-dev` is
+    /// enabled (default), production code uses `with_param_bridge()` instead.
+    #[cfg_attr(feature = "audio-dev", allow(dead_code))]
     pub fn new(parameters: Vec<ParameterInfo>) -> Self {
-        let meter_generator = Arc::new(RwLock::new(MeterGenerator::new()));
-        let provider = Arc::new(MeterGeneratorProvider {
-            generator: Arc::clone(&meter_generator),
-        });
-        let inner = InMemoryParameterHost::with_meter_provider(parameters, provider);
+        let inner = InMemoryParameterHost::new(parameters);
 
         Self {
             inner,
-            meter_generator,
+            #[cfg(feature = "audio-dev")]
+            param_bridge: None,
         }
     }
 
-    /// Update meter animation state
+    /// Create a new dev server host with an `AtomicParameterBridge`.
     ///
-    /// Call this periodically (e.g., 60 Hz) to animate the synthetic meters.
-    #[allow(dead_code)] // Reserved for future meter animation feature
-    pub fn tick_meters(&self) {
-        if let Ok(mut gen) = self.meter_generator.write() {
-            gen.tick();
+    /// When a bridge is provided, `set_parameter()` will write updates
+    /// to both the inner store and the bridge (for audio-thread reads).
+    #[cfg(feature = "audio-dev")]
+    pub fn with_param_bridge(
+        parameters: Vec<ParameterInfo>,
+        bridge: Arc<AtomicParameterBridge>,
+    ) -> Self {
+        let inner = InMemoryParameterHost::new(parameters);
+
+        Self {
+            inner,
+            param_bridge: Some(bridge),
         }
     }
 }
@@ -70,7 +73,17 @@ impl ParameterHost for DevServerHost {
     }
 
     fn set_parameter(&self, id: &str, value: f32) -> Result<(), BridgeError> {
-        self.inner.set_parameter(id, value)
+        let result = self.inner.set_parameter(id, value);
+
+        // Forward to atomic bridge for audio-thread access (lock-free)
+        #[cfg(feature = "audio-dev")]
+        if result.is_ok() {
+            if let Some(ref bridge) = self.param_bridge {
+                bridge.write(id, value);
+            }
+        }
+
+        result
     }
 
     fn get_all_parameters(&self) -> Vec<ParameterInfo> {
@@ -78,7 +91,9 @@ impl ParameterHost for DevServerHost {
     }
 
     fn get_meter_frame(&self) -> Option<MeterFrame> {
-        self.inner.get_meter_frame()
+        // Meters are now provided externally via the audio server's meter
+        // channel → WebSocket broadcast. No synthetic generation.
+        None
     }
 
     fn request_resize(&self, _width: u32, _height: u32) -> bool {
@@ -171,10 +186,7 @@ mod tests {
     #[test]
     fn test_get_meter_frame() {
         let host = DevServerHost::new(test_params());
-        let frame = host.get_meter_frame().expect("should have meter frame");
-
-        // Synthetic meters should have reasonable values
-        assert!(frame.peak_l >= 0.0);
-        assert!(frame.peak_r >= 0.0);
+        // Meters are now provided externally — no synthetic generation
+        assert!(host.get_meter_frame().is_none());
     }
 }

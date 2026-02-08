@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { ParameterClient } from '../ipc/ParameterClient';
+import { useConnectionStatus } from './useConnectionStatus';
 import type { ParameterInfo } from '../types/parameters';
 
 export interface UseAllParametersResult {
@@ -17,6 +18,7 @@ export function useAllParameters(): UseAllParametersResult {
   const [params, setParams] = useState<ParameterInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const { connected } = useConnectionStatus();
 
   const reload = useCallback(async () => {
     const client = ParameterClient.getInstance();
@@ -36,6 +38,13 @@ export function useAllParameters(): UseAllParametersResult {
   useEffect(() => {
     reload();
   }, [reload]);
+
+  // Reload when WebSocket reconnects (connection becomes true)
+  useEffect(() => {
+    if (connected) {
+      reload();
+    }
+  }, [connected, reload]);
 
   // Subscribe to parameter changes
   useEffect(() => {

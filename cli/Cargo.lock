@@ -3503,13 +3503,12 @@ dependencies = [
  "walkdir",
  "wavecraft-bridge",
  "wavecraft-dev-server",
- "wavecraft-metering",
  "wavecraft-protocol",
 ]
 
 [[package]]
 name = "wavecraft-bridge"
-version = "0.9.0"
+version = "0.10.0"
 dependencies = [
  "libloading",
  "serde",
@@ -3521,7 +3520,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-dev-server"
-version = "0.9.0"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "atomic_float",
@@ -3530,6 +3529,7 @@ dependencies = [
  "futures-util",
  "include_dir",
  "parking_lot",
+ "rtrb",
  "serde_json",
  "tao",
  "tokio",
@@ -3542,16 +3542,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "wavecraft-metering"
-version = "0.9.0"
-dependencies = [
- "rtrb",
- "wavecraft-protocol",
-]
-
-[[package]]
 name = "wavecraft-protocol"
-version = "0.9.0"
+version = "0.10.0"
 dependencies = [
  "paste",
  "serde",

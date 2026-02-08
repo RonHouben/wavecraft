@@ -13,4 +13,7 @@ pub mod ffi_processor;
 #[cfg(feature = "audio")]
 pub mod audio_server;
 
+#[cfg(feature = "audio")]
+pub mod atomic_params;
+
 pub use app::AppState;

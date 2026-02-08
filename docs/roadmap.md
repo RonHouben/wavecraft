@@ -7,15 +7,17 @@ This document tracks implementation progress against the milestones defined in t
 ## Progress Overview
 
 ```
-┌─────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP           v0.9.1 | 94%  │
-├─────────────────────────────────────────────┤
-│  ✅ M1-M17   Foundation → OS Audio Input   │
-│  ⏳ M18      User Testing                   │
-│  ⏳ M19      V1.0 Release                   │
-├─────────────────────────────────────────────┤
-│  [█████████████████████████████████] 17/18  │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│  WAVECRAFT ROADMAP           v0.9.1 | 81%   │
+├──────────────────────────────────────────────┤
+│  ✅ M1-M17   Foundation → OS Audio Input    │
+│  ⏳ M18      Audio Pipeline Fixes           │
+│  ⏳ M18.5    Template Structure Improvement │
+│  ⏳ M19      User Testing                   │
+│  ⏳ M20      V1.0 Release                   │
+├──────────────────────────────────────────────┤
+│  [████████████████████████████████] 17/21   │
+└──────────────────────────────────────────────┘
 ```
 
 **See also:** [Backlog](backlog.md) — unprioritized ideas for future consideration
@@ -1025,13 +1027,115 @@ Manual Tests:   Full flow validated (microphone → processor → UI)
 
 ---
 
-## Milestone 18: User Testing ⏳
+## Milestone 18: Audio Pipeline Fixes & Mocking Cleanup ⏳
+
+> **Goal:** Fix critical audio gaps in dev mode (`wavecraft start`) — add audio output, bridge parameter changes to DSP, and remove unused synthetic metering. Ensures beta testers get a working audio development experience.
+
+**Status: ⏳ Not Started**
+
+**Branch:** `feature/audio-pipeline-fixes`
+**Target Version:** `0.10.0` (minor — significant audio pipeline changes)
+
+**User Stories:** [docs/feature-specs/audio-pipeline-fixes/user-stories.md](feature-specs/audio-pipeline-fixes/user-stories.md)
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Audio Output** | | |
+| Add output stream to `AudioServer` | ⏳ | cpal `build_output_stream()` for effects path |
+| Audio flow: input → process → output | ⏳ | Full duplex effects processing |
+| Meters from processed output | ⏳ | Compute meters post-DSP, not pre-DSP |
+| **Parameter Sync (Dev Mode)** | | |
+| Lock-free param bridge (WS → audio thread) | ⏳ | `Arc<AtomicF32>` or snapshot struct |
+| `setParameter` reaches `FfiProcessor::process()` | ⏳ | Block-level parameter updates |
+| **Mocking Cleanup** | | |
+| Remove `MeterGenerator` from `wavecraft-metering` | ⏳ | `dev.rs` module removed |
+| Update fallback behavior (zeros, not fake animation) | ⏳ | Silent meters when no vtable |
+| **UI Fix** | | |
+| `useAllParameters()` retry on connection | ⏳ | Event-driven re-fetch on WS connect |
+| **Testing & Documentation** | | |
+| Manual testing with real audio | ⏳ | Gain plugin: slider changes audio output |
+| Architecture docs updated | ⏳ | high-level-design.md |
+
+**Success Criteria:**
+- [ ] `wavecraft start` produces audible processed output
+- [ ] Moving a gain slider in browser UI audibly changes output level
+- [ ] No synthetic/fake meter data in production code
+- [ ] Parameters load correctly even on slow WebSocket connection
+- [ ] All existing tests still pass
+
+---
+
+## Milestone 18.5: Template Structure Improvement (Processors Module) ⏳
+
+> **Goal:** Improve CLI template structure with `processors/` module and complete oscillator example. Teaches proper code organization from day one while providing engaging learning experience with real audio generation.
+
+**Status: ⏳ Not Started**
+
+**Depends on:** Milestone 18 (Audio Pipeline Fixes) — should complete audio fixes first
+
+**Branch:** `feature/template-processors-module`  
+**Target Version:** `0.11.0` (minor — breaking template change)
+
+**User Stories:** [docs/feature-specs/template-processors-module/user-stories.md](feature-specs/template-processors-module/user-stories.md)
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Template Structure** | | |
+| Create `processors/` module in template | ⏳ | New directory structure |
+| Add `processors/mod.rs` exports | ⏳ | Clean module pattern |
+| Add `processors/oscillator.rs` implementation | ⏳ | Complete Processor trait example |
+| Update `lib.rs` to use modular structure | ⏳ | Import from processors module |
+| **Oscillator Implementation** | | |
+| Parameter struct with ProcessorParams derive | ⏳ | frequency: 20-20kHz, level: 0-1 |
+| Oscillator processor with phase state | ⏳ | Sine wave generation |
+| Implement `set_sample_rate()` | ⏳ | Proper initialization |
+| Implement `reset()` | ⏳ | Clear phase state |
+| Add comprehensive code comments | ⏳ | Explain DSP concepts |
+| **Signal Chain Configuration** | | |
+| Default to gain-only chain (silent) | ⏳ | No unexpected sound |
+| Add oscillator as commented-out example | ⏳ | Easy to enable for testing |
+| Clear comments explaining options | ⏳ | User understands choices |
+| **Documentation** | | |
+| Update SDK Getting Started guide | ⏳ | New template structure |
+| Update High-Level Design docs | ⏳ | Template structure diagram |
+| Update Coding Standards | ⏳ | Processor organization patterns |
+| Update template README | ⏳ | How to add processors |
+| **Testing** | | |
+| Template generation tests | ⏳ | `wavecraft create` succeeds |
+| Template compilation tests | ⏳ | Plugin builds without errors |
+| Manual testing with oscillator | ⏳ | Generates audible sine wave |
+| DAW loading validation | ⏳ | Works in Ableton Live |
+
+**Key Deliverables:**
+- **Modular structure** — `processors/` folder for scalable organization
+- **Complete example** — Oscillator with full Processor trait implementation
+- **Educational value** — Teaches DSP concepts (phase accumulation, sample rate)
+- **Safe defaults** — Gain-only chain by default, oscillator opt-in
+- **Clear documentation** — How to add processors, understand the pattern
+
+**Success Criteria:**
+- [ ] Template has clear `processors/` module pattern
+- [ ] Oscillator generates audible sine wave (440Hz default)
+- [ ] Documentation explains where to add new processors
+- [ ] Pattern scales naturally (adding `processors/filter.rs` is obvious)
+- [ ] Template compiles and loads in DAW
+- [ ] Zero breaking changes to existing plugins
+
+**Estimated Effort:** 3-5 days (implementation 1-2 days, testing/docs 2-3 days)
+
+**Rationale:**
+- Current single-file template doesn't teach proper organization for real-world plugins
+- Gain example is passive (no sound) — less engaging for learning
+- No example showing how to implement custom Processor trait
+- Real plugins have 5-20+ processors; need clear organizational pattern
+
+---
+
+## Milestone 19: User Testing ⏳
 
 > **Goal:** Validate Wavecraft with real plugin developers before V1 release. Gather feedback on SDK usability, documentation quality, and overall developer experience.
 
-**Depends on:** Milestone 13 (Internal Testing) ✅
-
-**Depends on:** Milestone 17 (OS Audio Input for Dev Mode) ✅
+**Depends on:** Milestone 18.5 (Template Structure) — test with improved template
 
 **Target Version:** `1.0.0-beta` (breaking changes from user feedback)
 
@@ -1068,11 +1172,11 @@ Manual Tests:   Full flow validated (microphone → processor → UI)
 
 ---
 
-## Milestone 19: V1.0 Release 🎯
+## Milestone 20: V1.0 Release 🎯
 
 > **Goal:** Ship Wavecraft 1.0 — the first stable, production-ready release of the Rust + React audio plugin framework.
 
-**Depends on:** Milestone 18 (User Testing) — all critical feedback addressed.
+**Depends on:** Milestone 19 (User Testing) — all critical feedback addressed.
 
 **Target Version:** `1.0.0` (major — first stable release)
 
@@ -1124,6 +1228,8 @@ Manual Tests:   Full flow validated (microphone → processor → UI)
 
 | Date | Update |
 |------|--------|
+| 2026-02-08 | **Milestone 18.5 added: Template Structure Improvement (Processors Module)**: New quality-of-life milestone to improve CLI template structure with `processors/` module and complete oscillator example. Teaches proper code organization from day one while providing engaging learning experience with real audio generation. Post-M18 feature per user request and architectural approval. Includes ~60-line oscillator implementation with phase accumulation, complete Processor trait example, safe defaults (gain-only chain), and comprehensive documentation updates. Target version 0.11.0 (minor — breaking template change). Renumbered User Testing (M19→M20) and V1.0 Release (M20→M21). Priority: Medium (quality improvement). Estimated effort: 3-5 days. Progress: 81% (17/21 milestones). |
+| 2026-02-08 | **Milestone 18 created: Audio Pipeline Fixes & Mocking Cleanup**: New milestone to fix two critical audio architecture gaps before user testing. (1) Add audio output stream to `AudioServer` (input → process → output), (2) Bridge parameter changes from WebSocket to audio thread via lock-free mechanism, (3) Remove synthetic `MeterGenerator` and related mocking infrastructure (YAGNI cleanup), (4) Fix `useAllParameters()` race condition on WebSocket connect. Items promoted from backlog. User Testing renumbered to M19, V1.0 Release to M20. Target version 0.10.0. Progress: 85% (17/20 milestones). |
 | 2026-02-08 | **Dev Audio FFI Abstraction (v0.9.1)**: Replaced template-embedded `dev-audio.rs` binary with in-process FFI/dlopen approach. The CLI now loads the user's DSP processor from their compiled cdylib via C-ABI FFI vtable (`DevProcessorVTable` in `wavecraft-protocol`). `wavecraft_plugin!` macro auto-generates FFI exports with `catch_unwind` for panic safety. Users never see or touch audio capture code — template simplified (removed `src/bin/`, 6 optional deps, `[[bin]]` section). Backward compatible: plugins compiled without vtable gracefully fall back to metering-only mode. 7 implementation phases across 5 crates (protocol, macros, bridge, dev-server, CLI). 150+ engine tests, 28 UI tests passing. QA: 4/5 findings resolved (1 minor deferred — low risk), all Critical/Major/Medium addressed. Architecture docs updated (high-level-design.md, coding-standards.md). Archived to `_archive/dev-audio-ffi/`. |
 | 2026-02-08 | **CLI Self-Update enhancement (v0.9.1)**: Enhanced `wavecraft update` to self-update the CLI binary via `cargo install wavecraft` before updating project dependencies. Command now works from any directory (self-updates CLI only when outside a project). Two-phase execution: Phase 1 (CLI self-update) is non-fatal, Phase 2 (project deps) preserved from M14. Version change notification with re-run hint. 19 tests (12 added from QA findings). QA approved (0 Critical/High/Medium). Architecture docs updated (high-level-design.md, sdk-getting-started.md). Also fixed pre-existing `test_apply_local_dev_overrides` test. Archived to `_archive/cli-self-update/`. |
 | 2026-02-08 | **Milestone 17 complete (v0.8.0)**: OS Audio Input for Dev Mode fully implemented. `wavecraft start` automatically detects, compiles, and starts audio-dev binary if present in plugin projects. Audio flows from OS microphone → user's Processor → meters → WebSocket → UI. Zero configuration required (always-on design with feature flags). Real-time safe (no tokio panics from audio thread). Protocol extensions: `registerAudio` method and `meterUpdate` notification. Audio server with cpal integration. WebSocket client for binary communication. SDK templates with optional audio-dev binary. 10 commits on feature branch. End-to-end testing complete (WebSocket client received meter updates). All template projects compile successfully. Manual testing validates full flow. Ready to archive feature spec and merge to main. Progress: 94% (17/18 milestones). |
@@ -1222,14 +1328,15 @@ Manual Tests:   Full flow validated (microphone → processor → UI)
 17. ✅ **Milestone 17**: OS Audio Input for Dev Mode — Automatic audio input detection and processing (v0.8.0)
 
 ### Up Next
-18. ⏳ **Milestone 18**: User Testing — Beta testing with real plugin developers (v1.0.0-beta)
-19. ⏳ **Milestone 19**: V1.0 Release — First stable production release (v1.0.0)
+18. ⏳ **Milestone 18**: Audio Pipeline Fixes — Audio output, param sync, mocking cleanup (v0.10.0)
+19. ⏳ **Milestone 18.5**: Template Structure Improvement — Processors module with oscillator example (v0.11.0)
+20. ⏳ **Milestone 19**: User Testing — Beta testing with real plugin developers (v1.0.0-beta)
+21. ⏳ **Milestone 20**: V1.0 Release — First stable production release (v1.0.0)
 
 ### Immediate Tasks
-1. ✅ Milestone 16 complete — Macro API Simplification
-2. ✅ Milestone 17 complete — OS Audio Input for Dev Mode
-3. ✅ CLI Self-Update enhancement (v0.9.1) — `wavecraft update` now self-updates CLI first
-4. ✅ Dev Audio FFI Abstraction (v0.9.1) — Replaced template-embedded `dev-audio.rs` with in-process FFI/dlopen
-5. ⏳ Begin Milestone 18 (User Testing) — recruit beta testers
+1. ⏳ Begin Milestone 18 (Audio Pipeline Fixes) — fix audio output, param sync in dev mode
+2. ⏳ Remove synthetic meter generator (mocking cleanup)
+3. ⏳ Fix `useAllParameters()` retry on connection
+4. ⏳ After M18: Begin M18.5 (Template Structure) — add processors/ module pattern
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (crates.io publication, additional example plugins, etc.)

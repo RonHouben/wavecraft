@@ -3,8 +3,6 @@
 //! Provides lock-free SPSC ring buffers for transferring peak/RMS meter data
 //! from the audio thread to the UI thread without allocations or blocking.
 
-pub mod dev;
-
 pub use wavecraft_protocol::MeterFrame;
 
 /// Producer side of meter channel (audio thread).
