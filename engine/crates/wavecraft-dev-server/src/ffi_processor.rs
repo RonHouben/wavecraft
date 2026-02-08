@@ -66,8 +66,23 @@ pub mod implementation {
             }
             let num_samples = channels[0].len() as u32;
 
-            // Build array of channel pointers for the C-ABI call
-            let mut ptrs: Vec<*mut f32> = channels.iter_mut().map(|ch| ch.as_mut_ptr()).collect();
+            // Real-time safety: use a stack-allocated array instead of Vec.
+            // Wavecraft targets stereo (2 channels). Guard against unexpected
+            // multi-channel input to avoid out-of-bounds access.
+            if channels.len() > 2 {
+                tracing::error!(
+                    num_channels = channels.len(),
+                    "FfiProcessor::process() received more than 2 channels; skipping"
+                );
+                return;
+            }
+
+            // Build fixed-size array of channel pointers for the C-ABI call.
+            // No heap allocation — this lives on the stack.
+            let mut ptrs: [*mut f32; 2] = [std::ptr::null_mut(); 2];
+            for (i, ch) in channels.iter_mut().enumerate() {
+                ptrs[i] = ch.as_mut_ptr();
+            }
 
             (self.vtable.process)(self.instance, ptrs.as_mut_ptr(), num_channels, num_samples);
         }

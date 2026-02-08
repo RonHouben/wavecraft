@@ -7,15 +7,17 @@ This document tracks implementation progress against the milestones defined in t
 ## Progress Overview
 
 ```
-┌─────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP           v0.9.1 | 94%  │
-├─────────────────────────────────────────────┤
-│  ✅ M1-M17   Foundation → OS Audio Input   │
-│  ⏳ M18      User Testing                   │
-│  ⏳ M19      V1.0 Release                   │
-├─────────────────────────────────────────────┤
-│  [█████████████████████████████████] 17/18  │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│  WAVECRAFT ROADMAP          v0.10.0 | 86%   │
+├──────────────────────────────────────────────┤
+│  ✅ M1-M18   Foundation → Audio Pipeline    │
+│  ⏳ M18.5    Template Structure Improvement │
+│  ⏳ M18.6    Documentation Architecture     │
+│  ⏳ M19      User Testing                   │
+│  ⏳ M20      V1.0 Release                   │
+├──────────────────────────────────────────────┤
+│  [█████████████████████████████████] 18/22  │
+└──────────────────────────────────────────────┘
 ```
 
 **See also:** [Backlog](backlog.md) — unprioritized ideas for future consideration
@@ -1025,13 +1027,213 @@ Manual Tests:   Full flow validated (microphone → processor → UI)
 
 ---
 
-## Milestone 18: User Testing ⏳
+## Milestone 18: Audio Pipeline Fixes & Mocking Cleanup ✅
+
+> **Goal:** Fix critical audio gaps in dev mode (`wavecraft start`) — add audio output, bridge parameter changes to DSP, and remove unused synthetic metering. Ensures beta testers get a working audio development experience.
+
+**Status: ✅ Complete**
+
+**Branch:** `feature/audio-pipeline-fixes`
+**Version:** `0.10.0` (minor — significant audio pipeline changes)
+
+**User Stories:** [docs/feature-specs/_archive/audio-pipeline-fixes/user-stories.md](feature-specs/_archive/audio-pipeline-fixes/user-stories.md)
+**Low-Level Design:** [docs/feature-specs/_archive/audio-pipeline-fixes/low-level-design-audio-pipeline-fixes.md](feature-specs/_archive/audio-pipeline-fixes/low-level-design-audio-pipeline-fixes.md)
+**Implementation Plan:** [docs/feature-specs/_archive/audio-pipeline-fixes/implementation-plan.md](feature-specs/_archive/audio-pipeline-fixes/implementation-plan.md)
+**QA Report:** [docs/feature-specs/_archive/audio-pipeline-fixes/QA-report.md](feature-specs/_archive/audio-pipeline-fixes/QA-report.md)
+**Architectural Review:** [docs/feature-specs/_archive/audio-pipeline-fixes/architectural-review.md](feature-specs/_archive/audio-pipeline-fixes/architectural-review.md)
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Audio Output** | | |
+| Add output stream to `AudioServer` | ✅ | cpal `build_output_stream()` for effects path |
+| Audio flow: input → process → output | ✅ | Full duplex via rtrb SPSC ring buffer |
+| Meters from processed output | ✅ | Computed post-DSP via rtrb ring buffer |
+| **Parameter Sync (Dev Mode)** | | |
+| Lock-free param bridge (WS → audio thread) | ✅ | `AtomicParameterBridge` with `Arc<AtomicF32>` per param |
+| `setParameter` reaches `FfiProcessor::process()` | ✅ | Block-level updates via `Relaxed` atomics |
+| **Mocking Cleanup** | | |
+| Remove `MeterGenerator` from `wavecraft-metering` | ✅ | `dev.rs` module deleted |
+| Update fallback behavior (zeros, not fake animation) | ✅ | Silent meters when no vtable |
+| **UI Fix** | | |
+| `useAllParameters()` retry on connection | ✅ | Event-driven re-fetch on WS connect |
+| **Testing & Documentation** | | |
+| Manual testing with real audio | ✅ | Gain plugin: slider changes audio output |
+| Architecture docs updated | ✅ | high-level-design.md, coding-standards.md |
+
+**Key Deliverables:**
+- **Full-duplex AudioServer** — Separate cpal input/output streams connected by rtrb SPSC ring buffer
+- **AtomicParameterBridge** — Lock-free `HashMap<String, Arc<AtomicF32>>` for WS→audio thread parameter sync
+- **RT-safe meter delivery** — rtrb ring buffer replacing tokio mpsc channel (zero allocations on audio thread)
+- **MeterGenerator removed** — Synthetic metering infrastructure deleted; fallback = silent zeros
+- **UI reconnection retry** — `useAllParameters` re-fetches on WebSocket connection
+- **Pre-allocated audio buffers** — FfiProcessor uses stack arrays instead of heap Vec
+
+**Test Results:**
+```
+Engine Tests: 146 passed (including 18 audio-feature tests)
+UI Tests:     28 passed
+CLI Tests:    57 passed
+Linting:      All checks passed (cargo fmt, clippy, ESLint, Prettier)
+QA:           PASS (3 Medium findings fixed, 0 Critical/High)
+Architecture: APPROVED (full compliance with coding standards)
+```
+
+**Success Criteria:**
+- [x] `wavecraft start` produces audible processed output
+- [x] Moving a gain slider in browser UI audibly changes output level
+- [x] No synthetic/fake meter data in production code
+- [x] Parameters load correctly even on slow WebSocket connection
+- [x] All existing tests still pass
+
+**Completed:** 2026-02-08
+
+---
+
+## Milestone 18.5: Template Structure Improvement (Processors Module) ⏳
+
+> **Goal:** Improve CLI template structure with `processors/` module and complete oscillator example. Teaches proper code organization from day one while providing engaging learning experience with real audio generation.
+
+**Status: ⏳ Not Started**
+
+**Depends on:** Milestone 18 (Audio Pipeline Fixes) — should complete audio fixes first
+
+**Branch:** `feature/template-processors-module`  
+**Target Version:** `0.11.0` (minor — breaking template change)
+
+**User Stories:** [docs/feature-specs/template-processors-module/user-stories.md](feature-specs/template-processors-module/user-stories.md)
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Template Structure** | | |
+| Create `processors/` module in template | ⏳ | New directory structure |
+| Add `processors/mod.rs` exports | ⏳ | Clean module pattern |
+| Add `processors/oscillator.rs` implementation | ⏳ | Complete Processor trait example |
+| Update `lib.rs` to use modular structure | ⏳ | Import from processors module |
+| **Oscillator Implementation** | | |
+| Parameter struct with ProcessorParams derive | ⏳ | frequency: 20-20kHz, level: 0-1 |
+| Oscillator processor with phase state | ⏳ | Sine wave generation |
+| Implement `set_sample_rate()` | ⏳ | Proper initialization |
+| Implement `reset()` | ⏳ | Clear phase state |
+| Add comprehensive code comments | ⏳ | Explain DSP concepts |
+| **Signal Chain Configuration** | | |
+| Default to gain-only chain (silent) | ⏳ | No unexpected sound |
+| Add oscillator as commented-out example | ⏳ | Easy to enable for testing |
+| Clear comments explaining options | ⏳ | User understands choices |
+| **Documentation** | | |
+| Update SDK Getting Started guide | ⏳ | New template structure |
+| Update High-Level Design docs | ⏳ | Template structure diagram |
+| Update Coding Standards | ⏳ | Processor organization patterns |
+| Update template README | ⏳ | How to add processors |
+| **Testing** | | |
+| Template generation tests | ⏳ | `wavecraft create` succeeds |
+| Template compilation tests | ⏳ | Plugin builds without errors |
+| Manual testing with oscillator | ⏳ | Generates audible sine wave |
+| DAW loading validation | ⏳ | Works in Ableton Live |
+
+**Key Deliverables:**
+- **Modular structure** — `processors/` folder for scalable organization
+- **Complete example** — Oscillator with full Processor trait implementation
+- **Educational value** — Teaches DSP concepts (phase accumulation, sample rate)
+- **Safe defaults** — Gain-only chain by default, oscillator opt-in
+- **Clear documentation** — How to add processors, understand the pattern
+
+**Success Criteria:**
+- [ ] Template has clear `processors/` module pattern
+- [ ] Oscillator generates audible sine wave (440Hz default)
+- [ ] Documentation explains where to add new processors
+- [ ] Pattern scales naturally (adding `processors/filter.rs` is obvious)
+- [ ] Template compiles and loads in DAW
+- [ ] Zero breaking changes to existing plugins
+
+**Estimated Effort:** 3-5 days (implementation 1-2 days, testing/docs 2-3 days)
+
+**Rationale:**
+- Current single-file template doesn't teach proper organization for real-world plugins
+- Gain example is passive (no sound) — less engaging for learning
+- No example showing how to implement custom Processor trait
+- Real plugins have 5-20+ processors; need clear organizational pattern
+
+---
+
+## Milestone 18.6: Documentation Architecture Split ⏳
+
+> **Goal:** Split large architecture documents (~1,500 lines each) into focused, topic-specific files to improve navigation for both human developers and AI agents, reducing token consumption by 80-90%.
+
+**Status: ⏳ Not Started**
+
+**Depends on:** None — pure documentation refactoring
+
+**Branch:** `feature/docs-split-architecture`  
+**Target Version:** `0.10.1` (patch — documentation-only change)
+
+**User Stories:** [docs/feature-specs/docs-split-architecture/user-stories.md](feature-specs/docs-split-architecture/user-stories.md)
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Phase 1: Coding Standards Split** | | |
+| Create `coding-standards-typescript.md` (~400 lines) | ⏳ | TypeScript, React, hooks, build constants |
+| Create `coding-standards-css.md` (~150 lines) | ⏳ | TailwindCSS, theming, WebView styling |
+| Create `coding-standards-rust.md` (~600 lines) | ⏳ | Module org, DSL, xtask, FFI safety |
+| Create `coding-standards-testing.md` (~300 lines) | ⏳ | Testing, logging, error handling |
+| Update `coding-standards.md` to overview (~200 lines) | ⏳ | Navigation hub with quick reference |
+| **Phase 2: High-Level Design Split** | | |
+| Create `sdk-architecture.md` (~500 lines) | ⏳ | SDK distribution, crates, npm packages |
+| Create `declarative-plugin-dsl.md` (~300 lines) | ⏳ | DSL architecture, macros, discovery |
+| Create `development-workflows.md` (~400 lines) | ⏳ | Browser dev, FFI audio, build system |
+| Create `plugin-formats.md` (~300 lines) | ⏳ | VST3, CLAP, AU specifics |
+| Create `versioning-and-distribution.md` (~200 lines) | ⏳ | Version flow, packaging, signing |
+| Update `high-level-design.md` to overview (~400 lines) | ⏳ | Architecture diagram + navigation |
+| **Phase 3: Cross-Reference Updates** | | |
+| Update `.github/copilot-instructions.md` | ⏳ | Reference new document structure |
+| Update `.github/skills/**/SKILL.md` | ⏳ | Update architecture doc links |
+| Update `docs/guides/*.md` | ⏳ | Update all cross-references |
+| Update `README.md` | ⏳ | Documentation links section |
+| Update archived feature specs if needed | ⏳ | Low priority (historical docs) |
+| **Phase 4: Validation** | | |
+| Run `scripts/check-links.sh` | ⏳ | Zero broken links |
+| Grep for old references | ⏳ | `rg 'coding-standards\.md'` etc |
+| Test with AI agents | ⏳ | Verify token reduction |
+| Manual navigation testing | ⏳ | Hub documents are clear |
+| Add documentation structure guide | ⏳ | `CONTRIBUTING.md` section |
+
+**Key Deliverables:**
+- **9 new focused documents** (150-600 lines each)
+- **2 updated overview documents** (navigation hubs)
+- **Zero broken links** (validated by check-links.sh)
+- **80-90% token reduction** for focused documentation reads
+- **Clear navigation structure** (Related Documents sections)
+
+**Success Metrics:**
+
+| Metric | Baseline | Target |
+|--------|----------|--------|
+| Largest doc size | 1,562 lines | <600 lines |
+| Token usage (typical read) | 3,000-6,000 | 200-600 |
+| Broken links | N/A | 0 |
+| Time to find info | ~2-3 min | <30 sec |
+| Docs in architecture/ | 3 | 14 |
+
+**Estimated Effort:** 4-6 hours (careful extraction, link updates, validation)
+
+**Rationale:**
+- **Developer friction:** Scrolling through 1,500+ line docs is slow and overwhelming
+- **AI token waste:** Agents load 3,000-6,000 tokens even for narrow queries
+- **Maintenance difficulty:** Contributors struggle to find and update specific topics
+- **Scalability:** Documentation will only grow; needs proper structure now
+
+**Benefits:**
+- Developers find information in <30 seconds (vs ~2-3 minutes scrolling)
+- AI agents consume 80-90% fewer tokens per documentation read
+- Contributors can quickly locate and update specific topics
+- Documentation scales naturally as project grows
+
+---
+
+## Milestone 19: User Testing ⏳
 
 > **Goal:** Validate Wavecraft with real plugin developers before V1 release. Gather feedback on SDK usability, documentation quality, and overall developer experience.
 
-**Depends on:** Milestone 13 (Internal Testing) ✅
-
-**Depends on:** Milestone 17 (OS Audio Input for Dev Mode) ✅
+**Depends on:** Milestone 18.5 (Template Structure) — test with improved template
 
 **Target Version:** `1.0.0-beta` (breaking changes from user feedback)
 
@@ -1068,11 +1270,11 @@ Manual Tests:   Full flow validated (microphone → processor → UI)
 
 ---
 
-## Milestone 19: V1.0 Release 🎯
+## Milestone 20: V1.0 Release 🎯
 
 > **Goal:** Ship Wavecraft 1.0 — the first stable, production-ready release of the Rust + React audio plugin framework.
 
-**Depends on:** Milestone 18 (User Testing) — all critical feedback addressed.
+**Depends on:** Milestone 19 (User Testing) — all critical feedback addressed.
 
 **Target Version:** `1.0.0` (major — first stable release)
 
@@ -1124,6 +1326,10 @@ Manual Tests:   Full flow validated (microphone → processor → UI)
 
 | Date | Update |
 |------|--------|
+| 2026-02-08 | **Milestone 18.6 added: Documentation Architecture Split**: New infrastructure milestone to split large architecture documents into focused, topic-specific files. `coding-standards.md` (1,511 lines) splits into 5 documents (overview + TypeScript/CSS/Rust/Testing), `high-level-design.md` (1,562 lines) splits into 6 documents (overview + SDK/DSL/Workflows/Formats/Versioning). Target: 80-90% token reduction for AI agents, <30s navigation time for developers. Target version 0.10.1 (patch — documentation-only). 24 tasks across 4 phases (extraction, cross-references, validation). Milestone inserted between M18 (Complete) and M18.5 (Template Structure). Progress: 18/22 milestones (82%). Estimated effort: 4-6 hours. |
+| 2026-02-08 | **Milestone 18 complete (v0.10.0)**: Audio Pipeline Fixes & Mocking Cleanup fully implemented. (1) Full-duplex `AudioServer` with separate cpal input/output streams connected by `rtrb` SPSC ring buffer — audio now flows input → FfiProcessor::process() → output. (2) `AtomicParameterBridge` with `Arc<AtomicF32>` per parameter for lock-free WebSocket→audio thread parameter sync. (3) `MeterGenerator` deleted, fallback = silent zeros. (4) `useAllParameters` re-fetches on WebSocket reconnection. QA found 3 Medium issues (meter rate, tokio allocating on audio thread, unnecessary unsafe impl) — all fixed. 146 engine + 28 UI + 57 CLI tests passing. Architecture docs updated (high-level-design.md full-duplex diagram, coding-standards.md new patterns). Archived to `_archive/audio-pipeline-fixes/`. Progress: 86% (18/21 milestones). |
+| 2026-02-08 | **Milestone 18.5 added: Template Structure Improvement (Processors Module)**: New quality-of-life milestone to improve CLI template structure with `processors/` module and complete oscillator example. Teaches proper code organization from day one while providing engaging learning experience with real audio generation. Post-M18 feature per user request and architectural approval. Includes ~60-line oscillator implementation with phase accumulation, complete Processor trait example, safe defaults (gain-only chain), and comprehensive documentation updates. Target version 0.11.0 (minor — breaking template change). Renumbered User Testing (M19→M20) and V1.0 Release (M20→M21). Priority: Medium (quality improvement). Estimated effort: 3-5 days. Progress: 81% (17/21 milestones). |
+| 2026-02-08 | **Milestone 18 created: Audio Pipeline Fixes & Mocking Cleanup**: New milestone to fix two critical audio architecture gaps before user testing. (1) Add audio output stream to `AudioServer` (input → process → output), (2) Bridge parameter changes from WebSocket to audio thread via lock-free mechanism, (3) Remove synthetic `MeterGenerator` and related mocking infrastructure (YAGNI cleanup), (4) Fix `useAllParameters()` race condition on WebSocket connect. Items promoted from backlog. User Testing renumbered to M19, V1.0 Release to M20. Target version 0.10.0. Progress: 85% (17/20 milestones). |
 | 2026-02-08 | **Dev Audio FFI Abstraction (v0.9.1)**: Replaced template-embedded `dev-audio.rs` binary with in-process FFI/dlopen approach. The CLI now loads the user's DSP processor from their compiled cdylib via C-ABI FFI vtable (`DevProcessorVTable` in `wavecraft-protocol`). `wavecraft_plugin!` macro auto-generates FFI exports with `catch_unwind` for panic safety. Users never see or touch audio capture code — template simplified (removed `src/bin/`, 6 optional deps, `[[bin]]` section). Backward compatible: plugins compiled without vtable gracefully fall back to metering-only mode. 7 implementation phases across 5 crates (protocol, macros, bridge, dev-server, CLI). 150+ engine tests, 28 UI tests passing. QA: 4/5 findings resolved (1 minor deferred — low risk), all Critical/Major/Medium addressed. Architecture docs updated (high-level-design.md, coding-standards.md). Archived to `_archive/dev-audio-ffi/`. |
 | 2026-02-08 | **CLI Self-Update enhancement (v0.9.1)**: Enhanced `wavecraft update` to self-update the CLI binary via `cargo install wavecraft` before updating project dependencies. Command now works from any directory (self-updates CLI only when outside a project). Two-phase execution: Phase 1 (CLI self-update) is non-fatal, Phase 2 (project deps) preserved from M14. Version change notification with re-run hint. 19 tests (12 added from QA findings). QA approved (0 Critical/High/Medium). Architecture docs updated (high-level-design.md, sdk-getting-started.md). Also fixed pre-existing `test_apply_local_dev_overrides` test. Archived to `_archive/cli-self-update/`. |
 | 2026-02-08 | **Milestone 17 complete (v0.8.0)**: OS Audio Input for Dev Mode fully implemented. `wavecraft start` automatically detects, compiles, and starts audio-dev binary if present in plugin projects. Audio flows from OS microphone → user's Processor → meters → WebSocket → UI. Zero configuration required (always-on design with feature flags). Real-time safe (no tokio panics from audio thread). Protocol extensions: `registerAudio` method and `meterUpdate` notification. Audio server with cpal integration. WebSocket client for binary communication. SDK templates with optional audio-dev binary. 10 commits on feature branch. End-to-end testing complete (WebSocket client received meter updates). All template projects compile successfully. Manual testing validates full flow. Ready to archive feature spec and merge to main. Progress: 94% (17/18 milestones). |
@@ -1220,16 +1426,15 @@ Manual Tests:   Full flow validated (microphone → processor → UI)
 15. ✅ **Milestone 15**: Developer Tooling Polish — Comprehensive workspace cleanup (v0.8.6)
 16. ✅ **Milestone 16**: Macro API Simplification — Reduced boilerplate, automatic metadata (v0.9.0)
 17. ✅ **Milestone 17**: OS Audio Input for Dev Mode — Automatic audio input detection and processing (v0.8.0)
+18. ✅ **Milestone 18**: Audio Pipeline Fixes — Full-duplex audio, parameter sync, mocking cleanup (v0.10.0)
 
 ### Up Next
-18. ⏳ **Milestone 18**: User Testing — Beta testing with real plugin developers (v1.0.0-beta)
-19. ⏳ **Milestone 19**: V1.0 Release — First stable production release (v1.0.0)
+19. ⏳ **Milestone 18.5**: Template Structure Improvement — Processors module with oscillator example (v0.11.0)
+20. ⏳ **Milestone 19**: User Testing — Beta testing with real plugin developers (v1.0.0-beta)
+21. ⏳ **Milestone 20**: V1.0 Release — First stable production release (v1.0.0)
 
 ### Immediate Tasks
-1. ✅ Milestone 16 complete — Macro API Simplification
-2. ✅ Milestone 17 complete — OS Audio Input for Dev Mode
-3. ✅ CLI Self-Update enhancement (v0.9.1) — `wavecraft update` now self-updates CLI first
-4. ✅ Dev Audio FFI Abstraction (v0.9.1) — Replaced template-embedded `dev-audio.rs` with in-process FFI/dlopen
-5. ⏳ Begin Milestone 18 (User Testing) — recruit beta testers
+1. ⏳ Begin Milestone 18.5 (Template Structure) — add processors/ module pattern
+2. ⏳ After M18.5: Begin Milestone 19 (User Testing) — recruit beta testers
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (crates.io publication, additional example plugins, etc.)

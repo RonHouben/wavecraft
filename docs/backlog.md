@@ -112,6 +112,7 @@ Reported from developer testing session (2026-02-08). These are framework-level 
 
 | Date | Update |
 |------|--------|
+| 2026-02-08 | **Items promoted to Milestone 18**: AudioServer no output stream (Critical), Parameter changes don't reach audio thread (Critical), and UI race condition on parameter load (Minor) promoted to new Milestone 18 (Audio Pipeline Fixes). Remove audio signal mocking also promoted. Target version 0.10.0. User Testing renumbered to M19, V1.0 to M20. |
 | 2026-02-08 | **Bug found**: SDK dev mode crate version mismatch — `wavecraft start` audio binary fails when CLI is run via `cargo run` due to mixed path/git dependency resolution. Added to Developer Experience section. Does not affect end users. |
 | 2026-02-08 | **Backlog addition:** SDK Audio Architecture Gaps — three issues from developer test session: no audio output in dev-server (critical), params don't reach `process()` (critical), UI param load race condition (minor). All are framework-level gaps in `wavecraft-dev-server`, `wavecraft-macros`, and `@wavecraft/core`. |
 | 2026-02-08 | **Backlog addition:** Remove audio signal mocking to UI — reduces complexity and technical debt by removing unused infrastructure. YAGNI principle applied. |

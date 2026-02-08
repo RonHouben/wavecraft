@@ -95,6 +95,7 @@ fn prompt_install() -> Result<bool> {
 fn try_start_audio_in_process(
     loader: &PluginLoader,
     ws_handle: wavecraft_dev_server::ws_server::WsHandle,
+    param_bridge: std::sync::Arc<wavecraft_dev_server::atomic_params::AtomicParameterBridge>,
     verbose: bool,
 ) -> Option<wavecraft_dev_server::audio_server::AudioHandle> {
     use wavecraft_dev_server::audio_server::{AudioConfig, AudioServer};
@@ -137,7 +138,7 @@ fn try_start_audio_in_process(
         buffer_size: 512,
     };
 
-    let server = match AudioServer::new(Box::new(processor), config) {
+    let server = match AudioServer::new(Box::new(processor), config, param_bridge) {
         Ok(s) => s,
         Err(e) => {
             if verbose {
@@ -154,33 +155,12 @@ fn try_start_audio_in_process(
         }
     };
 
-    // Create a meter channel. Meter updates from the audio callback
-    // are forwarded to the WebSocket server for the browser UI.
-    let (meter_tx, mut meter_rx) = tokio::sync::mpsc::unbounded_channel();
+    let has_output = server.has_output();
 
-    // Spawn a task that forwards meter updates to WebSocket clients
-    tokio::spawn(async move {
-        use wavecraft_protocol::{IpcNotification, NOTIFICATION_METER_UPDATE};
-
-        while let Some(notification) = meter_rx.recv().await {
-            if let Ok(json) = serde_json::to_string(&IpcNotification::new(
-                NOTIFICATION_METER_UPDATE,
-                notification,
-            )) {
-                ws_handle.broadcast(&json).await;
-            }
-        }
-    });
-
-    match server.start(meter_tx) {
-        Ok(handle) => {
-            println!(
-                "{} Audio server started (in-process FFI)",
-                style("✓").green()
-            );
-            println!();
-            Some(handle)
-        }
+    // Start audio server. Returns a lock-free ring buffer consumer for
+    // meter data (RT-safe: audio thread writes without allocations).
+    let (handle, mut meter_consumer) = match server.start() {
+        Ok((h, c)) => (h, c),
         Err(e) => {
             println!(
                 "{}",
@@ -188,19 +168,47 @@ fn try_start_audio_in_process(
             );
             println!("  Continuing without audio...");
             println!();
-            None
+            return None;
         }
-    }
-}
+    };
 
-/// Fallback when the `audio-dev` feature is disabled.
-#[cfg(not(feature = "audio-dev"))]
-fn try_start_audio_in_process(
-    _loader: &PluginLoader,
-    _ws_handle: wavecraft_dev_server::ws_server::WsHandle,
-    _verbose: bool,
-) -> Option<()> {
-    None
+    // Spawn a task that drains the lock-free meter ring buffer and
+    // forwards updates to WebSocket clients.
+    tokio::spawn(async move {
+        use wavecraft_protocol::{IpcNotification, NOTIFICATION_METER_UPDATE};
+
+        let mut interval = tokio::time::interval(std::time::Duration::from_millis(16));
+        loop {
+            interval.tick().await;
+            // Drain all available meter frames, keeping only the latest.
+            let mut latest = None;
+            while let Ok(notification) = meter_consumer.pop() {
+                latest = Some(notification);
+            }
+            if let Some(notification) = latest {
+                if let Ok(json) = serde_json::to_string(&IpcNotification::new(
+                    NOTIFICATION_METER_UPDATE,
+                    notification,
+                )) {
+                    ws_handle.broadcast(&json).await;
+                }
+            }
+        }
+    });
+
+    if has_output {
+        println!(
+            "{} Audio server started — full-duplex (input + output)",
+            style("✓").green()
+        );
+    } else {
+        println!(
+            "{} Audio server started — input-only (metering)",
+            style("✓").green()
+        );
+    }
+    println!();
+    Some(handle)
 }
 
 /// Install npm dependencies in the ui/ directory.
@@ -288,14 +296,25 @@ fn run_dev_servers(
         }
     }
 
-    // 4. Start embedded WebSocket server
+    // 4. Create AtomicParameterBridge for lock-free audio-thread param reads
+    #[cfg(feature = "audio-dev")]
+    let param_bridge = {
+        use wavecraft_dev_server::atomic_params::AtomicParameterBridge;
+        std::sync::Arc::new(AtomicParameterBridge::new(&params))
+    };
+
+    // 5. Start embedded WebSocket server
     println!(
         "{} Starting WebSocket server on port {}...",
         style("→").cyan(),
         ws_port
     );
 
+    #[cfg(feature = "audio-dev")]
+    let host = DevServerHost::with_param_bridge(params, std::sync::Arc::clone(&param_bridge));
+    #[cfg(not(feature = "audio-dev"))]
     let host = DevServerHost::new(params);
+
     let handler = std::sync::Arc::new(IpcHandler::new(host));
 
     // Create tokio runtime for the WebSocket server
@@ -306,18 +325,22 @@ fn run_dev_servers(
 
     println!("{} WebSocket server running", style("✓").green());
 
-    // 5. Try to start audio in-process via FFI (optional, graceful fallback)
+    // 6. Try to start audio in-process via FFI (optional, graceful fallback)
     // Store the AudioHandle so the cpal stream stays alive until shutdown.
     // When this variable is dropped (reverse declaration order for locals),
     // the FfiProcessor inside the closure is dropped while the Library in
     // `loader` is still loaded — preserving vtable pointer validity.
+    #[cfg(feature = "audio-dev")]
     let _audio_handle = runtime.block_on(async {
         let ws_handle = server.handle();
-        try_start_audio_in_process(&loader, ws_handle, verbose)
+        try_start_audio_in_process(&loader, ws_handle, param_bridge.clone(), verbose)
     });
+    #[cfg(feature = "audio-dev")]
     let has_audio = _audio_handle.is_some();
+    #[cfg(not(feature = "audio-dev"))]
+    let has_audio = false;
 
-    // 6. Start UI dev server
+    // 7. Start UI dev server
     println!(
         "{} Starting UI dev server on port {}...",
         style("→").cyan(),
