@@ -92,12 +92,13 @@ fn extract_dir(dir: &Dir, target_dir: &Path, vars: &TemplateVariables) -> Result
 }
 
 /// SDK crates that need to be replaced when using local dev mode.
-const SDK_CRATES: [&str; 5] = [
+const SDK_CRATES: [&str; 6] = [
     "wavecraft-core",
     "wavecraft-protocol",
     "wavecraft-dsp",
     "wavecraft-bridge",
     "wavecraft-metering",
+    "wavecraft-dev-server",
 ];
 
 /// Replaces git dependencies with local path dependencies for SDK crates.
@@ -129,22 +130,41 @@ fn apply_local_dev_overrides(content: &str, vars: &TemplateVariables) -> Result<
 
     // Replace individual SDK crate dependencies
     for crate_name in &SDK_CRATES {
-        // Match: crate_name = { git = "https://github.com/RonHouben/wavecraft", tag = "..." }
+        // Match flexible git dependency patterns:
+        // - Simple: crate = { git = "...", tag = "..." }
+        // - With package: crate = { package = "crate", git = "...", tag = "..." }
+        // - With optional: crate = { git = "...", tag = "...", optional = true }
+        // - With both: crate = { package = "crate", git = "...", tag = "...", optional = true }
         let git_pattern = format!(
-            r#"{}\s*=\s*\{{\s*git\s*=\s*"https://github\.com/RonHouben/wavecraft"\s*,\s*tag\s*=\s*"[^"]*"\s*\}}"#,
+            r#"(?s)({}\s*=\s*\{{\s*)(?:package\s*=\s*"[^"]*"\s*,\s*)?(git\s*=\s*"https://github\.com/RonHouben/wavecraft"\s*,\s*tag\s*=\s*"[^"]*")\s*((?:,\s*optional\s*=\s*\w+)?)\s*\}}"#,
             regex::escape(crate_name)
-        );
-        let path_replacement = format!(
-            r#"{} = {{ path = "{}/{}" }}"#,
-            crate_name,
-            sdk_path.display(),
-            crate_name
         );
 
         let re = Regex::new(&git_pattern)
             .with_context(|| format!("Invalid regex pattern for crate: {}", crate_name))?;
+
+        // Perform replacement preserving package and optional attributes
         result = re
-            .replace_all(&result, path_replacement.as_str())
+            .replace_all(&result, |caps: &regex::Captures| {
+                let prefix = &caps[1]; // "crate = { "
+                let optional = &caps[3]; // ", optional = true" or empty
+                
+                // Check if package attribute exists in the original
+                let package_attr = if caps[0].contains("package") {
+                    format!(r#"package = "{}", "#, crate_name)
+                } else {
+                    String::new()
+                };
+
+                format!(
+                    r#"{}{}path = "{}/{}"{} }}"#,
+                    prefix,
+                    package_attr,
+                    sdk_path.display(),
+                    crate_name,
+                    optional
+                )
+            })
             .to_string();
     }
 
