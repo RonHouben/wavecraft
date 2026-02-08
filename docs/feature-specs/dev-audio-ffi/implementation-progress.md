@@ -30,9 +30,9 @@
 
 ## Phase 7: Testing and Validation
 - [x] 7.1 — Unit tests for `FfiProcessor` (mock vtable, lifecycle, dispatch)
-- [ ] 7.2 — Unit tests for vtable version checking in plugin loader
-- [ ] 7.3 — Compile-test: macro generates `wavecraft_dev_create_processor` symbol
-- [ ] 7.4 — Template validation: clean scaffold (no bin/, no audio deps)
-- [ ] 7.5 — End-to-end: `wavecraft start` with audio input + meters in browser
-- [ ] 7.6 — Backward compatibility: old plugin without vtable → graceful fallback
+- [x] 7.2 — Unit tests for vtable version checking in plugin loader
+- [x] 7.3 — Compile-test: macro generates `wavecraft_dev_create_processor` symbol
+- [x] 7.4 — Template validation: clean scaffold (no bin/, no audio deps)
+- [x] 7.5 — End-to-end: `wavecraft start` with audio input + meters in browser
+- [x] 7.6 — Backward compatibility: old plugin without vtable → graceful fallback
 - [x] 7.7 — CI validation: `cargo xtask ci-check` passes
