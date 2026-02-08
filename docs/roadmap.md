@@ -8,13 +8,14 @@ This document tracks implementation progress against the milestones defined in t
 
 ```
 ┌─────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP           v0.8.5 | 88%  │
+│  WAVECRAFT ROADMAP           v0.8.5 | 82%  │
 ├─────────────────────────────────────────────┤
 │  ✅ M1-M14   Foundation → CLI Enhancements │
-│  ⏳ M15      User Testing                   │
-│  ⏳ M16      V1.0 Release                   │
+│  🚧 M15      Developer Tooling Polish      │
+│  ⏳ M16      User Testing                   │
+│  ⏳ M17      V1.0 Release                   │
 ├─────────────────────────────────────────────┤
-│  [█████████████████████████████████░] 14/16 │
+│  [██████████████████████████████░░] 14/17   │
 └─────────────────────────────────────────────┘
 ```
 
@@ -686,7 +687,48 @@ QA:                    APPROVED (0 Critical/High, 2 Medium non-blocking)
 
 ---
 
-## Milestone 15: User Testing ⏳
+## Milestone 15: Developer Tooling Polish 🚧
+
+> **Goal:** Small quality-of-life improvements to developer tooling before user testing. Extend `cargo xtask clean` to comprehensively clean the entire workspace.
+
+**Status: 🚧 In Progress**
+
+**Branch:** `feature/workspace-cleanup`  
+**Target Version:** `0.8.6` (patch — tooling improvement, no breaking changes)
+
+**User Stories:** [docs/feature-specs/workspace-cleanup/user-stories.md](feature-specs/workspace-cleanup/user-stories.md)
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Workspace Cleanup** | | |
+| Extend `cargo xtask clean` to clean `cli/target` | ⏳ | Currently only cleans `engine/target` |
+| Clean `ui/dist/` (Vite build outputs) | ⏳ | |
+| Clean `ui/coverage/` (test artifacts) | ⏳ | |
+| Clean `target/tmp/` (test plugins) | ⏳ | |
+| Add clear output with disk space reporting | ⏳ | Show what was cleaned + size reclaimed |
+| **Testing** | | |
+| Unit tests for cleanup function | ⏳ | |
+| Manual testing | ⏳ | Verify all directories cleaned |
+| Documentation updates | ⏳ | Update high-level-design.md |
+| **Quality Assurance** | | |
+| QA review | ⏳ | |
+
+**Key Deliverables:**
+- Comprehensive `cargo xtask clean` command covering full workspace
+- Clear output showing cleaned directories and space reclaimed
+- Documentation updated
+
+**Success Criteria:**
+- [ ] Single command cleans all Rust + UI + temp build artifacts
+- [ ] No errors on missing directories (idempotent)
+- [ ] Clear output showing what was cleaned
+- [ ] Developer experience: "this just works"
+
+**Estimated Effort:** 1-2 days
+
+---
+
+## Milestone 16: User Testing ⏳
 
 > **Goal:** Comprehensive internal validation of the complete SDK workflow before external beta testing. Catch issues that would frustrate external testers.
 
@@ -824,11 +866,11 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 ---
 
-## Milestone 16: V1.0 Release 🎯
+## Milestone 17: V1.0 Release 🎯
 
 > **Goal:** Ship Wavecraft 1.0 — the first stable, production-ready release of the Rust + React audio plugin framework.
 
-**Depends on:** Milestone 15 (User Testing) — all critical feedback addressed.
+**Depends on:** Milestone 16 (User Testing) — all critical feedback addressed.
 
 **Target Version:** `1.0.0` (major — first stable release)
 
@@ -880,6 +922,7 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 | Date | Update |
 |------|--------|
+| 2026-02-08 | **Milestone 15 added: Developer Tooling Polish**: New milestone for extending `cargo xtask clean` to comprehensively clean the entire workspace (cli/target, ui/dist, ui/coverage, target/tmp). Small quality-of-life improvement to reclaim disk space with a single command. Renumbered User Testing (M15→M16) and V1.0 Release (M16→M17). Progress: 82% (14/17 milestones). Target version 0.8.6 (patch). Item promoted from backlog with user stories created. |
 | 2026-02-08 | **Milestone 14 complete (v0.8.5)**: CLI Enhancements fully implemented. Version flags (`-V`/`--version`) using clap's built-in support (follows Rust CLI conventions with capital V). Update command (`wavecraft update`) updates both Rust and npm dependencies with graceful degradation (continues on partial failure). 9 integration tests passing (4 version + 5 update), 18/22 manual tests. QA approved (0 Critical/High issues). Architectural review: ⭐⭐⭐⭐⭐ (5/5) — excellent architectural quality, idiomatic Rust, proper error handling. Documentation updated (high-level-design.md, sdk-getting-started.md, architectural-review.md). Ready for PO handoff to archive feature spec and merge to main. Progress: 88% (14/16 milestones). |
 | 2026-02-08 | **Milestone 14 added: CLI Enhancements**: New milestone for version flag (`-v`/`--version`) and `wavecraft update` command to update all project dependencies (Rust + npm). Small quality-of-life improvements before user testing. Renumbered User Testing (M14→M15) and V1.0 Release (M15→M16). Progress: 81% (13/16 milestones). Target version 0.8.1 (patch). Items moved from backlog with documentation that `-v`/`--version` should display format `wavecraft 0.x.y`. |
 | 2026-02-09 | **CD CLI cascade publish**: Enhanced Continuous Deployment pipeline with CLI cascade trigger, `[auto-bump]` loop prevention, and publish-only npm model. CLI now re-publishes whenever _any_ SDK component changes (engine crates, npm packages, or CLI itself), ensuring the git tag always reflects the latest SDK state. Replaced `[skip ci]` with `[auto-bump]` commit marker so other workflows (CI, template validation) still run on auto-bump commits. npm jobs switched to publish-only model (no build step — relies on pre-built `dist/` in repo). Added upstream failure guards (`!cancelled()` instead of `always()`). 12/12 test cases passing, QA approved (0 Critical/High/Medium). Architecture docs updated (high-level-design.md, ci-pipeline.md). Archived to `_archive/cd-cli-cascade-publish/`. |
