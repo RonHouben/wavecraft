@@ -351,7 +351,7 @@ All SDK crates use the `wavecraft-*` naming convention for clear identification:
 | `wavecraft-bridge` | IPC handler, `ParameterHost` trait, `PluginParamLoader` (dlopen + param/vtable loading) | ✅ crates.io | CLI uses for plugin loading |
 | `wavecraft-metering` | Real-time safe SPSC ring buffer for audio → UI metering | ✅ crates.io | Uses `MeterProducer` in DSP |
 | `wavecraft-dsp` | DSP primitives, `Processor` trait, built-in processors | ✅ crates.io | Implements `Processor` trait |
-| `wavecraft-dev-server` | WebSocket dev server, `DevAudioProcessor` trait, `FfiProcessor` wrapper, `AudioServer` | ✅ crates.io | CLI uses for dev mode |
+| `wavecraft-dev-server` | WebSocket dev server, `DevAudioProcessor` trait, `FfiProcessor` wrapper, `AudioServer` (full-duplex), `AtomicParameterBridge` | ✅ crates.io | CLI uses for dev mode |
 
 > **Why the split?** The `nih_plug` crate cannot be published to crates.io (it has unpublished dependencies). By isolating nih_plug integration in `wavecraft-nih_plug` (git-only), all other crates become publishable. User projects depend on `wavecraft-nih_plug` via git tag, while the ecosystem gains crates.io discoverability for the rest of the SDK.
 
@@ -917,32 +917,39 @@ The environment constant is evaluated at module scope (not inside hooks) to comp
 
 When running `wavecraft start`, the CLI loads the user's compiled cdylib (already built for parameter discovery) and also attempts to load an FFI vtable symbol (`wavecraft_dev_create_processor`). If found, audio processing runs **in-process** via cpal — no separate binary or subprocess is needed. Users never see or write any audio capture code.
 
-#### FFI Audio Architecture
+#### FFI Audio Architecture (Full-Duplex)
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │  CLI Process (`wavecraft start`)                                             │
 │                                                                              │
-│  ┌─────────────────────┐                                                     │
-│  │  dlopen(cdylib)      │                                                     │
-│  │  → params (existing) │                                                     │
-│  │  → vtable (new)      │                                                     │
-│  └──────────┬──────────┘                                                     │
-│             │                                                                │
-│             ▼                                                                │
-│  ┌─────────────────────┐      ┌──────────────────────────┐                   │
-│  │  FfiProcessor        │      │  cpal audio input stream  │                   │
-│  │  (wraps vtable)      │◄─────│  (OS microphone)          │                   │
-│  └──────────┬──────────┘      └──────────────────────────┘                   │
-│             │                                                                │
-│             │  process(channels) → audio data modified in-place              │
-│             │  compute meters from processed output                          │
-│             │                                                                │
-│             ▼                                                                │
-│  ┌─────────────────────┐      ┌──────────────────┐    ┌──────────────────┐   │
-│  │  Meter computation   │─────►│  WebSocket server │───►│  Browser UI      │   │
-│  └─────────────────────┘      │  (ws://9000)      │    │  (localhost:5173) │   │
-│                               └──────────────────┘    └──────────────────┘   │
+│  ┌─────────────────────┐     ┌──────────────────────────────┐                │
+│  │  dlopen(cdylib)      │     │  AtomicParameterBridge        │                │
+│  │  → params (existing) │     │  (Arc<AtomicF32> per param)   │                │
+│  │  → vtable (new)      │     │  WS writes ──► audio reads    │                │
+│  └──────────┬──────────┘     └──────────────┬───────────────┘                │
+│             │                               │                                │
+│             ▼                               ▼                                │
+│  ┌─────────────────────────────────────────────────────────────────┐          │
+│  │  cpal Input Callback                                           │          │
+│  │  OS Mic → deinterleave → FfiProcessor::process() → meters      │          │
+│  │                              (wraps vtable)           │        │          │
+│  │                                                       ▼        │          │
+│  │                                              rtrb SPSC (meters)│          │
+│  │  interleave processed audio → rtrb SPSC (audio) ──────┐        │          │
+│  └───────────────────────────────────────────────────────┼────────┘          │
+│                                                          │                   │
+│                                                          ▼                   │
+│  ┌─────────────────────────────────────────────────────────────────┐          │
+│  │  cpal Output Callback                                          │          │
+│  │  rtrb SPSC (audio) → speakers (silence on underflow)           │          │
+│  └─────────────────────────────────────────────────────────────────┘          │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────┐          │
+│  │  Tokio Meter Drain Task (16ms interval)                        │          │
+│  │  rtrb SPSC (meters) → WebSocket broadcast → Browser UI         │          │
+│  └─────────────────────────────────────────────────────────────────┘          │
+│                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -966,8 +973,9 @@ The vtable includes a `version` field (`DEV_PROCESSOR_VTABLE_VERSION`) so the CL
 - **`wavecraft_dev_create_processor`** (`wavecraft-macros` generated): FFI symbol exported by `wavecraft_plugin!` that returns the vtable. Every `extern "C"` function is wrapped in `catch_unwind` for panic safety.
 - **`PluginParamLoader`** (`wavecraft-bridge`): Extended to optionally load the vtable alongside parameters via `try_load_processor_vtable()`. Missing vtable → graceful fallback to metering-only mode.
 - **`DevAudioProcessor`** trait (`wavecraft-dev-server`): Simplified audio processing trait without associated types — compatible with both FFI and direct Rust usage.
-- **`FfiProcessor`** (`wavecraft-dev-server`): Safe wrapper around the vtable's opaque `*mut c_void` instance. Implements `DevAudioProcessor` and calls through vtable function pointers. `Drop` implementation calls the vtable's `drop` function.
-- **`AudioServer`** (`wavecraft-dev-server`): Accepts any `DevAudioProcessor` implementation. Uses cpal for OS audio capture and forwards meter data to the WebSocket server.
+- **`FfiProcessor`** (`wavecraft-dev-server`): Safe wrapper around the vtable's opaque `*mut c_void` instance. Implements `DevAudioProcessor` and calls through vtable function pointers. Uses stack-allocated `[*mut f32; 2]` for channel pointers (no heap allocation). `Drop` implementation calls the vtable's `drop` function.
+- **`AudioServer`** (`wavecraft-dev-server`): Full-duplex audio I/O server. Opens paired cpal input + output streams connected by an `rtrb` SPSC ring buffer. Input callback: deinterleave → `FfiProcessor::process()` → compute meters → write to audio ring buffer. Output callback: read from ring buffer → speakers (silence on underflow). Meter data is delivered via a separate `rtrb` SPSC ring buffer to a tokio drain task for WebSocket broadcast. All buffers are pre-allocated before stream creation. Gracefully falls back to input-only (metering) mode if no output device is available.
+- **`AtomicParameterBridge`** (`wavecraft-dev-server`): Lock-free bridge for passing parameter values from the WebSocket thread to the audio thread. Contains a `HashMap<String, Arc<AtomicF32>>` built once at startup (immutable structure, mutable atomic values). WS thread writes via `store(Relaxed)`, audio thread reads via `load(Relaxed)`. Zero allocations, zero locks on the audio thread.
 
 #### Memory and Lifetime Safety
 
@@ -979,16 +987,27 @@ All processor memory is allocated and freed **inside the dylib** via vtable func
 
 #### Backward Compatibility
 
-Plugins compiled with older SDK versions that don't export `wavecraft_dev_create_processor` continue to work — the CLI falls back to metering-only mode with a clear informational message. Version mismatches in the vtable also trigger a graceful fallback with upgrade guidance.
+Plugins compiled with older SDK versions that don't export `wavecraft_dev_create_processor` continue to work — the CLI falls back to silent meters (zeros) with a clear informational message. No synthetic/animated meter data is generated; the honest representation is "no audio processing is happening." Version mismatches in the vtable also trigger a graceful fallback with upgrade guidance.
+
+#### Parameter Sync in Dev Mode
+
+The `AtomicParameterBridge` enables lock-free parameter flow from the browser UI to the audio thread:
+
+1. **UI** sends `setParameter("gain", 0.75)` via WebSocket
+2. **WS thread** calls `DevServerHost::set_parameter()` which writes to both `InMemoryParameterHost` (for IPC queries) and `AtomicParameterBridge` (for audio thread)
+3. **Audio thread** reads `bridge.read("gain")` via `AtomicF32::load(Relaxed)` at block boundaries
+
+The FFI vtable v1 `process()` does not accept parameters directly. The bridge infrastructure is in place for future vtable v2 which will add a `set_parameter` function pointer. Currently, parameter values are available to the audio callback but not injected into the processor (documented known limitation of the `wavecraft_plugin!` macro).
 
 ### Benefits
 
 - **Real engine communication**: Browser UI talks to real Rust backend
 - **Hot module reload**: Vite HMR for instant UI updates
 - **Same IPC layer**: Identical JSON-RPC protocol as production
-- **Robust reconnection**: Automatic recovery from connection drops
+- **Robust reconnection**: Automatic recovery from connection drops; `useAllParameters` re-fetches parameters on reconnection
 - **Graceful degradation**: UI shows "Connecting..." when disconnected
-- **In-process audio**: Real DSP processing via FFI with zero user boilerplate
+- **In-process audio**: Full-duplex audio I/O (input → process → output) via FFI with zero user boilerplate
+- **Lock-free parameter sync**: UI parameter changes reach the audio thread via `AtomicParameterBridge` with zero allocations
 
 ⸻
 

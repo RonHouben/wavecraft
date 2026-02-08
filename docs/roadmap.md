@@ -8,15 +8,14 @@ This document tracks implementation progress against the milestones defined in t
 
 ```
 ┌──────────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP           v0.9.1 | 81%   │
+│  WAVECRAFT ROADMAP          v0.10.0 | 86%   │
 ├──────────────────────────────────────────────┤
-│  ✅ M1-M17   Foundation → OS Audio Input    │
-│  ⏳ M18      Audio Pipeline Fixes           │
+│  ✅ M1-M18   Foundation → Audio Pipeline    │
 │  ⏳ M18.5    Template Structure Improvement │
 │  ⏳ M19      User Testing                   │
 │  ⏳ M20      V1.0 Release                   │
 ├──────────────────────────────────────────────┤
-│  [████████████████████████████████] 17/21   │
+│  [█████████████████████████████████] 18/21  │
 └──────────────────────────────────────────────┘
 ```
 
@@ -1027,41 +1026,65 @@ Manual Tests:   Full flow validated (microphone → processor → UI)
 
 ---
 
-## Milestone 18: Audio Pipeline Fixes & Mocking Cleanup ⏳
+## Milestone 18: Audio Pipeline Fixes & Mocking Cleanup ✅
 
 > **Goal:** Fix critical audio gaps in dev mode (`wavecraft start`) — add audio output, bridge parameter changes to DSP, and remove unused synthetic metering. Ensures beta testers get a working audio development experience.
 
-**Status: ⏳ Not Started**
+**Status: ✅ Complete**
 
 **Branch:** `feature/audio-pipeline-fixes`
-**Target Version:** `0.10.0` (minor — significant audio pipeline changes)
+**Version:** `0.10.0` (minor — significant audio pipeline changes)
 
-**User Stories:** [docs/feature-specs/audio-pipeline-fixes/user-stories.md](feature-specs/audio-pipeline-fixes/user-stories.md)
+**User Stories:** [docs/feature-specs/_archive/audio-pipeline-fixes/user-stories.md](feature-specs/_archive/audio-pipeline-fixes/user-stories.md)
+**Low-Level Design:** [docs/feature-specs/_archive/audio-pipeline-fixes/low-level-design-audio-pipeline-fixes.md](feature-specs/_archive/audio-pipeline-fixes/low-level-design-audio-pipeline-fixes.md)
+**Implementation Plan:** [docs/feature-specs/_archive/audio-pipeline-fixes/implementation-plan.md](feature-specs/_archive/audio-pipeline-fixes/implementation-plan.md)
+**QA Report:** [docs/feature-specs/_archive/audio-pipeline-fixes/QA-report.md](feature-specs/_archive/audio-pipeline-fixes/QA-report.md)
+**Architectural Review:** [docs/feature-specs/_archive/audio-pipeline-fixes/architectural-review.md](feature-specs/_archive/audio-pipeline-fixes/architectural-review.md)
 
 | Task | Status | Notes |
 |------|--------|-------|
 | **Audio Output** | | |
-| Add output stream to `AudioServer` | ⏳ | cpal `build_output_stream()` for effects path |
-| Audio flow: input → process → output | ⏳ | Full duplex effects processing |
-| Meters from processed output | ⏳ | Compute meters post-DSP, not pre-DSP |
+| Add output stream to `AudioServer` | ✅ | cpal `build_output_stream()` for effects path |
+| Audio flow: input → process → output | ✅ | Full duplex via rtrb SPSC ring buffer |
+| Meters from processed output | ✅ | Computed post-DSP via rtrb ring buffer |
 | **Parameter Sync (Dev Mode)** | | |
-| Lock-free param bridge (WS → audio thread) | ⏳ | `Arc<AtomicF32>` or snapshot struct |
-| `setParameter` reaches `FfiProcessor::process()` | ⏳ | Block-level parameter updates |
+| Lock-free param bridge (WS → audio thread) | ✅ | `AtomicParameterBridge` with `Arc<AtomicF32>` per param |
+| `setParameter` reaches `FfiProcessor::process()` | ✅ | Block-level updates via `Relaxed` atomics |
 | **Mocking Cleanup** | | |
-| Remove `MeterGenerator` from `wavecraft-metering` | ⏳ | `dev.rs` module removed |
-| Update fallback behavior (zeros, not fake animation) | ⏳ | Silent meters when no vtable |
+| Remove `MeterGenerator` from `wavecraft-metering` | ✅ | `dev.rs` module deleted |
+| Update fallback behavior (zeros, not fake animation) | ✅ | Silent meters when no vtable |
 | **UI Fix** | | |
-| `useAllParameters()` retry on connection | ⏳ | Event-driven re-fetch on WS connect |
+| `useAllParameters()` retry on connection | ✅ | Event-driven re-fetch on WS connect |
 | **Testing & Documentation** | | |
-| Manual testing with real audio | ⏳ | Gain plugin: slider changes audio output |
-| Architecture docs updated | ⏳ | high-level-design.md |
+| Manual testing with real audio | ✅ | Gain plugin: slider changes audio output |
+| Architecture docs updated | ✅ | high-level-design.md, coding-standards.md |
+
+**Key Deliverables:**
+- **Full-duplex AudioServer** — Separate cpal input/output streams connected by rtrb SPSC ring buffer
+- **AtomicParameterBridge** — Lock-free `HashMap<String, Arc<AtomicF32>>` for WS→audio thread parameter sync
+- **RT-safe meter delivery** — rtrb ring buffer replacing tokio mpsc channel (zero allocations on audio thread)
+- **MeterGenerator removed** — Synthetic metering infrastructure deleted; fallback = silent zeros
+- **UI reconnection retry** — `useAllParameters` re-fetches on WebSocket connection
+- **Pre-allocated audio buffers** — FfiProcessor uses stack arrays instead of heap Vec
+
+**Test Results:**
+```
+Engine Tests: 146 passed (including 18 audio-feature tests)
+UI Tests:     28 passed
+CLI Tests:    57 passed
+Linting:      All checks passed (cargo fmt, clippy, ESLint, Prettier)
+QA:           PASS (3 Medium findings fixed, 0 Critical/High)
+Architecture: APPROVED (full compliance with coding standards)
+```
 
 **Success Criteria:**
-- [ ] `wavecraft start` produces audible processed output
-- [ ] Moving a gain slider in browser UI audibly changes output level
-- [ ] No synthetic/fake meter data in production code
-- [ ] Parameters load correctly even on slow WebSocket connection
-- [ ] All existing tests still pass
+- [x] `wavecraft start` produces audible processed output
+- [x] Moving a gain slider in browser UI audibly changes output level
+- [x] No synthetic/fake meter data in production code
+- [x] Parameters load correctly even on slow WebSocket connection
+- [x] All existing tests still pass
+
+**Completed:** 2026-02-08
 
 ---
 
@@ -1228,6 +1251,7 @@ Manual Tests:   Full flow validated (microphone → processor → UI)
 
 | Date | Update |
 |------|--------|
+| 2026-02-08 | **Milestone 18 complete (v0.10.0)**: Audio Pipeline Fixes & Mocking Cleanup fully implemented. (1) Full-duplex `AudioServer` with separate cpal input/output streams connected by `rtrb` SPSC ring buffer — audio now flows input → FfiProcessor::process() → output. (2) `AtomicParameterBridge` with `Arc<AtomicF32>` per parameter for lock-free WebSocket→audio thread parameter sync. (3) `MeterGenerator` deleted, fallback = silent zeros. (4) `useAllParameters` re-fetches on WebSocket reconnection. QA found 3 Medium issues (meter rate, tokio allocating on audio thread, unnecessary unsafe impl) — all fixed. 146 engine + 28 UI + 57 CLI tests passing. Architecture docs updated (high-level-design.md full-duplex diagram, coding-standards.md new patterns). Archived to `_archive/audio-pipeline-fixes/`. Progress: 86% (18/21 milestones). |
 | 2026-02-08 | **Milestone 18.5 added: Template Structure Improvement (Processors Module)**: New quality-of-life milestone to improve CLI template structure with `processors/` module and complete oscillator example. Teaches proper code organization from day one while providing engaging learning experience with real audio generation. Post-M18 feature per user request and architectural approval. Includes ~60-line oscillator implementation with phase accumulation, complete Processor trait example, safe defaults (gain-only chain), and comprehensive documentation updates. Target version 0.11.0 (minor — breaking template change). Renumbered User Testing (M19→M20) and V1.0 Release (M20→M21). Priority: Medium (quality improvement). Estimated effort: 3-5 days. Progress: 81% (17/21 milestones). |
 | 2026-02-08 | **Milestone 18 created: Audio Pipeline Fixes & Mocking Cleanup**: New milestone to fix two critical audio architecture gaps before user testing. (1) Add audio output stream to `AudioServer` (input → process → output), (2) Bridge parameter changes from WebSocket to audio thread via lock-free mechanism, (3) Remove synthetic `MeterGenerator` and related mocking infrastructure (YAGNI cleanup), (4) Fix `useAllParameters()` race condition on WebSocket connect. Items promoted from backlog. User Testing renumbered to M19, V1.0 Release to M20. Target version 0.10.0. Progress: 85% (17/20 milestones). |
 | 2026-02-08 | **Dev Audio FFI Abstraction (v0.9.1)**: Replaced template-embedded `dev-audio.rs` binary with in-process FFI/dlopen approach. The CLI now loads the user's DSP processor from their compiled cdylib via C-ABI FFI vtable (`DevProcessorVTable` in `wavecraft-protocol`). `wavecraft_plugin!` macro auto-generates FFI exports with `catch_unwind` for panic safety. Users never see or touch audio capture code — template simplified (removed `src/bin/`, 6 optional deps, `[[bin]]` section). Backward compatible: plugins compiled without vtable gracefully fall back to metering-only mode. 7 implementation phases across 5 crates (protocol, macros, bridge, dev-server, CLI). 150+ engine tests, 28 UI tests passing. QA: 4/5 findings resolved (1 minor deferred — low risk), all Critical/Major/Medium addressed. Architecture docs updated (high-level-design.md, coding-standards.md). Archived to `_archive/dev-audio-ffi/`. |
@@ -1326,17 +1350,15 @@ Manual Tests:   Full flow validated (microphone → processor → UI)
 15. ✅ **Milestone 15**: Developer Tooling Polish — Comprehensive workspace cleanup (v0.8.6)
 16. ✅ **Milestone 16**: Macro API Simplification — Reduced boilerplate, automatic metadata (v0.9.0)
 17. ✅ **Milestone 17**: OS Audio Input for Dev Mode — Automatic audio input detection and processing (v0.8.0)
+18. ✅ **Milestone 18**: Audio Pipeline Fixes — Full-duplex audio, parameter sync, mocking cleanup (v0.10.0)
 
 ### Up Next
-18. ⏳ **Milestone 18**: Audio Pipeline Fixes — Audio output, param sync, mocking cleanup (v0.10.0)
 19. ⏳ **Milestone 18.5**: Template Structure Improvement — Processors module with oscillator example (v0.11.0)
 20. ⏳ **Milestone 19**: User Testing — Beta testing with real plugin developers (v1.0.0-beta)
 21. ⏳ **Milestone 20**: V1.0 Release — First stable production release (v1.0.0)
 
 ### Immediate Tasks
-1. ⏳ Begin Milestone 18 (Audio Pipeline Fixes) — fix audio output, param sync in dev mode
-2. ⏳ Remove synthetic meter generator (mocking cleanup)
-3. ⏳ Fix `useAllParameters()` retry on connection
-4. ⏳ After M18: Begin M18.5 (Template Structure) — add processors/ module pattern
+1. ⏳ Begin Milestone 18.5 (Template Structure) — add processors/ module pattern
+2. ⏳ After M18.5: Begin Milestone 19 (User Testing) — recruit beta testers
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (crates.io publication, additional example plugins, etc.)
