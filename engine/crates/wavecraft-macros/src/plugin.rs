@@ -610,6 +610,104 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
                 let _ = ::std::ffi::CString::from_raw(ptr);
             }
         }
+
+        // ================================================================
+        // FFI Exports for Dev Audio Processing (used by `wavecraft start`)
+        // ================================================================
+
+        /// Returns a C-ABI vtable for creating and driving the plugin's audio
+        /// processor from the CLI dev server (in-process audio via FFI).
+        ///
+        /// Each inner function is wrapped in `catch_unwind` to prevent panics
+        /// from unwinding across the FFI boundary.
+        #[unsafe(no_mangle)]
+        pub extern "C" fn wavecraft_dev_create_processor() -> #krate::__internal::DevProcessorVTable {
+            use ::std::ffi::c_void;
+
+            type __P = __ProcessorType;
+            type __Params = <__P as #krate::Processor>::Params;
+
+            extern "C" fn create() -> *mut c_void {
+                let result = ::std::panic::catch_unwind(::std::panic::AssertUnwindSafe(|| {
+                    let processor = ::std::boxed::Box::new(<__P as ::std::default::Default>::default());
+                    ::std::boxed::Box::into_raw(processor) as *mut c_void
+                }));
+                match result {
+                    Ok(ptr) => ptr,
+                    Err(_) => ::std::ptr::null_mut(),
+                }
+            }
+
+            extern "C" fn process(
+                instance: *mut c_void,
+                channels: *mut *mut f32,
+                num_channels: u32,
+                num_samples: u32,
+            ) {
+                let _ = ::std::panic::catch_unwind(::std::panic::AssertUnwindSafe(|| {
+                    if instance.is_null() || channels.is_null() || num_channels == 0 || num_samples == 0 {
+                        return;
+                    }
+                    let processor = unsafe { &mut *(instance as *mut __P) };
+                    let num_ch = num_channels as usize;
+                    let num_samp = num_samples as usize;
+
+                    // Build &mut [&mut [f32]] from raw pointers.
+                    // SAFETY: Caller guarantees valid pointers and bounds (documented in vtable).
+                    // Note: Vec allocation is acceptable here — this runs in the dev audio server
+                    // context (not a DAW audio thread), where latency requirements are softer.
+                    let mut channel_slices: ::std::vec::Vec<&mut [f32]> = (0..num_ch)
+                        .map(|ch| unsafe {
+                            let ptr = *channels.add(ch);
+                            ::std::slice::from_raw_parts_mut(ptr, num_samp)
+                        })
+                        .collect();
+
+                    let transport = #krate::Transport::default();
+                    let params = <__Params as ::std::default::Default>::default();
+
+                    #krate::Processor::process(processor, &mut channel_slices, &transport, &params);
+                }));
+                // If panic occurred, audio buffer is left unmodified (pass-through)
+            }
+
+            extern "C" fn set_sample_rate(instance: *mut c_void, sample_rate: f32) {
+                let _ = ::std::panic::catch_unwind(::std::panic::AssertUnwindSafe(|| {
+                    if instance.is_null() {
+                        return;
+                    }
+                    let processor = unsafe { &mut *(instance as *mut __P) };
+                    #krate::Processor::set_sample_rate(processor, sample_rate);
+                }));
+            }
+
+            extern "C" fn reset(instance: *mut c_void) {
+                let _ = ::std::panic::catch_unwind(::std::panic::AssertUnwindSafe(|| {
+                    if instance.is_null() {
+                        return;
+                    }
+                    let processor = unsafe { &mut *(instance as *mut __P) };
+                    #krate::Processor::reset(processor);
+                }));
+            }
+
+            extern "C" fn drop_fn(instance: *mut c_void) {
+                let _ = ::std::panic::catch_unwind(::std::panic::AssertUnwindSafe(|| {
+                    if !instance.is_null() {
+                        let _ = unsafe { ::std::boxed::Box::from_raw(instance as *mut __P) };
+                    }
+                }));
+            }
+
+            #krate::__internal::DevProcessorVTable {
+                version: #krate::__internal::DEV_PROCESSOR_VTABLE_VERSION,
+                create,
+                process,
+                set_sample_rate,
+                reset,
+                drop: drop_fn,
+            }
+        }
     };
 
     TokenStream::from(expanded)

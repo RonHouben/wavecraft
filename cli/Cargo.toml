@@ -24,6 +24,7 @@ heck = "0.5"
 chrono = "0.4"
 syn = "2.0"
 ctrlc = "3"
+serde_json = "1.0"
 
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.29", features = ["signal"] }
@@ -56,4 +57,8 @@ version = "0.9.0"
 [dependencies.wavecraft-dev-server]
 path = "../engine/crates/wavecraft-dev-server"
 version = "0.9.0"
+
+[features]
+default = ["audio-dev"]
+audio-dev = ["wavecraft-dev-server/audio"]
 

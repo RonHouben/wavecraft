@@ -770,6 +770,94 @@ let mut temp_buffer = vec![0.0; buffer.samples()]; // VIOLATES REAL-TIME SAFETY
 - Alternative approaches (copying buffers) violate real-time safety (allocations on audio thread)
 - This pattern is used in the macro-generated code (`wavecraft-macros/src/plugin.rs`)
 
+### FFI Safety Patterns
+
+**Rule:** All `extern "C"` functions that cross a dylib boundary must use `catch_unwind` to prevent panics from unwinding across the FFI boundary. All `unsafe` blocks interacting with FFI must have `// SAFETY:` annotations.
+
+Wavecraft uses C-ABI FFI vtables to load user DSP processors from compiled cdylibs at runtime (see [Dev Audio via FFI](./high-level-design.md#dev-audio-via-ffi) in the high-level design). This pattern requires strict safety discipline.
+
+**Panic Safety at FFI Boundaries:**
+
+```rust
+// ✅ Every extern "C" function wraps its body in catch_unwind
+#[unsafe(no_mangle)]
+pub extern "C" fn wavecraft_dev_create_processor() -> DevProcessorVTable {
+    extern "C" fn process(
+        instance: *mut c_void,
+        channels: *mut *mut f32,
+        num_channels: u32,
+        num_samples: u32,
+    ) {
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            // ... actual processing ...
+        }));
+        // If panic occurred, audio buffer is left unmodified (silence/passthrough)
+    }
+    // ... other vtable functions similarly wrapped ...
+}
+
+// ❌ Missing catch_unwind — UB if user DSP code panics
+extern "C" fn process(instance: *mut c_void, ...) {
+    let processor = unsafe { &mut *(instance as *mut P) };
+    processor.process(...); // Panic here = undefined behavior
+}
+```
+
+**Memory Ownership Across Dylib Boundaries:**
+
+```rust
+// ✅ All alloc/dealloc happens inside the dylib — no cross-allocator issues
+extern "C" fn create() -> *mut c_void {
+    Box::into_raw(Box::new(Processor::default())) as *mut c_void  // dylib allocates
+}
+
+extern "C" fn drop_fn(instance: *mut c_void) {
+    if !instance.is_null() {
+        let _ = unsafe { Box::from_raw(instance as *mut Processor) };  // dylib frees
+    }
+}
+
+// ❌ CLI frees memory allocated by dylib — allocator mismatch, UB
+let processor = unsafe { Box::from_raw(ptr as *mut SomeType) };  // WRONG allocator
+```
+
+**VTable Versioning:**
+
+```rust
+// ✅ Version field enables graceful fallback on ABI mismatch
+#[repr(C)]
+pub struct DevProcessorVTable {
+    pub version: u32,  // Must equal DEV_PROCESSOR_VTABLE_VERSION
+    pub create: extern "C" fn() -> *mut c_void,
+    pub process: extern "C" fn(...),
+    // ...
+}
+```
+
+**SAFETY Comments for FFI `unsafe` Blocks:**
+
+```rust
+// ✅ Comprehensive SAFETY annotations
+// SAFETY: `library` is a valid loaded Library. If the symbol doesn't exist,
+// `get()` returns Err which `.ok()?` converts to None (graceful fallback).
+// The symbol type is trusted to match the macro-generated `extern "C"` function.
+let symbol: Symbol<DevProcessorVTableFn> =
+    unsafe { library.get(b"wavecraft_dev_create_processor\0").ok()? };
+
+// ❌ Bare unsafe without justification
+let symbol = unsafe { library.get(b"wavecraft_dev_create_processor\0").ok()? };
+```
+
+**Key Invariants:**
+
+| Invariant | Enforcement |
+|-----------|-------------|
+| No panics across FFI | `catch_unwind` in every `extern "C"` function |
+| No cross-allocator frees | All alloc/dealloc inside dylib via vtable functions |
+| Library outlives processor | Struct field order (`_library` last) + caller variable order |
+| ABI compatibility | `#[repr(C)]` structs, `extern "C"` fn pointers, version field |
+| Null pointer safety | Guards in `create()` return, `drop_fn()`, and `FfiProcessor::new()` |
+
 ---
 
 ## Testing

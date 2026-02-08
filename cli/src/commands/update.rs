@@ -141,10 +141,7 @@ fn get_installed_version() -> Result<String> {
         .context("Failed to run 'wavecraft --version'")?;
 
     if !output.status.success() {
-        bail!(
-            "'wavecraft --version' exited with status {}",
-            output.status
-        );
+        bail!("'wavecraft --version' exited with status {}", output.status);
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);

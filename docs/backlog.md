@@ -12,10 +12,23 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 
 ---
 
+## SDK Audio Architecture Gaps
+
+Reported from developer testing session (2026-02-08). These are framework-level issues that can't be properly solved at the plugin level.
+
+| Item | Severity | Notes |
+|------|----------|-------|
+| AudioServer has no output stream | Critical | `AudioServer` only opens `build_input_stream()` — reads mic data for metering but never calls `processor.process()`. No `build_output_stream()` exists. Should support both input-passthrough (effects) and output-only (generators/oscillators) modes. For generators, needs a `cpal` output stream that calls `processor.process()` with empty buffers and sends the result to speakers. **Crate:** `wavecraft-dev-server` |
+| Parameter changes don't reach audio thread | Critical | The `wavecraft_plugin!` macro's `build_processor_params()` always returns default params — nih-plug UI params are visible and automatable, but `Processor::process()` never receives updated values (documented known limitation). Need to bridge nih-plug `FloatParam` values into the `Params` struct passed to `process()` each block. For dev-server path, WebSocket `setParameter` messages should update a shared `Arc<AtomicF32>` or lock-free ring buffer that the audio callback reads. **Crates:** `wavecraft-macros`, `wavecraft-dev-server` |
+| UI race condition on parameter load | Minor | `useAllParameters()` fires once on mount before the WebSocket connects, fails silently, and never retries. Either have `WebSocketTransport` emit a "connected" event that triggers a re-fetch, or have `useAllParameters()` retry when connection state changes. **Package:** `@wavecraft/core` |
+
+---
+
 ## Developer Experience
 
 | Item | Notes |
 |------|-------|
+| Remove audio signal mocking to UI | Remove all audio signal mocking infrastructure since it's not currently needed. Reduces complexity and maintenance burden. Can be re-implemented later if real audio visualization is required. YAGNI principle — keep the codebase lean. |
 | Browser audio input via WASM | Enable testing UI with real audio input (mic, files, test tones) in browser dev mode. Tiered architecture: Mock DSP (JS) for fast HMR, optional WASM DSP for integration testing. Rust remains parameter source of truth. See [high-level design](feature-specs/audio-input-via-wasm/high-level-design.md). |
 | SDK dev mode: crate version mismatch in `wavecraft start` audio binary | In SDK dev mode (CLI run via `cargo run`), the main `wavecraft` dependency is patched to use local **path** deps, but `wavecraft-dev-server` and `wavecraft-dsp` still resolve via **git tag**. Cargo treats these as separate crates, making their `Processor` trait incompatible (`E0277`). Fix: CLI's auto-detection should also patch transitive dev deps to path dependencies. **Does not affect end users** (git tag deps are consistent). Only affects SDK contributors testing locally. |
 
@@ -100,6 +113,8 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 | Date | Update |
 |------|--------|
 | 2026-02-08 | **Bug found**: SDK dev mode crate version mismatch — `wavecraft start` audio binary fails when CLI is run via `cargo run` due to mixed path/git dependency resolution. Added to Developer Experience section. Does not affect end users. |
+| 2026-02-08 | **Backlog addition:** SDK Audio Architecture Gaps — three issues from developer test session: no audio output in dev-server (critical), params don't reach `process()` (critical), UI param load race condition (minor). All are framework-level gaps in `wavecraft-dev-server`, `wavecraft-macros`, and `@wavecraft/core`. |
+| 2026-02-08 | **Backlog addition:** Remove audio signal mocking to UI — reduces complexity and technical debt by removing unused infrastructure. YAGNI principle applied. |
 | 2026-02-08 | **Item promoted to Milestone 15**: Comprehensive workspace cleanup (`cargo xtask clean` extension) moved from backlog to roadmap as new Milestone 15 (Developer Tooling Polish). Target version 0.8.6. User stories created at `docs/feature-specs/workspace-cleanup/user-stories.md`. |
 | 2026-02-08 | **Items promoted to Milestone 14**: CLI `-v`/`--version` flag and CLI `update` command moved from backlog to new Milestone 14 (CLI Enhancements). Target version 0.8.1. |
 | 2026-02-07 | **Backlog addition:** Add CLI `update` command to update all project dependencies and packages (Rust + npm) in a plugin workspace. |
