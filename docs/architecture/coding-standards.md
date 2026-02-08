@@ -702,6 +702,105 @@ Code running on the audio thread must:
 - Use atomic types for shared state
 - Use SPSC ring buffers for data transfer
 
+### Lock-Free Parameter Bridge Pattern
+
+**Rule:** Use `AtomicF32` with immutable `HashMap` structure for passing parameter values from non-RT threads to the audio thread.
+
+When parameter values need to flow from a WebSocket/UI thread to the audio callback, the bridge must be lock-free on the read side. The `AtomicParameterBridge` pattern achieves this:
+
+1. Build a `HashMap<String, Arc<AtomicF32>>` once at startup (one entry per parameter)
+2. Never mutate the `HashMap` after construction — only the atomic values change
+3. Non-RT thread writes via `AtomicF32::store(value, Ordering::Relaxed)`
+4. Audio thread reads via `AtomicF32::load(Ordering::Relaxed)`
+
+**Do:**
+```rust
+use atomic_float::AtomicF32;
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::atomic::Ordering;
+
+pub struct AtomicParameterBridge {
+    params: HashMap<String, Arc<AtomicF32>>,  // Immutable after construction
+}
+
+impl AtomicParameterBridge {
+    pub fn new(parameters: &[ParameterInfo]) -> Self {
+        let params = parameters.iter()
+            .map(|p| (p.id.clone(), Arc::new(AtomicF32::new(p.default))))
+            .collect();
+        Self { params }
+    }
+
+    // Called from WebSocket thread (non-RT)
+    pub fn write(&self, id: &str, value: f32) {
+        if let Some(atomic) = self.params.get(id) {
+            atomic.store(value, Ordering::Relaxed);
+        }
+    }
+
+    // Called from audio thread (RT-safe: single atomic load, no allocation)
+    pub fn read(&self, id: &str) -> Option<f32> {
+        self.params.get(id).map(|a| a.load(Ordering::Relaxed))
+    }
+}
+```
+
+**Don't:**
+```rust
+// ❌ RwLock on audio thread (blocks, can deadlock)
+let params = Arc::new(RwLock::new(HashMap::new()));
+// in audio callback:
+let value = params.read().unwrap().get("gain").copied();
+
+// ❌ Mutex on audio thread
+let value = params.lock().unwrap().get("gain").copied();
+```
+
+**Rationale:**
+- `Relaxed` ordering is sufficient: parameter updates are not synchronization points. A one-block delay (~5-12ms) is imperceptible.
+- The `HashMap` is immutable after construction, so `get()` on the audio thread is safe (no reallocation possible).
+- `Arc<AtomicF32>` is `Send + Sync`, so the bridge is auto-derived as `Send + Sync` by the compiler — no `unsafe impl` needed.
+
+### SPSC Ring Buffer for Inter-Thread Communication
+
+**Rule:** Use `rtrb` SPSC ring buffers for passing data from audio callbacks to async tasks.
+
+When data needs to flow from a real-time audio callback to a non-RT consumer (e.g., meter data → WebSocket broadcast), use an `rtrb::RingBuffer` instead of `tokio` channels. Tokio channels (`mpsc::UnboundedSender`) allocate a linked-list node per `send()`, violating real-time safety.
+
+**Do:**
+```rust
+// Pre-allocate ring buffer before stream creation
+let (mut meter_producer, meter_consumer) =
+    rtrb::RingBuffer::<MeterUpdateNotification>::new(64);
+
+// Audio callback (RT-safe: no allocation)
+let _ = meter_producer.push(notification);  // Drops on overflow — acceptable for metering
+
+// Async task (non-RT)
+tokio::spawn(async move {
+    let mut interval = tokio::time::interval(Duration::from_millis(16));
+    loop {
+        interval.tick().await;
+        let mut latest = None;
+        while let Ok(frame) = meter_consumer.pop() {
+            latest = Some(frame);  // Keep only the latest
+        }
+        if let Some(frame) = latest {
+            ws_handle.broadcast(&frame).await;
+        }
+    }
+});
+```
+
+**Don't:**
+```rust
+// ❌ tokio unbounded channel in audio callback (allocates per send)
+let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+// in audio callback:
+let _ = tx.send(meter_data);  // Allocates a linked-list node!
+```
+
 ### nih-plug Buffer Write Pattern
 
 **Rule:** When converting nih-plug buffers to wavecraft DSP format, use the unsafe pointer write pattern with comprehensive safety documentation.
