@@ -3853,6 +3853,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.18",
+ "tracing",
  "wavecraft-protocol",
 ]
 
@@ -3886,7 +3887,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "wavecraft-bridge",
- "wavecraft-dsp",
  "wavecraft-protocol",
  "wry",
 ]
