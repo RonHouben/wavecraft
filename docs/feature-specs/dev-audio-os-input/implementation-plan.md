@@ -292,47 +292,11 @@ fn main() -> anyhow::Result<()> {
 
 ## Phase 3: CLI Integration
 
-**Goal:** Extend CLI start command to spawn audio binary when `--with-audio` flag is used.
+**Goal:** Extend CLI start command to automatically spawn audio binary when available, with graceful fallback.
 
-### 3.1 Add `--with-audio` Flag to Start Command
+**Design Decision:** No new flags. `wavecraft start` always attempts to start audio, falling back gracefully if unavailable. This provides the best developer experience - zero configuration for new projects, no breaking changes for existing projects.
 
-**File:** `cli/src/commands/start.rs`
-
-- **Action:** Add new boolean flag to `StartCommand` struct
-- **Why:** Opt-in audio mode
-- **Dependencies:** None
-- **Risk:** Low
-
-```rust
-#[derive(Debug)]
-pub struct StartCommand {
-    pub port: u16,
-    pub ui_port: u16,
-    pub install: bool,
-    pub no_install: bool,
-    pub verbose: bool,
-    pub with_audio: bool,  // New field
-}
-```
-
-**File:** `cli/src/main.rs`
-
-```rust
-#[command(name = "start")]
-struct StartArgs {
-    // ... existing args ...
-    
-    /// Enable OS audio input (requires dev-audio binary)
-    #[arg(long)]
-    with_audio: bool,
-}
-```
-
-**Expected outcome:** `wavecraft start --with-audio` accepted by CLI parser.
-
----
-
-### 3.2 Detect Audio Binary Presence
+### 3.1 Detect Audio Binary Presence
 
 **File:** `cli/src/commands/start.rs`
 
@@ -355,7 +319,7 @@ fn has_dev_audio_binary(project: &ProjectMarkers) -> Result<bool> {
 
 ---
 
-### 3.3 Compile Audio Binary
+### 3.2 Compile Audio Binary (Conditional)
 
 **File:** `cli/src/commands/start.rs`
 
@@ -377,7 +341,7 @@ fn compile_audio_binary(project: &ProjectMarkers, verbose: bool) -> Result<()> {
         .context("Failed to build audio binary")?;
     
     if !status.success() {
-        anyhow::bail!("Audio binary compilation failed. Check errors above.");
+        return Err(anyhow::anyhow!("Audio binary compilation failed"));
     }
     
     println!("{} Audio binary compiled", style("✓").green());
@@ -385,11 +349,11 @@ fn compile_audio_binary(project: &ProjectMarkers, verbose: bool) -> Result<()> {
 }
 ```
 
-**Expected outcome:** Audio binary compiles successfully or shows clear error.
+**Expected outcome:** Audio binary compiles successfully, or returns error for graceful handling.
 
 ---
 
-### 3.4 Spawn Audio Binary Process
+### 3.3 Spawn Audio Binary Process (Conditional)
 
 **File:** `cli/src/commands/start.rs`
 
@@ -421,11 +385,11 @@ fn spawn_audio_server(
 }
 ```
 
-**Expected outcome:** Audio binary runs as independent process, CLI tracks PID for cleanup.
+**Expected outcome:** Audio binary runs as independent process if available, CLI tracks PID for cleanup.
 
 ---
 
-### 3.5 Add Process Cleanup on Exit
+### 3.4 Add Process Cleanup on Exit
 
 **File:** `cli/src/commands/start.rs`
 
@@ -435,15 +399,20 @@ fn spawn_audio_server(
 - **Risk:** Low
 
 ```rust
-fn run_dev_servers_with_audio(
+fn run_dev_servers(
     project: &ProjectMarkers,
     ws_port: u16,
     ui_port: u16,
     verbose: bool,
 ) -> Result<()> {
-    // ... spawn WebSocket server, Vite, audio binary ...
+    // ... spawn WebSocket server, Vite ...
     
-    let mut children = vec![ws_server_child, vite_child, audio_child];
+    let mut children = vec![ws_server_child, vite_child];
+    
+    // Optionally spawn audio binary
+    if let Some(audio_child) = try_spawn_audio_server(project, ws_port, verbose) {
+        children.push(audio_child);
+    }
     
     // Register Ctrl+C handler
     ctrlc::set_handler(move || {
@@ -460,11 +429,11 @@ fn run_dev_servers_with_audio(
 }
 ```
 
-**Expected outcome:** Ctrl+C cleanly stops all spawned processes.
+**Expected outcome:** Ctrl+C cleanly stops all spawned processes (audio binary included if running).
 
 ---
 
-### 3.6 Add Helpful Error Messages
+### 3.5 Add Helpful Informational Messages
 
 **File:** `cli/src/commands/start.rs`
 
@@ -663,12 +632,15 @@ fn test_audio_binary_compiles() {
 
 **Test steps:**
 1. Generate test plugin: `wavecraft create TestAudioPlugin`
-2. Start with audio: `cd TestAudioPlugin && wavecraft start --with-audio`
-3. Verify audio input flows to speakers
-4. Adjust gain parameter in UI, verify audio changes
-5. Check meter levels match audio monitoring
-6. Measure latency with click test (<50ms target)
-7. Test Ctrl+C shutdown (no orphaned processes)
+2. Start dev server: `cd TestAudioPlugin && wavecraft start`
+3. Verify audio binary compiles and starts automatically
+4. Verify audio input flows to speakers
+5. Adjust gain parameter in UI, verify audio changes
+6. Check meter levels match audio monitoring
+7. Measure latency with click test (<50ms target)
+8. Test Ctrl+C shutdown (no orphaned processes)
+9. Test graceful fallback: Remove dev-audio binary, verify start still works
+10. Test error handling: Introduce compilation error, verify informative message
 
 **Expected outcome:** All manual tests pass, documented in test-plan.md.
 
@@ -703,12 +675,13 @@ fn test_audio_binary_compiles() {
 - **Risk:** Low
 
 **Test cases:**
-- Missing audio binary → helpful error message
+- Missing audio binary → helpful informational message, dev server continues
+- Audio compilation error → graceful fallback with warning
 - Audio device unavailable → graceful fallback
 - WebSocket connection fails → retry and report
-- Audio binary crashes → CLI detects and reports
+- Audio binary crashes → CLI detects and reports, continues serving UI
 
-**Expected outcome:** All error scenarios show actionable messages.
+**Expected outcome:** All error scenarios show informative messages without blocking dev server.
 
 ---
 
@@ -727,24 +700,33 @@ fn test_audio_binary_compiles() {
 
 **Content to add:**
 ```markdown
-## Testing with Real Audio
+## Audio Testing
 
-For testing audio processing with microphone input:
+`wavecraft start` automatically enables real audio input testing when available:
 
 ```bash
-wavecraft start --with-audio
+wavecraft start
 ```
 
-This mode:
-- Processes real audio from your system microphone
-- Uses the same `Processor` code as your plugin
-- Updates meters in real-time
-- Requires the `dev-audio` binary (included in templates)
+**What happens:**
+- If your project has a `dev-audio` binary configured, it automatically compiles and starts
+- Audio flows from your system microphone through your `Processor` code
+- Meters update in real-time with actual audio levels
+- Parameter changes from the UI are applied instantly to the audio stream
 
-**Note:** UI hot-reloading still works while audio is running.
+**Setting up audio (new projects include this by default):**
+1. Add to `engine/Cargo.toml`:
+   ```toml
+   [[bin]]
+   name = "dev-audio"
+   path = "src/bin/dev-audio.rs"
+   ```
+2. Create `engine/src/bin/dev-audio.rs` (see SDK templates)
+
+**Note:** If the audio binary is not present or fails to compile, the dev server continues with browser-only mode. UI hot-reloading works with or without audio.
 ```
 
-**Expected outcome:** Getting Started guide covers audio testing.
+**Expected outcome:** Getting Started guide covers automatic audio testing.
 
 ---
 
@@ -820,7 +802,7 @@ Phase 1 (Protocol) → Phase 2 (Audio Binary) → Phase 3 (CLI) → Phase 4 (Tem
 1. Protocol extensions (1.1-1.3)
 2. AudioServer API (2.1)
 3. Audio callback implementation (2.2)
-4. CLI spawning logic (3.4)
+4. CLI conditional spawning logic (3.1-3.3)
 5. Integration testing (5.2, 5.3)
 
 **Parallelizable work:**
@@ -888,15 +870,16 @@ Phase 1 (Protocol) → Phase 2 (Audio Binary) → Phase 3 (CLI) → Phase 4 (Tem
 
 ## Success Criteria
 
-- [ ] `wavecraft start --with-audio` compiles audio binary and starts all servers
-- [ ] Audio flows from microphone → user's `Processor` → speakers
+- [ ] `wavecraft start` automatically attempts to compile and start audio binary if available
+- [ ] Audio flows from microphone → user's `Processor` → speakers when audio binary is present
 - [ ] Meters in UI reflect processed audio levels in real-time
 - [ ] Parameter changes in UI affect audio processing within 50ms
 - [ ] UI hot-reloading (Vite HMR) works while audio is running
 - [ ] Audio latency <50ms on MacBook hardware
 - [ ] <1% xrun rate at 256 sample buffer size
 - [ ] Ctrl+C cleanly stops all processes (no orphans)
-- [ ] Missing audio binary shows helpful error message
+- [ ] Missing audio binary shows helpful informational message but doesn't block dev server
+- [ ] Audio binary compilation errors show helpful message and fall back gracefully
 - [ ] Template-generated projects compile audio binary without errors
 - [ ] Documentation covers audio workflow and troubleshooting
 - [ ] All automated tests pass
@@ -911,7 +894,7 @@ Phase 1 (Protocol) → Phase 2 (Audio Binary) → Phase 3 (CLI) → Phase 4 (Tem
 - Phase 2: Audio Server Library (Steps 2.1-2.4)
 
 **Week 2: CLI Integration**
-- Phase 3: CLI Integration (Steps 3.1-3.6)
+- Phase 3: CLI Integration (Steps 3.1-3.5)
 - Phase 4: Template Updates (Steps 4.1-4.3)
 
 **Week 3: Testing & Polish**
