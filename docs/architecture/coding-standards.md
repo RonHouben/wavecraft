@@ -836,6 +836,34 @@ beforeEach(() => {
 - Types: `vitest/globals`, `@testing-library/jest-dom`
 - npm packages: `@wavecraft/core`, `@wavecraft/components` available via workspace
 
+### Testing CLI-Generated Plugins
+
+When SDK changes affect generated plugins (templates, CLI, or engine crates), validate that `wavecraft create` produces working projects.
+
+**Standard workflow using `--output` flag:**
+
+```bash
+# Generate test plugin into SDK's build directory (gitignored)
+cargo run --manifest-path cli/Cargo.toml -- create TestPlugin \
+  --output target/tmp/test-plugin \
+  --local-sdk
+
+# Test the generated plugin
+cd target/tmp/test-plugin
+cargo run --manifest-path /path/to/wavecraft/cli/Cargo.toml -- start --install
+```
+
+**Why use `--output`:**
+- Test artifacts live in `target/tmp/` (gitignored)
+- Easy cleanup: `rm -rf target/tmp/test-plugin`
+- `--local-sdk` uses path dependencies, so local changes are tested without publishing
+
+**Test checklist for CLI/template changes:**
+1. `wavecraft create` completes without errors
+2. `wavecraft start` builds without compile errors
+3. `cargo xtask bundle` produces valid plugin bundles
+4. Plugin loads in a DAW
+
 ---
 
 ## Linting & Formatting

@@ -181,6 +181,38 @@ pkill -f "cargo xtask dev"
 - Layout modifications
 - New visual features
 
+### Testing CLI-Generated Plugins
+
+When SDK changes affect generated plugins (templates, engine crates, CLI), you must validate `wavecraft create` produces working projects.
+
+**Standard workflow using `--output` flag:**
+
+```bash
+# Generate test plugin into SDK's build directory (gitignored)
+cargo run --manifest-path cli/Cargo.toml -- create TestPlugin \
+  --output target/tmp/test-plugin \
+  --local-sdk
+
+# Test the generated plugin
+cd target/tmp/test-plugin
+cargo run --manifest-path /path/to/wavecraft/cli/Cargo.toml -- start --install
+```
+
+**Why `--output` is the standard approach:**
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| `--output target/tmp/...` | Isolated, gitignored, easy cleanup | Slightly longer command |
+| Create in separate directory | Clean separation | Must remember to delete after |
+| Create in current directory | Quick | Pollutes SDK repo with test artifacts |
+
+**Test checklist for CLI/template changes:**
+
+1. `wavecraft create` completes without errors
+2. `wavecraft start` builds without compile errors (no `include_dir` panics, etc.)
+3. `cargo xtask bundle` produces valid plugin bundles
+4. Plugin loads in a DAW
+
 ### Why Not Docker/act?
 
 The `cargo xtask ci-check` approach is **~26x faster** than running the full CI pipeline via Docker:

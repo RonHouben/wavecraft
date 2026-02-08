@@ -93,6 +93,37 @@ All contributions must include appropriate tests:
 
 See [docs/architecture/coding-standards.md#testing](docs/architecture/coding-standards.md#testing) for testing guidelines.
 
+### Testing CLI-Generated Plugins
+
+When making changes to the SDK that affect generated plugins (templates, CLI, or engine crates), you must validate that `wavecraft create` produces a working project.
+
+**Standard workflow using `--output` flag:**
+
+```bash
+# Generate a test plugin into your local SDK checkout's build directory
+cargo run --manifest-path cli/Cargo.toml -- create TestPlugin \
+  --output target/tmp/test-plugin \
+  --local-sdk
+
+# Build and test the generated plugin
+cd target/tmp/test-plugin
+cargo run --manifest-path /path/to/wavecraft/cli/Cargo.toml -- start --install
+```
+
+**Why use `--output`?**
+
+- Isolates test artifacts from your working directory
+- Generated project lives inside SDK repo's `target/` (gitignored)
+- Easy cleanup: `rm -rf target/tmp/test-plugin`
+- Avoids confusion between SDK development and test plugins
+
+**Key test scenarios:**
+
+1. `wavecraft create` completes without errors
+2. `wavecraft start` builds without compile errors
+3. `cargo xtask bundle` produces valid plugin bundles
+4. Plugin loads in a DAW without crashes
+
 ## Documentation
 
 Update documentation when:

@@ -9,6 +9,7 @@
 use anyhow::{Context, Result};
 use console::style;
 use std::io::{self, Write};
+use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc;
@@ -120,6 +121,9 @@ fn run_dev_servers(
     );
     println!();
 
+    ensure_port_available(ws_port, "WebSocket server", "--port")?;
+    ensure_port_available(ui_port, "UI dev server", "--ui-port")?;
+
     // 1. Build the plugin in debug mode
     println!("{} Building plugin...", style("→").cyan());
     let build_status = Command::new("cargo")
@@ -192,13 +196,19 @@ fn run_dev_servers(
     );
 
     let ui_port_str = format!("--port={}", ui_port);
-    let ui_server = Command::new("npm")
-        .args(["run", "dev", "--", &ui_port_str])
+    let mut ui_server = Command::new("npm")
+        .args(["run", "dev", "--", &ui_port_str, "--strictPort"])
         .current_dir(&project.ui_dir)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .spawn()
         .context("Failed to start UI dev server")?;
+
+    // Give the UI server a moment to fail fast (e.g., port already in use).
+    thread::sleep(Duration::from_millis(300));
+    if let Some(status) = ui_server.try_wait().context("Failed to check UI dev server status")? {
+        anyhow::bail!("UI dev server exited early with status {}", status);
+    }
 
     // Print success message
     println!();
@@ -212,6 +222,22 @@ fn run_dev_servers(
 
     // Wait for shutdown (keeps runtime alive)
     wait_for_shutdown(ui_server, runtime)
+}
+
+fn ensure_port_available(port: u16, label: &str, flag: &str) -> Result<()> {
+    match TcpListener::bind(("0.0.0.0", port)) {
+        Ok(listener) => {
+            drop(listener);
+            Ok(())
+        }
+        Err(err) => anyhow::bail!(
+            "{} port {} is already in use ({}). Stop the process using it or run `wavecraft start {}` with a free port.",
+            label,
+            port,
+            err,
+            flag
+        ),
+    }
 }
 
 /// Find the plugin dylib in the target directory.
@@ -343,7 +369,7 @@ fn library_matches_name(path: &Path, expected_stem: &str, extension: &str) -> bo
 }
 
 /// Set up Ctrl+C handler and wait for shutdown.
-fn wait_for_shutdown(ui_server: Child, _runtime: tokio::runtime::Runtime) -> Result<()> {
+fn wait_for_shutdown(mut ui_server: Child, _runtime: tokio::runtime::Runtime) -> Result<()> {
     let (tx, rx) = mpsc::channel();
 
     ctrlc::set_handler(move || {
@@ -351,18 +377,43 @@ fn wait_for_shutdown(ui_server: Child, _runtime: tokio::runtime::Runtime) -> Res
     })
     .context("Failed to set Ctrl+C handler")?;
 
-    // Wait for Ctrl+C
-    let _ = rx.recv();
-
-    println!();
-    println!("{} Shutting down servers...", style("→").cyan());
-
-    // Kill UI server
-    kill_process(ui_server)?;
-
-    // Runtime is dropped when it goes out of scope, which stops the WebSocket server
-    println!("{} Servers stopped", style("✓").green());
-    Ok(())
+    loop {
+        match rx.recv_timeout(Duration::from_millis(200)) {
+            Ok(_) => {
+                println!();
+                println!("{} Shutting down servers...", style("→").cyan());
+                kill_process(ui_server)?;
+                println!("{} Servers stopped", style("✓").green());
+                return Ok(());
+            }
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                if let Some(status) = ui_server
+                    .try_wait()
+                    .context("Failed to check UI dev server status")?
+                {
+                    println!();
+                    println!(
+                        "{} UI dev server exited unexpectedly ({}).",
+                        style("✗").red(),
+                        status
+                    );
+                    println!("{} Shutting down servers...", style("→").cyan());
+                    println!("{} Servers stopped", style("✓").green());
+                    return Err(anyhow::anyhow!(
+                        "UI dev server exited unexpectedly with status {}",
+                        status
+                    ));
+                }
+            }
+            Err(mpsc::RecvTimeoutError::Disconnected) => {
+                println!();
+                println!("{} Shutting down servers...", style("→").cyan());
+                kill_process(ui_server)?;
+                println!("{} Servers stopped", style("✓").green());
+                return Ok(());
+            }
+        }
+    }
 }
 
 /// Kill a child process gracefully.
