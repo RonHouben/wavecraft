@@ -61,12 +61,22 @@ impl Processor for Oscillator {
         _transport: &Transport,
         params: &Self::Params,
     ) {
+        // Guard: if set_sample_rate() hasn't been called yet, leave buffer unchanged.
+        if self.sample_rate == 0.0 {
+            return;
+        }
+
         // How far the phase advances per sample:
         //   phase_delta = frequency / sample_rate
         // e.g. 440 Hz at 44 100 S/s → 0.00998 per sample
         let phase_delta = params.frequency / self.sample_rate;
 
+        // Save the starting phase so every channel receives the same waveform.
+        // Without this, the right channel would be phase-shifted relative to left.
+        let start_phase = self.phase;
+
         for channel in buffer.iter_mut() {
+            self.phase = start_phase;
             for sample in channel.iter_mut() {
                 // Generate a sine wave and scale by level
                 *sample = (self.phase * std::f32::consts::TAU).sin() * params.level;

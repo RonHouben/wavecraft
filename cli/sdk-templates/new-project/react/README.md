@@ -40,7 +40,9 @@ cargo xtask install
 
 This copies the bundles to your system plugin directories.
 
---- ## Project Structure
+---
+
+## Project Structure
 
 ```
 {{plugin_name}}/
@@ -239,15 +241,7 @@ cargo xtask clean
 - Parameter changes apply instantly to the audio stream
 - UI hot-reloading works while audio is running
 
-**Audio binary setup (included in new projects):**
-The template includes `engine/src/bin/dev-audio.rs` and the necessary configuration in `engine/Cargo.toml`:
-```toml
-[[bin]]
-name = "dev-audio"
-path = "src/bin/dev-audio.rs"
-```
-
-**Note:** If the audio binary fails to compile or you're working on a machine without audio hardware, the dev server continues with browser-only mode. You'll see helpful messages about enabling audio if it's not configured.
+**Note:** If audio hardware is unavailable, the dev server continues in browser-only mode with metering. Audio processing uses FFI to load your plugin's DSP code automatically — no extra binary needed.
 
 ---
 
@@ -271,7 +265,7 @@ These fields are automatically used for plugin metadata (vendor, URL, email).
 ```rust
 wavecraft_plugin! {
     name: "{{plugin_name_title}}",    // Display name in DAW
-    signal: SignalChain![{{plugin_name_pascal}}Gain],  // Processor chain entry point
+    signal: SignalChain![InputGain, OutputGain],  // Processor chain entry point
 }
 ```
 
