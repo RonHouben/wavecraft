@@ -1,5 +1,11 @@
 //! Tests for ProcessorParams derive macro
 
+// The derive macro generates code using `::wavecraft::` paths.
+// In user projects, `wavecraft` is the Cargo rename for `wavecraft-nih_plug`.
+// For these tests, we alias `wavecraft_dsp` as `wavecraft` so the generated
+// paths resolve correctly.
+extern crate wavecraft_dsp as wavecraft;
+
 use wavecraft_dsp::{ParamRange, ProcessorParams};
 use wavecraft_macros::ProcessorParams;
 

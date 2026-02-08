@@ -16,7 +16,7 @@ pub mod util;
 
 // Re-export key types for convenience
 pub use wavecraft_core::prelude as core_prelude;
-pub use wavecraft_dsp::{ParamRange, Processor, ProcessorParams, Transport};
+pub use wavecraft_dsp::{ParamRange, ParamSpec, Processor, ProcessorParams, Transport};
 pub use wavecraft_metering::{MeterConsumer, MeterFrame, MeterProducer, create_meter_channel};
 pub use wavecraft_protocol::ParameterInfo;
 
@@ -25,6 +25,11 @@ pub use wavecraft_core::wavecraft_processor;
 
 // Re-export the wavecraft_plugin! proc-macro from wavecraft_macros
 pub use wavecraft_macros::wavecraft_plugin;
+
+// Re-export the ProcessorParams derive macro from wavecraft_macros.
+// This coexists with the ProcessorParams *trait* re-exported from wavecraft_dsp
+// (derive macros and traits live in different namespaces).
+pub use wavecraft_macros::ProcessorParams;
 
 /// Hidden module for macro-generated code.
 ///

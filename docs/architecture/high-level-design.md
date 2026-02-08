@@ -493,8 +493,10 @@ my-plugin/
 ├── engine/
 │   ├── Cargo.toml           ← Depends on wavecraft-nih_plug (git tag, Cargo rename)
 │   └── src/
-│       ├── lib.rs           ← Plugin entry point
-│       └── dsp.rs           ← User's Processor implementation
+│       ├── lib.rs           ← Plugin assembly (signal chain + metadata)
+│       └── processors/      ← Custom DSP processors
+│           ├── mod.rs        ← Module exports
+│           └── oscillator.rs ← Example: sine-wave oscillator
 │
 ├── ui/
 │   ├── package.json         ← Depends on @wavecraft/core + @wavecraft/components

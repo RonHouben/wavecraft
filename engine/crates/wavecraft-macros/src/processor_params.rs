@@ -75,7 +75,7 @@ fn expand_derive(input: &DeriveInput) -> syn::Result<TokenStream> {
         };
 
         quote! {
-            wavecraft_dsp::ParamSpec {
+            ::wavecraft::ParamSpec {
                 name: #name,
                 id_suffix: #id_suffix,
                 range: #range,
@@ -87,9 +87,9 @@ fn expand_derive(input: &DeriveInput) -> syn::Result<TokenStream> {
     });
 
     Ok(quote! {
-        impl wavecraft_dsp::ProcessorParams for #struct_name {
-            fn param_specs() -> &'static [wavecraft_dsp::ParamSpec] {
-                static SPECS: [wavecraft_dsp::ParamSpec; #spec_count] = [
+        impl ::wavecraft::ProcessorParams for #struct_name {
+            fn param_specs() -> &'static [::wavecraft::ParamSpec] {
+                static SPECS: [::wavecraft::ParamSpec; #spec_count] = [
                     #(#spec_items),*
                 ];
                 &SPECS
@@ -232,7 +232,7 @@ fn parse_param_attr(field_name: &str, attr: &syn::Attribute) -> syn::Result<Para
     // Generate range TokenStream
     let range_tokens = if let Some(factor) = range_factor {
         quote! {
-            wavecraft_dsp::ParamRange::Skewed {
+            ::wavecraft::ParamRange::Skewed {
                 min: #min,
                 max: #max,
                 factor: #factor,
@@ -240,7 +240,7 @@ fn parse_param_attr(field_name: &str, attr: &syn::Attribute) -> syn::Result<Para
         }
     } else {
         quote! {
-            wavecraft_dsp::ParamRange::Linear {
+            ::wavecraft::ParamRange::Linear {
                 min: #min,
                 max: #max,
             }

@@ -176,7 +176,10 @@ my-plugin/
 ├── engine/                  # Rust audio engine
 │   ├── Cargo.toml           # Dependencies on wavecraft-* crates (git tags)
 │   └── src/
-│       └── lib.rs           # Plugin entry point (using declarative DSL)
+│       ├── lib.rs           # Plugin assembly (signal chain + metadata)
+│       └── processors/      # Your custom DSP processors
+│           ├── mod.rs        # Module exports
+│           └── oscillator.rs # Example: sine-wave oscillator
 │
 ├── ui/                      # React UI (TypeScript + Tailwind)
 │   ├── package.json         # Dependencies: @wavecraft/core + @wavecraft/components
@@ -187,6 +190,15 @@ my-plugin/
     └── src/main.rs          # xtask commands (bundle, dev, install, etc.)
 ```
 
+**Key files:**
+
+| File | Purpose |
+|------|---------|
+| `engine/src/lib.rs` | Plugin assembly — signal chain + `wavecraft_plugin!` DSL |
+| `engine/src/processors/` | Folder for your custom `Processor` implementations |
+| `engine/src/processors/oscillator.rs` | Example oscillator (sine wave, frequency + level) |
+| `ui/src/App.tsx` | User interface layout with parameter controls |
+
 **Note:** The generated project references:
 - **Rust crates** via git tags (e.g., `git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.0"`)
 - **npm packages** from the `@wavecraft` organization (`@wavecraft/core`, `@wavecraft/components`)
@@ -195,76 +207,114 @@ my-plugin/
 
 ## Implementing Your DSP
 
-The CLI-generated plugin uses the **declarative DSL** for quick setup. Your plugin is defined in `engine/src/lib.rs`:
+The CLI-generated plugin uses the **declarative DSL**. Your plugin is assembled in `engine/src/lib.rs`:
 
 ```rust
-use wavecraft_core::prelude::*;
+use wavecraft::prelude::*;
 
-// Define the processor chain (using built-in Gain processor)
-wavecraft_processor!(MyPluginGain => Gain);
+mod processors;
+use processors::Oscillator;
 
-// Generate the complete plugin
+// Named wrappers — the name becomes the parameter-ID prefix
+wavecraft_processor!(InputGain => Gain);
+wavecraft_processor!(MyOscillator => Oscillator);
+wavecraft_processor!(OutputGain => Gain);
+
+// Plugin metadata (vendor, URL, email) is derived from Cargo.toml
 wavecraft_plugin! {
     name: "My Plugin",
-    vendor: "My Company",
-    url: "https://example.com",
-    email: "info@example.com",
-    signal: MyPluginGain,
+    signal: SignalChain![InputGain, OutputGain],
+    // Enable the oscillator by switching to:
+    // signal: SignalChain![InputGain, MyOscillator, OutputGain],
 }
 ```
 
-### Adding Custom DSP
+Custom DSP code lives in the `engine/src/processors/` folder. The template includes a working oscillator example in `processors/oscillator.rs`.
 
-To implement custom processing, create your own processor struct and implement the `Processor` trait:
+### Writing a Custom Processor
+
+Every processor needs two parts: a **parameter struct** and a **processor struct**.
 
 ```rust
-use wavecraft_core::prelude::*;
+// engine/src/processors/oscillator.rs
+use wavecraft::prelude::*;
 
-pub struct MyProcessor {
+// 1. Define parameters with the derive macro
+#[derive(ProcessorParams, Default, Clone)]
+pub struct OscillatorParams {
+    #[param(range = "20.0..=5000.0", default = 440.0, unit = "Hz", factor = 2.5)]
+    pub frequency: f32,
+
+    #[param(range = "0.0..=1.0", default = 0.5, unit = "%")]
+    pub level: f32,
+}
+
+// 2. Implement the Processor trait
+#[derive(Default)]
+pub struct Oscillator {
     sample_rate: f32,
-    gain_smoother: f32,
+    phase: f32,
 }
 
-impl MyProcessor {
-    pub fn new() -> Self {
-        Self {
-            sample_rate: 44100.0,
-            gain_smoother: 0.0,
-        }
-    }
-}
+impl Processor for Oscillator {
+    type Params = OscillatorParams;
 
-impl Processor for MyProcessor {
-    fn prepare(&mut self, sample_rate: f32, _max_block_size: usize) {
+    fn set_sample_rate(&mut self, sample_rate: f32) {
         self.sample_rate = sample_rate;
     }
 
-    fn process(&mut self, _transport: &Transport, buffer: &mut Buffer) {
-        // Get parameter values (smoothed)
-        let target_gain = /* get from params */;
-        
-        // Process each sample
+    fn process(
+        &mut self,
+        buffer: &mut [&mut [f32]],
+        _transport: &Transport,
+        params: &Self::Params,
+    ) {
+        let phase_delta = params.frequency / self.sample_rate;
+
         for channel in buffer.iter_mut() {
             for sample in channel.iter_mut() {
-                // Simple gain with smoothing
-                self.gain_smoother += 0.001 * (target_gain - self.gain_smoother);
-                *sample *= self.gain_smoother;
+                *sample = (self.phase * std::f32::consts::TAU).sin() * params.level;
+                self.phase += phase_delta;
+                if self.phase >= 1.0 {
+                    self.phase -= 1.0;
+                }
             }
         }
     }
 
     fn reset(&mut self) {
-        self.gain_smoother = 0.0;
+        self.phase = 0.0;
     }
 }
 ```
 
 ### Key Concepts
 
-1. **`prepare()`** — Called when audio starts. Use for initialization.
-2. **`process()`** — Called for each audio buffer. Must be real-time safe!
-3. **`reset()`** — Called when playback stops. Clear delay lines, etc.
-4. **`Transport`** — Contains tempo, time signature, playhead position.
+1. **`Processor` trait** — Your audio processing logic.
+   - `process()` — Called per audio buffer. Must be real-time safe!
+   - `set_sample_rate()` — Called when sample rate changes.
+   - `reset()` — Called when playback stops. Clear delay lines, etc.
+2. **`ProcessorParams` derive** — Generates parameter metadata for UI + host automation.
+3. **`Transport`** — Contains tempo, time signature, playhead position.
+4. **`SignalChain![]`** — Chains processors in order. Each processor gets its own namespaced parameters.
+
+### Adding a Processor to Your Project
+
+1. Create a file: `engine/src/processors/filter.rs`
+2. Implement `Processor` + `ProcessorParams` (see oscillator example)
+3. Export in `processors/mod.rs`:
+   ```rust
+   pub mod filter;
+   pub use filter::Filter;
+   ```
+4. Wire into the signal chain in `lib.rs`:
+   ```rust
+   use processors::{Oscillator, Filter};
+   wavecraft_processor!(MyFilter => Filter);
+   // signal: SignalChain![InputGain, MyOscillator, MyFilter, OutputGain],
+   ```
+
+The UI automatically discovers new parameters — no React changes needed.
 
 ### Real-Time Safety Rules
 
@@ -278,27 +328,33 @@ The `process()` method runs on the audio thread. You **must not**:
 
 ## Defining Parameters
 
-Use the `wavecraft_params!` macro to declare your parameters:
+Parameters are defined using the `#[derive(ProcessorParams)]` macro on a struct:
 
 ```rust
-use wavecraft_core::prelude::*;
+use wavecraft::prelude::*;
 
-wavecraft_params! {
-    Gain: { id: 0, name: "Gain", range: -24.0..=24.0, default: 0.0, unit: "dB" },
-    Mix: { id: 1, name: "Mix", range: 0.0..=1.0, default: 1.0, unit: "%" },
-    Frequency: { id: 2, name: "Frequency", range: 20.0..=20000.0, default: 1000.0, unit: "Hz" },
+#[derive(ProcessorParams, Default, Clone)]
+struct MyParams {
+    #[param(range = "-24.0..=24.0", default = 0.0, unit = "dB")]
+    gain: f32,
+
+    #[param(range = "0.0..=1.0", default = 1.0, unit = "%")]
+    mix: f32,
+
+    #[param(range = "20.0..=20000.0", default = 1000.0, unit = "Hz", factor = 2.5)]
+    frequency: f32,
 }
 ```
 
-### Parameter Fields
+### `#[param]` Attribute Options
 
-| Field | Description |
-|-------|-------------|
-| `id` | Unique numeric identifier (for host automation) |
-| `name` | Display name shown in UI and host |
-| `range` | Value range (inclusive) |
-| `default` | Initial value |
-| `unit` | Unit string (dB, %, Hz, ms, etc.) |
+| Attribute | Required | Description | Example |
+|-----------|----------|-------------|---------|
+| `range` | Yes | Value range as `"MIN..=MAX"` | `range = "0.0..=1.0"` |
+| `default` | No | Default value (midpoint if omitted) | `default = 0.0` |
+| `unit` | No | Unit string for display | `unit = "dB"` |
+| `factor` | No | Skew factor (>1 = log, <1 = exp) | `factor = 2.5` |
+| `group` | No | UI grouping name | `group = "Input"` |
 
 ---
 
