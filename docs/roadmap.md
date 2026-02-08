@@ -8,19 +8,16 @@ This document tracks implementation progress against the milestones defined in t
 
 ```
 ┌─────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP           v0.8.6 | 88%  │
+│  WAVECRAFT ROADMAP           v0.8.0 | 94%  │
 ├─────────────────────────────────────────────┤
-│  ✅ M1-M15   Foundation → Tooling Polish   │
-│  ⏳ M16      User Testing                   │
+│  ✅ M1-M16   Foundation → User Testing     │
 │  ⏳ M17      V1.0 Release                   │
 ├─────────────────────────────────────────────┤
-│  [████████████████████████████████] 15/17   │
+│  [██████████████████████████████████] 16/17 │
 └─────────────────────────────────────────────┘
 ```
 
 **See also:** [Backlog](backlog.md) — unprioritized ideas for future consideration
-
-> **Note:** CI/CD workflow verification in progress (2026-02-08)
 
 ---
 
@@ -844,11 +841,75 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 ---
 
-## Milestone 14: User Testing ⏳
+## Milestone 16: OS Audio Input for Dev Mode ✅
+
+**Status: ✅ Complete**
+
+**Branch:** `feature/dev-audio-os-input`  
+**Target Version:** `0.8.0` (minor — new CLI development feature)
+
+**User Stories:** [docs/feature-specs/_archive/dev-audio-os-input/user-stories.md](feature-specs/_archive/dev-audio-os-input/user-stories.md)
+
+> **Goal:** Enable OS microphone input during development mode for testing audio processing without plugin host. Simplifies development workflow by providing real audio input via `wavecraft start`.
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Protocol Extensions** | | |
+| Add `registerAudio` method | ✅ | JSON-RPC method for audio service registration |
+| Add `meterUpdate` notification | ✅ | Binary WebSocket message for meter data |
+| **Audio Server** | | |
+| Integrate cpal for OS audio input | ✅ | Cross-platform audio I/O library |
+| Implement real-time audio processing loop | ✅ | Microphone → Processor → meters |
+| WebSocket binary communication | ✅ | MessagePack for meter updates |
+| **CLI Integration** | | |
+| Auto-detect audio-dev binary | ✅ | Checks for dev-audio.rs in plugin projects |
+| Compile and start audio binary | ✅ | `cargo build` + process spawning |
+| Graceful fallback when missing | ✅ | Helpful messages, continues without audio |
+| **SDK Templates** | | |
+| Optional audio-dev binary in templates | ✅ | dev-audio.rs with feature flags |
+| Template README documentation | ✅ | Usage instructions for audio development |
+| **Testing** | | |
+| End-to-end testing | ✅ | WebSocket client verified meter updates |
+| Protocol serialization tests | ✅ | registerAudio and meterUpdate |
+| Template compilation tests | ✅ | All template projects compile |
+| Manual testing | ✅ | Full flow validated |
+
+**Key Deliverables:**
+- **Always-on design** — Zero configuration, automatic detection
+- **CLI integration** — `wavecraft start` detects, compiles, and starts audio binary
+- **Real-time safe** — No tokio panics from audio thread
+- **WebSocket protocol** — Binary meter updates via MessagePack
+- **Template support** — Optional audio-dev binary in SDK templates
+- **10 commits** on feature branch with comprehensive testing
+
+**Test Results:**
+```
+Protocol Tests: All passing (registerAudio, meterUpdate serialization)
+Template Tests: All projects compile successfully
+E2E Tests:      WebSocket client received meter updates with real audio
+Manual Tests:   Full flow validated (microphone → processor → UI)
+```
+
+**Success Criteria:**
+- [x] `wavecraft start` automatically detects and compiles audio binary
+- [x] Audio flows: microphone → user's Processor → meters → WebSocket → UI
+- [x] Meter updates verified with real audio values (RMS/peak)
+- [x] Graceful fallback when audio binary missing
+- [x] Zero configuration required (always-on design)
+- [x] Real-time safe (no tokio panics from audio thread)
+- [x] All template projects compile successfully
+
+**Completed:** 2026-02-08
+
+---
+
+## Milestone 17: User Testing ⏳
 
 > **Goal:** Validate Wavecraft with real plugin developers before V1 release. Gather feedback on SDK usability, documentation quality, and overall developer experience.
 
 **Depends on:** Milestone 13 (Internal Testing) ✅
+
+**Depends on:** Milestone 16 (OS Audio Input for Dev Mode) ✅
 
 **Target Version:** `0.9.0` (minor — user feedback may drive breaking changes)
 
@@ -885,11 +946,11 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 ---
 
-## Milestone 17: V1.0 Release 🎯
+## Milestone 18: V1.0 Release 🎯
 
 > **Goal:** Ship Wavecraft 1.0 — the first stable, production-ready release of the Rust + React audio plugin framework.
 
-**Depends on:** Milestone 16 (User Testing) — all critical feedback addressed.
+**Depends on:** Milestone 17 (User Testing) — all critical feedback addressed.
 
 **Target Version:** `1.0.0` (major — first stable release)
 
@@ -941,6 +1002,7 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 | Date | Update |
 |------|--------|
+| 2026-02-08 | **Milestone 16 complete (v0.8.0)**: OS Audio Input for Dev Mode fully implemented. `wavecraft start` automatically detects, compiles, and starts audio-dev binary if present in plugin projects. Audio flows from OS microphone → user's Processor → meters → WebSocket → UI. Zero configuration required (always-on design with feature flags). Real-time safe (no tokio panics from audio thread). Protocol extensions: `registerAudio` method and `meterUpdate` notification. Audio server with cpal integration. WebSocket client for binary communication. SDK templates with optional audio-dev binary. 10 commits on feature branch. End-to-end testing complete (WebSocket client received meter updates). All template projects compile successfully. Manual testing validates full flow. Ready to archive feature spec and merge to main. Progress: 94% (16/17 milestones). |
 | 2026-02-08 | **Milestone 15 complete (v0.8.6)**: Developer Tooling Polish fully implemented. Extended `cargo xtask clean` to comprehensively clean entire workspace (7 directories: engine/target, cli/target, ui/dist, ui/coverage, target/tmp, bundled/, AU wrapper). Added 3 helper functions (`dir_size`, `format_size`, `remove_dir`) with 8 unit tests. Clear output with checkmarks and disk space reporting. Idempotent (no errors on missing dirs). 12/12 manual tests passing (100%). QA approved (0 issues). Architectural review: Fully compliant with all conventions, serves as reference implementation for future xtask commands. Documentation updated (high-level-design.md, implementation-progress.md, test-plan.md, QA-report.md, architectural-review.md). Ready for PO handoff to archive feature spec and merge to main. Progress: 88% (15/17 milestones). |
 | 2026-02-08 | **Milestone 15 added: Developer Tooling Polish**: New milestone for extending `cargo xtask clean` to comprehensively clean the entire workspace (cli/target, ui/dist, ui/coverage, target/tmp). Small quality-of-life improvement to reclaim disk space with a single command. Renumbered User Testing (M15→M16) and V1.0 Release (M16→M17). Progress: 82% (14/17 milestones). Target version 0.8.6 (patch). Item promoted from backlog with user stories created. |
 | 2026-02-08 | **Milestone 14 complete (v0.8.5)**: CLI Enhancements fully implemented. Version flags (`-V`/`--version`) using clap's built-in support (follows Rust CLI conventions with capital V). Update command (`wavecraft update`) updates both Rust and npm dependencies with graceful degradation (continues on partial failure). 9 integration tests passing (4 version + 5 update), 18/22 manual tests. QA approved (0 Critical/High issues). Architectural review: ⭐⭐⭐⭐⭐ (5/5) — excellent architectural quality, idiomatic Rust, proper error handling. Documentation updated (high-level-design.md, sdk-getting-started.md, architectural-review.md). Ready for PO handoff to archive feature spec and merge to main. Progress: 88% (14/16 milestones). |
@@ -1030,17 +1092,16 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 13. ✅ **Milestone 13**: Internal Testing — CLI UX improvements, comprehensive validation (v0.8.0)
 14. ✅ **Milestone 14**: CLI Enhancements — Version flags and update command (v0.8.5)
 15. ✅ **Milestone 15**: Developer Tooling Polish — Comprehensive workspace cleanup (v0.8.6)
+16. ✅ **Milestone 16**: OS Audio Input for Dev Mode — Automatic audio input detection and processing (v0.8.0)
 
 ### Up Next
-16. ⏳ **Milestone 16**: User Testing — Beta testing with real plugin developers (v0.9.0)
-17. ⏳ **Milestone 17**: V1.0 Release — First stable production release (v1.0.0)
+17. ⏳ **Milestone 17**: User Testing — Beta testing with real plugin developers (v0.9.0)
+18. ⏳ **Milestone 18**: V1.0 Release — First stable production release (v1.0.0)
 
 ### Immediate Tasks
-1. ✅ Milestone 15 complete — Comprehensive workspace cleanup
-2. ✅ Archive feature spec to `docs/feature-specs/_archive/workspace-cleanup/`
-3. ⏳ Merge `feature/workspace-cleanup` to main
-4. ⏳ Merge `feature/cd-cli-cascade-publish` to main (ready, pending M15 merge)
-5. ⏳ Merge npm OIDC workflow fix to `main` and re-run publish validation
-6. ⏳ Begin Milestone 16 (User Testing) — recruit beta testers
+1. ✅ Milestone 16 complete — OS Audio Input for Dev Mode
+2. ⏳ Archive feature spec to `docs/feature-specs/_archive/dev-audio-os-input/`
+3. ⏳ Merge `feature/dev-audio-os-input` to main
+4. ⏳ Begin Milestone 17 (User Testing) — recruit beta testers
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (crates.io publication, additional example plugins, etc.)
