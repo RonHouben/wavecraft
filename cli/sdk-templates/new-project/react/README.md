@@ -91,15 +91,18 @@ use wavecraft::prelude::*;
 mod processors;
 use processors::Oscillator;
 
-wavecraft_processor!(InputGain    => Gain);        // Built-in gain
-wavecraft_processor!({{plugin_name_pascal}}Oscillator => Oscillator); // Your custom processor
-wavecraft_processor!(OutputGain   => Gain);        // Built-in gain
+// Built-in processors need named wrappers (parameter-ID prefix)
+wavecraft_processor!(InputGain  => Gain);
+wavecraft_processor!(OutputGain => Gain);
+
+// Custom processors (like Oscillator) are used directly in the signal chain.
+// They already implement the Processor trait with their own parameters.
 
 wavecraft_plugin! {
     name: "{{plugin_name_title}}",
     signal: SignalChain![InputGain, OutputGain],
     // To hear the oscillator, swap the line above with:
-    // signal: SignalChain![InputGain, {{plugin_name_pascal}}Oscillator, OutputGain],
+    // signal: SignalChain![InputGain, Oscillator, OutputGain],
 }
 ```
 
@@ -118,7 +121,7 @@ To hear it, switch the signal-chain line in `lib.rs`:
 signal: SignalChain![InputGain, OutputGain],
 
 // After (generates a 440 Hz sine wave)
-signal: SignalChain![InputGain, {{plugin_name_pascal}}Oscillator, OutputGain],
+signal: SignalChain![InputGain, Oscillator, OutputGain],
 ```
 
 Rebuild (`cargo xtask bundle`) and open the plugin in your DAW to hear the tone.
@@ -132,6 +135,7 @@ Follow these four steps:
 
 ```rust
 use wavecraft::prelude::*;
+use wavecraft::ProcessorParams;
 
 #[derive(ProcessorParams, Default, Clone)]
 pub struct FilterParams {
@@ -174,11 +178,10 @@ pub use filter::Filter;  // ← add
 // engine/src/lib.rs
 use processors::{Oscillator, Filter};
 
-wavecraft_processor!(MyFilter => Filter);
-
+// Custom processors are used directly — no wavecraft_processor! wrapper needed.
 wavecraft_plugin! {
     name: "{{plugin_name_title}}",
-    signal: SignalChain![InputGain, {{plugin_name_pascal}}Oscillator, MyFilter, OutputGain],
+    signal: SignalChain![InputGain, Oscillator, Filter, OutputGain],
 }
 ```
 
@@ -319,9 +322,11 @@ wavecraft-protocol = { git = "https://github.com/RonHouben/wavecraft", tag = "{{
 **`Processor` trait** — Implement this for custom DSP:
 ```rust
 pub trait Processor {
-    fn prepare(&mut self, sample_rate: f32, max_block_size: usize);
-    fn process(&mut self, transport: &Transport, buffer: &mut Buffer);
-    fn reset(&mut self);
+    type Params: ProcessorParams + Default + Send + Sync + 'static;
+
+    fn process(&mut self, buffer: &mut [&mut [f32]], transport: &Transport, params: &Self::Params);
+    fn set_sample_rate(&mut self, _sample_rate: f32) {}
+    fn reset(&mut self) {}
 }
 ```
 

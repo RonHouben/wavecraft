@@ -215,17 +215,19 @@ use wavecraft::prelude::*;
 mod processors;
 use processors::Oscillator;
 
-// Named wrappers — the name becomes the parameter-ID prefix
+// Built-in processors need named wrappers (parameter-ID prefix)
 wavecraft_processor!(InputGain => Gain);
-wavecraft_processor!(MyOscillator => Oscillator);
 wavecraft_processor!(OutputGain => Gain);
+
+// Custom processors (like Oscillator) are used directly — they already
+// implement the Processor trait with their own parameters.
 
 // Plugin metadata (vendor, URL, email) is derived from Cargo.toml
 wavecraft_plugin! {
     name: "My Plugin",
     signal: SignalChain![InputGain, OutputGain],
     // Enable the oscillator by switching to:
-    // signal: SignalChain![InputGain, MyOscillator, OutputGain],
+    // signal: SignalChain![InputGain, Oscillator, OutputGain],
 }
 ```
 
@@ -238,6 +240,7 @@ Every processor needs two parts: a **parameter struct** and a **processor struct
 ```rust
 // engine/src/processors/oscillator.rs
 use wavecraft::prelude::*;
+use wavecraft::ProcessorParams;
 
 // 1. Define parameters with the derive macro
 #[derive(ProcessorParams, Default, Clone)]
