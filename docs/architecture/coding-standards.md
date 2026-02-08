@@ -979,6 +979,41 @@ version = "0.2.0"  # Bump this when implementing a new feature
 
 The VersionBadge component in the UI displays this version (e.g., "v0.2.0").
 
+### SDK Distribution Versioning (CI Auto-Bump)
+
+**Rule:** Distribution packages (CLI, npm) are version-bumped automatically by CI. Do not manually bump these versions for publish-only changes.
+
+The CD pipeline (`continuous-deploy.yml`) automatically patches and publishes distribution packages when any SDK component changes. This ensures users always get the latest SDK via `cargo install wavecraft` or `npm install @wavecraft/core`.
+
+**Two version domains exist:**
+
+| Domain | Packages | Owner | Bumped By |
+|--------|----------|-------|-----------|
+| **Product Version** | `engine/Cargo.toml` workspace version | PO (decides), Coder (implements) | Manual — during feature development |
+| **Distribution Version** | CLI (`cli/Cargo.toml`), `@wavecraft/core`, `@wavecraft/components` | CI | Automatic — patch bump on any SDK change |
+
+**How it works:**
+1. A push to `main` triggers the CD pipeline
+2. `detect-changes` identifies which SDK components changed
+3. If **any** component changed, the CLI is also published (cascade trigger)
+4. For each package, CI compares the local version against the published registry version
+5. If the local version is not ahead, CI auto-bumps the patch version, commits with `[auto-bump]` marker, and publishes
+6. The `[auto-bump]` marker prevents infinite re-triggering of the pipeline
+
+**What developers should do:**
+- Bump `engine/Cargo.toml` workspace version for product milestones (as before)
+- Do **not** manually bump CLI or npm package versions unless making a deliberate breaking change
+- If you need a specific version (e.g., minor bump for a breaking CLI change), bump it in your PR — CI will respect the manual bump
+
+**What CI does:**
+- Auto-patches CLI, `@wavecraft/core`, `@wavecraft/components` when their local version ≤ registry version
+- Commits version bumps with `[auto-bump]` suffix to prevent infinite loops
+- Uses `git pull --rebase` before each push to handle parallel job conflicts
+
+**Infinite loop prevention:**
+- Commits with `[auto-bump]` in the message are skipped by the `detect-changes` job
+- This is preferred over `[skip ci]` because other workflows (CI, template validation) should still run on those commits
+
 ---
 
 ### Comments and Documentation
