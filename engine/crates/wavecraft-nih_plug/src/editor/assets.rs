@@ -1,17 +1,16 @@
 //! Static asset embedding for the plugin UI.
 //!
 //! This module conditionally embeds the built React UI assets at compile time.
-//! The assets are expected to be in `ui/dist/` relative to the wavecraft-nih_plug crate.
+//! The embedded fallback assets live in `assets/ui-dist/` within the crate.
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use include_dir::{Dir, include_dir};
 
-/// Embedded UI assets from ui/dist/.
+/// Embedded UI assets from the crate's fallback UI dist directory.
 ///
-/// This is built at compile time and includes all files from the ui/dist directory.
-/// The path is relative to the wavecraft-nih_plug crate root (../../../ui/dist from src/).
+/// This is built at compile time and includes all files from assets/ui-dist.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-static UI_ASSETS: Dir = include_dir!("$CARGO_MANIFEST_DIR/../../../ui/dist");
+static UI_ASSETS: Dir = include_dir!("$CARGO_MANIFEST_DIR/assets/ui-dist");
 
 /// Get an embedded asset by path.
 ///
@@ -19,7 +18,8 @@ static UI_ASSETS: Dir = include_dir!("$CARGO_MANIFEST_DIR/../../../ui/dist");
 ///
 /// # Arguments
 ///
-/// * `path` - The path relative to ui/dist/, e.g. "index.html" or "assets/index-xxx.js"
+/// * `path` - The path relative to the embedded UI dist directory,
+///   e.g. "index.html" or "assets/index-xxx.js"
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub fn get_asset(path: &str) -> Option<(&'static [u8], &'static str)> {
     // Normalize path by removing leading slash if present
@@ -86,7 +86,7 @@ mod tests {
 
     #[test]
     fn test_index_html_exists() {
-        // This test will fail if UI hasn't been built
+        // The fallback embedded index should always exist.
         let asset = get_asset("index.html");
         assert!(
             asset.is_some(),
