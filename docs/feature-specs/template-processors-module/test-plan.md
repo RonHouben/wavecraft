@@ -3,7 +3,7 @@
 ## Overview
 - **Feature**: Template Processors Module
 - **Spec Location**: `docs/feature-specs/template-processors-module/`
-- **Date**: 2026-02-08
+- **Date**: 2026-02-08 (Re-test #2 after doc fixes)
 - **Tester**: Tester Agent
 - **Branch**: `feature/template-processors-module`
 
@@ -11,8 +11,8 @@
 
 | Status | Count |
 |--------|-------|
-| ✅ PASS | 9 |
-| ❌ FAIL | 3 |
+| ✅ PASS | 11 |
+| ❌ FAIL | 1 |
 | ⏸️ BLOCKED | 0 |
 | ⬜ NOT RUN | 0 |
 
@@ -34,7 +34,7 @@
 
 **Status**: ✅ PASS
 
-**Actual Result**: All checks passed in 24.8s. Linting: Engine PASSED, UI PASSED. Tests: 142 engine tests + 28 UI tests all pass.
+**Actual Result**: All checks passed in 12.2s. Linting: Engine PASSED (fmt + clippy), UI PASSED (ESLint + Prettier). Tests: 148 engine tests (including doctests) + 28 UI tests all pass. Zero failures.
 
 ---
 
@@ -51,7 +51,7 @@
 
 **Status**: ✅ PASS
 
-**Actual Result**: All engine crate versions are 0.11.0 (workspace + wavecraft-protocol, wavecraft-dsp, wavecraft-bridge, wavecraft-macros, wavecraft-core, wavecraft-metering, wavecraft-dev-server). CLI depends on wavecraft versions 0.11.0. CLI's own version remains 0.9.1 (correct — CLI version is managed by CI auto-bump, not manually).
+**Actual Result**: `engine/Cargo.toml` shows `version = "0.11.0"`. All workspace crates compiled at 0.11.0 (confirmed in TC-005 build output: wavecraft-protocol, wavecraft-dsp, wavecraft-bridge, wavecraft-macros, wavecraft-core, wavecraft-metering, wavecraft-dev-server, wavecraft-nih_plug all at 0.11.0). CLI's own version remains 0.9.1 (correct — CLI version is managed by CI auto-bump, not manually).
 
 ---
 
@@ -164,15 +164,22 @@ These are all expected since Oscillator is imported but not used in the default 
 
 **Description**: Verify the generated README has correct project structure, oscillator instructions, and adding-processor guide.
 
+**Preconditions**: Previously ❌ FAIL (Issues #1 and #2) — Fixed in this iteration.
+
 **Steps**:
 1. Reviewed template README at `cli/sdk-templates/new-project/react/README.md`
-2. Checked for key sections and code accuracy
+2. Checked all code examples for compile-correctness
 
-**Expected Result**: README contains all key sections with accurate content.
+**Expected Result**: README contains all key sections with accurate, compilable code examples.
 
-**Status**: ❌ FAIL
+**Status**: ✅ PASS
 
-**Actual Result**: README has all required sections (Project Structure, Enabling the Oscillator Example, Adding a New Processor) but contains **incorrect code examples** that would fail to compile. See Issue #1 and Issue #2.
+**Actual Result**: All 3 previously reported issues are fixed:
+
+1. **Development Workflow code block (lines 85–106)**: `wavecraft_processor!` only wraps built-in types (`InputGain => Gain`, `OutputGain => Gain`). `Oscillator` used directly with comment explaining why. ✓
+2. **Enabling the Oscillator (lines 119–126)**: Shows `SignalChain![InputGain, Oscillator, OutputGain]` — direct use, no wrapper. ✓
+3. **Adding a New Processor step 4 (lines 175–184)**: `Filter` used directly in `SignalChain![]` with explicit comment: "Custom processors are used directly — no wavecraft_processor! wrapper needed." ✓
+4. **Core Traits — Processor trait (lines 323–330)**: Correct trait signature with `type Params`, proper `process()` signature, `set_sample_rate()`, `reset()` — all matching `wavecraft-dsp/src/traits.rs`. ✓
 
 ---
 
@@ -204,14 +211,31 @@ These are all expected since Oscillator is imported but not used in the default 
 
 **Description**: Verify SDK getting started guide reflects the new processors module structure.
 
-**Steps**:
-1. Reviewed `docs/guides/sdk-getting-started.md` for processors/ structure and trait API
+**Preconditions**: Previously ❌ FAIL (Issue #3) — Partially fixed in this iteration.
 
-**Expected Result**: Guide shows `processors/` directory in project structure, correct trait API.
+**Steps**:
+1. Reviewed `docs/guides/sdk-getting-started.md` main lib.rs example (lines 210–228)
+2. Reviewed oscillator code example (lines 241–290)
+3. Reviewed "Adding a Processor to Your Project" subsection (lines 306–320)
+
+**Expected Result**: All code examples correctly use custom processors directly (no `wavecraft_processor!` wrapping).
 
 **Status**: ❌ FAIL
 
-**Actual Result**: The guide correctly shows the `processors/` directory structure and includes an accurate oscillator example. However, it contains incorrect `wavecraft_processor!` usage for custom processors. See Issue #3.
+**Actual Result**: The **main** lib.rs example (lines 210–228) was correctly fixed — Oscillator is used directly without wrapping. However, the **"Adding a Processor to Your Project"** subsection (lines 315–319) was NOT fixed and still shows incorrect code:
+
+```rust
+// lines 315-319 — STILL INCORRECT
+use processors::{Oscillator, Filter};
+wavecraft_processor!(MyFilter => Filter);
+// signal: SignalChain![InputGain, MyOscillator, MyFilter, OutputGain],
+```
+
+Two errors remain:
+1. `wavecraft_processor!(MyFilter => Filter)` — `Filter` is a custom type, this won't compile
+2. `MyOscillator` — references a non-existent wrapper type (no `wavecraft_processor!(MyOscillator => ...)` is defined)
+
+See Issue #1 below.
 
 ---
 
@@ -237,78 +261,45 @@ These are all expected since Oscillator is imported but not used in the default 
 
 ## Issues Found
 
-### Issue #1: README template shows non-compiling `wavecraft_processor!` usage for custom processors
-
-- **Severity**: Medium
-- **Test Case**: TC-009
-- **Description**: The README template (`cli/sdk-templates/new-project/react/README.md`) shows wrapping custom processors with `wavecraft_processor!`, but the macro only supports built-in types (`Gain` and `Passthrough` — see `engine/crates/wavecraft-core/src/macros.rs` lines 58-98). These code examples would fail to compile if a user followed them.
-- **Expected**: Documentation should use custom processors directly in `SignalChain![]` (matching the actual `lib.rs` template)
-- **Actual**: Multiple incorrect examples throughout the README
-- **Locations**:
-  1. **Line 95**: `wavecraft_processor!({{plugin_name_pascal}}Oscillator => Oscillator);` — Won't compile
-  2. **Line 102**: `signal: SignalChain![InputGain, {{plugin_name_pascal}}Oscillator, OutputGain],` — References non-existent wrapper
-  3. **Lines 114–117** ("Enabling the Oscillator" section): Shows `SignalChain![InputGain, {{plugin_name_pascal}}Oscillator, OutputGain]` — Should be `SignalChain![InputGain, Oscillator, OutputGain]`
-  4. **Line 177**: `wavecraft_processor!(MyFilter => Filter);` — Won't compile for custom `Filter` type
-  5. **Line 180**: `signal: SignalChain![InputGain, {{plugin_name_pascal}}Oscillator, MyFilter, OutputGain],` — Uses non-existent wrappers
-- **Suggested Fix**:
-  - Remove `wavecraft_processor!` wrapping for custom processors in code examples
-  - Use custom processor types directly in `SignalChain![]`
-  - The "Development Workflow" section code block should match the actual generated `lib.rs`
-  - "Enabling the Oscillator" → `signal: SignalChain![InputGain, Oscillator, OutputGain]`
-  - "Adding a New Processor" step 4 → use `Filter` directly: `signal: SignalChain![InputGain, Oscillator, Filter, OutputGain]`
-
-### Issue #2: README template shows incorrect Processor trait signature
-
-- **Severity**: Medium
-- **Test Case**: TC-009
-- **Description**: The "Core Traits" section of the template README (lines 320–327) shows an outdated/incorrect Processor trait signature that doesn't match the actual trait in `engine/crates/wavecraft-dsp/src/traits.rs`.
-- **Expected** (actual trait):
-  ```rust
-  pub trait Processor: Send + 'static {
-      type Params: ProcessorParams + Default + Send + Sync + 'static;
-      fn process(&mut self, buffer: &mut [&mut [f32]], transport: &Transport, params: &Self::Params);
-      fn set_sample_rate(&mut self, _sample_rate: f32) {}
-      fn reset(&mut self) {}
-  }
-  ```
-- **Actual** (in README template):
-  ```rust
-  pub trait Processor {
-      fn prepare(&mut self, sample_rate: f32, max_block_size: usize);
-      fn process(&mut self, transport: &Transport, buffer: &mut Buffer);
-      fn reset(&mut self);
-  }
-  ```
-- **Differences**:
-  - Missing `Send + 'static` bound
-  - Missing `type Params` associated type
-  - Shows `prepare()` instead of `set_sample_rate()` (different name and signature)
-  - `process()` has wrong argument order and types (`Buffer` vs `&mut [&mut [f32]]`, no `params` parameter)
-- **Suggested Fix**: Replace the trait block in the README template with the actual trait signature from `wavecraft-dsp`.
-
-### Issue #3: SDK Getting Started guide shows incorrect `wavecraft_processor!` usage
+### Issue #1: SDK Getting Started guide — "Adding a Processor" section still uses incorrect `wavecraft_processor!` wrapping
 
 - **Severity**: Medium
 - **Test Case**: TC-011
-- **Description**: The SDK Getting Started guide (`docs/guides/sdk-getting-started.md`) shows wrapping custom processors with `wavecraft_processor!`, which won't compile.
-- **Locations**:
-  1. **Line 220**: `wavecraft_processor!(MyOscillator => Oscillator);` — Won't compile
-  2. **Line 228**: `signal: SignalChain![InputGain, MyOscillator, OutputGain],` — References non-existent wrapper
-  3. **Line 313**: `wavecraft_processor!(MyFilter => Filter);` — Won't compile
-  4. **Line 314**: `signal: SignalChain![InputGain, MyOscillator, MyFilter, OutputGain],` — Uses non-existent wrappers
-- **Suggested Fix**: Same approach as Issue #1 — use custom processors directly without `wavecraft_processor!` wrapping. The guide's signal chain examples should use `Oscillator` and `Filter` directly.
+- **Description**: The "Adding a Processor to Your Project" subsection in `docs/guides/sdk-getting-started.md` (lines 315–319) still shows wrapping a custom `Filter` processor with `wavecraft_processor!`, which only supports built-in types (`Gain` and `Passthrough`). It also references `MyOscillator` which doesn't exist.
+- **Expected**:
+  ```rust
+  use processors::{Oscillator, Filter};
+  // Custom processors are used directly — no wavecraft_processor! wrapper needed.
+  // signal: SignalChain![InputGain, Oscillator, Filter, OutputGain],
+  ```
+- **Actual**:
+  ```rust
+  use processors::{Oscillator, Filter};
+  wavecraft_processor!(MyFilter => Filter);
+  // signal: SignalChain![InputGain, MyOscillator, MyFilter, OutputGain],
+  ```
+- **Location**: `docs/guides/sdk-getting-started.md` lines 315–319
+- **Steps to Reproduce**:
+  1. Open `docs/guides/sdk-getting-started.md`
+  2. Navigate to "Adding a Processor to Your Project" → step 4
+  3. Observe incorrect `wavecraft_processor!` wrapping of custom type and non-existent `MyOscillator` reference
+- **Suggested Fix**:
+  - Remove the `wavecraft_processor!(MyFilter => Filter);` line
+  - Change `MyOscillator` → `Oscillator` and `MyFilter` → `Filter`
+  - Optionally add a comment: "Custom processors are used directly — no wavecraft_processor! wrapper needed."
 
 ## Testing Notes
 
-- The actual generated `lib.rs` template is **correct** — it uses `Oscillator` directly in `SignalChain![]` without wrapping it in `wavecraft_processor!`. The issues are all in the **documentation** (README template and SDK guide) which show incorrect patterns.
-- The `wavecraft_processor!` macro only has match arms for `Gain` and `Passthrough` (in `engine/crates/wavecraft-core/src/macros.rs` lines 58-98). Any other type passed to it will cause a compile error.
-- The core implementation (derive macro paths, re-exports, oscillator template, version bumps) is excellent and well-done.
-- The `implementation-progress.md` correctly notes "wavecraft_processor! only supports built-in types" as a resolved issue, but this knowledge wasn't consistently applied to the README template and SDK guide code examples.
-- All 3 issues are documentation fixes only — no code changes required.
+- **Test run #1** (pre-fix): 9/12 PASS, 3/12 FAIL — Issues #1 (README `wavecraft_processor!`), #2 (README Processor trait), #3 (Getting Started guide `wavecraft_processor!`)
+- **Test run #2** (this run, after doc fixes): 11/12 PASS, 1/12 FAIL — 2 of 3 issues fixed (TC-009 README ✓). 1 remaining issue in TC-011.
+- **Remaining issue**: The "Adding a Processor to Your Project" step 4 in `sdk-getting-started.md` (lines 315–319) was missed during the fix pass. The main lib.rs example in the same file was corrected, but the shorter subsection still has the old pattern.
+- The remaining fix is a **3-line documentation change** — no code changes needed.
+- All automated checks pass (lint + tests). All template generation and compilation tests pass.
+- The core implementation (derive macro paths, re-exports, oscillator template, version bumps, template code) is excellent and well-done.
 
 ## Sign-off
 
-- [ ] All critical tests pass
+- [x] All critical tests pass
 - [x] All high-priority tests pass (no critical issues)
 - [x] Issues documented for coder agent
-- [ ] Ready for release: **NO** — 3 medium-severity documentation issues need fixing first
+- [ ] Ready for release: **NO** — 1 medium-severity documentation issue needs fixing first

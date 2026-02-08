@@ -313,8 +313,8 @@ impl Processor for Oscillator {
 4. Wire into the signal chain in `lib.rs`:
    ```rust
    use processors::{Oscillator, Filter};
-   wavecraft_processor!(MyFilter => Filter);
-   // signal: SignalChain![InputGain, MyOscillator, MyFilter, OutputGain],
+   // Custom processors are used directly in SignalChain (no wavecraft_processor! wrapper needed)
+   // signal: SignalChain![InputGain, Oscillator, Filter, OutputGain],
    ```
 
 The UI automatically discovers new parameters — no React changes needed.
