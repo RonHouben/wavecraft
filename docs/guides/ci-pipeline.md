@@ -332,8 +332,8 @@ Wavecraft uses automatic continuous deployment for all publishable packages. Whe
 |-----|-------------|--------------|
 | `publish-cli` | `cli/**` (includes `sdk-templates/`) | crates.io (`wavecraft`) |
 | `publish-engine` | `engine/crates/**` | crates.io (6 crates) |
-| `publish-npm-core` | `ui/packages/core/src/**` | npm (`@wavecraft/core`) |
-| `publish-npm-components` | `ui/packages/components/src/**` | npm (`@wavecraft/components`) |
+| `publish-npm-core` | `ui/packages/core/**` | npm (`@wavecraft/core`) |
+| `publish-npm-components` | `ui/packages/components/**` | npm (`@wavecraft/components`) |
 
 ### Packages Published
 
@@ -354,7 +354,7 @@ Wavecraft uses automatic continuous deployment for all publishable packages. Whe
 | `wavecraft-metering` | SPSC ring buffer for audio → UI |
 | `wavecraft-dsp` | Pure DSP algorithms |
 | `wavecraft-bridge` | IPC handling |
-| `wavecraft-core` | nih-plug VST3/CLAP integration |
+| `wavecraft-core` | Core SDK types and macros |
 
 ### Version Bumping
 
@@ -386,8 +386,9 @@ The workflow will detect the new version isn't published and publish it without 
 
 | Secret | Purpose |
 |--------|---------|
-| `CARGO_REGISTRY_TOKEN` | crates.io publishing |
 | `GITHUB_TOKEN` | Commit version bumps (built-in) |
+
+**Note:** crates.io publishing uses OIDC trusted publishing (no `CARGO_REGISTRY_TOKEN` required).
 
 **Note:** npm publishing uses OIDC trusted publishing (no secret required). Packages are published with `--provenance` for cryptographic attestation.
 
@@ -429,3 +430,7 @@ Engine crates have interdependencies and must be published in order:
 ```
 
 The workflow waits 30 seconds between publishes for crates.io indexing.
+
+### Engine Publish Dependencies
+
+The `publish-engine` job installs Linux system dependencies required by `wavecraft-dev-server` (GTK/GLib/WebKit). This ensures the publish verification step can compile crates that rely on `gobject-sys` and `glib-sys`.
