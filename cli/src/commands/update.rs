@@ -6,6 +6,10 @@ use std::process::Command;
 const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Result of the CLI self-update attempt.
+///
+/// Note: Uses unit variants rather than data-carrying variants (as described in LLD).
+/// Version information is printed directly in `update_cli()` rather than stored in the
+/// enum, which simplifies control flow without losing functionality.
 enum SelfUpdateResult {
     /// CLI binary was updated to a new version.
     Updated,
@@ -21,6 +25,22 @@ enum ProjectUpdateResult {
     NotInProject,
     /// Project deps updated (may include partial failures).
     Updated { errors: Vec<String> },
+}
+
+/// Outcome of the summary decision logic, extracted for testability.
+#[cfg_attr(test, derive(Debug, PartialEq))]
+enum SummaryOutcome {
+    /// Both phases completed successfully.
+    AllComplete { show_rerun_hint: bool },
+    /// CLI failed but project deps succeeded.
+    ProjectOnlyComplete,
+    /// Project dependency updates failed.
+    ProjectErrors {
+        errors: Vec<String>,
+        show_rerun_hint: bool,
+    },
+    /// CLI failed and not in a project — messages already shown inline.
+    NoAction,
 }
 
 /// Update the CLI and (if in a project) project dependencies.
@@ -40,6 +60,11 @@ pub fn run() -> Result<()> {
 /// Runs `cargo install wavecraft`, captures output, and determines whether
 /// a new version was installed, the CLI is already up-to-date, or the
 /// update failed. Failures are non-fatal — captured as `SelfUpdateResult::Failed`.
+///
+/// Note: No timeout is applied to the `cargo install` subprocess. Compilation
+/// typically takes 30-60 seconds. A hang (network stall, compilation freeze) will
+/// block `wavecraft update` indefinitely. This is acceptable for a CLI tool —
+/// users can Ctrl-C to abort. A timeout may be added in a future version if needed.
 fn update_cli() -> SelfUpdateResult {
     println!("🔄 Checking for CLI updates...");
 
@@ -115,21 +140,41 @@ fn get_installed_version() -> Result<String> {
         .output()
         .context("Failed to run 'wavecraft --version'")?;
 
+    if !output.status.success() {
+        bail!(
+            "'wavecraft --version' exited with status {}",
+            output.status
+        );
+    }
+
     let stdout = String::from_utf8_lossy(&output.stdout);
-    // clap outputs: "wavecraft X.Y.Z\n"
-    let version = stdout
+    Ok(parse_version_output(&stdout))
+}
+
+/// Parse the version string from `wavecraft --version` output.
+///
+/// clap outputs: "wavecraft X.Y.Z\n" — this strips the prefix and whitespace.
+fn parse_version_output(stdout: &str) -> String {
+    stdout
         .trim()
         .strip_prefix("wavecraft ")
         .unwrap_or(stdout.trim())
-        .to_string();
+        .to_string()
+}
 
-    Ok(version)
+/// Detect whether the given directory is a Wavecraft plugin project.
+///
+/// Returns `(has_engine, has_ui)` based on the presence of marker files
+/// (`engine/Cargo.toml` and `ui/package.json`).
+fn detect_project(root: &Path) -> (bool, bool) {
+    let has_engine = root.join("engine/Cargo.toml").exists();
+    let has_ui = root.join("ui/package.json").exists();
+    (has_engine, has_ui)
 }
 
 /// Update project dependencies (Rust crates + npm packages) if in a project directory.
 fn update_project_deps() -> ProjectUpdateResult {
-    let has_engine = Path::new("engine/Cargo.toml").exists();
-    let has_ui = Path::new("ui/package.json").exists();
+    let (has_engine, has_ui) = detect_project(Path::new("."));
 
     if !has_engine && !has_ui {
         println!();
@@ -167,45 +212,82 @@ fn update_project_deps() -> ProjectUpdateResult {
     ProjectUpdateResult::Updated { errors }
 }
 
-/// Print a summary of both update phases and determine the exit code.
-fn print_summary(self_update: &SelfUpdateResult, project: &ProjectUpdateResult) -> Result<()> {
+/// Determine the summary outcome from both update phases.
+///
+/// This is a pure function extracted from `print_summary()` for testability.
+/// It decides what messages should be shown and whether the process should fail.
+fn determine_summary(
+    self_update: &SelfUpdateResult,
+    project: &ProjectUpdateResult,
+) -> SummaryOutcome {
     let cli_updated = matches!(self_update, SelfUpdateResult::Updated);
     let cli_failed = matches!(self_update, SelfUpdateResult::Failed);
     let in_project = matches!(project, ProjectUpdateResult::Updated { .. });
 
-    let project_errors = match project {
-        ProjectUpdateResult::Updated { errors } => errors.clone(),
-        ProjectUpdateResult::NotInProject => vec![],
+    let project_errors: &[String] = match project {
+        ProjectUpdateResult::Updated { errors } => errors,
+        ProjectUpdateResult::NotInProject => &[],
     };
 
-    // Show re-run hint if CLI was updated and project deps were also run
-    if cli_updated && in_project {
-        println!();
-        println!("💡 Note: Project dependencies were updated using the previous CLI version.");
-        println!("   Re-run `wavecraft update` to use the new CLI for dependency updates.");
-    }
+    let show_rerun_hint = cli_updated && in_project;
 
-    // Check for project dependency failures
     if !project_errors.is_empty() {
-        bail!(
-            "Failed to update some dependencies:\n  {}",
-            project_errors.join("\n  ")
-        );
+        return SummaryOutcome::ProjectErrors {
+            errors: project_errors.to_vec(),
+            show_rerun_hint,
+        };
     }
 
-    // Final summary based on outcomes
     if cli_failed && in_project {
-        // CLI failed but project deps succeeded
-        println!();
-        println!("✨ Project dependencies updated (CLI self-update skipped)");
-    } else if !cli_failed {
-        // Everything that was attempted succeeded
-        println!();
-        println!("✨ All updates complete");
+        return SummaryOutcome::ProjectOnlyComplete;
     }
-    // If cli_failed && !in_project: warning + not-in-project messages already shown
+
+    if cli_failed && !in_project {
+        return SummaryOutcome::NoAction;
+    }
+
+    SummaryOutcome::AllComplete { show_rerun_hint }
+}
+
+/// Print a summary of both update phases and determine the exit code.
+fn print_summary(self_update: &SelfUpdateResult, project: &ProjectUpdateResult) -> Result<()> {
+    let outcome = determine_summary(self_update, project);
+
+    match outcome {
+        SummaryOutcome::AllComplete { show_rerun_hint } => {
+            if show_rerun_hint {
+                print_rerun_hint();
+            }
+            println!();
+            println!("✨ All updates complete");
+        }
+        SummaryOutcome::ProjectOnlyComplete => {
+            println!();
+            println!("✨ Project dependencies updated (CLI self-update skipped)");
+        }
+        SummaryOutcome::ProjectErrors {
+            errors,
+            show_rerun_hint,
+        } => {
+            if show_rerun_hint {
+                print_rerun_hint();
+            }
+            bail!(
+                "Failed to update some dependencies:\n  {}",
+                errors.join("\n  ")
+            );
+        }
+        SummaryOutcome::NoAction => {}
+    }
 
     Ok(())
+}
+
+/// Print the re-run hint for when CLI was updated but project deps ran with old binary.
+fn print_rerun_hint() {
+    println!();
+    println!("💡 Note: Project dependencies were updated using the previous CLI version.");
+    println!("   Re-run `wavecraft update` to use the new CLI for dependency updates.");
 }
 
 fn update_rust_deps() -> Result<()> {
@@ -242,6 +324,8 @@ mod tests {
     use std::fs;
     use tempfile::TempDir;
 
+    // --- is_already_up_to_date tests ---
+
     #[test]
     fn test_is_already_up_to_date_true() {
         let stderr = "    Updating crates.io index\n     \
@@ -270,36 +354,56 @@ mod tests {
         assert!(is_already_up_to_date(stderr));
     }
 
+    // --- parse_version_output tests (QA-L-002) ---
+
     #[test]
-    fn test_detects_engine_only() {
+    fn test_parse_version_output_standard() {
+        assert_eq!(parse_version_output("wavecraft 1.2.3\n"), "1.2.3");
+    }
+
+    #[test]
+    fn test_parse_version_output_no_prefix() {
+        assert_eq!(parse_version_output("1.2.3\n"), "1.2.3");
+    }
+
+    #[test]
+    fn test_parse_version_output_whitespace() {
+        assert_eq!(parse_version_output("  wavecraft 0.9.1  \n"), "0.9.1");
+    }
+
+    #[test]
+    fn test_parse_version_output_empty() {
+        assert_eq!(parse_version_output(""), "");
+    }
+
+    // --- detect_project tests (QA-L-004) ---
+
+    #[test]
+    fn test_detect_project_engine_only() {
         let temp = TempDir::new().unwrap();
         let engine_dir = temp.path().join("engine");
         fs::create_dir(&engine_dir).unwrap();
         fs::write(engine_dir.join("Cargo.toml"), "[package]\nname = \"test\"").unwrap();
 
-        let has_engine = temp.path().join("engine/Cargo.toml").exists();
-        let has_ui = temp.path().join("ui/package.json").exists();
-
+        let (has_engine, has_ui) = detect_project(temp.path());
         assert!(has_engine);
         assert!(!has_ui);
     }
 
     #[test]
-    fn test_detects_ui_only() {
+    fn test_detect_project_ui_only() {
         let temp = TempDir::new().unwrap();
         let ui_dir = temp.path().join("ui");
         fs::create_dir(&ui_dir).unwrap();
         fs::write(ui_dir.join("package.json"), "{}").unwrap();
 
-        let has_engine = temp.path().join("engine/Cargo.toml").exists();
-        let has_ui = temp.path().join("ui/package.json").exists();
-
+        let (has_engine, has_ui) = detect_project(temp.path());
         assert!(!has_engine);
         assert!(has_ui);
     }
 
     #[test]
-    fn test_detects_both() {
+    fn test_detect_project_both() {
         let temp = TempDir::new().unwrap();
 
         let engine_dir = temp.path().join("engine");
@@ -310,10 +414,113 @@ mod tests {
         fs::create_dir(&ui_dir).unwrap();
         fs::write(ui_dir.join("package.json"), "{}").unwrap();
 
-        let has_engine = temp.path().join("engine/Cargo.toml").exists();
-        let has_ui = temp.path().join("ui/package.json").exists();
-
+        let (has_engine, has_ui) = detect_project(temp.path());
         assert!(has_engine);
         assert!(has_ui);
+    }
+
+    #[test]
+    fn test_detect_project_no_markers() {
+        let temp = TempDir::new().unwrap();
+
+        let (has_engine, has_ui) = detect_project(temp.path());
+        assert!(!has_engine);
+        assert!(!has_ui);
+    }
+
+    // --- determine_summary tests (QA-L-003) ---
+
+    #[test]
+    fn test_summary_all_complete_no_project() {
+        let outcome = determine_summary(
+            &SelfUpdateResult::AlreadyUpToDate,
+            &ProjectUpdateResult::NotInProject,
+        );
+        assert_eq!(
+            outcome,
+            SummaryOutcome::AllComplete {
+                show_rerun_hint: false
+            }
+        );
+    }
+
+    #[test]
+    fn test_summary_all_complete_with_project() {
+        let outcome = determine_summary(
+            &SelfUpdateResult::AlreadyUpToDate,
+            &ProjectUpdateResult::Updated { errors: vec![] },
+        );
+        assert_eq!(
+            outcome,
+            SummaryOutcome::AllComplete {
+                show_rerun_hint: false
+            }
+        );
+    }
+
+    #[test]
+    fn test_summary_updated_with_project_shows_rerun_hint() {
+        let outcome = determine_summary(
+            &SelfUpdateResult::Updated,
+            &ProjectUpdateResult::Updated { errors: vec![] },
+        );
+        assert_eq!(
+            outcome,
+            SummaryOutcome::AllComplete {
+                show_rerun_hint: true
+            }
+        );
+    }
+
+    #[test]
+    fn test_summary_cli_failed_in_project() {
+        let outcome = determine_summary(
+            &SelfUpdateResult::Failed,
+            &ProjectUpdateResult::Updated { errors: vec![] },
+        );
+        assert_eq!(outcome, SummaryOutcome::ProjectOnlyComplete);
+    }
+
+    #[test]
+    fn test_summary_cli_failed_not_in_project() {
+        let outcome = determine_summary(
+            &SelfUpdateResult::Failed,
+            &ProjectUpdateResult::NotInProject,
+        );
+        assert_eq!(outcome, SummaryOutcome::NoAction);
+    }
+
+    #[test]
+    fn test_summary_project_errors() {
+        let outcome = determine_summary(
+            &SelfUpdateResult::AlreadyUpToDate,
+            &ProjectUpdateResult::Updated {
+                errors: vec!["Rust: compile failed".to_string()],
+            },
+        );
+        assert_eq!(
+            outcome,
+            SummaryOutcome::ProjectErrors {
+                errors: vec!["Rust: compile failed".to_string()],
+                show_rerun_hint: false,
+            }
+        );
+    }
+
+    #[test]
+    fn test_summary_updated_with_project_errors_shows_rerun_hint() {
+        let outcome = determine_summary(
+            &SelfUpdateResult::Updated,
+            &ProjectUpdateResult::Updated {
+                errors: vec!["npm: fetch failed".to_string()],
+            },
+        );
+        assert_eq!(
+            outcome,
+            SummaryOutcome::ProjectErrors {
+                errors: vec!["npm: fetch failed".to_string()],
+                show_rerun_hint: true,
+            }
+        );
     }
 }
