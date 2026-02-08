@@ -178,9 +178,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin main
           git add cli/Cargo.toml
           git commit -m "chore: bump wavecraft CLI to ${{ steps.bump.outputs.version }} [auto-bump]"
+          git pull --rebase origin main
           git push origin main
 
       - name: Set final version
@@ -348,9 +348,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin main
           git add ui/packages/core/package.json
           git commit -m "chore: bump @wavecraft/core to ${{ steps.bump.outputs.version }} [auto-bump]"
+          git pull --rebase origin main
           git push origin main
 
       - name: Set final version
@@ -456,9 +456,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin main
           git add ui/packages/components/package.json
           git commit -m "chore: bump @wavecraft/components to ${{ steps.bump.outputs.version }} [auto-bump]"
+          git pull --rebase origin main
           git push origin main
 
       - name: Set final version
