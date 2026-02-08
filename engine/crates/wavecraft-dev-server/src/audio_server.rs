@@ -147,28 +147,85 @@ pub mod implementation {
     /// WebSocket client for audio binary
     #[derive(Clone)]
     pub struct WebSocketClient {
-        // Placeholder - will implement proper client
-        #[allow(dead_code)]
-        url: String,
+        tx: tokio::sync::mpsc::UnboundedSender<String>,
     }
 
     impl WebSocketClient {
         pub async fn connect(url: &str) -> Result<Self> {
+            use futures_util::{SinkExt, StreamExt};
+            use tokio_tungstenite::connect_async;
+            
             tracing::info!("Connecting to WebSocket server at {}", url);
-            // TODO: Implement actual WebSocket connection
-            Ok(Self {
-                url: url.to_string(),
-            })
+            
+            let (ws_stream, _) = connect_async(url)
+                .await
+                .context("Failed to connect to WebSocket server")?;
+            
+            tracing::info!("WebSocket connection established");
+            
+            let (mut write, mut read) = ws_stream.split();
+            let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<String>();
+            
+            // Spawn task to send messages
+            tokio::spawn(async move {
+                while let Some(msg) = rx.recv().await {
+                    if let Err(e) = write.send(tokio_tungstenite::tungstenite::Message::Text(msg)).await {
+                        tracing::error!("Failed to send WebSocket message: {}", e);
+                        break;
+                    }
+                }
+            });
+            
+            // Spawn task to receive messages (for future parameter updates)
+            tokio::spawn(async move {
+                while let Some(msg) = read.next().await {
+                    match msg {
+                        Ok(tokio_tungstenite::tungstenite::Message::Text(text)) => {
+                            tracing::debug!("Received: {}", text);
+                            // TODO: Handle parameter updates
+                        }
+                        Ok(tokio_tungstenite::tungstenite::Message::Close(_)) => {
+                            tracing::info!("WebSocket connection closed by server");
+                            break;
+                        }
+                        Err(e) => {
+                            tracing::error!("WebSocket error: {}", e);
+                            break;
+                        }
+                        _ => {}
+                    }
+                }
+            });
+            
+            Ok(Self { tx })
         }
 
-        pub async fn register_audio(&self, _params: RegisterAudioParams) -> Result<()> {
+        pub async fn register_audio(&self, params: RegisterAudioParams) -> Result<()> {
+            use wavecraft_protocol::{IpcRequest, RequestId, METHOD_REGISTER_AUDIO};
+            
             tracing::info!("Registering audio client");
-            // TODO: Send registration message
+            
+            let request = IpcRequest::new(
+                RequestId::String("register".to_string()),
+                METHOD_REGISTER_AUDIO,
+                Some(serde_json::to_value(params)?),
+            );
+            
+            let json = serde_json::to_string(&request)?;
+            self.tx.send(json).context("Failed to send registration message")?;
+            
             Ok(())
         }
 
-        pub async fn send_meter_update(&self, _notification: MeterUpdateNotification) -> Result<()> {
-            // TODO: Send meter update notification
+        pub async fn send_meter_update(&self, notification: MeterUpdateNotification) -> Result<()> {
+            use wavecraft_protocol::{IpcNotification, NOTIFICATION_METER_UPDATE};
+            
+            let notif = IpcNotification::new(NOTIFICATION_METER_UPDATE, notification);
+            let json = serde_json::to_string(&notif)?;
+            
+            // Non-blocking send - if channel is full, drop the message
+            let _ = self.tx.send(json);
+            
             Ok(())
         }
     }
