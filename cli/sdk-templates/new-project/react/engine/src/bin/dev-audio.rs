@@ -5,9 +5,9 @@
 //!
 //! Usage: `wavecraft start` automatically runs this binary when available.
 
-use {{plugin_name_snake}}::{{plugin_name_pascal}}Gain;
 use anyhow::Result;
 use wavecraft_dev_server::audio_server::{AudioConfig, AudioServer};
+use wavecraft_dsp::GainDsp;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -25,8 +25,9 @@ async fn main() -> Result<()> {
         buffer_size: 512,
     };
 
-    // Create processor instance (same as used in plugin)
-    let processor = {{plugin_name_pascal}}Gain::default();
+    // Create processor instance using built-in Gain processor
+    // Replace with your custom processor for testing specific DSP code
+    let processor = GainDsp::default();
 
     // Create and run audio server
     log::info!("Starting audio server...");
