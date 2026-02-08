@@ -571,7 +571,11 @@ QA:           5 findings (1 Critical, 4 Medium) — all resolved
 | **Continuous Deployment** | | |
 | `continuous-deploy.yml` workflow | ✅ | Auto-publish on merge to main |
 | Path-based change detection | ✅ | dorny/paths-filter for selective publishing |
-| Auto-version bumping | ✅ | Patch versions bumped automatically |
+| Auto-version bumping | ✅ | Patch versions bumped automatically via `[auto-bump]` commits |
+| CLI cascade trigger | ✅ | CLI re-publishes when any SDK component changes |
+| `[auto-bump]` loop prevention | ✅ | Replaces `[skip ci]` — other workflows still run |
+| npm publish-only model | ✅ | No build step — uses pre-built `dist/` in repo |
+| Upstream failure guards | ✅ | `!cancelled()` prevents cascade on upstream failures |
 | npm release workflow | ✅ | `npm-release.yml` (manual override) |
 | CLI release workflow | ✅ | `cli-release.yml` (manual override) |
 | CI pipeline documentation | ✅ | Full CD section in ci-pipeline.md |
@@ -584,7 +588,7 @@ QA:           5 findings (1 Critical, 4 Medium) — all resolved
 - **syn-based validation** — Authoritative Rust keyword checking (architectural best practice)
 - **`@wavecraft/core` npm package** — IPC bridge, React hooks, Logger, utilities
 - **`@wavecraft/components` npm package** — Meter, ParameterSlider, ParameterGroup, VersionBadge
-- **Continuous Deployment** — Auto-publish to npm/crates.io on merge to main
+- **Continuous Deployment** — Auto-publish to npm/crates.io on merge to main, CLI cascade trigger, `[auto-bump]` loop prevention
 
 **Test Results:**
 ```
@@ -808,6 +812,7 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 | Date | Update |
 |------|--------|
+| 2026-02-09 | **CD CLI cascade publish**: Enhanced Continuous Deployment pipeline with CLI cascade trigger, `[auto-bump]` loop prevention, and publish-only npm model. CLI now re-publishes whenever _any_ SDK component changes (engine crates, npm packages, or CLI itself), ensuring the git tag always reflects the latest SDK state. Replaced `[skip ci]` with `[auto-bump]` commit marker so other workflows (CI, template validation) still run on auto-bump commits. npm jobs switched to publish-only model (no build step — relies on pre-built `dist/` in repo). Added upstream failure guards (`!cancelled()` instead of `always()`). 12/12 test cases passing, QA approved (0 Critical/High/Medium). Architecture docs updated (high-level-design.md, ci-pipeline.md). Archived to `_archive/cd-cli-cascade-publish/`. |
 | 2026-02-08 | **CLI auto-detect local SDK**: CLI now auto-detects when running from monorepo source checkout (`cargo run` or `target/debug/wavecraft`) and uses path dependencies instead of git tags. Eliminates the need for `--local-sdk` flag during SDK development. Runtime binary path inspection with SDK marker validation (`engine/crates/wavecraft-nih_plug/Cargo.toml`). 9/9 manual tests, 32 CLI unit tests, QA approved. Architecture docs updated (high-level-design.md, coding-standards.md, agent-development-flow.md). Archived to `_archive/cli-auto-local-sdk/`. |
 | 2026-02-08 | **CLI `wavecraft start` port preflight**: Added preflight port checks and strict UI port binding. Startup now fails fast when UI or WS ports are in use, avoiding partial startup and Vite auto-port switching. Docs updated (High-Level Design, Getting Started, coding standards/agent flow). Test plan re-run and QA completed. |
 | 2026-02-07 | **npm OIDC trusted publishing validation**: Branch run succeeded for `@wavecraft/components` and confirmed provenance publishing; `@wavecraft/core` publish on `main` still fails due to token injection. Workflow fix pending merge to `main` before re-validating OIDC publishes. |
@@ -821,7 +826,7 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 | 2026-02-06 | **wavecraft-core crate split for crates.io publishing**: Split wavecraft-core into wavecraft-core (publishable, no nih_plug dependency) + wavecraft-nih_plug (git-only, contains nih-plug integration). Added `__nih` module for proc-macro type exports. Template uses Cargo package rename (`wavecraft = { package = "wavecraft-nih_plug" }`). All 6 publishable crates validated with dry-run publish. 24/24 manual tests, QA approved. Architecture docs updated (high-level-design.md, coding-standards.md). Milestone 13 now **In Progress**. |
 | 2026-02-05 | **CI Workflow Simplification**: Removed redundant `push` triggers from CI and Template Validation workflows — they now only run on PRs (not on merge to main). Added `workflow_dispatch` for manual runs when needed. Eliminates ~10-14 CI minutes of redundant validation per merge. Documentation updated (ci-pipeline.md, high-level-design.md). Archived to `_archive/ci-workflow-simplification/`. |
 | 2026-02-04 | **CLI `--local-dev` flag**: Added `--local-dev` CLI option to `wavecraft create` for SDK development and CI. Generates path dependencies (e.g., `path = "/path/to/engine/crates/wavecraft-core"`) instead of git tag dependencies. Solves CI chicken-egg problem where template validation fails because git tags don't exist until after PR merge. Mutually exclusive with `--sdk-version`. 10/10 unit tests, 10/10 manual tests. Documentation updated (sdk-getting-started.md, ci-pipeline.md). Archived to `_archive/ci-local-dev-dependencies/`. |
-| 2026-02-04 | **Continuous Deployment implemented (v0.7.1)**: Added `continuous-deploy.yml` workflow for automatic package publishing on merge to main. Path-based change detection using `dorny/paths-filter` — only changed packages are published. Auto-patch version bumping with bot commits (`[skip ci]` prevents re-triggers). Supports: CLI (crates.io), 6 engine crates (crates.io), `@wavecraft/core` (npm), `@wavecraft/components` (npm). Existing `cli-release.yml` and `npm-release.yml` converted to manual overrides. Full documentation added to `docs/guides/ci-pipeline.md`. Version bumped to 0.7.1 across all packages. |
+| 2026-02-04 | **Continuous Deployment implemented (v0.7.1)**: Added `continuous-deploy.yml` workflow for automatic package publishing on merge to main. Path-based change detection using `dorny/paths-filter` — only changed packages are published. Auto-patch version bumping with bot commits. Supports: CLI (crates.io), 6 engine crates (crates.io), `@wavecraft/core` (npm), `@wavecraft/components` (npm). Existing `cli-release.yml` and `npm-release.yml` converted to manual overrides. Full documentation added to `docs/guides/ci-pipeline.md`. Version bumped to 0.7.1 across all packages. |
 | 2026-02-04 | **Milestone 12 complete (v0.7.0)**: Open Source Readiness fully implemented. **wavecraft CLI** published to crates.io (`cargo install wavecraft && wavecraft create my-plugin`). **npm packages** published: `@wavecraft/core@0.7.0` (IPC bridge, hooks, Logger, utilities) and `@wavecraft/components@0.7.0` (Meter, ParameterSlider, ParameterGroup, VersionBadge). **Template system** converted to use npm packages instead of bundled UI copy. **CI workflows** for template validation and CLI release. 75/75 implementation tasks complete. 20/20 manual tests passing. QA approved (0 Critical/High issues). Architecture docs updated (npm package imports, subpath exports). Archived to `_archive/open-source-readiness/`. |
 | 2026-02-03 | **CI Pipeline Optimization complete**: Added `cargo xtask check` command for fast local validation (~52s, 26x faster than Docker CI). Pre-compile test binaries in CI with `cargo test --no-run`. Tiered artifact retention (7 days main / 90 days tags, ~75-80% storage reduction). Updated agent documentation (Tester uses `cargo xtask check`, QA focuses on manual review). Architecture docs updated (high-level-design.md, ci-pipeline.md, coding-standards.md). Version 0.6.2. |
 | 2026-02-03 | **Milestone 11 complete**: Code Quality & OSS Prep fully implemented. UI Logger (`Logger` class in `@wavecraft/ipc` with debug/info/warn/error methods), Engine logging (`tracing` crate, 24 println! calls migrated), open source infrastructure (LICENSE, CONTRIBUTING.md, CODE_OF_CONDUCT.md, issue/PR templates), README polish. Horizontal scroll fix applied. Template project synchronized. 110+ engine tests, 43 UI tests, 19/19 manual tests passing. QA approved (5 findings resolved). Logging standards documented in coding-standards.md. Version 0.6.1. Archived to `_archive/code-quality-polish/`. |
@@ -898,8 +903,9 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 ### Immediate Tasks
 1. ✅ Milestone 13 complete — Internal testing + CLI UX improvements
 2. ✅ CLI auto-detect local SDK — Auto-detects monorepo, uses path deps
-3. ⏳ Merge `feature/cli-auto-local-sdk` to main
-4. ⏳ Merge npm OIDC workflow fix to `main` and re-run publish validation
-5. ✅ Continuous Deployment configured — Auto-publishes on merge to main
+3. ✅ CD CLI cascade publish — CLI cascade trigger, `[auto-bump]` loop prevention
+4. ⏳ Merge `feature/cd-cli-cascade-publish` to main
+5. ⏳ Merge npm OIDC workflow fix to `main` and re-run publish validation
+6. ✅ Continuous Deployment configured — Auto-publishes on merge to main
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (crates.io publication, additional example plugins, etc.)
