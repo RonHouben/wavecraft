@@ -8,15 +8,14 @@ This document tracks implementation progress against the milestones defined in t
 
 ```
 ┌──────────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP          v0.10.0 | 86%   │
+│  WAVECRAFT ROADMAP          v0.11.0 | 86%   │
 ├──────────────────────────────────────────────┤
-│  ✅ M1-M18   Foundation → Audio Pipeline    │
-│  ⏳ M18.5    Template Structure Improvement │
+│  ✅ M1-M18.5 Foundation → Template Polish   │
 │  ⏳ M18.6    Documentation Architecture     │
 │  ⏳ M19      User Testing                   │
 │  ⏳ M20      V1.0 Release                   │
 ├──────────────────────────────────────────────┤
-│  [█████████████████████████████████] 18/22  │
+│  [██████████████████████████████████] 19/22 │
 └──────────────────────────────────────────────┘
 ```
 
@@ -1089,69 +1088,73 @@ Architecture: APPROVED (full compliance with coding standards)
 
 ---
 
-## Milestone 18.5: Template Structure Improvement (Processors Module) ⏳
+## Milestone 18.5: Template Structure Improvement (Processors Module) ✅
 
 > **Goal:** Improve CLI template structure with `processors/` module and complete oscillator example. Teaches proper code organization from day one while providing engaging learning experience with real audio generation.
 
-**Status: ⏳ Not Started**
+**Status: ✅ Complete**
 
-**Depends on:** Milestone 18 (Audio Pipeline Fixes) — should complete audio fixes first
+**Depends on:** Milestone 18 (Audio Pipeline Fixes) ✅
 
-**Branch:** `feature/template-processors-module`  
-**Target Version:** `0.11.0` (minor — breaking template change)
+**Branch:** `feature/template-processors-module` (merged)
+**Version:** `0.11.0` (minor — breaking template change)
+**Completed:** 2026-02-09
 
-**User Stories:** [docs/feature-specs/template-processors-module/user-stories.md](feature-specs/template-processors-module/user-stories.md)
+**User Stories:** [docs/feature-specs/_archive/template-processors-module/user-stories.md](feature-specs/_archive/template-processors-module/user-stories.md)
 
 | Task | Status | Notes |
 |------|--------|-------|
 | **Template Structure** | | |
-| Create `processors/` module in template | ⏳ | New directory structure |
-| Add `processors/mod.rs` exports | ⏳ | Clean module pattern |
-| Add `processors/oscillator.rs` implementation | ⏳ | Complete Processor trait example |
-| Update `lib.rs` to use modular structure | ⏳ | Import from processors module |
+| Create `processors/` module in template | ✅ | New directory structure |
+| Add `processors/mod.rs` exports | ✅ | Clean module pattern |
+| Add `processors/oscillator.rs` implementation | ✅ | Complete Processor trait example |
+| Update `lib.rs` to use modular structure | ✅ | Import from processors module |
 | **Oscillator Implementation** | | |
-| Parameter struct with ProcessorParams derive | ⏳ | frequency: 20-20kHz, level: 0-1 |
-| Oscillator processor with phase state | ⏳ | Sine wave generation |
-| Implement `set_sample_rate()` | ⏳ | Proper initialization |
-| Implement `reset()` | ⏳ | Clear phase state |
-| Add comprehensive code comments | ⏳ | Explain DSP concepts |
+| Parameter struct with ProcessorParams derive | ✅ | frequency: 20-20kHz, level: 0-1 |
+| Oscillator processor with phase state | ✅ | Sine wave generation |
+| Implement `set_sample_rate()` | ✅ | Proper initialization |
+| Implement `reset()` | ✅ | Clear phase state |
+| Add comprehensive code comments | ✅ | Explain DSP concepts |
 | **Signal Chain Configuration** | | |
-| Default to gain-only chain (silent) | ⏳ | No unexpected sound |
-| Add oscillator as commented-out example | ⏳ | Easy to enable for testing |
-| Clear comments explaining options | ⏳ | User understands choices |
+| Default to gain-only chain (silent) | ✅ | No unexpected sound |
+| Add oscillator as commented-out example | ✅ | Easy to enable for testing |
+| Clear comments explaining options | ✅ | User understands choices |
 | **Documentation** | | |
-| Update SDK Getting Started guide | ⏳ | New template structure |
-| Update High-Level Design docs | ⏳ | Template structure diagram |
-| Update Coding Standards | ⏳ | Processor organization patterns |
-| Update template README | ⏳ | How to add processors |
+| Update SDK Getting Started guide | ✅ | New template structure |
+| Update High-Level Design docs | ✅ | Template structure diagram |
+| Update Coding Standards | ✅ | Processor organization patterns |
+| Update template README | ✅ | How to add processors |
 | **Testing** | | |
-| Template generation tests | ⏳ | `wavecraft create` succeeds |
-| Template compilation tests | ⏳ | Plugin builds without errors |
-| Manual testing with oscillator | ⏳ | Generates audible sine wave |
-| DAW loading validation | ⏳ | Works in Ableton Live |
+| Template generation tests | ✅ | `wavecraft create` succeeds |
+| Template compilation tests | ✅ | Plugin builds without errors |
+| Manual testing with oscillator | ✅ | Generates audible sine wave |
+| DAW loading validation | ✅ | Works in Ableton Live |
 
 **Key Deliverables:**
 - **Modular structure** — `processors/` folder for scalable organization
-- **Complete example** — Oscillator with full Processor trait implementation
+- **Complete example** — Oscillator with full Processor trait implementation (~60 lines)
 - **Educational value** — Teaches DSP concepts (phase accumulation, sample rate)
-- **Safe defaults** — Gain-only chain by default, oscillator opt-in
+- **Safe defaults** — Gain-only chain by default, oscillator opt-in via commented-out line
 - **Clear documentation** — How to add processors, understand the pattern
+- **23 files changed** — 873 insertions, 192 deletions
+
+**Test Results:**
+```
+Engine Tests: All passing
+UI Tests:     All passing
+CLI Tests:    All passing
+Manual Tests: 12/12 passed (Tester)
+Linting:      All checks passed (cargo fmt, clippy, ESLint, Prettier)
+QA:           PASS (0 Critical/High/Medium/Low issues)
+```
 
 **Success Criteria:**
-- [ ] Template has clear `processors/` module pattern
-- [ ] Oscillator generates audible sine wave (440Hz default)
-- [ ] Documentation explains where to add new processors
-- [ ] Pattern scales naturally (adding `processors/filter.rs` is obvious)
-- [ ] Template compiles and loads in DAW
-- [ ] Zero breaking changes to existing plugins
-
-**Estimated Effort:** 3-5 days (implementation 1-2 days, testing/docs 2-3 days)
-
-**Rationale:**
-- Current single-file template doesn't teach proper organization for real-world plugins
-- Gain example is passive (no sound) — less engaging for learning
-- No example showing how to implement custom Processor trait
-- Real plugins have 5-20+ processors; need clear organizational pattern
+- [x] Template has clear `processors/` module pattern
+- [x] Oscillator generates audible sine wave (440Hz default)
+- [x] Documentation explains where to add new processors
+- [x] Pattern scales naturally (adding `processors/filter.rs` is obvious)
+- [x] Template compiles and loads in DAW
+- [x] Zero breaking changes to existing plugins
 
 ---
 
@@ -1326,6 +1329,7 @@ Architecture: APPROVED (full compliance with coding standards)
 
 | Date | Update |
 |------|--------|
+| 2026-02-09 | **Milestone 18.5 complete (v0.11.0)**: Template Structure Improvement — Processors Module. Added `processors/` module to CLI template with sine-wave oscillator example demonstrating custom DSP processors with `#[derive(ProcessorParams)]`. Modular code organization teaches proper project structure from day one. Oscillator with frequency (20-20kHz) and level (0-1) parameters, phase accumulation, `set_sample_rate()` and `reset()` lifecycle methods. Safe defaults: gain-only signal chain by default, oscillator available as commented-out example. 23 files changed (873 insertions, 192 deletions). 12/12 manual tests, QA approved (PASS), architecture docs updated. Archived to `_archive/template-processors-module/`. Progress: 86% (19/22 milestones). |
 | 2026-02-08 | **Milestone 18.6 added: Documentation Architecture Split**: New infrastructure milestone to split large architecture documents into focused, topic-specific files. `coding-standards.md` (1,511 lines) splits into 5 documents (overview + TypeScript/CSS/Rust/Testing), `high-level-design.md` (1,562 lines) splits into 6 documents (overview + SDK/DSL/Workflows/Formats/Versioning). Target: 80-90% token reduction for AI agents, <30s navigation time for developers. Target version 0.10.1 (patch — documentation-only). 24 tasks across 4 phases (extraction, cross-references, validation). Milestone inserted between M18 (Complete) and M18.5 (Template Structure). Progress: 18/22 milestones (82%). Estimated effort: 4-6 hours. |
 | 2026-02-08 | **Milestone 18 complete (v0.10.0)**: Audio Pipeline Fixes & Mocking Cleanup fully implemented. (1) Full-duplex `AudioServer` with separate cpal input/output streams connected by `rtrb` SPSC ring buffer — audio now flows input → FfiProcessor::process() → output. (2) `AtomicParameterBridge` with `Arc<AtomicF32>` per parameter for lock-free WebSocket→audio thread parameter sync. (3) `MeterGenerator` deleted, fallback = silent zeros. (4) `useAllParameters` re-fetches on WebSocket reconnection. QA found 3 Medium issues (meter rate, tokio allocating on audio thread, unnecessary unsafe impl) — all fixed. 146 engine + 28 UI + 57 CLI tests passing. Architecture docs updated (high-level-design.md full-duplex diagram, coding-standards.md new patterns). Archived to `_archive/audio-pipeline-fixes/`. Progress: 86% (18/21 milestones). |
 | 2026-02-08 | **Milestone 18.5 added: Template Structure Improvement (Processors Module)**: New quality-of-life milestone to improve CLI template structure with `processors/` module and complete oscillator example. Teaches proper code organization from day one while providing engaging learning experience with real audio generation. Post-M18 feature per user request and architectural approval. Includes ~60-line oscillator implementation with phase accumulation, complete Processor trait example, safe defaults (gain-only chain), and comprehensive documentation updates. Target version 0.11.0 (minor — breaking template change). Renumbered User Testing (M19→M20) and V1.0 Release (M20→M21). Priority: Medium (quality improvement). Estimated effort: 3-5 days. Progress: 81% (17/21 milestones). |
@@ -1427,14 +1431,15 @@ Architecture: APPROVED (full compliance with coding standards)
 16. ✅ **Milestone 16**: Macro API Simplification — Reduced boilerplate, automatic metadata (v0.9.0)
 17. ✅ **Milestone 17**: OS Audio Input for Dev Mode — Automatic audio input detection and processing (v0.8.0)
 18. ✅ **Milestone 18**: Audio Pipeline Fixes — Full-duplex audio, parameter sync, mocking cleanup (v0.10.0)
+19. ✅ **Milestone 18.5**: Template Structure Improvement — Processors module with oscillator example (v0.11.0)
 
 ### Up Next
-19. ⏳ **Milestone 18.5**: Template Structure Improvement — Processors module with oscillator example (v0.11.0)
-20. ⏳ **Milestone 19**: User Testing — Beta testing with real plugin developers (v1.0.0-beta)
+20. ⏳ **Milestone 18.6**: Documentation Architecture Split — Split large docs into focused files (v0.10.1)
+21. ⏳ **Milestone 19**: User Testing — Beta testing with real plugin developers (v1.0.0-beta)
 21. ⏳ **Milestone 20**: V1.0 Release — First stable production release (v1.0.0)
 
 ### Immediate Tasks
-1. ⏳ Begin Milestone 18.5 (Template Structure) — add processors/ module pattern
-2. ⏳ After M18.5: Begin Milestone 19 (User Testing) — recruit beta testers
+1. ⏳ Begin Milestone 18.6 (Docs Split) — split architecture docs into focused files
+2. ⏳ After M18.6: Begin Milestone 19 (User Testing) — recruit beta testers
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (crates.io publication, additional example plugins, etc.)
