@@ -109,6 +109,26 @@ wavecraft create my-plugin --no-git
 wavecraft create --help
 ```
 
+### Starting Dev Servers
+
+```bash
+# Start WebSocket + UI dev servers
+wavecraft start
+
+# Use a different WebSocket port
+wavecraft start --port 9010
+
+# Use a different UI dev server port
+wavecraft start --ui-port 5174
+
+# Auto-install UI dependencies if missing
+wavecraft start --install
+```
+
+**Note:** The UI dev server requires a free port. If the port is already in use,
+`wavecraft start` will exit with an error. Stop the other process or pass
+`--ui-port` to choose a different port.
+
 ### CLI Options
 
 | Option | Description | Default |
@@ -438,6 +458,13 @@ vendor = "Your Company"
 1. Ensure parameter ID in UI matches Rust definition
 2. Check browser console for IPC errors
 3. Verify WebSocket connection in dev mode
+
+### UI dev server port already in use
+
+If you see an error indicating the UI dev server port is already in use:
+
+1. Stop any running Vite dev servers using that port
+2. Re-run with a different UI port: `wavecraft start --ui-port 5174`
 
 ### Audio glitches/dropouts
 
