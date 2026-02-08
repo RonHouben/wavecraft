@@ -1,8 +1,7 @@
 //! Procedural macro for generating complete plugin implementations from DSL.
 //!
-//! This is Phase 6 of the declarative plugin DSL feature.
-//! Current implementation is a simplified version that generates working code
-//! but requires further refinement for full feature parity.
+//! Simplified API (0.9.0): Only requires `name` and `signal` properties.
+//! Metadata (vendor, URL, email) is automatically derived from Cargo.toml.
 
 use proc_macro::TokenStream;
 use quote::quote;
@@ -10,26 +9,21 @@ use syn::{
     Expr, Ident, LitStr, Path, Result, Token,
     parse::{Parse, ParseStream},
     parse_macro_input,
+    spanned::Spanned,
 };
 
 /// Input structure for `wavecraft_plugin!` macro.
 struct PluginDef {
     name: LitStr,
-    vendor: LitStr,
-    url: Option<LitStr>,
-    email: Option<LitStr>,
     signal: Expr,
-    /// Optional crate path for nih-plug integration crate (default: `::wavecraft_nih_plug`).
-    /// Use `crate: wavecraft` when depending on wavecraft-nih_plug via Cargo rename.
+    /// Optional crate path for nih-plug integration crate (default: `::wavecraft`).
+    /// Use `crate: my_name` only if you've renamed the wavecraft dependency in Cargo.toml.
     krate: Option<Path>,
 }
 
 impl Parse for PluginDef {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut name = None;
-        let mut vendor = None;
-        let mut url = None;
-        let mut email = None;
         let mut signal = None;
         let mut krate = None;
 
@@ -52,14 +46,19 @@ impl Parse for PluginDef {
 
             match key.to_string().as_str() {
                 "name" => name = Some(input.parse()?),
-                "vendor" => vendor = Some(input.parse()?),
-                "url" => url = Some(input.parse()?),
-                "email" => email = Some(input.parse()?),
                 "signal" => signal = Some(input.parse()?),
                 _ => {
                     return Err(syn::Error::new(
                         key.span(),
-                        format!("unknown field: `{}`", key),
+                        format!(
+                            "unknown field: `{}`\n\
+                             \n\
+                             The wavecraft_plugin! macro only accepts:\n\
+                             - name: \"Plugin Name\" (required)\n\
+                             - signal: SignalChain![...] (required)\n\
+                             - crate: custom_name (optional, for Cargo renames)",
+                            key
+                        ),
                     ));
                 }
             }
@@ -67,6 +66,42 @@ impl Parse for PluginDef {
             if input.peek(Token![,]) {
                 input.parse::<Token![,]>()?;
             }
+        }
+
+        let signal = signal.ok_or_else(|| {
+            input.error(
+                "missing required field: `signal`\n\
+                 \n\
+                 The signal field defines your DSP processing chain.\n\
+                 \n\
+                 Example:\n\
+                 wavecraft_plugin! {\n\
+                     name: \"My Plugin\",\n\
+                     signal: SignalChain![MyGain],\n\
+                 }\n\
+                 \n\
+                 For multiple processors:\n\
+                 signal: SignalChain![InputGain, Filter, OutputGain]",
+            )
+        })?;
+
+        // Validate signal is wrapped in SignalChain! (not a bare identifier)
+        if let Expr::Path(ref path) = signal
+            && path.path.segments.len() == 1
+        {
+            let span = signal.span();
+            return Err(syn::Error::new(
+                span,
+                "signal must use `SignalChain!` wrapper.\n\
+                 \n\
+                 Did you mean:\n\
+                 signal: SignalChain![YourProcessor]\n\
+                 \n\
+                 Or for multiple processors:\n\
+                 signal: SignalChain![A, B, C]\n\
+                 \n\
+                 Note: Bare processor names are not allowed. Always wrap in SignalChain![]",
+            ));
         }
 
         Ok(PluginDef {
@@ -77,54 +112,31 @@ impl Parse for PluginDef {
                      Example:\n\
                      wavecraft_plugin! {\n\
                          name: \"My Plugin\",\n\
-                         vendor: \"My Company\",\n\
-                         signal: Chain![MyGain],\n\
+                         signal: SignalChain![MyGain],\n\
                      }",
                 )
             })?,
-            vendor: vendor.ok_or_else(|| {
-                input.error(
-                    "missing required field: `vendor`\n\
-                     \n\
-                     Example:\n\
-                     wavecraft_plugin! {\n\
-                         name: \"My Plugin\",\n\
-                         vendor: \"My Company\",\n\
-                         signal: Chain![MyGain],\n\
-                     }",
-                )
-            })?,
-            url,
-            email,
-            signal: signal.ok_or_else(|| {
-                input.error(
-                    "missing required field: `signal`\n\
-                     \n\
-                     The signal field defines your DSP processing chain.\n\
-                     \n\
-                     Example:\n\
-                     wavecraft_plugin! {\n\
-                         name: \"My Plugin\",\n\
-                         vendor: \"My Company\",\n\
-                         signal: Chain![MyGain],\n\
-                     }\n\
-                     \n\
-                     For multiple processors:\n\
-                     signal: Chain![InputGain, Filter, OutputGain]",
-                )
-            })?,
-            krate,
+            signal,
+            // Default krate to ::wavecraft if not specified
+            krate: krate.or_else(|| Some(syn::parse_quote!(::wavecraft))),
         })
     }
 }
 
-/// Generate a deterministic VST3 ID from plugin name and vendor.
-fn generate_vst3_id(name: &str, vendor: &str) -> proc_macro2::TokenStream {
+/// Generate a deterministic VST3 ID from package name and plugin name.
+///
+/// Uses CARGO_PKG_NAME instead of vendor for:
+/// - Stability: package names are canonical identifiers
+/// - Uniqueness: enforced by Cargo/crates.io conventions
+/// - Simplicity: one less parameter to manage
+fn generate_vst3_id(name: &str) -> proc_macro2::TokenStream {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
 
+    let package_name = env!("CARGO_PKG_NAME");
+
     let mut hasher = DefaultHasher::new();
-    format!("{}{}", vendor, name).hash(&mut hasher);
+    format!("{}{}", package_name, name).hash(&mut hasher);
     let hash = hasher.finish();
 
     // Convert hash to 16 bytes
@@ -154,21 +166,53 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
     let plugin_def = parse_macro_input!(input as PluginDef);
 
     let name = &plugin_def.name;
-    let vendor = &plugin_def.vendor;
-    let url = plugin_def
-        .url
-        .unwrap_or_else(|| LitStr::new("", proc_macro2::Span::call_site()));
-    let email = plugin_def
-        .email
-        .unwrap_or_else(|| LitStr::new("", proc_macro2::Span::call_site()));
     let signal_type = &plugin_def.signal;
 
-    // Default krate to ::wavecraft_nih_plug if not specified
+    // Default krate to ::wavecraft if not specified (should already be set by Parse)
     let krate = plugin_def
         .krate
-        .unwrap_or_else(|| syn::parse_quote!(::wavecraft_nih_plug));
+        .unwrap_or_else(|| syn::parse_quote!(::wavecraft));
 
-    let vst3_id = generate_vst3_id(&name.value(), &vendor.value());
+    // Derive metadata from Cargo environment variables
+    let vendor = {
+        let authors = env!("CARGO_PKG_AUTHORS");
+        authors.split(',').next().unwrap_or("Unknown").trim()
+    };
+
+    let url = {
+        let homepage = env!("CARGO_PKG_HOMEPAGE");
+        if homepage.is_empty() {
+            env!("CARGO_PKG_REPOSITORY")
+        } else {
+            homepage
+        }
+    };
+
+    let email = {
+        let authors = env!("CARGO_PKG_AUTHORS");
+        // Parse email from "Name <email@example.com>" format
+        // Returns empty string if format doesn't match (acceptable for VST3/CLAP)
+        authors
+            .split(',')
+            .next()
+            .map(|author| {
+                // Extract email from "Name <email@example.com>" format
+                author
+                    .split('<')
+                    .nth(1)
+                    .and_then(|s| s.split('>').next())
+                    .unwrap_or("")
+            })
+            .unwrap_or("")
+    };
+
+    let vst3_id = generate_vst3_id(&name.value());
+
+    // CLAP ID now uses package name for consistency
+    let clap_id = {
+        let package_name = env!("CARGO_PKG_NAME");
+        format!("com.{}", package_name.replace('-', "_"))
+    };
 
     // Phase 6 Steps 6.1-6.6 Complete:
     // - Input parsing ✓
@@ -177,6 +221,12 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
     // - Plugin trait impl with audio processing ✓
     // - Format impls & exports ✓
     // - Error messages (compile-time validation) ✓
+    //
+    // 0.9.0 Updates:
+    // - Simplified API (name + signal only) ✓
+    // - Metadata derived from Cargo.toml ✓
+    // - VST3/CLAP IDs use package name ✓
+    // - Signal validation (requires SignalChain!) ✓
 
     let expanded = quote! {
         // Use the signal expression as the processor type
@@ -336,7 +386,11 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
             ) -> ::std::option::Option<::std::boxed::Box<dyn #krate::__nih::Editor>> {
                 #[cfg(any(target_os = "macos", target_os = "windows"))]
                 {
-                    let meter_consumer = self.meter_consumer.lock().unwrap().take();
+                    let meter_consumer = self
+                        .meter_consumer
+                        .lock()
+                        .expect("meter_consumer mutex poisoned - previous panic in editor thread")
+                        .take();
                     #krate::editor::create_webview_editor(
                         self.params.clone(),
                         meter_consumer,
@@ -396,7 +450,30 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
                     for (ch, sample_buf) in sample_buffers.iter().enumerate() {
                         if let Some(channel) = buffer.as_slice().get(ch) {
                             if sample_idx < channel.len() {
-                                // Safety: we're within bounds
+                                // SAFETY JUSTIFICATION:
+                                //
+                                // 1. Exclusive Access: nih-plug's process() callback guarantees exclusive
+                                //    buffer access (no concurrent reads/writes from other threads).
+                                //
+                                // 2. Bounds Check: The `if` guards above ensure:
+                                //    - `ch` is a valid channel index (within buffer.channels())
+                                //    - `sample_idx < channel.len()` (within channel sample count)
+                                //
+                                // 3. Pointer Validity:
+                                //    - `channel.as_ptr()` is from nih-plug's Buffer allocation (valid)
+                                //    - `.add(sample_idx)` offset is within bounds (checked above)
+                                //    - Pointer is properly aligned (f32 alignment guaranteed by host)
+                                //
+                                // 4. Write Safety:
+                                //    - f32 is Copy (atomic write, no drop required)
+                                //    - No aliasing: Buffer<'a> lifetime ensures no other refs exist
+                                //    - Host expects in-place modification (plugin contract)
+                                //
+                                // 5. Why unsafe is necessary:
+                                //    nih-plug's Buffer API only provides immutable refs (as_slice()).
+                                //    However, the plugin contract allows (and expects) in-place writes.
+                                //    Casting *const → *mut is sound because we have exclusive access
+                                //    during process() callback (guaranteed by DAW host).
                                 unsafe {
                                     let channel_ptr = channel.as_ptr() as *mut f32;
                                     *channel_ptr.add(sample_idx) = sample_buf[0];
@@ -420,9 +497,16 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
                 let frame = #krate::MeterFrame {
                     peak_l: peak_left,
                     peak_r: peak_right,
-                    rms_l: peak_left * 0.707, // Simplified RMS estimation
+                    // Simplified RMS estimation: peak * 1/√2 (0.707)
+                    // This is exact for sine waves but approximate for other signals.
+                    // Acceptable for basic metering; for accurate RMS, use sliding window average.
+                    rms_l: peak_left * 0.707,
                     rms_r: peak_right * 0.707,
-                    timestamp: 0, // TODO: Add proper timestamp
+                    // Note: Timestamp not implemented for DSL plugins.
+                    // Basic metering doesn't require sample-accurate timing.
+                    // For advanced metering with sample position tracking,
+                    // implement Plugin trait directly and use context.transport().
+                    timestamp: 0,
                 };
 
                 let _ = self.meter_producer.push(frame);
@@ -449,7 +533,7 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
         }
 
         impl #krate::__nih::ClapPlugin for __WavecraftPlugin {
-            const CLAP_ID: &'static str = concat!("com.", #vendor, ".", #name);
+            const CLAP_ID: &'static str = #clap_id;
             const CLAP_DESCRIPTION: Option<&'static str> = None;
             const CLAP_MANUAL_URL: Option<&'static str> = None;
             const CLAP_SUPPORT_URL: Option<&'static str> = None;
@@ -503,9 +587,14 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
                 .map(|spec| #krate::__internal::param_spec_to_info(spec, &id_prefix))
                 .collect();
 
+            // Serialize parameter list to JSON for FFI export
+            // Fallback to "[]" on serialization error (should never happen for ParameterInfo)
             let json = #krate::__internal::serde_json::to_string(&params)
                 .unwrap_or_else(|_| "[]".to_string());
 
+            // Convert to C string for FFI
+            // Returns null pointer if JSON contains embedded null bytes (invalid UTF-8)
+            // Caller (JS bridge) must check for null before dereferencing
             ::std::ffi::CString::new(json)
                 .map(|s| s.into_raw())
                 .unwrap_or(::std::ptr::null_mut())

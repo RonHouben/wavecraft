@@ -40,12 +40,18 @@ impl CreateCommand {
         }
 
         // Use defaults for missing fields
-        let vendor = self
+        let author_name = self
             .vendor
             .clone()
-            .unwrap_or_else(|| "Your Company".to_string());
-        let email = self.email.clone();
-        let url = self.url.clone();
+            .unwrap_or_else(|| "Your Name".to_string());
+        let author_email = self
+            .email
+            .clone()
+            .unwrap_or_else(|| "your.email@example.com".to_string());
+        let homepage = self
+            .url
+            .clone()
+            .unwrap_or_else(|| "https://yourproject.com".to_string());
 
         // Resolve SDK path:
         // 1. Explicit --local-sdk flag (manual override)
@@ -77,9 +83,9 @@ impl CreateCommand {
         // Create template variables
         let vars = TemplateVariables::new(
             self.name.clone(),
-            vendor,
-            email,
-            url,
+            author_name,
+            author_email,
+            homepage,
             self.sdk_version.clone(),
             sdk_path,
         );
