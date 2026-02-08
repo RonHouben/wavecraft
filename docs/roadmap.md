@@ -8,19 +8,20 @@ This document tracks implementation progress against the milestones defined in t
 
 ```
 ┌─────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP           v0.8.6 | 88%  │
+│  WAVECRAFT ROADMAP           v0.8.6 | 83%  │
 ├─────────────────────────────────────────────┤
 │  ✅ M1-M15   Foundation → Tooling Polish   │
-│  ⏳ M16      User Testing                   │
-│  ⏳ M17      V1.0 Release                   │
+│  ⏳ M16      Macro API Simplification      │
+│  ⏳ M17      User Testing                   │
+│  ⏳ M18      V1.0 Release                   │
 ├─────────────────────────────────────────────┤
-│  [████████████████████████████████] 15/17   │
+│  [███████████████████████████████] 15/18    │
 └─────────────────────────────────────────────┘
 ```
 
 **See also:** [Backlog](backlog.md) — unprioritized ideas for future consideration
 
-> **Note:** CI/CD workflow verification in progress (2026-02-08)
+> **Note:** Macro API Simplification in planning phase (2026-02-08)
 
 ---
 
@@ -844,7 +845,112 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 ---
 
-## Milestone 14: User Testing ⏳
+## Milestone 16: Macro API Simplification ⏳
+
+> **Goal:** Simplify the `wavecraft_plugin!` macro API to reduce boilerplate and improve developer experience. Remove unnecessary properties, enforce consistent signal chain syntax, and derive metadata from `Cargo.toml`.
+
+**Status: 🚧 In Progress** — Design phase complete, implementation planning in progress
+
+**Branch:** `feature/macro-api-simplification`  
+**Target Version:** `0.9.0` (minor — breaking API change, simplified interface)
+
+**User Stories:** [docs/feature-specs/macro-api-simplification/user-stories.md](feature-specs/macro-api-simplification/user-stories.md)  
+**Low-Level Design:** [docs/feature-specs/macro-api-simplification/low-level-design.md](feature-specs/macro-api-simplification/low-level-design.md)  
+**Implementation Plan:** [docs/feature-specs/macro-api-simplification/implementation-plan.md](feature-specs/macro-api-simplification/implementation-plan.md)
+
+### Motivation
+
+The current `wavecraft_plugin!` macro requires too many properties that add boilerplate without value:
+- `vendor`, `url`, `email` — Should be derived from `Cargo.toml`
+- `crate` — Internal implementation detail, shouldn't be user-facing
+- `signal` — Accepts both bare `Processor` and `SignalChain![]`, causing API confusion
+
+### Proposed Changes
+
+| Change | Current API | New API | Impact |
+|--------|-------------|---------|--------|
+| **Required properties** | 5 (name, vendor, url, email, signal) | 2 (name, signal) | 60% reduction |
+| **Metadata source** | Manual in macro | Auto-derived from Cargo.toml | No duplication |
+| **Signal syntax** | `InputGain` or `Chain![InputGain]` | `SignalChain![InputGain]` | Consistent |
+| **`crate` property** | Required | Optional (hidden) | Simplified |
+
+**Before (9 lines):**
+```rust
+wavecraft_plugin! {
+    name: "My Plugin",
+    vendor: "Wavecraft",
+    url: "https://example.com",
+    email: "info@example.com",
+    signal: InputGain,  // or Chain![InputGain]
+}
+```
+
+**After (4 lines):**
+```rust
+wavecraft_plugin! {
+    name: "My Plugin",
+    signal: SignalChain![InputGain],
+}
+```
+
+### Technical Approach
+
+| Area | Solution |
+|------|----------|
+| **Metadata derivation** | Use Cargo's compile-time env vars (`CARGO_PKG_AUTHORS`, `CARGO_PKG_HOMEPAGE`) |
+| **VST3 Class ID** | Hash `CARGO_PKG_NAME + name` instead of `vendor + name` (**breaking change**) |
+| **Signal validation** | Compile-time check that `signal` is a `SignalChain![]` |
+| **Macro rename** | `Chain!` → `SignalChain!` with deprecation path |
+| **`crate` property** | Optional field with default `::wavecraft` (not removed for edge cases) |
+
+### Tasks
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Phase 1: Core Macro Changes** | | |
+| Simplify `PluginDef` struct | ⏳ | Remove vendor, url, email fields |
+| Derive metadata from Cargo env vars | ⏳ | `CARGO_PKG_AUTHORS`, etc. |
+| Update VST3/CLAP ID generation | ⏳ | Use package name instead of vendor |
+| Add signal validation | ⏳ | Reject bare identifiers |
+| **Phase 2: SignalChain Rename** | | |
+| Create `SignalChain!` macro | ⏳ | Copy `Chain!` macro |
+| Deprecate `Chain!` | ⏳ | Add deprecation warning |
+| Update prelude exports | ⏳ | Export `SignalChain!` |
+| **Phase 3: CLI Template Updates** | | |
+| Update template to use new API | ⏳ | Minimal macro call |
+| Add metadata to template Cargo.toml | ⏳ | authors, homepage fields |
+| **Phase 4: Documentation** | | |
+| Update architecture docs | ⏳ | Declarative Plugin DSL section |
+| Create migration guide | ⏳ | `MIGRATION-0.9.md` |
+| **Phase 5: Testing** | | |
+| Unit tests (macro expansion) | ⏳ | Test VST3 ID generation |
+| Integration tests | ⏳ | Template compilation |
+| Manual testing (DAW) | ⏳ | Plugin loads correctly |
+
+**Key Deliverables:**
+- **95% simpler API** — 9 lines → 4 lines (55% reduction)
+- **Single source of truth** — Metadata from `Cargo.toml` only
+- **Consistent signal syntax** — `SignalChain![]` always
+- **Compile-time validation** — Clear error messages for API misuse
+- **Migration guide** — MIGRATION-0.9.md with upgrade instructions
+
+**Breaking Changes:**
+- VST3 Class IDs will change (now based on package name, not vendor)
+- `Chain!` deprecated (removed in 0.10.0)
+- Bare processor syntax removed (must use `SignalChain![]`)
+
+**Success Criteria:**
+- [ ] Template uses new minimal API (4 lines)
+- [ ] All tests pass with new macro
+- [ ] VST3/CLAP export still works correctly
+- [ ] Clear compile-time errors for misuse
+- [ ] Documentation updated with migration guide
+
+**Estimated Effort:** 1 week (design complete, implementation + testing)
+
+---
+
+## Milestone 17: User Testing ⏳
 
 > **Goal:** Validate Wavecraft with real plugin developers before V1 release. Gather feedback on SDK usability, documentation quality, and overall developer experience.
 
@@ -885,11 +991,11 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 ---
 
-## Milestone 17: V1.0 Release 🎯
+## Milestone 18: V1.0 Release 🎯
 
 > **Goal:** Ship Wavecraft 1.0 — the first stable, production-ready release of the Rust + React audio plugin framework.
 
-**Depends on:** Milestone 16 (User Testing) — all critical feedback addressed.
+**Depends on:** Milestone 17 (User Testing) — all critical feedback addressed.
 
 **Target Version:** `1.0.0` (major — first stable release)
 
@@ -941,6 +1047,7 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 | Date | Update |
 |------|--------|
+| 2026-02-08 | **Milestone 16 created: Macro API Simplification**: New milestone for reducing boilerplate in `wavecraft_plugin!` macro. Based on user feedback, removes unnecessary properties (`vendor`, `url`, `email`), derives metadata from `Cargo.toml`, enforces consistent `SignalChain!` syntax, and renames `Chain!` → `SignalChain!`. Also makes `crate` property optional (hidden). Target version 0.9.0 (minor — breaking API change). Planning complete (user stories, low-level design by Architect, implementation plan by Planner). Renumbered User Testing (M16→M17) and V1.0 Release (M17→M18). Progress: 83% (15/18 milestones). Design decisions: metadata from `CARGO_PKG_*` env vars, VST3 ID uses package name instead of vendor (breaking), compile-time signal validation. Feature request from developer feedback about reducing boilerplate. |
 | 2026-02-08 | **Milestone 15 complete (v0.8.6)**: Developer Tooling Polish fully implemented. Extended `cargo xtask clean` to comprehensively clean entire workspace (7 directories: engine/target, cli/target, ui/dist, ui/coverage, target/tmp, bundled/, AU wrapper). Added 3 helper functions (`dir_size`, `format_size`, `remove_dir`) with 8 unit tests. Clear output with checkmarks and disk space reporting. Idempotent (no errors on missing dirs). 12/12 manual tests passing (100%). QA approved (0 issues). Architectural review: Fully compliant with all conventions, serves as reference implementation for future xtask commands. Documentation updated (high-level-design.md, implementation-progress.md, test-plan.md, QA-report.md, architectural-review.md). Ready for PO handoff to archive feature spec and merge to main. Progress: 88% (15/17 milestones). |
 | 2026-02-08 | **Milestone 15 added: Developer Tooling Polish**: New milestone for extending `cargo xtask clean` to comprehensively clean the entire workspace (cli/target, ui/dist, ui/coverage, target/tmp). Small quality-of-life improvement to reclaim disk space with a single command. Renumbered User Testing (M15→M16) and V1.0 Release (M16→M17). Progress: 82% (14/17 milestones). Target version 0.8.6 (patch). Item promoted from backlog with user stories created. |
 | 2026-02-08 | **Milestone 14 complete (v0.8.5)**: CLI Enhancements fully implemented. Version flags (`-V`/`--version`) using clap's built-in support (follows Rust CLI conventions with capital V). Update command (`wavecraft update`) updates both Rust and npm dependencies with graceful degradation (continues on partial failure). 9 integration tests passing (4 version + 5 update), 18/22 manual tests. QA approved (0 Critical/High issues). Architectural review: ⭐⭐⭐⭐⭐ (5/5) — excellent architectural quality, idiomatic Rust, proper error handling. Documentation updated (high-level-design.md, sdk-getting-started.md, architectural-review.md). Ready for PO handoff to archive feature spec and merge to main. Progress: 88% (14/16 milestones). |
@@ -1032,15 +1139,16 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 15. ✅ **Milestone 15**: Developer Tooling Polish — Comprehensive workspace cleanup (v0.8.6)
 
 ### Up Next
-16. ⏳ **Milestone 16**: User Testing — Beta testing with real plugin developers (v0.9.0)
-17. ⏳ **Milestone 17**: V1.0 Release — First stable production release (v1.0.0)
+16. 🚧 **Milestone 16**: Macro API Simplification — Reduce boilerplate, enforce SignalChain (v0.9.0)
+17. ⏳ **Milestone 17**: User Testing — Beta testing with real plugin developers (v1.0.0-beta)
+18. ⏳ **Milestone 18**: V1.0 Release — First stable production release (v1.0.0)
 
 ### Immediate Tasks
-1. ✅ Milestone 15 complete — Comprehensive workspace cleanup
-2. ✅ Archive feature spec to `docs/feature-specs/_archive/workspace-cleanup/`
-3. ⏳ Merge `feature/workspace-cleanup` to main
-4. ⏳ Merge `feature/cd-cli-cascade-publish` to main (ready, pending M15 merge)
-5. ⏳ Merge npm OIDC workflow fix to `main` and re-run publish validation
-6. ⏳ Begin Milestone 16 (User Testing) — recruit beta testers
+1. ✅ User stories created — Macro API simplification requirements documented
+2. ✅ Design complete — Architect has completed low-level design
+3. ✅ Implementation plan ready — Planner has created detailed step-by-step plan
+4. ⏳ Begin Coder phase — Implement macro simplifications (5 phases, 23 steps)
+5. ⏳ Testing — Validate new API with tests and manual DAW verification
+6. ⏳ Documentation — Update guides, create MIGRATION-0.9.md
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (crates.io publication, additional example plugins, etc.)
