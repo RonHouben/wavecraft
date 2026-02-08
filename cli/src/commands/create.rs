@@ -4,6 +4,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 use std::path::PathBuf;
 use std::process::Command;
 
+use crate::sdk_detect;
 use crate::template::{extract_template, variables::TemplateVariables};
 use crate::validation::validate_crate_name;
 
@@ -46,9 +47,29 @@ impl CreateCommand {
         let email = self.email.clone();
         let url = self.url.clone();
 
-        // Resolve SDK path if --local-sdk is set
+        // Resolve SDK path:
+        // 1. Explicit --local-sdk flag (manual override)
+        // 2. Auto-detect if running from SDK repo (via cargo run)
+        // 3. None → use git tag dependencies
         let sdk_path = if self.local_sdk {
             Some(find_local_sdk_path()?)
+        } else if let Some(detected_path) = sdk_detect::detect_sdk_repo() {
+            println!();
+            println!(
+                "{} {}",
+                style("ℹ").cyan().bold(),
+                style("Detected SDK development mode (running from source checkout)").cyan()
+            );
+            println!(
+                "  {} Using local path dependencies instead of git tags",
+                style("→").dim()
+            );
+            println!(
+                "  {} To force git tag mode, install via: cargo install wavecraft",
+                style("→").dim()
+            );
+            println!();
+            Some(detected_path)
         } else {
             None
         };
