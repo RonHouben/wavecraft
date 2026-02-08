@@ -202,7 +202,7 @@ Then update the UI to control your parameters:
 ### Development Commands
 
 ```bash
-# Start dev servers (Engine WebSocket + UI with hot reload)
+# Start dev servers (Engine WebSocket + UI with hot reload + Auto audio if configured)
 cargo xtask dev
 
 # Build debug plugin (fast compilation)
@@ -223,6 +223,27 @@ cargo xtask test
 # Clean build artifacts
 cargo xtask clean
 ```
+
+### Audio Testing with Real Input
+
+`cargo xtask dev` automatically enables real-time audio input testing when available:
+
+**What happens:**
+- If your project has `dev-audio` binary configured, it compiles and starts automatically
+- Audio flows from your system microphone through your DSP code
+- Meters update in real-time with actual audio levels
+- Parameter changes apply instantly to the audio stream
+- UI hot-reloading works while audio is running
+
+**Audio binary setup (included in new projects):**
+The template includes `engine/src/bin/dev-audio.rs` and the necessary configuration in `engine/Cargo.toml`:
+```toml
+[[bin]]
+name = "dev-audio"
+path = "src/bin/dev-audio.rs"
+```
+
+**Note:** If the audio binary fails to compile or you're working on a machine without audio hardware, the dev server continues with browser-only mode. You'll see helpful messages about enabling audio if it's not configured.
 
 ---
 

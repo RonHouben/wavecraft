@@ -24,3 +24,14 @@ log = "0.4"
 # This ensures version consistency with the Wavecraft SDK
 nih_plug_xtask = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28b149ec4d62757d0b448809148a0c3ca6e09a95" }
 
+[dev-dependencies]
+# Development audio server for testing with real OS audio input
+wavecraft-dev-server = { package = "wavecraft-dev-server", git = "https://github.com/RonHouben/wavecraft", tag = "{{sdk_version}}", features = ["audio"] }
+cpal = "0.15"
+anyhow = "1.0"
+env_logger = "0.11"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+
+[[bin]]
+name = "dev-audio"
+path = "src/bin/dev-audio.rs"
