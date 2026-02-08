@@ -40,9 +40,11 @@ wavecraft/
 │   ├── src/                       # CLI source code
 │   │   ├── main.rs                # Entry point, clap CLI
 │   │   ├── validation.rs          # Crate name validation (syn-based)
+│   │   ├── sdk_detect.rs          # Auto-detect SDK dev mode (cargo run vs install)
 │   │   ├── commands/              # Command implementations
 │   │   │   ├── mod.rs
-│   │   │   └── create.rs          # `wavecraft create` command
+│   │   │   ├── create.rs          # `wavecraft create` command
+│   │   │   └── start.rs           # `wavecraft start` dev servers
 │   │   └── template/              # Template extraction & variables
 │   │       ├── mod.rs
 │   │       └── variables.rs
@@ -95,13 +97,13 @@ wavecraft/
 │                                                                         │
 │  ┌─────────────────┐     scaffolds      ┌───────────────────────────┐   │
 │  │   CLI           │ ──────────────────►│ New Plugin Project        │   │
-│  │(wavecraft create)│                    │ (uses git tag deps)       │   │
+│  │(wavecraft create)│                    │ (git tag or path deps)    │   │
 │  │                 │                    │                           │   │
 │  │  • validation   │                    │ [dependencies]            │   │
 │  │  • templates    │                    │ wavecraft-core = {        │   │
-│  │  • defaults     │                    │   git = "...wavecraft",  │   │
-│  │    (no prompts) │                    │   tag = "wavecraft-cli-  │   │
-│  │                 │                    │         v0.7.1" }         │   │
+│  │  • sdk_detect   │                    │   git = "...wavecraft",  │   │
+│  │  • defaults     │                    │   tag = "wavecraft-cli-  │   │
+│  │    (no prompts) │                    │         v0.7.1" }         │   │
 │  └─────────────────┘                    └───────────────────────────┘   │
 │                                                     │                   │
 │                                          depends on │ (git)             │
@@ -146,6 +148,7 @@ wavecraft/
 | Development | Rapid iteration | Stable API |
 | User workflow | `cargo install wavecraft && wavecraft create` | Same, with crates.io deps |
 | CLI behavior | No prompts, uses placeholder defaults | Same |
+| SDK dev mode | Auto-detected via `cargo run` (path deps) | Same |
 
 ⸻
 

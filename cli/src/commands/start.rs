@@ -19,8 +19,8 @@ use std::time::Duration;
 
 use crate::dev_server::{DevServerHost, PluginLoader};
 use crate::project::{has_node_modules, ProjectMarkers};
-use wavecraft_dev_server::ws_server::WsServer;
 use wavecraft_bridge::IpcHandler;
+use wavecraft_dev_server::ws_server::WsServer;
 
 /// Options for the `start` command.
 #[derive(Debug)]
@@ -206,7 +206,10 @@ fn run_dev_servers(
 
     // Give the UI server a moment to fail fast (e.g., port already in use).
     thread::sleep(Duration::from_millis(300));
-    if let Some(status) = ui_server.try_wait().context("Failed to check UI dev server status")? {
+    if let Some(status) = ui_server
+        .try_wait()
+        .context("Failed to check UI dev server status")?
+    {
         anyhow::bail!("UI dev server exited early with status {}", status);
     }
 
@@ -285,9 +288,10 @@ fn find_plugin_dylib(engine_dir: &Path) -> Result<PathBuf> {
     // Prefer the dylib that matches the engine crate name
     if let Some(crate_name) = read_engine_crate_name(engine_dir) {
         let expected_stem = crate_name.replace('-', "_");
-        if let Some(matched) = candidates.iter().find(|p| {
-            library_matches_name(p, &expected_stem, extension)
-        }) {
+        if let Some(matched) = candidates
+            .iter()
+            .find(|p| library_matches_name(p, &expected_stem, extension))
+        {
             return Ok(matched.to_path_buf());
         }
     }
@@ -312,9 +316,7 @@ fn resolve_debug_dir(engine_dir: &Path) -> Result<PathBuf> {
         return Ok(engine_debug);
     }
 
-    let workspace_debug = engine_dir
-        .parent()
-        .map(|p| p.join("target").join("debug"));
+    let workspace_debug = engine_dir.parent().map(|p| p.join("target").join("debug"));
 
     if let Some(debug_dir) = workspace_debug {
         if debug_dir.exists() {

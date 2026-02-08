@@ -808,6 +808,7 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 | Date | Update |
 |------|--------|
+| 2026-02-08 | **CLI auto-detect local SDK**: CLI now auto-detects when running from monorepo source checkout (`cargo run` or `target/debug/wavecraft`) and uses path dependencies instead of git tags. Eliminates the need for `--local-sdk` flag during SDK development. Runtime binary path inspection with SDK marker validation (`engine/crates/wavecraft-nih_plug/Cargo.toml`). 9/9 manual tests, 32 CLI unit tests, QA approved. Architecture docs updated (high-level-design.md, coding-standards.md, agent-development-flow.md). Archived to `_archive/cli-auto-local-sdk/`. |
 | 2026-02-08 | **CLI `wavecraft start` port preflight**: Added preflight port checks and strict UI port binding. Startup now fails fast when UI or WS ports are in use, avoiding partial startup and Vite auto-port switching. Docs updated (High-Level Design, Getting Started, coding standards/agent flow). Test plan re-run and QA completed. |
 | 2026-02-07 | **npm OIDC trusted publishing validation**: Branch run succeeded for `@wavecraft/components` and confirmed provenance publishing; `@wavecraft/core` publish on `main` still fails due to token injection. Workflow fix pending merge to `main` before re-validating OIDC publishes. |
 | 2026-02-07 | **Doctest cleanup + documentation guidance**: Replaced ignored Rust doctests with `rust,no_run` or `text` blocks where appropriate, updated examples to compile, and documented doctest conventions in coding standards. `cargo xtask ci-check` now runs with zero ignored doctests. |
@@ -896,10 +897,9 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 ### Immediate Tasks
 1. ✅ Milestone 13 complete — Internal testing + CLI UX improvements
-2. ⏳ Archive feature specs to `_archive/cli-ux-improvements/`
-3. ⏳ Merge `feature/cli-ux-improvements` to main
-4. ⏳ Create git tag `v0.8.0` — Version bump after merge
+2. ✅ CLI auto-detect local SDK — Auto-detects monorepo, uses path deps
+3. ⏳ Merge `feature/cli-auto-local-sdk` to main
+4. ⏳ Merge npm OIDC workflow fix to `main` and re-run publish validation
 5. ✅ Continuous Deployment configured — Auto-publishes on merge to main
-6. ⏳ Merge npm OIDC workflow fix to `main` and re-run publish validation
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (crates.io publication, additional example plugins, etc.)

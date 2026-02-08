@@ -444,6 +444,31 @@ vendor = "Your Company"
 
 ---
 
+## SDK Development (Contributing to Wavecraft)
+
+If you're working on the Wavecraft SDK itself (not building a plugin), the CLI **automatically detects** when it's running from the monorepo source checkout:
+
+```bash
+# From the wavecraft repo root:
+cargo run -p wavecraft -- create TestPlugin --output target/tmp/test-plugin
+
+# The CLI will print:
+# ℹ Detected SDK development mode (running from source checkout)
+#   → Using local path dependencies instead of git tags
+```
+
+**What this does:** Instead of generating `Cargo.toml` dependencies that reference a git tag (which may not exist yet for unreleased versions), the CLI generates **local path dependencies** pointing to the SDK crates in your checkout. This means `wavecraft start` works immediately without needing a published release.
+
+**When does it trigger?**
+- The running binary is inside a cargo `target/` directory (i.e., built via `cargo run`)
+- The wavecraft monorepo marker (`engine/crates/wavecraft-nih_plug/Cargo.toml`) is found by walking up from the binary location
+
+**When does it NOT trigger?**
+- Binaries installed via `cargo install wavecraft` (located in `~/.cargo/bin/`)
+- The explicit `--local-sdk` hidden flag still works as a manual override
+
+---
+
 ## Troubleshooting
 
 ### Plugin doesn't appear in DAW
