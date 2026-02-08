@@ -44,8 +44,8 @@ jobs:
   # Job 2: Publish CLI to crates.io
   # ============================================================================
   publish-cli:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.cli == 'true'
+    needs: [detect-changes, publish-engine]
+    if: needs.detect-changes.outputs.cli == 'true' && always()
     runs-on: ubuntu-latest
     permissions:
       id-token: write  # Required for crates.io trusted publishing (OIDC)
@@ -186,7 +186,7 @@ jobs:
   # ============================================================================
   publish-engine:
     needs: detect-changes
-    if: needs.detect-changes.outputs.engine == 'true'
+    if: needs.detect-changes.outputs.engine == 'true' || needs.detect-changes.outputs.cli == 'true'
     runs-on: ubuntu-latest
     permissions:
       id-token: write  # Required for crates.io trusted publishing (OIDC)
@@ -246,11 +246,6 @@ jobs:
             --from-git \
             --yes \
             --allow-branch main
-          # cargo-workspaces automatically:
-          # - Bumps patch version if current version already published
-          # - Creates git tags: wavecraft-protocol-v0.7.2, wavecraft-core-v0.7.2, etc.
-          # - Commits version changes
-          # - Pushes commits and tags
 
   # ============================================================================
   # Job 4: Publish @wavecraft/core to npm
