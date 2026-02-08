@@ -307,10 +307,15 @@ fn run_dev_servers(
     println!("{} WebSocket server running", style("✓").green());
 
     // 5. Try to start audio in-process via FFI (optional, graceful fallback)
-    let has_audio = runtime.block_on(async {
+    // Store the AudioHandle so the cpal stream stays alive until shutdown.
+    // When this variable is dropped (reverse declaration order for locals),
+    // the FfiProcessor inside the closure is dropped while the Library in
+    // `loader` is still loaded — preserving vtable pointer validity.
+    let _audio_handle = runtime.block_on(async {
         let ws_handle = server.handle();
-        try_start_audio_in_process(&loader, ws_handle, verbose).is_some()
+        try_start_audio_in_process(&loader, ws_handle, verbose)
     });
+    let has_audio = _audio_handle.is_some();
 
     // 6. Start UI dev server
     println!(

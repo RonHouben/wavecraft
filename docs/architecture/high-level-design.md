@@ -67,7 +67,7 @@ wavecraft/
 │   │   ├── wavecraft-protocol/    # IPC contracts
 │   │   ├── wavecraft-bridge/      # IPC handler
 │   │   ├── wavecraft-metering/    # Real-time metering
-│   │   ├── wavecraft-dev-server/  # Browser dev server (WebSocket transport)
+│   │   ├── wavecraft-dev-server/  # Browser dev server, audio capture, FFI processor
 │   │   └── wavecraft-dsp/         # DSP primitives
 │   └── xtask/                     # Build automation
 ├── packaging/                     # AU wrapper, installers
@@ -347,10 +347,11 @@ All SDK crates use the `wavecraft-*` naming convention for clear identification:
 | `wavecraft-nih_plug` | nih-plug integration, WebView editor, plugin exports | ❌ Git only | **Primary dependency** — users import via Cargo rename: `wavecraft = { package = "wavecraft-nih_plug" }` |
 | `wavecraft-core` | Core SDK types, declarative macros, no nih_plug dependency | ✅ crates.io | Re-exported via wavecraft-nih_plug |
 | `wavecraft-macros` | Procedural macros: `ProcessorParams` derive, `wavecraft_plugin!` proc-macro | ✅ crates.io | Used indirectly via wavecraft-nih_plug |
-| `wavecraft-protocol` | IPC contracts, parameter types, JSON-RPC definitions | ✅ crates.io | Implements `ParamSet` trait |
-| `wavecraft-bridge` | IPC handler, `ParameterHost` trait for parameter management | ✅ crates.io | Rarely used directly |
+| `wavecraft-protocol` | IPC contracts, parameter types, JSON-RPC definitions, FFI vtable contract (`DevProcessorVTable`) | ✅ crates.io | Implements `ParamSet` trait |
+| `wavecraft-bridge` | IPC handler, `ParameterHost` trait, `PluginParamLoader` (dlopen + param/vtable loading) | ✅ crates.io | CLI uses for plugin loading |
 | `wavecraft-metering` | Real-time safe SPSC ring buffer for audio → UI metering | ✅ crates.io | Uses `MeterProducer` in DSP |
 | `wavecraft-dsp` | DSP primitives, `Processor` trait, built-in processors | ✅ crates.io | Implements `Processor` trait |
+| `wavecraft-dev-server` | WebSocket dev server, `DevAudioProcessor` trait, `FfiProcessor` wrapper, `AudioServer` | ✅ crates.io | CLI uses for dev mode |
 
 > **Why the split?** The `nih_plug` crate cannot be published to crates.io (it has unpublished dependencies). By isolating nih_plug integration in `wavecraft-nih_plug` (git-only), all other crates become publishable. User projects depend on `wavecraft-nih_plug` via git tag, while the ecosystem gains crates.io discoverability for the rest of the SDK.
 
@@ -589,6 +590,7 @@ Wavecraft provides a declarative domain-specific language (DSL) for defining plu
 │       vendor: "Wavecraft",         → ClapPlugin impl (CLAP ID)                  │
 │       signal: InputGain,           → nih_export_vst3!() macro                   │
 │   }                                → nih_export_clap!() macro                   │
+│                                    → FFI vtable export (dev audio processing)   │
 │                                                                                 │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -616,6 +618,11 @@ The DSL uses a two-layer macro system:
        signal: InputGain,
    }
    ```
+   In addition to the nih-plug `Plugin` implementation, this macro also generates:
+   - `wavecraft_get_params_json` / `wavecraft_free_string` — FFI exports for parameter discovery
+   - `wavecraft_dev_create_processor` — FFI vtable export returning a `DevProcessorVTable` for dev audio processing (see [Dev Audio via FFI](#dev-audio-via-ffi))
+
+   All generated `extern "C"` functions use `catch_unwind` to prevent panics from unwinding across the FFI boundary.
 
 3. **`#[derive(ProcessorParams)]`** — Auto-generates parameter metadata:
    ```rust
@@ -906,6 +913,74 @@ cd ui && npm run dev
 
 The environment constant is evaluated at module scope (not inside hooks) to comply with React's Rules of Hooks. This ensures consistent hook call order across renders.
 
+### Dev Audio via FFI
+
+When running `wavecraft start`, the CLI loads the user's compiled cdylib (already built for parameter discovery) and also attempts to load an FFI vtable symbol (`wavecraft_dev_create_processor`). If found, audio processing runs **in-process** via cpal — no separate binary or subprocess is needed. Users never see or write any audio capture code.
+
+#### FFI Audio Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  CLI Process (`wavecraft start`)                                             │
+│                                                                              │
+│  ┌─────────────────────┐                                                     │
+│  │  dlopen(cdylib)      │                                                     │
+│  │  → params (existing) │                                                     │
+│  │  → vtable (new)      │                                                     │
+│  └──────────┬──────────┘                                                     │
+│             │                                                                │
+│             ▼                                                                │
+│  ┌─────────────────────┐      ┌──────────────────────────┐                   │
+│  │  FfiProcessor        │      │  cpal audio input stream  │                   │
+│  │  (wraps vtable)      │◄─────│  (OS microphone)          │                   │
+│  └──────────┬──────────┘      └──────────────────────────┘                   │
+│             │                                                                │
+│             │  process(channels) → audio data modified in-place              │
+│             │  compute meters from processed output                          │
+│             │                                                                │
+│             ▼                                                                │
+│  ┌─────────────────────┐      ┌──────────────────┐    ┌──────────────────┐   │
+│  │  Meter computation   │─────►│  WebSocket server │───►│  Browser UI      │   │
+│  └─────────────────────┘      │  (ws://9000)      │    │  (localhost:5173) │   │
+│                               └──────────────────┘    └──────────────────┘   │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### FFI VTable Contract
+
+The `DevProcessorVTable` (`wavecraft-protocol`) is a `#[repr(C)]` struct with `extern "C"` function pointers:
+
+| Function | Purpose |
+|----------|---------|
+| `create` | Heap-allocate a new processor instance (returns `*mut c_void`) |
+| `process` | Process deinterleaved audio buffers in-place |
+| `set_sample_rate` | Update the processor's sample rate |
+| `reset` | Clear processor state (delay lines, filters, etc.) |
+| `drop` | Free the processor instance |
+
+The vtable includes a `version` field (`DEV_PROCESSOR_VTABLE_VERSION`) so the CLI can detect incompatible changes and fall back gracefully instead of invoking undefined behavior.
+
+#### Key Components
+
+- **`DevProcessorVTable`** (`wavecraft-protocol`): Versioned C-ABI vtable defining the FFI contract between user cdylib and CLI.
+- **`wavecraft_dev_create_processor`** (`wavecraft-macros` generated): FFI symbol exported by `wavecraft_plugin!` that returns the vtable. Every `extern "C"` function is wrapped in `catch_unwind` for panic safety.
+- **`PluginParamLoader`** (`wavecraft-bridge`): Extended to optionally load the vtable alongside parameters via `try_load_processor_vtable()`. Missing vtable → graceful fallback to metering-only mode.
+- **`DevAudioProcessor`** trait (`wavecraft-dev-server`): Simplified audio processing trait without associated types — compatible with both FFI and direct Rust usage.
+- **`FfiProcessor`** (`wavecraft-dev-server`): Safe wrapper around the vtable's opaque `*mut c_void` instance. Implements `DevAudioProcessor` and calls through vtable function pointers. `Drop` implementation calls the vtable's `drop` function.
+- **`AudioServer`** (`wavecraft-dev-server`): Accepts any `DevAudioProcessor` implementation. Uses cpal for OS audio capture and forwards meter data to the WebSocket server.
+
+#### Memory and Lifetime Safety
+
+All processor memory is allocated and freed **inside the dylib** via vtable functions (`create` → `Box::into_raw`, `drop` → `Box::from_raw`). The CLI never allocates or frees processor memory, avoiding cross-allocator issues.
+
+**Drop ordering invariant:** The `FfiProcessor` (which holds vtable function pointers into the loaded library) must be dropped **before** the `PluginParamLoader` (which holds the `Library`). This is enforced by:
+1. **Struct field order** in `PluginParamLoader`: `_library` is the last field, so it's dropped last.
+2. **Local variable order** in the CLI: `_audio_handle` is declared after `loader`, so it's dropped first (reverse declaration order for locals).
+
+#### Backward Compatibility
+
+Plugins compiled with older SDK versions that don't export `wavecraft_dev_create_processor` continue to work — the CLI falls back to metering-only mode with a clear informational message. Version mismatches in the vtable also trigger a graceful fallback with upgrade guidance.
+
 ### Benefits
 
 - **Real engine communication**: Browser UI talks to real Rust backend
@@ -913,6 +988,7 @@ The environment constant is evaluated at module scope (not inside hooks) to comp
 - **Same IPC layer**: Identical JSON-RPC protocol as production
 - **Robust reconnection**: Automatic recovery from connection drops
 - **Graceful degradation**: UI shows "Connecting..." when disconnected
+- **In-process audio**: Real DSP processing via FFI with zero user boilerplate
 
 ⸻
 
@@ -952,7 +1028,7 @@ cargo xtask ci-check --fix      # Auto-fix linting issues
 cargo xtask dev              # Starts WebSocket server + Vite
 cargo xtask dev --verbose    # With detailed IPC logging
 
-# Plugin project development (embedded server + FFI parameter discovery)
+# Plugin project development (embedded server + FFI parameter/audio discovery)
 wavecraft start
 
 # Fast iteration (debug build, no signing)

@@ -83,6 +83,11 @@ pub mod implementation {
             let _buffer_size = self.config.buffer_size;
             let mut frame_counter = 0u64;
 
+            // Capture the actual channel count from the stream config before
+            // moving self.stream_config into build_input_stream. This handles
+            // mono (1 ch), stereo (2 ch), and multi-channel (>2 ch) devices.
+            let num_channels = self.stream_config.channels as usize;
+
             let stream = self
                 .device
                 .build_input_stream(
@@ -90,12 +95,11 @@ pub mod implementation {
                     move |data: &[f32], _: &cpal::InputCallbackInfo| {
                         frame_counter += 1;
 
-                        // Convert interleaved cpal input to deinterleaved channels.
-                        // cpal provides interleaved stereo: [L0, R0, L1, R1, ...]
-                        let num_channels = 2usize;
-                        let num_samples = data.len() / num_channels;
+                        // Convert interleaved cpal input to deinterleaved stereo.
+                        // cpal provides interleaved data: [Ch0_S0, Ch1_S0, ..., Ch0_S1, ...]
+                        let num_samples = data.len() / num_channels.max(1);
 
-                        if num_samples == 0 {
+                        if num_samples == 0 || num_channels == 0 {
                             return;
                         }
 
@@ -104,8 +108,12 @@ pub mod implementation {
 
                         for i in 0..num_samples {
                             left[i] = data[i * num_channels];
+                            // Stereo or more: use second channel for right.
+                            // Mono: duplicate left channel to right.
                             if num_channels > 1 {
                                 right[i] = data[i * num_channels + 1];
+                            } else {
+                                right[i] = left[i];
                             }
                         }
 
