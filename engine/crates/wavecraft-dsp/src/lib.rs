@@ -21,7 +21,5 @@ pub use builtins::*;
 // Re-export combinators
 pub use combinators::Chain;
 
-// Re-export SignalChain! and Chain! macros
-// Note: Chain! is deprecated in favor of SignalChain!
-#[doc(inline)]
-pub use crate::{Chain, SignalChain};
+// Note: SignalChain! and Chain! macros are automatically exported at crate root
+// via #[macro_export] in combinators/mod.rs

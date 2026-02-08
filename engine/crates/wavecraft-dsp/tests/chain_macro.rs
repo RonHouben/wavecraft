@@ -1,12 +1,16 @@
-//! Tests for the Chain! macro.
+//! Tests for the SignalChain! macro.
 
 use wavecraft_dsp::builtins::{GainDsp, PassthroughDsp};
-use wavecraft_dsp::{Chain, Processor, Transport};
+use wavecraft_dsp::combinators::Chain; // Import struct type, not macro
+use wavecraft_dsp::{Processor, Transport};
+
+// Import macro separately to avoid deprecation warning on struct import
+use wavecraft_dsp::SignalChain;
 
 #[test]
 fn test_chain_macro_single_processor() {
-    // Chain![T] should compile to just T (zero overhead)
-    type SingleChain = Chain![GainDsp];
+    // SignalChain![T] should compile to just T (zero overhead)
+    type SingleChain = SignalChain![GainDsp];
 
     // This should be exactly GainDsp, not wrapped
     let _processor: SingleChain = GainDsp::default();
@@ -14,8 +18,8 @@ fn test_chain_macro_single_processor() {
 
 #[test]
 fn test_chain_macro_two_processors() {
-    // Chain![A, B] should compile to Chain<A, B>
-    type TwoChain = Chain![GainDsp, PassthroughDsp];
+    // SignalChain![A, B] should compile to Chain<A, B>
+    type TwoChain = SignalChain![GainDsp, PassthroughDsp];
 
     let mut chain: TwoChain = Chain {
         first: GainDsp::default(),
@@ -33,8 +37,8 @@ fn test_chain_macro_two_processors() {
 
 #[test]
 fn test_chain_macro_three_processors() {
-    // Chain![A, B, C] should compile to Chain<A, Chain<B, C>>
-    type ThreeChain = Chain![GainDsp, PassthroughDsp, GainDsp];
+    // SignalChain![A, B, C] should compile to Chain<A, Chain<B, C>>
+    type ThreeChain = SignalChain![GainDsp, PassthroughDsp, GainDsp];
 
     let chain: ThreeChain = Chain {
         first: GainDsp::default(),

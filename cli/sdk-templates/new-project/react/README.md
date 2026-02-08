@@ -78,20 +78,22 @@ This copies the bundles to your system plugin directories.
 Your plugin is defined using Wavecraft's declarative macros in `engine/src/lib.rs`:
 
 ```rust
-use wavecraft_core::prelude::*;
+use wavecraft::prelude::*;
 
 // Define processor chain (currently using built-in Gain processor)
 wavecraft_processor!({{plugin_name_pascal}}Gain => Gain);
 
-// Generate complete plugin with metadata
+// Generate complete plugin with metadata (derived from Cargo.toml)
 wavecraft_plugin! {
     name: "{{plugin_name_title}}",
-    vendor: "{{vendor}}",
-    url: "{{url}}",
-    email: "{{email}}",
-    signal: {{plugin_name_pascal}}Gain,
+    signal: SignalChain![{{plugin_name_pascal}}Gain],
 }
 ```
+
+**Metadata Derivation:** The plugin automatically derives:
+- **Vendor/Author** from `Cargo.toml` `authors` field
+- **URL** from `homepage` or `repository` field
+- **Email** parsed from authors
 
 ### Adding Custom DSP
 
@@ -136,8 +138,7 @@ wavecraft_processor!(MyPluginProcessor => MyCustomProcessor);
 
 wavecraft_plugin! {
     name: "{{plugin_name_title}}",
-    vendor: "{{vendor}}",
-    signal: MyPluginProcessor,
+    signal: SignalChain![MyPluginProcessor],
 }
 ```
 
@@ -228,26 +229,38 @@ cargo xtask clean
 
 ## Plugin Configuration
 
-All plugin metadata is configured in the `wavecraft_plugin!` macro in `engine/src/lib.rs`:
+Plugin metadata is configured in two places:
+
+### engine/Cargo.toml
+
+```toml
+[package]
+name = "{{plugin_name}}"
+authors = ["Your Name <your.email@example.com>"]
+homepage = "https://yourproject.com"
+```
+
+These fields are automatically used for plugin metadata (vendor, URL, email).
+
+### engine/src/lib.rs
 
 ```rust
 wavecraft_plugin! {
     name: "{{plugin_name_title}}",    // Display name in DAW
-    vendor: "{{vendor}}",              // Your company/name
-    url: "{{url}}",                    // Website (optional)
-    email: "{{email}}",                // Contact email (optional)
-    signal: {{plugin_name_pascal}}Gain,  // Processor chain entry point
+    signal: SignalChain![{{plugin_name_pascal}}Gain],  // Processor chain entry point
 }
 ```
 
+**Note:** Vendor, URL, and email are derived from Cargo.toml at compile time.
+
 ### Unique Plugin IDs
 
-**Important:** The template generates default IDs, but you should customize them before distribution:
+**Important:** The template generates IDs based on your package name. Customize if needed:
 
 **CLAP ID:** In `engine/Cargo.toml`:
 ```toml
 [package.metadata.clap]
-id = "com.{{vendor}}.{{plugin_name}}"  # Change to your domain
+id = "com.{{plugin_name}}"  # Default: com.your_package_name
 ```
 
 **VST3 Class ID:** Auto-generated from plugin name, but can be customized in `wavecraft_plugin!`:

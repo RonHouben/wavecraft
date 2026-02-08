@@ -698,6 +698,95 @@ The `ParameterGroup` component renders parameters within a named section, improv
 | Export macros | Generated | -5 lines |
 | **Total: ~190 lines** | **~9 lines** | **95%** |
 
+### Known Limitations and Trade-offs (v0.9.0)
+
+#### Parameter Sync in DSL Plugins
+
+The `wavecraft_plugin!` macro generates plugins where the `Processor::process()` method always receives **default parameter values**. This is a conscious design trade-off to keep the macro simple while supporting the most common use cases.
+
+**What Works**:
+- ✅ Host automation (parameters visible in DAW, automation recorded)
+- ✅ UI parameter display and editing (sliders, knobs work correctly)
+- ✅ IPC parameter sync (UI ↔ Host communication)
+- ✅ Parameter values visible in DAW mixer/automation lanes
+
+**What Doesn't Work**:
+- ❌ DSP code reading parameter values in `process()`
+- ❌ Parameter-driven effects (gain, filters, modulation)
+- ❌ Parameter automation affecting audio output
+
+**Example of the Limitation**:
+
+```rust
+#[derive(ProcessorParams, Default)]
+struct GainParams {
+    #[param(range = "-60.0..=24.0", default = 0.0)]
+    gain: f32,
+}
+
+impl Processor for MyGain {
+    type Params = GainParams;
+    
+    fn process(&mut self, buffer: &mut [&mut [f32]], ..., params: &Self::Params) {
+        // ⚠️ params.gain will ALWAYS be 0.0 (default) in DSL-generated plugins
+        // Host automation and UI updates don't reach here
+        let gain_linear = db_to_linear(params.gain); // Always 1.0 (0 dB)
+    }
+}
+```
+
+**Workaround**: For parameter-driven DSP, implement the `Plugin` trait directly instead of using the macro:
+
+```rust
+// Manual implementation - full parameter control
+impl Plugin for MyPlugin {
+    fn process(&mut self, buffer: &mut Buffer, ...) {
+        // Direct access to nih-plug parameters
+        let gain_db = self.params.gain.value();
+        let gain_linear = db_to_linear(gain_db);
+        
+        // Apply gain to audio
+        for channel in buffer.iter_samples() {
+            for sample in channel {
+                *sample *= gain_linear;
+            }
+        }
+    }
+}
+```
+
+**Why This Limitation Exists**:
+
+The macro bridges two parameter representations:
+
+1. **nih-plug parameters** — Runtime trait objects (`FloatParam`, `BoolParam`) with atomic storage for host automation
+2. **Processor parameters** — Plain typed structs (`f32`, `bool`) for DSP code
+
+Full bidirectional sync requires:
+- Parse user's parameter struct at compile time (complex proc-macro logic)
+- Generate field-by-field conversion code
+- Handle nested parameters, groups, and conditionals
+- Manage parameter smoothing and sample-accurate automation
+
+This is solvable but adds significant complexity (~1500 LOC proc-macro code vs current ~500 LOC). The limitation is acceptable for v0.9.0 because:
+
+1. **Clear Workaround**: Manual `Plugin` implementation is well-documented and straightforward
+2. **Target Use Case**: The DSL is designed for minimal plugins (test plugins, demos, fixed DSP)
+3. **Incremental Release**: Full parameter sync can be added in 0.10.0 without breaking the existing API
+
+**When to Use DSL vs Manual Implementation**:
+
+| Use Case | Recommendation |
+|----------|----------------|
+| Test plugins, demos | ✅ Use `wavecraft_plugin!` macro |
+| Fixed DSP (no parameter control) | ✅ Use `wavecraft_plugin!` macro |
+| Passthrough, analyzers, visualizers | ✅ Use `wavecraft_plugin!` macro |
+| Gain, EQ, compression, modulation | ❌ Implement `Plugin` trait manually |
+| Custom parameter smoothing | ❌ Implement `Plugin` trait manually |
+| Sample-accurate automation | ❌ Implement `Plugin` trait manually |
+
+**Roadmap**: Full parameter sync is tracked in GitHub issues and targeted for a future release (0.10.0 or 1.0.0).
+
 ⸻
 
 ## Browser Development Mode

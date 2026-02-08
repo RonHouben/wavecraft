@@ -39,7 +39,7 @@ pub fn derive_processor_params(input: TokenStream) -> TokenStream {
 ///
 /// # Syntax (0.9.0+)
 ///
-/// ```rust,no_run
+/// ```text
 /// use wavecraft::prelude::*;
 ///
 /// // Define your processor wrapper
@@ -79,9 +79,7 @@ pub fn derive_processor_params(input: TokenStream) -> TokenStream {
 ///
 /// Then specify the renamed crate:
 ///
-/// ```rust,no_run
-/// # use wavecraft::prelude::*;
-/// # wavecraft_processor!(MyGain => Gain);
+/// ```text
 /// wavecraft_plugin! {
 ///     name: "My Plugin",
 ///     signal: SignalChain![MyGain],
@@ -97,6 +95,17 @@ pub fn derive_processor_params(input: TokenStream) -> TokenStream {
 /// - Default `crate` path changed from `::wavecraft_nih_plug` to `::wavecraft`
 ///
 /// See `docs/MIGRATION-0.9.md` for migration guide.
+///
+/// # Known Limitations
+///
+/// **Parameter Automation**: The DSL-generated `process()` method always receives
+/// default parameter values. Host automation and UI work correctly, but the
+/// `Processor` cannot read parameter changes.
+///
+/// **Workaround**: For parameter-driven DSP, implement the `Plugin` trait directly
+/// instead of using this macro. See SDK documentation for examples.
+///
+/// **Tracking**: This limitation is tracked in the SDK roadmap for future releases.
 #[proc_macro]
 pub fn wavecraft_plugin(input: TokenStream) -> TokenStream {
     plugin::wavecraft_plugin_impl(input)

@@ -47,6 +47,7 @@ macro_rules! SignalChain {
 ///
 /// ```rust,no_run
 /// use wavecraft_dsp::builtins::GainDsp;
+/// use wavecraft_dsp::SignalChain;
 ///
 /// // Old (deprecated):
 /// // type MyChain = Chain![GainDsp];
