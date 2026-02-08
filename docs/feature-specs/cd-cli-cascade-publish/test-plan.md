@@ -10,12 +10,12 @@
 
 | Status | Count |
 |--------|-------|
-| ✅ PASS | 10 |
-| ❌ FAIL | 2 |
+| ✅ PASS | 12 |
+| ❌ FAIL | 0 |
 | ⏸️ BLOCKED | 0 |
 | ⬜ NOT RUN | 0 |
 
-> **Note**: TC-005 is marked FAIL for the missing upstream failure guards (Issue #2, Medium). TC-006 is marked FAIL for the `sed` pattern corrupting dependency versions (Issue #1, Critical).
+> All test cases pass after fixes in commit `87bf1c6`.
 
 ## Prerequisites
 
@@ -99,9 +99,9 @@
 
 **Expected Result**: CLI depends on all 4 jobs and triggers on aggregate flag.
 
-**Status**: ❌ FAIL
+**Status**: ✅ PASS
 
-**Actual Result**: CLI correctly depends on all 4 jobs and uses `any_sdk_changed`. However, the `if` condition is `needs.detect-changes.outputs.any_sdk_changed == 'true' && always()` which **lacks upstream failure guards**. The LLD specified `!cancelled()` and individual result checks like `(needs.publish-engine.result == 'success' || needs.publish-engine.result == 'skipped')`. Without these, if an upstream publish job fails, CLI will still attempt to publish. See **Issue #2**.
+**Actual Result**: CLI correctly depends on all 4 jobs (`detect-changes`, `publish-engine`, `publish-npm-core`, `publish-npm-components`) and uses `any_sdk_changed`. The `if` condition includes `!cancelled()` and individual upstream result checks for all 3 publish jobs (`success || skipped`). No bare `always()` present. Matches LLD spec.
 
 ---
 
@@ -119,9 +119,9 @@
 
 **Expected Result**: Three-step auto-bump pattern with loop guard marker and rebase.
 
-**Status**: ❌ FAIL
+**Status**: ✅ PASS
 
-**Actual Result**: Three-step pattern is present (determine → auto-bump → commit+push → set final). The bump uses `sed -i` correctly on CI (Ubuntu). **However**, the `sed` pattern `s/^version = ".*"/version = "$NEW"/` matches ALL lines starting with `version = ` in `cli/Cargo.toml`, not just the `[package]` version. The file has 7 matching lines (package version + 6 dependency versions). This would corrupt dependency version declarations. See **Issue #1**.
+**Actual Result**: Three-step pattern is present (determine → auto-bump → commit+push → set final). The `sed` pattern is scoped to the `[package]` section using address range `/^\[package\]/,/^\[/`, preventing corruption of dependency version lines. Verified with GNU sed on Ubuntu — matches exactly 1 line (package version) out of 7 `version = ` lines in `cli/Cargo.toml`. Commit message includes `[auto-bump]`. `git pull --rebase` before push.
 
 ---
 
@@ -233,62 +233,25 @@
 
 **Status**: ✅ PASS
 
-**Actual Result**: `cargo xtask ci-check` completed in 19.6s. Lint (cargo fmt, clippy, ESLint, Prettier) all passed. Tests (165 Rust tests, 28 UI tests) all passed.
+**Actual Result**: `cargo xtask ci-check` completed in 14.4s. Lint (cargo fmt, clippy, ESLint, Prettier) all passed. Tests (165 Rust tests, 28 UI tests) all passed.
 
 ---
 
 ## Issues Found
 
-### Issue #1: `sed` Pattern Corrupts Dependency Versions in CLI Cargo.toml
+### Issue #1: `sed` Pattern Corrupts Dependency Versions in CLI Cargo.toml — RESOLVED
 
 - **Severity**: Critical
 - **Test Case**: TC-006
-- **Description**: The CLI auto-bump step uses `sed -i "s/^version = \".*\"/version = \"$NEW\"/" cli/Cargo.toml` to bump the package version. This regex matches **all** lines starting with `version = "` — not just the `[package]` version.
-- **Expected**: Only the `[package]` version on line 3 is updated.
-- **Actual**: `cli/Cargo.toml` has **7 lines** matching `^version = "`:
-  - Line 3: `version = "0.8.5"` (package version — should be bumped)
-  - Line 35: `version = "0.8"` (toml dependency — **should NOT change**)
-  - Line 38: `version = "1"` (tokio dependency — **should NOT change**)
-  - Line 44: `version = "0.7.4"` (wavecraft-protocol — **should NOT change**)
-  - Line 48: `version = "0.7.4"` (wavecraft-bridge — **should NOT change**)
-  - Line 52: `version = "0.7.4"` (wavecraft-metering — **should NOT change**)
-  - Line 56: `version = "0.7.4"` (wavecraft-dev-server — **should NOT change**)
-- **Steps to Reproduce**:
-  1. Run: `grep -n '^version = ' cli/Cargo.toml`
-  2. Observe 7 matching lines
-  3. Simulate: `sed "s/^version = \".*\"/version = \"0.8.6\"/" cli/Cargo.toml` (dry run)
-  4. Observe all 7 lines changed to `version = "0.8.6"`
-- **Suggested Fix**: Target only the `[package]` section version. Options:
-  - **Option A (simplest)**: Use `sed` with line-number targeting: `sed -i '3s/^version = ".*"/version = "'$NEW'"/' cli/Cargo.toml` — fragile if line numbers change.
-  - **Option B (recommended)**: Use a two-pass approach — `sed '/^\[package\]/,/^\[/{s/^version = ".*"/version = "'"$NEW"'"/}' cli/Cargo.toml` to scope the replacement to the `[package]` section only.
-  - **Option C**: Use `cargo set-version` from `cargo-edit` (most robust but requires installing the tool in CI).
+- **Resolution**: Fixed in commit `87bf1c6`. The `sed` pattern is now scoped to the `[package]` section using address range `/^\[package\]/,/^\[/{...}`. Verified with GNU sed on Ubuntu — matches exactly 1 line.
 
 ---
 
-### Issue #2: Missing Upstream Failure Guards on `publish-cli` Job
+### Issue #2: Missing Upstream Failure Guards on `publish-cli` Job — RESOLVED
 
 - **Severity**: Medium
 - **Test Case**: TC-005
-- **Description**: The `publish-cli` job's `if` condition is:
-  ```yaml
-  if: needs.detect-changes.outputs.any_sdk_changed == 'true' && always()
-  ```
-  The LLD specification (lines 304-316 of `low-level-design-cd-cli-cascade-publish.md`) requires defensive upstream failure guards:
-  ```yaml
-  if: |
-    !cancelled() &&
-    needs.detect-changes.outputs.any_sdk_changed == 'true' &&
-    (needs.publish-engine.result == 'success' || needs.publish-engine.result == 'skipped') &&
-    (needs.publish-npm-core.result == 'success' || needs.publish-npm-core.result == 'skipped') &&
-    (needs.publish-npm-components.result == 'success' || needs.publish-npm-components.result == 'skipped')
-  ```
-- **Expected**: `publish-cli` should only run if upstream jobs **succeeded or were skipped** (not if they failed or were cancelled).
-- **Actual**: With `always()`, `publish-cli` will run even if an upstream publish job **fails**. This could result in publishing a CLI that references engine crate versions not yet on crates.io.
-- **Steps to Reproduce**:
-  1. Open `.github/workflows/continuous-deploy.yml`
-  2. Find `publish-cli` job's `if` condition (line ~67)
-  3. Compare to LLD specification (lines 304-316)
-- **Suggested Fix**: Replace the `if` condition with the LLD-specified defensive pattern that checks `!cancelled()` and individual upstream job results.
+- **Resolution**: Fixed in commit `87bf1c6`. Replaced `always()` with `!cancelled()` and individual upstream job result checks (`success || skipped`) for all 3 publish jobs, matching LLD spec.
 
 ## Testing Notes
 
@@ -303,7 +266,7 @@ Post-merge verification scenarios (engine-only change triggers CLI, auto-bump co
 
 ## Sign-off
 
-- [ ] All critical tests pass — **NO** (Issue #1 is Critical)
+- [x] All critical tests pass
 - [x] All high-priority tests pass
-- [x] Issues documented for coder agent
-- [ ] Ready for release: **NO** — Critical Issue #1 must be fixed before merge
+- [x] Issues documented and resolved
+- [x] Ready for release: **YES**
