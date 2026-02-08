@@ -544,11 +544,35 @@ Follow the existing crate structure:
 
 **Rule:** Use the declarative DSL macros for new plugin definitions. Manual `Plugin` implementations should be avoided unless necessary for advanced use cases.
 
-**Processor Wrapper Macro:**
+**Processor Wrapper Macro (built-in processors only):**
 ```rust
-// ✅ Use wavecraft_processor! for named processor wrappers
+// ✅ Use wavecraft_processor! for named wrappers around built-in processors
 wavecraft_processor!(InputGain => Gain);
 wavecraft_processor!(OutputStage => Passthrough);
+
+// ❌ Do NOT use wavecraft_processor! for custom processors
+// wavecraft_processor!(MyOsc => Oscillator); // Wrong — Oscillator is custom
+```
+
+> **Note:** `wavecraft_processor!` only supports built-in processor types (`Gain`, `Passthrough`).
+> Custom processors implementing the `Processor` trait go directly in `SignalChain![]`.
+
+**Custom Processors in Signal Chain:**
+```rust
+use wavecraft::prelude::*;
+
+mod processors;
+use processors::Oscillator;
+
+// Built-in processors need wrappers (provides parameter-ID prefix)
+wavecraft_processor!(InputGain => Gain);
+wavecraft_processor!(OutputGain => Gain);
+
+// Custom processors are used directly — they already have their own Params type
+wavecraft_plugin! {
+    name: "My Plugin",
+    signal: SignalChain![InputGain, Oscillator, OutputGain],
+}
 ```
 
 **Plugin Definition Macro:**
@@ -565,6 +589,11 @@ wavecraft_plugin! {
 
 **Parameter Definition:**
 ```rust
+use wavecraft::prelude::*;
+// The prelude provides the ProcessorParams *trait*;
+// this explicit import brings the *derive macro* (same name, different namespace).
+use wavecraft::ProcessorParams;
+
 // ✅ Use #[derive(ProcessorParams)] for parameter structs
 #[derive(ProcessorParams, Default)]
 struct GainParams {

@@ -272,9 +272,17 @@ impl Processor for Oscillator {
         _transport: &Transport,
         params: &Self::Params,
     ) {
+        if self.sample_rate == 0.0 {
+            return;
+        }
+
         let phase_delta = params.frequency / self.sample_rate;
 
+        // Save phase so every channel gets the same waveform
+        let start_phase = self.phase;
+
         for channel in buffer.iter_mut() {
+            self.phase = start_phase;
             for sample in channel.iter_mut() {
                 *sample = (self.phase * std::f32::consts::TAU).sin() * params.level;
                 self.phase += phase_delta;
