@@ -48,10 +48,7 @@ pub mod implementation {
                 .default_input_config()
                 .context("Failed to get default input config")?;
 
-            tracing::info!(
-                "Using sample rate: {} Hz",
-                supported_config.sample_rate().0
-            );
+            tracing::info!("Using sample rate: {} Hz", supported_config.sample_rate().0);
 
             let stream_config = supported_config.into();
 
@@ -94,8 +91,8 @@ pub mod implementation {
 
                         // Compute meters (simplified)
                         let peak = data.iter().copied().fold(0.0f32, |a, b| a.max(b.abs()));
-                        let rms = (data.iter().map(|x| x * x).sum::<f32>() / data.len() as f32)
-                            .sqrt();
+                        let rms =
+                            (data.iter().map(|x| x * x).sum::<f32>() / data.len() as f32).sqrt();
 
                         // Send meter update every ~16ms (60 Hz)
                         if frame_counter % 735 == 0 {
@@ -151,28 +148,31 @@ pub mod implementation {
         pub async fn connect(url: &str) -> Result<Self> {
             use futures_util::{SinkExt, StreamExt};
             use tokio_tungstenite::connect_async;
-            
+
             tracing::info!("Connecting to WebSocket server at {}", url);
-            
+
             let (ws_stream, _) = connect_async(url)
                 .await
                 .context("Failed to connect to WebSocket server")?;
-            
+
             tracing::info!("WebSocket connection established");
-            
+
             let (mut write, mut read) = ws_stream.split();
             let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<String>();
-            
+
             // Spawn task to send messages
             tokio::spawn(async move {
                 while let Some(msg) = rx.recv().await {
-                    if let Err(e) = write.send(tokio_tungstenite::tungstenite::Message::Text(msg)).await {
+                    if let Err(e) = write
+                        .send(tokio_tungstenite::tungstenite::Message::Text(msg))
+                        .await
+                    {
                         tracing::error!("Failed to send WebSocket message: {}", e);
                         break;
                     }
                 }
             });
-            
+
             // Spawn task to receive messages (for future parameter updates)
             tokio::spawn(async move {
                 while let Some(msg) = read.next().await {
@@ -193,44 +193,49 @@ pub mod implementation {
                     }
                 }
             });
-            
+
             Ok(Self { tx })
         }
 
         pub async fn register_audio(&self, params: RegisterAudioParams) -> Result<()> {
-            use wavecraft_protocol::{IpcRequest, RequestId, METHOD_REGISTER_AUDIO};
-            
+            use wavecraft_protocol::{IpcRequest, METHOD_REGISTER_AUDIO, RequestId};
+
             tracing::info!("Registering audio client");
-            
+
             let request = IpcRequest::new(
                 RequestId::String("register".to_string()),
                 METHOD_REGISTER_AUDIO,
                 Some(serde_json::to_value(params)?),
             );
-            
+
             let json = serde_json::to_string(&request)?;
-            self.tx.send(json).context("Failed to send registration message")?;
-            
+            self.tx
+                .send(json)
+                .context("Failed to send registration message")?;
+
             Ok(())
         }
 
         pub async fn send_meter_update(&self, notification: MeterUpdateNotification) -> Result<()> {
             use wavecraft_protocol::{IpcNotification, NOTIFICATION_METER_UPDATE};
-            
+
             let notif = IpcNotification::new(NOTIFICATION_METER_UPDATE, notification);
             let json = serde_json::to_string(&notif)?;
-            
+
             // Non-blocking send - if channel is full, drop the message
             let _ = self.tx.send(json);
-            
+
             Ok(())
         }
-        
+
         /// Send meter update synchronously (for use from audio thread)
         pub fn send_meter_update_sync(&self, notification: MeterUpdateNotification) {
             use wavecraft_protocol::{IpcNotification, NOTIFICATION_METER_UPDATE};
-            
-            if let Ok(json) = serde_json::to_string(&IpcNotification::new(NOTIFICATION_METER_UPDATE, notification)) {
+
+            if let Ok(json) = serde_json::to_string(&IpcNotification::new(
+                NOTIFICATION_METER_UPDATE,
+                notification,
+            )) {
                 let _ = self.tx.send(json);
             }
         }

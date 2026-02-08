@@ -8,7 +8,7 @@ use futures_util::{SinkExt, StreamExt};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::{broadcast, RwLock};
+use tokio::sync::{RwLock, broadcast};
 use tokio_tungstenite::{accept_async, tungstenite::protocol::Message};
 use tracing::{debug, error, info, warn};
 use wavecraft_bridge::{IpcHandler, ParameterHost};
@@ -125,7 +125,7 @@ async fn handle_connection<H: ParameterHost>(
 
     let (mut write, mut read) = ws_stream.split();
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<String>();
-    
+
     // Track this client for broadcasting
     let mut is_audio_client = false;
     state.browser_clients.write().await.push(tx.clone());
@@ -153,16 +153,20 @@ async fn handle_connection<H: ParameterHost>(
                 if json.contains("\"method\":\"registerAudio\"") {
                     is_audio_client = true;
                     info!("Audio client registered: {}", addr);
-                    
+
                     // Parse to extract client_id
                     if let Ok(req) = serde_json::from_str::<wavecraft_protocol::IpcRequest>(&json) {
                         if let Some(params) = req.params {
-                            if let Ok(audio_params) = serde_json::from_value::<wavecraft_protocol::RegisterAudioParams>(params) {
-                                *state.audio_client.write().await = Some(audio_params.client_id.clone());
+                            if let Ok(audio_params) = serde_json::from_value::<
+                                wavecraft_protocol::RegisterAudioParams,
+                            >(params)
+                            {
+                                *state.audio_client.write().await =
+                                    Some(audio_params.client_id.clone());
                             }
                         }
                     }
-                    
+
                     // Send success response
                     let response = wavecraft_protocol::IpcResponse::success(
                         wavecraft_protocol::RequestId::Number(1),
@@ -183,7 +187,8 @@ async fn handle_connection<H: ParameterHost>(
                     // Broadcast to all browser clients
                     let clients = state.browser_clients.read().await;
                     for (idx, client) in clients.iter().enumerate() {
-                        if idx != client_index {  // Don't send back to audio client
+                        if idx != client_index {
+                            // Don't send back to audio client
                             let _ = client.send(json.clone());
                         }
                     }
@@ -225,12 +230,16 @@ async fn handle_connection<H: ParameterHost>(
     }
 
     // Cleanup: remove client from broadcast list
-    state.browser_clients.write().await.retain(|c| !c.is_closed());
+    state
+        .browser_clients
+        .write()
+        .await
+        .retain(|c| !c.is_closed());
     if is_audio_client {
         *state.audio_client.write().await = None;
         info!("Audio client disconnected: {}", addr);
     }
-    
+
     write_task.abort();
     info!("Connection closed: {}", addr);
 }
