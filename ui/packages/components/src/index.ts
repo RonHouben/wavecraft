@@ -1,5 +1,5 @@
 /**
- * @wavecraft/components - Pre-built React components for Wavecraft audio plugins
+ * @wavecraft/components - Pre-built React UI components for Wavecraft audio plugins.
  *
  * @packageDocumentation
  */

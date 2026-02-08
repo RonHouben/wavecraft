@@ -6,6 +6,10 @@ on:
       - main
   workflow_dispatch:
 
+concurrency:
+  group: continuous-deploy
+  cancel-in-progress: false
+
 jobs:
   # ============================================================================
   # Job 1: Detect which packages changed
@@ -118,38 +122,27 @@ jobs:
           print("CLI dependency publishability validated.")
           PY
       
-      - name: Get current version
+      - name: Determine publish version
         id: version
         run: |
-          VERSION=$(cargo metadata --manifest-path cli/Cargo.toml --no-deps --format-version 1 | jq -r '.packages[0].version')
-          echo "current=$VERSION" >> $GITHUB_OUTPUT
-          echo "Current CLI version: $VERSION"
-      
-      - name: Check if already published
-        id: check
-        run: |
-          VERSION="${{ steps.version.outputs.current }}"
-          # Use sparse index API for more reliable version check
-          PUBLISHED_VERSION=$(curl -s "https://index.crates.io/wa/ve/wavecraft" | tail -1 | jq -r '.vers' 2>/dev/null || echo "")
-          if [ "$PUBLISHED_VERSION" = "$VERSION" ]; then
-            echo "published=true" >> $GITHUB_OUTPUT
-            echo "Version $VERSION already published (found: $PUBLISHED_VERSION)"
+          CURRENT=$(cargo metadata --manifest-path cli/Cargo.toml --no-deps --format-version 1 | jq -r '.packages[0].version')
+          PUBLISHED=$(curl -s "https://index.crates.io/wa/ve/wavecraft" | tail -1 | jq -r '.vers' 2>/dev/null || echo "0.0.0")
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          echo "published=$PUBLISHED" >> $GITHUB_OUTPUT
+          
+          # Compare: if current > published, publish current (intentional bump)
+          # If current <= published, compute published + patch
+          if [ "$(printf '%s\n' "$PUBLISHED" "$CURRENT" | sort -V | tail -1)" = "$CURRENT" ] && [ "$CURRENT" != "$PUBLISHED" ]; then
+            echo "publish=$CURRENT" >> $GITHUB_OUTPUT
+            echo "bumped=false" >> $GITHUB_OUTPUT
+            echo "Publishing current version: $CURRENT (latest on crates.io: $PUBLISHED)"
           else
-            echo "published=false" >> $GITHUB_OUTPUT
-            echo "Version $VERSION not yet published (latest: $PUBLISHED_VERSION)"
+            NEW=$(echo "$PUBLISHED" | awk -F. '{print $1"."$2"."$3+1}')
+            sed -i "s/^version = \"$CURRENT\"/version = \"$NEW\"/" cli/Cargo.toml
+            echo "publish=$NEW" >> $GITHUB_OUTPUT
+            echo "bumped=true" >> $GITHUB_OUTPUT
+            echo "Bumping to: $NEW (current: $CURRENT, crates.io: $PUBLISHED)"
           fi
-      
-      - name: Bump patch version
-        id: bump
-        if: steps.check.outputs.published == 'true'
-        working-directory: cli
-        run: |
-          # Parse current version and increment patch
-          CURRENT="${{ steps.version.outputs.current }}"
-          NEW=$(echo $CURRENT | awk -F. '{print $1"."$2"."$3+1}')
-          sed -i "s/^version = \"$CURRENT\"/version = \"$NEW\"/" Cargo.toml
-          echo "Bumped version: $CURRENT -> $NEW"
-          echo "bumped=true" >> $GITHUB_OUTPUT
 
       - name: Verify publishability (dry-run)
         working-directory: cli
@@ -166,7 +159,7 @@ jobs:
         run: cargo publish
       
       - name: Commit version bump
-        if: steps.bump.outputs.bumped == 'true'
+        if: steps.version.outputs.bumped == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -286,28 +279,28 @@ jobs:
         working-directory: ui
         run: npm ci
       
-      - name: Get current version
+      - name: Determine publish version
         id: version
-        run: |
-          VERSION=$(node -p "require('./ui/packages/core/package.json').version")
-          echo "current=$VERSION" >> $GITHUB_OUTPUT
-          echo "Current @wavecraft/core version: $VERSION"
-      
-      - name: Check if already published
-        id: check
-        run: |
-          if npm view @wavecraft/core@${{ steps.version.outputs.current }} version 2>/dev/null; then
-            echo "published=true" >> $GITHUB_OUTPUT
-            echo "Version ${{ steps.version.outputs.current }} already published"
-          else
-            echo "published=false" >> $GITHUB_OUTPUT
-            echo "Version ${{ steps.version.outputs.current }} not yet published"
-          fi
-      
-      - name: Bump patch version
-        if: steps.check.outputs.published == 'true'
         working-directory: ui/packages/core
-        run: npm version patch --no-git-tag-version
+        run: |
+          LOCAL=$(node -p "require('./package.json').version")
+          LATEST=$(npm view @wavecraft/core version 2>/dev/null || echo "0.0.0")
+          echo "local=$LOCAL" >> $GITHUB_OUTPUT
+          echo "latest=$LATEST" >> $GITHUB_OUTPUT
+          
+          # Compare: if local > latest, publish local (intentional bump)
+          # If local <= latest, compute latest + patch
+          if npx --yes semver "$LOCAL" -r ">$LATEST" > /dev/null 2>&1; then
+            echo "publish=$LOCAL" >> $GITHUB_OUTPUT
+            echo "bumped=false" >> $GITHUB_OUTPUT
+            echo "Publishing local version: $LOCAL (ahead of npm: $LATEST)"
+          else
+            NEXT=$(npx --yes semver "$LATEST" -i patch)
+            npm version "$NEXT" --no-git-tag-version
+            echo "publish=$NEXT" >> $GITHUB_OUTPUT
+            echo "bumped=true" >> $GITHUB_OUTPUT
+            echo "Bumping to: $NEXT (local: $LOCAL, npm: $LATEST)"
+          fi
       
       - name: Build package
         working-directory: ui/packages/core
@@ -324,7 +317,7 @@ jobs:
         run: npm publish --access public --provenance
 
       - name: Commit version bump
-        if: steps.check.outputs.published == 'true'
+        if: steps.version.outputs.bumped == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -347,7 +340,8 @@ jobs:
     if: |
       always() &&
       needs.detect-changes.outputs.npm-components == 'true' &&
-      (needs.publish-npm-core.result == 'success' || needs.publish-npm-core.result == 'skipped')
+      (needs.publish-npm-core.result == 'success' || needs.publish-npm-core.result == 'skipped' ||
+       (needs.publish-npm-core.result == 'failure' && needs.detect-changes.outputs.npm-core != 'true'))
     runs-on: ubuntu-latest
     env:
       NODE_AUTH_TOKEN: ""
@@ -385,28 +379,28 @@ jobs:
         working-directory: ui
         run: npm ci
       
-      - name: Get current version
+      - name: Determine publish version
         id: version
-        run: |
-          VERSION=$(node -p "require('./ui/packages/components/package.json').version")
-          echo "current=$VERSION" >> $GITHUB_OUTPUT
-          echo "Current @wavecraft/components version: $VERSION"
-      
-      - name: Check if already published
-        id: check
-        run: |
-          if npm view @wavecraft/components@${{ steps.version.outputs.current }} version 2>/dev/null; then
-            echo "published=true" >> $GITHUB_OUTPUT
-            echo "Version ${{ steps.version.outputs.current }} already published"
-          else
-            echo "published=false" >> $GITHUB_OUTPUT
-            echo "Version ${{ steps.version.outputs.current }} not yet published"
-          fi
-      
-      - name: Bump patch version
-        if: steps.check.outputs.published == 'true'
         working-directory: ui/packages/components
-        run: npm version patch --no-git-tag-version
+        run: |
+          LOCAL=$(node -p "require('./package.json').version")
+          LATEST=$(npm view @wavecraft/components version 2>/dev/null || echo "0.0.0")
+          echo "local=$LOCAL" >> $GITHUB_OUTPUT
+          echo "latest=$LATEST" >> $GITHUB_OUTPUT
+          
+          # Compare: if local > latest, publish local (intentional bump)
+          # If local <= latest, compute latest + patch
+          if npx --yes semver "$LOCAL" -r ">$LATEST" > /dev/null 2>&1; then
+            echo "publish=$LOCAL" >> $GITHUB_OUTPUT
+            echo "bumped=false" >> $GITHUB_OUTPUT
+            echo "Publishing local version: $LOCAL (ahead of npm: $LATEST)"
+          else
+            NEXT=$(npx --yes semver "$LATEST" -i patch)
+            npm version "$NEXT" --no-git-tag-version
+            echo "publish=$NEXT" >> $GITHUB_OUTPUT
+            echo "bumped=true" >> $GITHUB_OUTPUT
+            echo "Bumping to: $NEXT (local: $LOCAL, npm: $LATEST)"
+          fi
       
       - name: Build package
         working-directory: ui/packages/components
@@ -423,7 +417,7 @@ jobs:
         run: npm publish --access public --provenance
 
       - name: Commit version bump
-        if: steps.check.outputs.published == 'true'
+        if: steps.version.outputs.bumped == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
