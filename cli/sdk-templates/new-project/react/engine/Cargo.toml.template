@@ -21,6 +21,16 @@ serde_json = "1.0"
 # Logging
 log = "0.4"
 
+# DSP crate for processors (needed by dev-audio binary)
+wavecraft-dsp = { git = "https://github.com/RonHouben/wavecraft", tag = "{{sdk_version}}", optional = true }
+
+# Development audio server dependencies (optional, only used by dev-audio binary)
+wavecraft-dev-server = { package = "wavecraft-dev-server", git = "https://github.com/RonHouben/wavecraft", tag = "{{sdk_version}}", features = ["audio"], optional = true }
+cpal = { version = "0.15", optional = true }
+anyhow = { version = "1.0", optional = true }
+env_logger = { version = "0.11", optional = true }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"], optional = true }
+
 [build-dependencies]
 # Note: Use the nih_plug_xtask from wavecraft's dependency tree
 # This ensures version consistency with the Wavecraft SDK
