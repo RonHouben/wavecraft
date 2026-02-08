@@ -130,45 +130,35 @@ jobs:
           echo "current=$CURRENT" >> $GITHUB_OUTPUT
           echo "published=$PUBLISHED" >> $GITHUB_OUTPUT
           
-          # Compare: if current > published, publish current (intentional bump)
-          # If current <= published, compute published + patch
+          # Compare: if current > published, publish current
+          # If current <= published, skip (already published or needs manual bump)
           if [ "$(printf '%s\n' "$PUBLISHED" "$CURRENT" | sort -V | tail -1)" = "$CURRENT" ] && [ "$CURRENT" != "$PUBLISHED" ]; then
-            echo "publish=$CURRENT" >> $GITHUB_OUTPUT
-            echo "bumped=false" >> $GITHUB_OUTPUT
+            echo "skip=false" >> $GITHUB_OUTPUT
             echo "Publishing current version: $CURRENT (latest on crates.io: $PUBLISHED)"
           else
-            NEW=$(echo "$PUBLISHED" | awk -F. '{print $1"."$2"."$3+1}')
-            sed -i "s/^version = \"$CURRENT\"/version = \"$NEW\"/" cli/Cargo.toml
-            echo "publish=$NEW" >> $GITHUB_OUTPUT
-            echo "bumped=true" >> $GITHUB_OUTPUT
-            echo "Bumping to: $NEW (current: $CURRENT, crates.io: $PUBLISHED)"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "Skipping: local $CURRENT is not ahead of crates.io $PUBLISHED. Bump version in a PR to publish."
           fi
 
       - name: Verify publishability (dry-run)
+        if: steps.version.outputs.skip != 'true'
         working-directory: cli
         run: cargo publish --dry-run
       
       - name: Authenticate with crates.io (OIDC)
+        if: steps.version.outputs.skip != 'true'
         id: crates-auth
         uses: rust-lang/crates-io-auth-action@v1
 
       - name: Publish to crates.io
+        if: steps.version.outputs.skip != 'true'
         working-directory: cli
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.crates-auth.outputs.token }}
         run: cargo publish
-      
-      - name: Commit version bump
-        if: steps.version.outputs.bumped == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add cli/Cargo.toml
-          NEW_VERSION=$(cargo metadata --manifest-path cli/Cargo.toml --no-deps --format-version 1 | jq -r '.packages[0].version')
-          git commit -m "chore(cli): release v$NEW_VERSION [skip ci]"
-          git push
 
       - name: Create and push git tag
+        if: steps.version.outputs.skip != 'true'
         run: |
           NEW_VERSION=$(cargo metadata --manifest-path cli/Cargo.toml --no-deps --format-version 1 | jq -r '.packages[0].version')
           git tag "wavecraft-cli-v$NEW_VERSION"
@@ -288,45 +278,35 @@ jobs:
           echo "local=$LOCAL" >> $GITHUB_OUTPUT
           echo "latest=$LATEST" >> $GITHUB_OUTPUT
           
-          # Compare: if local > latest, publish local (intentional bump)
-          # If local <= latest, compute latest + patch
+          # Compare: if local > latest, publish local
+          # If local <= latest, skip (already published or needs manual bump in a PR)
           if npx --yes semver "$LOCAL" -r ">$LATEST" > /dev/null 2>&1; then
-            echo "publish=$LOCAL" >> $GITHUB_OUTPUT
-            echo "bumped=false" >> $GITHUB_OUTPUT
+            echo "skip=false" >> $GITHUB_OUTPUT
             echo "Publishing local version: $LOCAL (ahead of npm: $LATEST)"
           else
-            NEXT=$(npx --yes semver "$LATEST" -i patch)
-            npm version "$NEXT" --no-git-tag-version
-            echo "publish=$NEXT" >> $GITHUB_OUTPUT
-            echo "bumped=true" >> $GITHUB_OUTPUT
-            echo "Bumping to: $NEXT (local: $LOCAL, npm: $LATEST)"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "Skipping: local $LOCAL is not ahead of npm $LATEST. Bump version in a PR to publish."
           fi
       
       - name: Build package
+        if: steps.version.outputs.skip != 'true'
         working-directory: ui/packages/core
         run: npm run build:lib
       
       - name: Verify publishability (dry-run)
+        if: steps.version.outputs.skip != 'true'
         working-directory: ui/packages/core
         run: npm publish --access public --dry-run
       
       - name: Publish to npm
+        if: steps.version.outputs.skip != 'true'
         working-directory: ui/packages/core
         env:
           NPM_CONFIG_PROVENANCE: true
         run: npm publish --access public --provenance
 
-      - name: Commit version bump
-        if: steps.version.outputs.bumped == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add ui/packages/core/package.json
-          NEW_VERSION=$(node -p "require('./ui/packages/core/package.json').version")
-          git commit -m "chore(npm-core): release v$NEW_VERSION [skip ci]"
-          git push
-
       - name: Create and push git tag
+        if: steps.version.outputs.skip != 'true'
         run: |
           NEW_VERSION=$(node -p "require('./ui/packages/core/package.json').version")
           git tag "@wavecraft/core-v$NEW_VERSION"
@@ -354,9 +334,6 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
-      
-      - name: Pull latest changes
-        run: git pull origin main
       
       - uses: actions/setup-node@v4
         with:
@@ -388,45 +365,35 @@ jobs:
           echo "local=$LOCAL" >> $GITHUB_OUTPUT
           echo "latest=$LATEST" >> $GITHUB_OUTPUT
           
-          # Compare: if local > latest, publish local (intentional bump)
-          # If local <= latest, compute latest + patch
+          # Compare: if local > latest, publish local
+          # If local <= latest, skip (already published or needs manual bump in a PR)
           if npx --yes semver "$LOCAL" -r ">$LATEST" > /dev/null 2>&1; then
-            echo "publish=$LOCAL" >> $GITHUB_OUTPUT
-            echo "bumped=false" >> $GITHUB_OUTPUT
+            echo "skip=false" >> $GITHUB_OUTPUT
             echo "Publishing local version: $LOCAL (ahead of npm: $LATEST)"
           else
-            NEXT=$(npx --yes semver "$LATEST" -i patch)
-            npm version "$NEXT" --no-git-tag-version
-            echo "publish=$NEXT" >> $GITHUB_OUTPUT
-            echo "bumped=true" >> $GITHUB_OUTPUT
-            echo "Bumping to: $NEXT (local: $LOCAL, npm: $LATEST)"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "Skipping: local $LOCAL is not ahead of npm $LATEST. Bump version in a PR to publish."
           fi
       
       - name: Build package
+        if: steps.version.outputs.skip != 'true'
         working-directory: ui/packages/components
         run: npm run build:lib
       
       - name: Verify publishability (dry-run)
+        if: steps.version.outputs.skip != 'true'
         working-directory: ui/packages/components
         run: npm publish --access public --dry-run
       
       - name: Publish to npm
+        if: steps.version.outputs.skip != 'true'
         working-directory: ui/packages/components
         env:
           NPM_CONFIG_PROVENANCE: true
         run: npm publish --access public --provenance
 
-      - name: Commit version bump
-        if: steps.version.outputs.bumped == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add ui/packages/components/package.json
-          NEW_VERSION=$(node -p "require('./ui/packages/components/package.json').version")
-          git commit -m "chore(npm-components): release v$NEW_VERSION [skip ci]"
-          git push
-
       - name: Create and push git tag
+        if: steps.version.outputs.skip != 'true'
         run: |
           NEW_VERSION=$(node -p "require('./ui/packages/components/package.json').version")
           git tag "@wavecraft/components-v$NEW_VERSION"

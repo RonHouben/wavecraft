@@ -1,6 +1,6 @@
 # Implementation Progress: Fix CD npm Publish Version Drift
 
-## Status: Implementation Complete — Awaiting PR Merge & CD Test
+## Status: Follow-up fix in progress — Publish-only model
 
 ---
 
@@ -26,9 +26,22 @@
 - [x] **Step 4.1:** Replace CLI version check with registry-aware strategy (crates.io sparse index + sort -V)
 - [x] **Step 4.2:** Update `Commit version bump` condition for CLI (`steps.version.outputs.bumped`)
 
+## Phase 5: Follow-up — Publish-Only Model (post-merge findings)
+
+The first CD run after PR #38 merge revealed two additional issues:
+1. **Idempotency bug:** When `local == registry`, the version resolution treated it as "needs bump" instead of skipping. This caused unwanted 0.7.5 (core) and 0.8.5 (CLI) publishes.
+2. **Branch protection:** `git push` to main is blocked by branch protection rules (requires PRs + status checks). The auto-bump commit model is incompatible.
+
+**Fix: Switch to "publish-only" model:**
+- [x] **Step 5.1:** Sync local versions to match registry (core → 0.7.5, CLI → 0.8.5)
+- [x] **Step 5.2:** Replace auto-bump logic with skip-when-not-ahead for all 3 publish jobs
+- [x] **Step 5.3:** Remove all "Commit version bump" steps (no more direct pushes to main)
+- [x] **Step 5.4:** Condition build/publish/tag steps on `skip != 'true'`
+- [x] **Step 5.5:** Remove "Pull latest changes" step from components (no longer needed)
+
 ## Testing
 
-- [ ] Trigger `workflow_dispatch` → all jobs pass or correctly skip
-- [ ] Verify npm versions are >= `0.7.4`
-- [ ] Re-run `workflow_dispatch` → publish jobs skip (idempotent)
+- [x] Trigger `workflow_dispatch` → push-triggered run published 0.7.4 successfully
+- [x] Verify npm versions are >= `0.7.4` (core: 0.7.5, components: 0.7.4)
+- [ ] Trigger `workflow_dispatch` → publish jobs skip (idempotent, local matches registry)
 - [ ] Verify git tags created correctly
