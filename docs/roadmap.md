@@ -689,7 +689,7 @@ Based on internal testing, the CLI was improved for better developer experience:
 | **Git tag format** | `wavecraft-cli-v{version}` (matches repo convention) | Consistent release tagging |
 | **Clean interface** | `--local-sdk` boolean flag (hidden), no `--sdk-version` | Less confusing help output |
 | **PATH troubleshooting** | Clear documentation in Getting Started guide | Better error handling |
-| **Embedded dev server** | `wavecraft start` builds plugin, loads params via FFI, starts WS + Vite | Enables browser dev from plugin projects |
+| **Embedded dev server** | `wavecraft start` builds plugin, loads params via FFI, starts WS + Vite; preflight port checks with strict UI port binding | Enables browser dev from plugin projects; fail-fast if ports are in use |
 
 **Test Results (M13 Complete):**
 ```
@@ -808,6 +808,7 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 | Date | Update |
 |------|--------|
+| 2026-02-08 | **CLI `wavecraft start` port preflight**: Added preflight port checks and strict UI port binding. Startup now fails fast when UI or WS ports are in use, avoiding partial startup and Vite auto-port switching. Docs updated (High-Level Design, Getting Started, coding standards/agent flow). Test plan re-run and QA completed. |
 | 2026-02-07 | **npm OIDC trusted publishing validation**: Branch run succeeded for `@wavecraft/components` and confirmed provenance publishing; `@wavecraft/core` publish on `main` still fails due to token injection. Workflow fix pending merge to `main` before re-validating OIDC publishes. |
 | 2026-02-07 | **Doctest cleanup + documentation guidance**: Replaced ignored Rust doctests with `rust,no_run` or `text` blocks where appropriate, updated examples to compile, and documented doctest conventions in coding standards. `cargo xtask ci-check` now runs with zero ignored doctests. |
 | 2026-02-07 | **Dev server rename (v0.7.2)**: Renamed `standalone` crate to `wavecraft-dev-server` to clarify purpose. Updated CLI/xtask wiring, docs/specs, and verified help output + dev server smoke tests. Test plan and QA report completed. |
