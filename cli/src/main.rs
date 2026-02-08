@@ -92,7 +92,12 @@ enum Commands {
         verbose: bool,
     },
 
-    /// Update all project dependencies (Rust crates + npm packages)
+    /// Update the CLI and project dependencies (Rust crates + npm packages)
+    #[command(
+        long_about = "Update the Wavecraft CLI to the latest version, then update Rust crates \
+        and npm packages if run from a plugin project directory.\n\n\
+        Can be run from any directory. When outside a project, only the CLI is updated."
+    )]
     Update,
 }
 
