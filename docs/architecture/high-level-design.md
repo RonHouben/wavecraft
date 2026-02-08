@@ -977,9 +977,9 @@ Wavecraft uses GitHub Actions for continuous integration and release automation.
 **Continuous Deploy** (`.github/workflows/continuous-deploy.yml`):
 - Triggers on push to `main` (after PR merge)
 - Detects changed packages via path filters and publishes to crates.io/npm
-- **Auto-bump:** If local version ≤ published version, CI auto-bumps the patch version, commits with `[auto-bump]`, and publishes
+- **Auto-bump:** If local version ≤ published version, CI auto-bumps the patch version, commits as `github-actions[bot]`, and publishes
 - **CLI cascade:** CLI re-publishes whenever _any_ SDK component changes (engine, npm-core, npm-components, or CLI itself), ensuring the git tag always reflects the latest SDK state
-- **Infinite loop prevention:** `detect-changes` skips if commit message contains `[auto-bump]`
+- **Infinite loop prevention:** `detect-changes` skips if commit author is `github-actions[bot]`
 - See [CI/CD Pipeline Guide](../guides/ci-pipeline.md) and [Coding Standards — SDK Distribution Versioning](./coding-standards.md#sdk-distribution-versioning-ci-auto-bump) for details
 
 **Release Build** (`.github/workflows/release.yml`):

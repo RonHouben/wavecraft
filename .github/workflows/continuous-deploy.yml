@@ -16,8 +16,8 @@ jobs:
   # ============================================================================
   detect-changes:
     runs-on: ubuntu-latest
-    # Skip if the triggering commit is an auto-bump from CI to prevent infinite loops
-    if: "!contains(github.event.head_commit.message, '[auto-bump]')"
+    # Skip if the triggering commit was made by the CI bot (auto-bump) to prevent infinite loops
+    if: github.event.head_commit.author.name != 'github-actions[bot]'
     outputs:
       cli: ${{ steps.filter.outputs.cli }}
       engine: ${{ steps.filter.outputs.engine }}

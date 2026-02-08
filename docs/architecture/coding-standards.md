@@ -997,8 +997,8 @@ The CD pipeline (`continuous-deploy.yml`) automatically patches and publishes di
 2. `detect-changes` identifies which SDK components changed
 3. If **any** component changed, the CLI is also published (cascade trigger)
 4. For each package, CI compares the local version against the published registry version
-5. If the local version is not ahead, CI auto-bumps the patch version, commits with `[auto-bump]` marker, and publishes
-6. The `[auto-bump]` marker prevents infinite re-triggering of the pipeline
+5. If the local version is not ahead, CI auto-bumps the patch version, commits as `github-actions[bot]`, and publishes
+6. The `github-actions[bot]` author is detected by the pipeline to prevent infinite re-triggering
 
 **What developers should do:**
 - Bump `engine/Cargo.toml` workspace version for product milestones (as before)
@@ -1007,12 +1007,13 @@ The CD pipeline (`continuous-deploy.yml`) automatically patches and publishes di
 
 **What CI does:**
 - Auto-patches CLI, `@wavecraft/core`, `@wavecraft/components` when their local version ≤ registry version
-- Commits version bumps with `[auto-bump]` suffix to prevent infinite loops
+- Commits version bumps as `github-actions[bot]` author
 - Uses `git pull --rebase` before each push to handle parallel job conflicts
 
 **Infinite loop prevention:**
-- Commits with `[auto-bump]` in the message are skipped by the `detect-changes` job
-- This is preferred over `[skip ci]` because other workflows (CI, template validation) should still run on those commits
+- Commits authored by `github-actions[bot]` are skipped by the `detect-changes` job
+- This is more robust than commit message markers (which can false-match on squash merge bodies)
+- Preferred over `[skip ci]` because other workflows (CI, template validation) should still run on auto-bump commits
 
 ---
 

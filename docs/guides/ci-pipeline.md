@@ -309,7 +309,7 @@ Wavecraft uses automatic continuous deployment for all publishable packages. Whe
 │        ▼                                                                    │
 │  ┌──────────────────────────────────────────────────┐                        │
 │  │ detect-changes                                   │                        │
-│  │ • Skips if commit contains [auto-bump]           │                        │
+│  │ • Skips if author is github-actions[bot]          │                        │
 │  │ • Outputs: cli, engine, npm-core, npm-components │                        │
 │  │ • Computes: any_sdk_changed (OR of all four)     │                        │
 │  └────────┬─────────────────────────────────────────┘                        │
@@ -389,7 +389,7 @@ Each distribution package (CLI, npm-core, npm-components) uses a three-step auto
 
 1. **Determine version** — Compare local version against the published registry version (crates.io or npm)
 2. **Auto-bump** (if needed) — If local version ≤ published, increment patch from published version
-3. **Commit + push** — Commit the version bump with `[auto-bump]` in the message, then push to `main`
+3. **Commit + push** — Commit the version bump as `github-actions[bot]`, then push to `main`
 
 A "set final version" step consolidates the version (whether from determine or bump) for use by downstream steps (publish, git tag).
 
@@ -397,17 +397,17 @@ A "set final version" step consolidates the version (whether from determine or b
 
 ### Infinite Loop Prevention
 
-Auto-bump commits push to `main`, which would re-trigger the CD pipeline. This is prevented by:
+Auto-bump commits push to `main`, which would re-trigger the CD pipeline. This is prevented by checking the commit author:
 
 ```
-Auto-bump commit: "chore(cli): auto-bump to 0.8.6 [auto-bump]"
-                                                    ^^^^^^^^^^^^
+Auto-bump commit author: "github-actions[bot]"
+
 detect-changes job:
-  if: "!contains(github.event.head_commit.message, '[auto-bump]')"
+  if: github.event.head_commit.author.name != 'github-actions[bot]'
   → Job skips → All downstream jobs skip → No further commits → Loop terminated
 ```
 
-**Why `[auto-bump]` instead of `[skip ci]`?** The `[skip ci]` marker would suppress _all_ GitHub Actions workflows (CI, template validation, etc.). The `[auto-bump]` marker only affects the CD workflow, allowing other quality checks to still run.
+**Why author check instead of commit message markers?** Commit messages are free-text — a PR mentioning `[auto-bump]` in its description would falsely skip the CD pipeline (squash merges include the full PR body). Checking the commit author is deterministic and immune to message content. This approach also avoids `[skip ci]` which would suppress _all_ GitHub Actions workflows.
 
 ### CLI Cascade Trigger
 
