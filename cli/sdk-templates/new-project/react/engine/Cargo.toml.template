@@ -25,7 +25,7 @@ log = "0.4"
 wavecraft-dsp = { git = "https://github.com/RonHouben/wavecraft", tag = "{{sdk_version}}", optional = true }
 
 # Development audio server dependencies (optional, only used by dev-audio binary)
-wavecraft-dev-server = { package = "wavecraft-dev-server", git = "https://github.com/RonHouben/wavecraft", tag = "{{sdk_version}}", optional = true }
+wavecraft-dev-server = { package = "wavecraft-dev-server", git = "https://github.com/RonHouben/wavecraft", tag = "{{sdk_version}}", features = ["audio"], optional = true }
 cpal = { version = "0.15", optional = true }
 anyhow = { version = "1.0", optional = true }
 env_logger = { version = "0.11", optional = true }
@@ -38,7 +38,7 @@ nih_plug_xtask = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "2
 
 [features]
 # Enable audio development dependencies (automatically used by dev-audio binary)
-audio-dev = ["wavecraft-dsp", "wavecraft-dev-server", "env_logger", "tokio"]
+audio-dev = ["wavecraft-dsp", "wavecraft-dev-server", "cpal", "anyhow", "env_logger", "tokio"]
 
 [[bin]]
 name = "dev-audio"
