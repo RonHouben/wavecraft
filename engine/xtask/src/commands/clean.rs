@@ -336,7 +336,7 @@ mod tests {
         let file1_path = temp_dir.path().join("file1.txt");
         let mut file1 = fs::File::create(&file1_path).expect("Failed to create file1");
         file1
-            .write_all(&vec![b'A'; 100])
+            .write_all(&[b'A'; 100])
             .expect("Failed to write file1");
         drop(file1);
 
@@ -344,7 +344,7 @@ mod tests {
         let file2_path = temp_dir.path().join("file2.txt");
         let mut file2 = fs::File::create(&file2_path).expect("Failed to create file2");
         file2
-            .write_all(&vec![b'B'; 200])
+            .write_all(&[b'B'; 200])
             .expect("Failed to write file2");
         drop(file2);
 
@@ -366,14 +366,14 @@ mod tests {
         // File in root (50 bytes)
         let root_file = temp_dir.path().join("root.txt");
         let mut file = fs::File::create(&root_file).expect("Failed to create root file");
-        file.write_all(&vec![b'R'; 50])
+        file.write_all(&[b'R'; 50])
             .expect("Failed to write root file");
         drop(file);
 
         // File in nested (75 bytes)
         let nested_file = nested_dir.join("nested.txt");
         let mut file = fs::File::create(&nested_file).expect("Failed to create nested file");
-        file.write_all(&vec![b'N'; 75])
+        file.write_all(&[b'N'; 75])
             .expect("Failed to write nested file");
         drop(file);
 
