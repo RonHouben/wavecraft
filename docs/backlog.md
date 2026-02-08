@@ -30,6 +30,7 @@ Reported from developer testing session (2026-02-08). These are framework-level 
 |------|-------|
 | Remove audio signal mocking to UI | Remove all audio signal mocking infrastructure since it's not currently needed. Reduces complexity and maintenance burden. Can be re-implemented later if real audio visualization is required. YAGNI principle — keep the codebase lean. |
 | Browser audio input via WASM | Enable testing UI with real audio input (mic, files, test tones) in browser dev mode. Tiered architecture: Mock DSP (JS) for fast HMR, optional WASM DSP for integration testing. Rust remains parameter source of truth. See [high-level design](feature-specs/audio-input-via-wasm/high-level-design.md). |
+| SDK dev mode: crate version mismatch in `wavecraft start` audio binary | In SDK dev mode (CLI run via `cargo run`), the main `wavecraft` dependency is patched to use local **path** deps, but `wavecraft-dev-server` and `wavecraft-dsp` still resolve via **git tag**. Cargo treats these as separate crates, making their `Processor` trait incompatible (`E0277`). Fix: CLI's auto-detection should also patch transitive dev deps to path dependencies. **Does not affect end users** (git tag deps are consistent). Only affects SDK contributors testing locally. |
 
 ---
 
@@ -111,6 +112,7 @@ Reported from developer testing session (2026-02-08). These are framework-level 
 
 | Date | Update |
 |------|--------|
+| 2026-02-08 | **Bug found**: SDK dev mode crate version mismatch — `wavecraft start` audio binary fails when CLI is run via `cargo run` due to mixed path/git dependency resolution. Added to Developer Experience section. Does not affect end users. |
 | 2026-02-08 | **Backlog addition:** SDK Audio Architecture Gaps — three issues from developer test session: no audio output in dev-server (critical), params don't reach `process()` (critical), UI param load race condition (minor). All are framework-level gaps in `wavecraft-dev-server`, `wavecraft-macros`, and `@wavecraft/core`. |
 | 2026-02-08 | **Backlog addition:** Remove audio signal mocking to UI — reduces complexity and technical debt by removing unused infrastructure. YAGNI principle applied. |
 | 2026-02-08 | **Item promoted to Milestone 15**: Comprehensive workspace cleanup (`cargo xtask clean` extension) moved from backlog to roadmap as new Milestone 15 (Developer Tooling Polish). Target version 0.8.6. User stories created at `docs/feature-specs/workspace-cleanup/user-stories.md`. |
