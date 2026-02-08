@@ -64,7 +64,12 @@ jobs:
   # ============================================================================
   publish-cli:
     needs: [detect-changes, publish-engine, publish-npm-core, publish-npm-components]
-    if: needs.detect-changes.outputs.any_sdk_changed == 'true' && always()
+    if: |
+      !cancelled() &&
+      needs.detect-changes.outputs.any_sdk_changed == 'true' &&
+      (needs.publish-engine.result == 'success' || needs.publish-engine.result == 'skipped') &&
+      (needs.publish-npm-core.result == 'success' || needs.publish-npm-core.result == 'skipped') &&
+      (needs.publish-npm-components.result == 'success' || needs.publish-npm-components.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       id-token: write  # Required for crates.io trusted publishing (OIDC)
@@ -158,7 +163,7 @@ jobs:
         run: |
           PUBLISHED=${{ steps.version.outputs.published }}
           NEW=$(npx --yes semver "$PUBLISHED" -i patch)
-          sed -i "s/^version = \".*\"/version = \"$NEW\"/" cli/Cargo.toml
+          sed -i '/^\[package\]/,/^\[/{s/^version = ".*"/version = "'"$NEW"'"/}' cli/Cargo.toml
           echo "version=$NEW" >> $GITHUB_OUTPUT
           echo "bumped=true" >> $GITHUB_OUTPUT
           echo "Auto-bumped CLI to $NEW"
