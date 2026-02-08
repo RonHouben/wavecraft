@@ -10,6 +10,7 @@
 /ui/coverage
 /ui/packages/components/dist
 /ui/packages/core/dist
+target/tmp
 
 # Playwright
 /ui/playwright-report/
