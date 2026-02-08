@@ -20,3 +20,8 @@ pub use builtins::*;
 
 // Re-export combinators
 pub use combinators::Chain;
+
+// Re-export SignalChain! and Chain! macros
+// Note: Chain! is deprecated in favor of SignalChain!
+#[doc(inline)]
+pub use crate::{Chain, SignalChain};

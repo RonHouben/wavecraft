@@ -1,8 +1,8 @@
 # Implementation Progress: Macro API Simplification
 
 **Feature:** Macro API Simplification  
-**Target Version:** 0.8.0  
-**Status:** Planning Complete  
+**Target Version:** 0.9.0  
+**Status:** In Progress (Phase 1 & 2 Complete)  
 **Started:** 2026-02-08
 
 ---
@@ -13,74 +13,75 @@ This document tracks the implementation progress of the Macro API Simplification
 
 ---
 
-## Phase 1: Core Macro Changes (HIGH PRIORITY)
+## Phase 1: Core Macro Changes (HIGH PRIORITY) ✅
 
 ### Proc-Macro Simplification
 
-- [ ] **Task 1.1**: Simplify `PluginDef` struct
+- [x] **Task 1.1**: Simplify `PluginDef` struct
   - File: `engine/crates/wavecraft-macros/src/plugin.rs`
   - Remove `vendor`, `url`, `email` fields
-  - Make `krate` field optional
+  - Make `krate` field optional (default: `::wavecraft`)
   
-- [ ] **Task 1.2**: Update `Parse` implementation
+- [x] **Task 1.2**: Update `Parse` implementation
   - File: `engine/crates/wavecraft-macros/src/plugin.rs`
   - Remove property parsing for vendor/url/email
   - Make `crate` property optional with `::wavecraft` default
   - Update error messages
 
-- [ ] **Task 1.3**: Implement metadata derivation
+- [x] **Task 1.3**: Implement metadata derivation
   - File: `engine/crates/wavecraft-macros/src/plugin.rs`
   - Derive vendor from `CARGO_PKG_AUTHORS`
   - Derive URL from `CARGO_PKG_HOMEPAGE` / `CARGO_PKG_REPOSITORY`
   - Parse email from authors field
   - Add fallback defaults
 
-- [ ] **Task 1.4**: Update VST3 ID generation
+- [x] **Task 1.4**: Update VST3 ID generation
   - File: `engine/crates/wavecraft-macros/src/plugin.rs`
   - Change `generate_vst3_id()` to use package name instead of vendor
   - Update hash input: `format!("{}{}", package_name, name)`
 
-- [ ] **Task 1.5**: Update CLAP ID generation
+- [x] **Task 1.5**: Update CLAP ID generation
   - File: `engine/crates/wavecraft-macros/src/plugin.rs`
-  - Use package name: `concat!("com.", env!("CARGO_PKG_NAME"))`
+  - Use package name: `format!("com.{}", package_name.replace('-', "_"))`
 
-- [ ] **Task 1.6**: Add signal validation
+- [x] **Task 1.6**: Add signal validation
   - File: `engine/crates/wavecraft-macros/src/plugin.rs`
   - Detect bare processors (identifiers)
   - Emit helpful compile error guiding to `SignalChain![]`
 
-- [ ] **Task 1.7**: Update macro docstring
+- [x] **Task 1.7**: Update macro docstring
   - File: `engine/crates/wavecraft-macros/src/lib.rs`
   - Update examples to show minimal API
   - Show `SignalChain![]` usage
+  - Document metadata derivation
 
 ---
 
-## Phase 2: SignalChain Macro Rename (MEDIUM PRIORITY)
+## Phase 2: SignalChain Macro Rename (MEDIUM PRIORITY) ✅
 
 ### Declarative Macro Updates
 
-- [ ] **Task 2.1**: Create `SignalChain!` macro
+- [x] **Task 2.1**: Create `SignalChain!` macro
   - File: `engine/crates/wavecraft-dsp/src/combinators/mod.rs`
   - Copy implementation from `Chain!`
   - Update docstrings with examples
 
-- [ ] **Task 2.2**: Deprecate `Chain!` macro
+- [x] **Task 2.2**: Deprecate `Chain!` macro
   - File: `engine/crates/wavecraft-dsp/src/combinators/mod.rs`
   - Add `#[deprecated]` attribute
   - Delegate to `SignalChain!`
 
-- [ ] **Task 2.3**: Export `SignalChain!` at crate root
+- [x] **Task 2.3**: Export `SignalChain!` at crate root
   - File: `engine/crates/wavecraft-dsp/src/lib.rs`
   - Add to public exports
 
-- [ ] **Task 2.4**: Update core prelude
+- [x] **Task 2.4**: Update core prelude
   - File: `engine/crates/wavecraft-core/src/prelude.rs`
   - Re-export `SignalChain`
 
-- [ ] **Task 2.5**: Update nih_plug prelude
+- [x] **Task 2.5**: Update nih_plug prelude
   - File: `engine/crates/wavecraft-nih_plug/src/prelude.rs`
-  - Verify `SignalChain` available via `wavecraft::prelude::*`
+  - Verify `SignalChain` available via `wavecraft::prelude::*` (auto via core prelude)
 
 ---
 

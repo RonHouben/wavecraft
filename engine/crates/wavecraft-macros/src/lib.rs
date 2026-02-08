@@ -33,32 +33,70 @@ pub fn derive_processor_params(input: TokenStream) -> TokenStream {
 
 /// Procedural macro for generating complete plugin implementations.
 ///
-/// This macro parses a simple DSL and generates all the boilerplate code for
-/// a working VST3/CLAP plugin.
+/// This macro parses a minimal DSL and generates all the boilerplate code for
+/// a working VST3/CLAP plugin. Plugin metadata is automatically derived from
+/// your `Cargo.toml`.
 ///
-/// # Syntax
+/// # Syntax (0.9.0+)
 ///
-/// ```text
+/// ```rust,no_run
+/// use wavecraft::prelude::*;
+///
+/// // Define your processor wrapper
+/// wavecraft_processor!(MyGain => Gain);
+///
+/// // Generate complete plugin with minimal boilerplate
 /// wavecraft_plugin! {
 ///     name: "My Plugin",
-///     vendor: "My Company",
-///     url: "https://example.com",  // optional
-///     email: "info@example.com",   // optional
-///     signal: Chain![
-///         MyGain { level: 0.0 },
-///     ],
+///     signal: SignalChain![MyGain],
 /// }
 /// ```
 ///
-/// # Phase 6 Status
+/// # Metadata Derivation
 ///
-/// This is a work-in-progress implementation. Current status:
-/// - [x] Step 6.1: Basic input parsing (name, vendor, signal)
-/// - [ ] Step 6.2: Generate Plugin struct (partially done)
-/// - [ ] Step 6.3: Generate Params struct from processor chain
-/// - [ ] Step 6.4: Generate Plugin trait impl (partially done)
-/// - [ ] Step 6.5: Generate format impls & exports (done)
-/// - [ ] Step 6.6: Add error messages
+/// The macro automatically derives plugin metadata from `Cargo.toml`:
+/// - **Vendor**: First author in `authors` field (or "Unknown")
+/// - **URL**: `homepage` field (or `repository` if homepage empty)
+/// - **Email**: Extracted from first author's email in `authors` field
+/// - **Version**: `version` field (via `CARGO_PKG_VERSION`)
+///
+/// Add metadata to your `Cargo.toml`:
+///
+/// ```toml
+/// [package]
+/// authors = ["Your Name <your.email@example.com>"]
+/// homepage = "https://yourproject.com"
+/// ```
+///
+/// # Optional `crate` Property
+///
+/// If you've renamed the `wavecraft` dependency in your `Cargo.toml`:
+///
+/// ```toml
+/// [dependencies]
+/// my_wavecraft = { package = "wavecraft-nih_plug", ... }
+/// ```
+///
+/// Then specify the renamed crate:
+///
+/// ```rust,no_run
+/// # use wavecraft::prelude::*;
+/// # wavecraft_processor!(MyGain => Gain);
+/// wavecraft_plugin! {
+///     name: "My Plugin",
+///     signal: SignalChain![MyGain],
+///     crate: my_wavecraft,  // Optional
+/// }
+/// ```
+///
+/// # Breaking Changes (0.9.0)
+///
+/// - Removed `vendor`, `url`, `email` properties (now auto-derived)
+/// - Bare processors no longer accepted: use `SignalChain![...]` wrapper
+/// - VST3 Class IDs now use package name instead of vendor (plugins get new IDs)
+/// - Default `crate` path changed from `::wavecraft_nih_plug` to `::wavecraft`
+///
+/// See `docs/MIGRATION-0.9.md` for migration guide.
 #[proc_macro]
 pub fn wavecraft_plugin(input: TokenStream) -> TokenStream {
     plugin::wavecraft_plugin_impl(input)
