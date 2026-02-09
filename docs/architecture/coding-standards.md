@@ -18,6 +18,8 @@ For detailed rules, see the topic-specific documents below.
 
 ## Quick Reference — Naming Conventions
 
+> For full details, see the language-specific guides in the [Documentation Structure](#documentation-structure) table above.
+
 ### TypeScript / JavaScript
 
 | Type | Convention | Example |

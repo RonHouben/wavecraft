@@ -43,3 +43,10 @@
 - [x] **Step 4.3** — Verify document count (12) and sizes (all ≤600 lines) ✅
 - [x] **Step 4.4** — Verify content completeness (all critical headings present) ✅
 - [x] **Step 4.5** — Fixed validation issues: added versioning detail, trimmed rust doc
+
+## Phase 5: QA Fixes
+
+- [x] **QA-M1** — Added `## Rust` heading in `coding-standards-rust.md` for consistent heading hierarchy
+- [x] **QA-L1** — Added summary note in `coding-standards.md` Quick Reference linking to language-specific guides
+- [x] **QA-L2** — Left `versioning-and-distribution.md` as-is (128 lines, focused and complete)
+- [x] **QA-Info** — Pre-existing broken reference in `.github/copilot-instructions.md` — out of scope
