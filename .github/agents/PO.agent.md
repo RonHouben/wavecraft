@@ -151,12 +151,6 @@ Use this format:
 ## Overview
 [Brief description of the feature and problem being solved]
 
-## Version
-
-**Target Version:** `X.Y.Z` (patch/minor bump from `current`)
-
-**Rationale:** [Why this version bump type — refer to coding standards]
-
 ---
 
 ## User Story 1: [Title]
@@ -176,16 +170,9 @@ Use this format:
 - Dependencies
 ```
 
-#### Version Guidelines
+#### Versioning
 
-As the Product Owner, you decide the version for each feature based on user impact:
-
-| Bump Type | When to Use | Examples |
-|-----------|-------------|----------|
-| **Patch** (0.0.X) | Polish, bug fixes, small improvements | UX tweaks, performance fixes |
-| **Minor** (0.X.0) | New features, significant changes | New components, architectural changes |
-
-The Coder agent will implement the version bump during the coding phase.
+All versioning is automated by the CD pipeline — **do not specify or bump versions manually**. This applies to all packages (CLI, npm, engine workspace). See the [Coding Standards — Versioning](../../docs/architecture/coding-standards.md#versioning) section for details.
 
 #### Where to save user stories
 - Before starting creating the user stories, make sure that you are checked out to the correct feature branch in git. If the branch does not exist, create a new branch named after the feature you are working on.

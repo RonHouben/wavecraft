@@ -234,49 +234,55 @@ Key: the audio path never blocks on UI; the UI never directly runs audio code.
 
 ## Versioning
 
-Wavecraft uses semantic versioning (SemVer) with a single source of truth in `engine/Cargo.toml`. The version automatically propagates to plugin metadata and the UI at build time.
+Wavecraft uses semantic versioning (SemVer) with automated version management via the CD pipeline. The CLI version is the **user-facing entry point** (`cargo install wavecraft`), and the workspace version (`engine/Cargo.toml`) is kept aligned with it. All version bumping is handled by CI — developers do not manually bump versions during feature development.
 
 ### Version Flow
 
 ```
-┌────────────────────┐
-│ engine/Cargo.toml  │  [workspace.package]
-│ version = "1.0.0"  │  version = "1.0.0"
-└─────────┬──────────┘
-          │
-          ├──────────────────────────────────────┐
-          │                                      │
-          ▼                                      ▼
-┌─────────────────────┐               ┌─────────────────────┐
-│ Plugin Binary       │               │ cargo xtask bundle  │
-│ (Rust compile)      │               │ reads Cargo.toml    │
-│                     │               │ exports to Vite env │
-│ env!("CARGO_PKG_    │               └──────────┬──────────┘
-│      VERSION")      │                          │
-│         │           │                          ▼
-│         ▼           │               ┌─────────────────────┐
-│  nih-plug Plugin    │               │ Vite Build          │
-│  VERSION constant   │               │ __APP_VERSION__     │
-│  → VST3/CLAP        │               │ compile-time const  │
-│    metadata         │               └──────────┬──────────┘
-└─────────────────────┘                          │
-                                                 ▼
-                                      ┌─────────────────────┐
-                                      │ React UI            │
-                                      │ VersionBadge        │
-                                      │ displays version    │
-                                      └─────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│              CD Pipeline (continuous-deploy.yml)         │
+│                                                         │
+│  Push to main → detect changes → auto-bump patch        │
+│  → publish to crates.io / npm → push git tags           │
+└────────────┬────────────────────────┬───────────────────┘
+             │                        │
+             ▼                        ▼
+  ┌─────────────────────┐  ┌─────────────────────┐
+  │ CLI (crates.io)     │  │ npm packages        │
+  │ cargo install       │  │ @wavecraft/core     │
+  │ wavecraft           │  │ @wavecraft/components│
+  └─────────────────────┘  └─────────────────────┘
+             │
+             ▼
+  ┌─────────────────────┐
+  │ engine/Cargo.toml   │  [workspace.package]
+  │ (aligned with CLI)  │  version = "X.Y.Z"
+  └─────────┬───────────┘
+            │
+            ├────────────────────────────────┐
+            │                                │
+            ▼                                ▼
+  ┌─────────────────────┐       ┌─────────────────────┐
+  │ Plugin Binary       │       │ Vite Build          │
+  │ env!("CARGO_PKG_    │       │ __APP_VERSION__     │
+  │      VERSION")      │       │ compile-time const  │
+  │ → VST3/CLAP metadata│       │ → VersionBadge UI   │
+  └─────────────────────┘       └─────────────────────┘
 ```
 
 ### Key Design Decisions
 
-1. **Build-time injection** — Version is embedded at compile time, not fetched via IPC at runtime. This ensures zero runtime cost and no startup latency.
+1. **CI-automated versioning** — All version bumps are handled by the CD pipeline. No manual version bumping is required — not per feature, not at milestones.
 
-2. **Vite `define` block** — The `__APP_VERSION__` constant is injected via Vite's `define` configuration, which performs compile-time string replacement.
+2. **CLI as entry point** — The CLI version (`cargo install wavecraft`) is the user-facing version. The workspace version is aligned with the CLI version.
 
-3. **Development fallback** — When building without xtask (e.g., `npm run dev`), the version is read directly from `engine/Cargo.toml` using a regex parser in `vite.config.ts`. This ensures developers always see the correct version during development.
+3. **Build-time injection** — Version is embedded at compile time, not fetched via IPC at runtime. This ensures zero runtime cost and no startup latency.
 
-4. **No manual sync** — Changing the version in `Cargo.toml` automatically updates all consumers on next build.
+4. **Vite `define` block** — The `__APP_VERSION__` constant is injected via Vite's `define` configuration, which performs compile-time string replacement.
+
+5. **Development fallback** — When building without xtask (e.g., `npm run dev`), the version is read directly from `engine/Cargo.toml` using a regex parser in `vite.config.ts`.
+
+6. **No manual sync** — CI keeps all versions in sync automatically.
 
 ⸻
 

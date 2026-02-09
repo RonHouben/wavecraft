@@ -1227,80 +1227,39 @@ Linting runs automatically on all PRs via `.github/workflows/lint.yml`:
 
 ### Versioning
 
-**Rule:** The Product Owner decides the target version in the user stories. The Coder implements the version bump during the coding phase.
+**Rule:** All version bumping is handled automatically by the CD pipeline. Do not manually bump versions during feature development.
 
-The version is defined in `engine/Cargo.toml` under `[workspace.package]` and is the **single source of truth**. It gets injected into the UI at build time via Vite's `define` configuration.
-
-**Workflow:**
-1. **PO** specifies the target version in `user-stories.md` with rationale
-2. **Coder** implements the version bump in `engine/Cargo.toml` during coding
-3. **Tester** verifies the correct version is displayed in the UI
-
-**Version bump criteria:**
-- **Minor version** (0.X.0): Significant features, architectural changes, milestone completions
-- **Patch version** (0.0.X): Small features, bug fixes, polish items, documentation updates
-
-**Examples:**
-- Adding WebSocket IPC bridge → Minor bump (0.2.0 → 0.3.0)
-- Removing a feature flag → Patch bump (0.2.0 → 0.2.1)
-- Performance optimization → Patch bump
-- New UI component → Patch bump (unless it's a major feature)
-
-**Why PO decides:**
-- Version communicates product significance to users — a product decision
-- Ensures consistent versioning across features
-- Separates "what version" (product) from "when to bump" (engineering)
-
-**Why Coder implements during coding:**
-- Allows testers to verify the correct version is rendered in the UI
-- Creates clear traceability between builds and features
-- Ensures version is updated before testing, not as an afterthought
-
-**Example:**
-```toml
-# engine/Cargo.toml
-[workspace.package]
-version = "0.2.0"  # Bump this when implementing a new feature
-```
-
-The VersionBadge component in the UI displays this version (e.g., "v0.2.0").
-
-### SDK Distribution Versioning (CI Auto-Bump)
-
-**Rule:** Distribution packages (CLI, npm) are version-bumped automatically by CI. Do not manually bump these versions for publish-only changes.
-
-The CD pipeline (`continuous-deploy.yml`) automatically patches and publishes distribution packages when any SDK component changes. This ensures users always get the latest SDK via `cargo install wavecraft` or `npm install @wavecraft/core`.
-
-**Two version domains exist:**
-
-| Domain | Packages | Owner | Bumped By |
-|--------|----------|-------|-----------|
-| **Product Version** | `engine/Cargo.toml` workspace version | PO (decides), Coder (implements) | Manual — during feature development |
-| **Distribution Version** | CLI (`cli/Cargo.toml`), `@wavecraft/core`, `@wavecraft/components` | CI | Automatic — patch bump on any SDK change |
+The version is defined in `engine/Cargo.toml` under `[workspace.package]` and propagates to plugin metadata and the UI at build time via Vite's `define` configuration. The CLI version (`cli/Cargo.toml`) is the **user-facing entry point** — the workspace version should be kept aligned with the CLI version.
 
 **How it works:**
-1. A push to `main` triggers the CD pipeline
+1. A push to `main` triggers the CD pipeline (`continuous-deploy.yml`)
 2. `detect-changes` identifies which SDK components changed
 3. If **any** component changed, the CLI is also published (cascade trigger)
 4. For each package, CI compares the local version against the published registry version
 5. If the local version is not ahead, CI auto-bumps the patch version, commits as `github-actions[bot]`, and publishes
 6. The `github-actions[bot]` author is detected by the pipeline to prevent infinite re-triggering
 
+**Packages auto-bumped by CI:**
+- CLI (`cli/Cargo.toml`)
+- `@wavecraft/core` (npm)
+- `@wavecraft/components` (npm)
+- `engine/Cargo.toml` workspace version
+
 **What developers should do:**
-- Bump `engine/Cargo.toml` workspace version for product milestones (as before)
-- Do **not** manually bump CLI or npm package versions unless making a deliberate breaking change
-- If you need a specific version (e.g., minor bump for a breaking CLI change), bump it in your PR — CI will respect the manual bump
+- Do **not** manually bump any versions during feature development
+- If you need a specific version (e.g., minor bump for a breaking change), bump it in your PR — CI will respect the manual bump
 
 **What CI does:**
-- Auto-patches CLI, `@wavecraft/core`, `@wavecraft/components` when their local version ≤ registry version
+- Auto-patches all distribution packages when their local version ≤ registry version
 - Commits version bumps **locally only** (not pushed to `main`) — branch protection rulesets prevent direct pushes
 - Pushes **git tags only** for each published version (tags are not subject to branch protection)
-- The version in source files on `main` is the "product baseline" — the registry holds the authoritative published version
 
 **Infinite loop prevention:**
 - Auto-bump commits are no longer pushed to `main`, so the infinite loop scenario does not arise
 - The `detect-changes` guard (`github-actions[bot]` author check) is kept as defense-in-depth
 - Preferred over `[skip ci]` because other workflows (CI, template validation) should still run normally
+
+The VersionBadge component in the UI displays the current version (e.g., "v0.9.0").
 
 ---
 
