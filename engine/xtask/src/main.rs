@@ -223,6 +223,13 @@ enum Commands {
         skip_tests: bool,
     },
 
+    /// Validate CLI wavecraft-* dependency versions and publishability
+    #[command(
+        about = "Validate CLI wavecraft-* dependency versions and publishability",
+        name = "validate-cli-deps"
+    )]
+    ValidateCliDeps,
+
     /// Validate CLI template generation
     #[command(
         about = "Validate CLI template generation (replicates CI workflow)",
@@ -373,6 +380,12 @@ fn main() -> Result<()> {
                 verbose: cli.verbose,
             };
             commands::check::run(config)
+        }
+        Some(Commands::ValidateCliDeps) => {
+            let config = commands::validate_cli_deps::ValidateCliDepsConfig {
+                verbose: cli.verbose,
+            };
+            commands::validate_cli_deps::run(config)
         }
         Some(Commands::ValidateTemplate { keep }) => {
             let config = commands::validate_template::ValidateTemplateConfig {

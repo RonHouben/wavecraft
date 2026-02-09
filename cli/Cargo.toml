@@ -42,6 +42,9 @@ version = "1"
 features = ["full"]
 
 # Engine crates (path dependencies)
+# NOTE: `cargo xtask validate-cli-deps` validates these wavecraft-* dependencies
+# for version fields and publishability. Run locally or via the CD pipeline.
+# Adding or removing engine crate dependencies here does NOT require workflow updates.
 [dependencies.wavecraft-protocol]
 path = "../engine/crates/wavecraft-protocol"
 version = "0.11.0"

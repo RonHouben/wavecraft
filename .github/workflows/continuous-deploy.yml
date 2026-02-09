@@ -104,49 +104,9 @@ jobs:
         with:
           workspaces: cli
 
-      - name: Validate CLI dependency versions
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import tomllib
-
-          cli_toml = Path("cli/Cargo.toml")
-          data = tomllib.loads(cli_toml.read_text())
-          deps = data.get("dependencies", {})
-          required = [
-              "wavecraft-protocol",
-              "wavecraft-bridge",
-              "wavecraft-metering",
-              "wavecraft-dev-server",
-          ]
-          missing = [dep for dep in required if "version" not in deps.get(dep, {})]
-          if missing:
-              raise SystemExit(f"Missing version for CLI dependencies: {', '.join(missing)}")
-          print("CLI dependency versions validated.")
-          PY
-
-      - name: Validate CLI dependency publishability
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import tomllib
-
-          crates = {
-              "wavecraft-protocol": "engine/crates/wavecraft-protocol/Cargo.toml",
-              "wavecraft-bridge": "engine/crates/wavecraft-bridge/Cargo.toml",
-              "wavecraft-metering": "engine/crates/wavecraft-metering/Cargo.toml",
-              "wavecraft-dev-server": "engine/crates/wavecraft-dev-server/Cargo.toml",
-          }
-          unpublished = []
-          for name, path in crates.items():
-              data = tomllib.loads(Path(path).read_text())
-              publish = data.get("package", {}).get("publish", True)
-              if publish is False:
-                  unpublished.append(name)
-          if unpublished:
-              raise SystemExit(f"CLI dependencies are not publishable: {', '.join(unpublished)}")
-          print("CLI dependency publishability validated.")
-          PY
+      - name: Validate CLI dependencies
+        working-directory: engine
+        run: cargo xtask validate-cli-deps
       
       - name: Determine publish version
         id: version
