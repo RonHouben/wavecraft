@@ -27,9 +27,9 @@ Wavecraft provides a declarative domain-specific language (DSL) for defining plu
 │   wavecraft_plugin! {              → process() with DSP routing                 │
 │       name: "My Plugin",           → VST3Plugin impl (class ID)                 │
 │       vendor: "Wavecraft",         → ClapPlugin impl (CLAP ID)                  │
-│       signal: InputGain,           → nih_export_vst3!() macro                   │
-│   }                                → nih_export_clap!() macro                   │
-│                                    → FFI vtable export (dev audio processing)   │
+│       signal: InputGain,           → nih_export_vst3!() (#[cfg] gated)          │
+│   }                                → nih_export_clap!() (#[cfg] gated)          │
+│                                    → FFI vtable export (always available)       │
 │                                                                                 │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -59,8 +59,9 @@ The DSL uses a two-layer macro system:
    }
    ```
    In addition to the nih-plug `Plugin` implementation, this macro also generates:
-   - `wavecraft_get_params_json` / `wavecraft_free_string` — FFI exports for parameter discovery
-   - `wavecraft_dev_create_processor` — FFI vtable export returning a `DevProcessorVTable` for dev audio processing (see [Dev Audio via FFI](./development-workflows.md#dev-audio-via-ffi))
+   - `nih_export_vst3!()` and `nih_export_clap!()` — Conditionally compiled with `#[cfg(not(feature = "_param-discovery"))]`. This allows `wavecraft start` to load the dylib for parameter discovery without triggering nih-plug's static initializers (which cause macOS `AudioComponentRegistrar` hangs during `dlopen`).
+   - `wavecraft_get_params_json` / `wavecraft_free_string` — FFI exports for parameter discovery (always available)
+   - `wavecraft_dev_create_processor` — FFI vtable export returning a `DevProcessorVTable` for dev audio processing (always available, see [Dev Audio via FFI](./development-workflows.md#dev-audio-via-ffi))
 
    All generated `extern "C"` functions use `catch_unwind` to prevent panics from unwinding across the FFI boundary.
 

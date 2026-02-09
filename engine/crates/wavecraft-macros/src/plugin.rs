@@ -550,7 +550,12 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
             ];
         }
 
+        // When building with `_param-discovery` feature, skip nih-plug's
+        // static initializers (VST3/CLAP factory registration) to prevent
+        // dlopen from hanging on macOS audio subsystem services.
+        #[cfg(not(feature = "_param-discovery"))]
         #krate::__nih::nih_export_clap!(__WavecraftPlugin);
+        #[cfg(not(feature = "_param-discovery"))]
         #krate::__nih::nih_export_vst3!(__WavecraftPlugin);
 
         // ================================================================

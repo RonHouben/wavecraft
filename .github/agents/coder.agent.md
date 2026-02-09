@@ -1,7 +1,9 @@
 ---
 name: coder
 description: Senior software engineer implementing Rust audio plugins (nih-plug) with React UIs. Expert in real-time safe DSP code, VST3/CLAP integration, and cross-platform development.
+model: Claude Sonnet 4.5 (copilot)
 tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'github/*',  'todo']
+agents: [tester, docwriter, search]
 user-invokable: true
 handoffs: 
   - label: Test Implementation
@@ -293,6 +295,41 @@ cargo xtask test --engine    # Engine tests (if Rust code changed)
 
 ---
 
+## Creating Pull Requests
+
+When your implementation is ready and pre-handoff checks pass, create a Pull Request using the `#skill:create-pull-request` skill.
+
+**Prerequisites:**
+- All commits are pushed to the feature branch
+- Pre-handoff checks pass (lint, typecheck, tests)
+- Implementation progress documented in `docs/feature-specs/{feature}/implementation-progress.md`
+
+**Workflow:**
+
+The create-pull-request skill will automatically:
+1. Extract feature name from current branch
+2. Analyze all commits and changes
+3. Generate a comprehensive PR title
+4. Create `PR-summary.md` in the feature-specs folder with:
+   - Auto-generated summary from commits
+   - Grouped changes by area (Engine/DSP, UI, Build, Docs)
+   - List of related documentation
+   - Testing checklist
+5. Create the PR with `gh pr create`
+
+**Example:**
+```
+User: "Create a PR for my changes"
+Agent: [Analyzes branch feat/meter-improvements]
+       [Creates docs/feature-specs/meter-improvements/PR-summary.md]
+       [Runs: gh pr create --title "Improve meter performance and accuracy" --body-file ...]
+       ✅ PR created: https://github.com/owner/repo/pull/123
+```
+
+**Note:** All PR details are auto-generated from your commits and changed files. No manual input required.
+
+---
+
 ## What You Should NOT Do
 
 - Make architectural decisions (defer to architect)
@@ -301,6 +338,7 @@ cargo xtask test --engine    # Engine tests (if Rust code changed)
 - Write code without understanding the full context
 - Implement features not in the current spec
 - **Skip pre-handoff checks** (always verify locally first)
+- Merge PRs (that's handled by authorized team members after QA approval)
 
 ---
 

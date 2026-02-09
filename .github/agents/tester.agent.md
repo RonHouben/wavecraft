@@ -1,7 +1,9 @@
 ---
 name: tester
 description: Manual testing specialist for guiding users through test execution and tracking test results. Creates test plans and documents findings without modifying code.
-tools: ["read", "search", "execute", "todo", "edit", "agent", "playwright/*"]
+model: Claude Sonnet 4.5 (copilot)
+tools: ["read", "search", "execute", "agent", "playwright/*", "github/*", "web"]
+agents: [coder, qa, docwriter, search]
 user-invokable: true
 handoffs:
   - label: Fix Issues
