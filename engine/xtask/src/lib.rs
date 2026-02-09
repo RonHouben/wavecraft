@@ -236,6 +236,11 @@ pub mod output {
         eprintln!("{}", text.red());
     }
 
+    /// Print an error item with ✗ marker.
+    pub fn print_error_item(text: &str) {
+        eprintln!("  {} {}", "✗".red(), text);
+    }
+
     /// Print a warning message.
     pub fn print_warning(text: &str) {
         println!("{}", text.yellow());

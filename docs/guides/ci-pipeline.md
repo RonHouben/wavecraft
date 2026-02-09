@@ -353,6 +353,22 @@ Wavecraft uses automatic continuous deployment for all publishable packages. Whe
 
 **Key difference:** `publish-cli` is a cascade job — it triggers whenever _any_ SDK package (engine, npm-core, npm-components, or CLI itself) changes. This ensures the CLI git tag always points to the latest SDK state, since scaffolded projects depend on that tag.
 
+### CLI Dependency Validation
+
+The `publish-cli` job validates CLI dependencies before publishing using `cargo xtask validate-cli-deps`. This single command performs two checks for every `wavecraft-*` dependency discovered in `cli/Cargo.toml`:
+
+1. **Version field** — Each `wavecraft-*` dependency must have a `version` field (required for `cargo publish` to crates.io)
+2. **Publishability** — The corresponding crate at `engine/crates/{name}/Cargo.toml` must not have `publish = false`
+
+Dependencies are **discovered dynamically** from `cli/Cargo.toml` — adding or removing engine crate dependencies does not require updating the workflow file.
+
+The command can also be run locally:
+
+```bash
+cd engine && cargo xtask validate-cli-deps          # basic output
+cd engine && cargo xtask validate-cli-deps --verbose # per-dependency details
+```
+
 ### Packages Published
 
 #### npm Packages

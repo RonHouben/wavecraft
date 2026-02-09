@@ -13,6 +13,7 @@ pub mod notarize;
 pub mod release;
 pub mod sign;
 pub mod test;
+pub mod validate_cli_deps;
 pub mod validate_template;
 
 use anyhow::Result;
