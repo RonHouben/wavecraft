@@ -3,7 +3,7 @@ members = ["crates/*", "xtask"]
 resolver = "2"
 
 [workspace.package]
-version = "0.11.1"
+version = "0.11.0"
 edition = "2024"
 license = "MIT"
 authors = ["Wavecraft Team"]
@@ -19,13 +19,13 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 
 # Internal crates (publishable - version required for crates.io)
-wavecraft-protocol = { path = "crates/wavecraft-protocol", version = "0.11.1" }
-wavecraft-dsp = { path = "crates/wavecraft-dsp", version = "0.11.1" }
-wavecraft-bridge = { path = "crates/wavecraft-bridge", version = "0.11.1" }
-wavecraft-macros = { path = "crates/wavecraft-macros", version = "0.11.1" }
-wavecraft-core = { path = "crates/wavecraft-core", version = "0.11.1" }
-wavecraft-metering = { path = "crates/wavecraft-metering", version = "0.11.1" }
-wavecraft-dev-server = { path = "crates/wavecraft-dev-server", version = "0.11.1" }
+wavecraft-protocol = { path = "crates/wavecraft-protocol", version = "0.11.0" }
+wavecraft-dsp = { path = "crates/wavecraft-dsp", version = "0.11.0" }
+wavecraft-bridge = { path = "crates/wavecraft-bridge", version = "0.11.0" }
+wavecraft-macros = { path = "crates/wavecraft-macros", version = "0.11.0" }
+wavecraft-core = { path = "crates/wavecraft-core", version = "0.11.0" }
+wavecraft-metering = { path = "crates/wavecraft-metering", version = "0.11.0" }
+wavecraft-dev-server = { path = "crates/wavecraft-dev-server", version = "0.11.0" }
 
 # Internal crates (not published to crates.io)
 wavecraft-nih_plug = { path = "crates/wavecraft-nih_plug" }

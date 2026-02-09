@@ -47,15 +47,15 @@ features = ["full"]
 # Adding or removing engine crate dependencies here does NOT require workflow updates.
 [dependencies.wavecraft-protocol]
 path = "../engine/crates/wavecraft-protocol"
-version = "0.11.1"
+version = "0.11.0"
 
 [dependencies.wavecraft-bridge]
 path = "../engine/crates/wavecraft-bridge"
-version = "0.11.1"
+version = "0.11.0"
 
 [dependencies.wavecraft-dev-server]
 path = "../engine/crates/wavecraft-dev-server"
-version = "0.11.1"
+version = "0.11.0"
 
 [features]
 default = ["audio-dev"]
