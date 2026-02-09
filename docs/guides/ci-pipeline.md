@@ -288,7 +288,7 @@ This allows validation against the current commit's SDK code, even before releas
 
 ## Related Documentation
 
-- [Coding Standards](../architecture/coding-standards.md) — Code conventions including linting rules
+- [Coding Standards](../architecture/coding-standards.md) — Code conventions overview (see [Testing & Quality](../architecture/coding-standards-testing.md) for linting rules)
 - [macOS Signing Guide](./macos-signing.md) — Plugin signing and notarization
 
 ---

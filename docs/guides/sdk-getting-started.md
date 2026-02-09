@@ -596,8 +596,8 @@ If you see an error indicating the UI dev server port is already in use:
 
 ## Next Steps
 
-- **[High-Level Design](../architecture/high-level-design.md)** — Understand the architecture
-- **[Coding Standards](../architecture/coding-standards.md)** — Follow project conventions
+- **[High-Level Design](../architecture/high-level-design.md)** — Architecture overview and detailed topic docs
+- **[Coding Standards](../architecture/coding-standards.md)** — Coding conventions and language-specific guides
 - **[macOS Signing Guide](./macos-signing.md)** — Prepare for distribution
 
 ---

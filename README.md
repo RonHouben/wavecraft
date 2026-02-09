@@ -108,8 +108,8 @@ wavecraft/
 ## Documentation
 
 - [SDK Getting Started](docs/guides/sdk-getting-started.md) — Build your first plugin with Wavecraft
-- [High-Level Design](docs/architecture/high-level-design.md) — Architecture overview, component design, data flows, and implementation roadmap
-- [Coding Standards](docs/architecture/coding-standards.md) — TypeScript, Rust, and React conventions
+- [High-Level Design](docs/architecture/high-level-design.md) — Architecture overview and navigation hub for detailed topic docs
+- [Coding Standards](docs/architecture/coding-standards.md) — Coding conventions overview and navigation hub for language-specific guides
 - [Agent Development Flow](docs/architecture/agent-development-flow.md) — How specialized agents collaborate through the development lifecycle
 - [Roadmap](docs/roadmap.md) — Milestone tracking and implementation progress
 - [Visual Testing Guide](docs/guides/visual-testing.md) — Playwright-based visual testing with agent-driven workflows

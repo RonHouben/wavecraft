@@ -172,7 +172,7 @@ Use this format:
 
 #### Versioning
 
-All versioning is automated by the CD pipeline — **do not specify or bump versions manually**. This applies to all packages (CLI, npm, engine workspace). See the [Coding Standards — Versioning](../../docs/architecture/coding-standards.md#versioning) section for details.
+All versioning is automated by the CD pipeline — **do not specify or bump versions manually**. This applies to all packages (CLI, npm, engine workspace). See [Versioning and Distribution](../../docs/architecture/versioning-and-distribution.md) for details.
 
 #### Where to save user stories
 - Before starting creating the user stories, make sure that you are checked out to the correct feature branch in git. If the branch does not exist, create a new branch named after the feature you are working on.

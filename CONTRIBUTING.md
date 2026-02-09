@@ -91,7 +91,7 @@ All contributions must include appropriate tests:
 - **Engine changes:** Add Rust unit tests and integration tests
 - **Run tests locally:** `cargo xtask test` before submitting PR
 
-See [docs/architecture/coding-standards.md#testing](docs/architecture/coding-standards.md#testing) for testing guidelines.
+See [Testing & Quality Standards](docs/architecture/coding-standards-testing.md) for testing guidelines.
 
 ### Testing CLI-Generated Plugins
 
@@ -152,6 +152,18 @@ PRs must pass all CI checks before merging. See [docs/guides/ci-pipeline.md](doc
 ## Squash Merge Policy
 
 All PRs are squashed on merge to keep the main branch history clean. Your PR title becomes the commit message, so make it descriptive.
+
+## Documentation Structure
+
+Architecture documentation lives in `docs/architecture/` and follows these conventions:
+
+- **Overview hubs** (`coding-standards.md`, `high-level-design.md`) — Navigation entry points with links to topic-specific docs
+- **Topic-specific docs** — Self-contained documents for specific domains (e.g., `coding-standards-rust.md`, `sdk-architecture.md`)
+- **Target size**: 150–600 lines per document
+- **Required sections**: Title, description, Related Documents, content
+
+See the navigation tables in [Coding Standards](docs/architecture/coding-standards.md)
+and [High-Level Design](docs/architecture/high-level-design.md) for the full document list.
 
 ## Questions or Need Help?
 

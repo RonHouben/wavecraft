@@ -34,8 +34,7 @@ b82739b docs: remove manual versioning from development flow
 ## Related Documentation
 
 - [User Stories](user-stories.md) — Requirements and acceptance criteria
-- [Coding Standards — Versioning](/docs/architecture/coding-standards.md#versioning) — Authoritative versioning policy
-- [High-Level Design — Versioning](/docs/architecture/high-level-design.md#versioning) — Version flow architecture
+- [Versioning and Distribution](/docs/architecture/versioning-and-distribution.md) — Authoritative versioning policy and version flow architecture
 
 ## Testing
 
