@@ -1,6 +1,12 @@
 use anyhow::{bail, Context, Result};
 use std::path::Path;
 use std::process::Command;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
+use std::thread;
+use std::time::Duration;
 
 /// Current CLI version, known at compile time.
 const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -68,10 +74,17 @@ pub fn run() -> Result<()> {
 fn update_cli() -> SelfUpdateResult {
     println!("🔄 Checking for CLI updates...");
 
-    let output = match Command::new("cargo")
+    let update_done = Arc::new(AtomicBool::new(false));
+    let progress_handle = start_cli_update_progress(update_done.clone());
+
+    let output_result = Command::new("cargo")
         .args(["install", "wavecraft"])
-        .output()
-    {
+        .output();
+
+    update_done.store(true, Ordering::Relaxed);
+    let _ = progress_handle.join();
+
+    let output = match output_result {
         Ok(output) => output,
         Err(e) => {
             eprintln!(
@@ -116,6 +129,26 @@ fn update_cli() -> SelfUpdateResult {
             SelfUpdateResult::Updated
         }
     }
+}
+
+fn start_cli_update_progress(done: Arc<AtomicBool>) -> thread::JoinHandle<()> {
+    thread::spawn(move || {
+        let delay = Duration::from_secs(8);
+        let mut slept = Duration::from_millis(0);
+
+        while slept < delay {
+            if done.load(Ordering::Relaxed) {
+                return;
+            }
+            let step = Duration::from_millis(200);
+            thread::sleep(step);
+            slept += step;
+        }
+
+        if !done.load(Ordering::Relaxed) {
+            println!("⏳ Still checking... this can take a minute on slow networks.");
+        }
+    })
 }
 
 /// Detect if `cargo install` output indicates the package is already at the latest version.
