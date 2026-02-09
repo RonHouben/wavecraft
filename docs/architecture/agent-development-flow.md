@@ -211,8 +211,33 @@ cargo run --manifest-path /path/to/wavecraft/cli/Cargo.toml -- start --install
 
 1. `wavecraft create` completes without errors
 2. `wavecraft start` builds without compile errors (no `include_dir` panics, etc.)
-3. `cargo xtask bundle` produces valid plugin bundles
-4. Plugin loads in a DAW
+3. **`cargo clippy` passes on generated project** — catch unused imports, dead code warnings
+4. `cargo xtask bundle` produces valid plugin bundles
+5. Plugin loads in a DAW
+
+**Complete test workflow:**
+
+```bash
+# Step 1: Generate test plugin
+cargo run --manifest-path cli/Cargo.toml -- create TestPlugin \
+  --output target/tmp/test-plugin
+
+# Step 2: Run clippy on generated code (catches template issues)
+cd target/tmp/test-plugin/engine
+cargo clippy --all-targets -- -D warnings
+
+# Step 3: Verify compile and bundle
+cd ..
+cargo xtask bundle
+
+# Step 4: Cleanup
+cd ../../..
+rm -rf target/tmp/test-plugin
+```
+
+**Why clippy on generated code is critical:**
+
+The CI pipeline runs `template-validation.yml` which executes clippy on generated templates. If the Tester doesn't run clippy locally, template issues (unused imports, dead code) will only be caught in CI, causing pipeline failures after merge.
 
 ### Why Not Docker/act?
 

@@ -1,12 +1,36 @@
 // Import everything from Wavecraft SDK
 use wavecraft::prelude::*;
 
-// Define the processor chain - in this case, just a Gain processor
-wavecraft_processor!({{plugin_name_pascal}}Gain => Gain);
+// Custom processors live in the `processors/` folder.
+// See `processors/oscillator.rs` for a complete example.
+mod processors;
+#[allow(unused_imports)] // Oscillator is unused in default signal chain
+use processors::Oscillator;
 
-// Generate the complete plugin from DSL
-// Plugin metadata (vendor, URL, email) is automatically derived from Cargo.toml
+// ---------------------------------------------------------------------------
+// Processor wrappers
+// ---------------------------------------------------------------------------
+// `wavecraft_processor!` creates a named wrapper around a built-in processor.
+// The wrapper name becomes the parameter-ID prefix (e.g. "inputgain_gain").
+//
+// Custom processors (like Oscillator) are used directly — they already
+// implement the Processor trait with their own parameter types.
+
+wavecraft_processor!(InputGain => Gain);
+wavecraft_processor!(OutputGain => Gain);
+
+// ---------------------------------------------------------------------------
+// Plugin definition
+// ---------------------------------------------------------------------------
+// `SignalChain![]` processes audio through each processor in order.
+// Plugin metadata (vendor, URL, email) is automatically derived from Cargo.toml.
+
 wavecraft_plugin! {
     name: "{{plugin_name_title}}",
-    signal: SignalChain![{{plugin_name_pascal}}Gain],
+
+    // Default: gain-only chain (silent — requires external audio input).
+    // Uncomment the line below to hear the oscillator example instead.
+    //
+    // signal: SignalChain![InputGain, Oscillator, OutputGain],
+    signal: SignalChain![InputGain, OutputGain],
 }

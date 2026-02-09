@@ -40,14 +40,19 @@ cargo xtask install
 
 This copies the bundles to your system plugin directories.
 
---- ## Project Structure
+---
+
+## Project Structure
 
 ```
 {{plugin_name}}/
 ├── Cargo.toml       # Workspace root
 ├── engine/          # Rust audio engine
 │   ├── src/
-│   │   └── lib.rs   # Plugin implementation (declarative DSL)
+│   │   ├── lib.rs            # Plugin assembly (signal chain + metadata)
+│   │   └── processors/       # Your custom DSP processors
+│   │       ├── mod.rs         # Module exports
+│   │       └── oscillator.rs  # Example: sine-wave oscillator
 │   ├── xtask/       # Build automation (dev, bundle, install, etc.)
 │   └── Cargo.toml   # Wavecraft SDK dependencies (git tags)
 ├── ui/              # React UI (TypeScript + Tailwind CSS)
@@ -64,29 +69,42 @@ This copies the bundles to your system plugin directories.
 
 | File | Purpose |
 |------|---------|
-| `engine/src/lib.rs` | Plugin implementation using `wavecraft_plugin!` DSL |
+| `engine/src/lib.rs` | Plugin assembly — signal chain + `wavecraft_plugin!` DSL |
+| `engine/src/processors/` | Folder for your custom `Processor` implementations |
+| `engine/src/processors/oscillator.rs` | Example oscillator (sine wave, frequency + level params) |
 | `ui/src/App.tsx` | User interface layout with parameter controls |
-| `ui/src/lib/wavecraft-ipc/` | IPC client for real-time parameter sync |
 | `engine/Cargo.toml` | Wavecraft SDK dependencies via git tags |
 
 ---
 
 ## Development Workflow
 
-### Understanding the Declarative DSL
+### Understanding the Project Layout
 
-Your plugin is defined using Wavecraft's declarative macros in `engine/src/lib.rs`:
+Your plugin has two main parts:
+
+1. **`engine/src/lib.rs`** — Assembles the signal chain and declares the plugin.
+2. **`engine/src/processors/`** — Contains your custom DSP code (one file per processor).
 
 ```rust
+// engine/src/lib.rs
 use wavecraft::prelude::*;
 
-// Define processor chain (currently using built-in Gain processor)
-wavecraft_processor!({{plugin_name_pascal}}Gain => Gain);
+mod processors;
+use processors::Oscillator;
 
-// Generate complete plugin with metadata (derived from Cargo.toml)
+// Built-in processors need named wrappers (parameter-ID prefix)
+wavecraft_processor!(InputGain  => Gain);
+wavecraft_processor!(OutputGain => Gain);
+
+// Custom processors (like Oscillator) are used directly in the signal chain.
+// They already implement the Processor trait with their own parameters.
+
 wavecraft_plugin! {
     name: "{{plugin_name_title}}",
-    signal: SignalChain![{{plugin_name_pascal}}Gain],
+    signal: SignalChain![InputGain, OutputGain],
+    // To hear the oscillator, swap the line above with:
+    // signal: SignalChain![InputGain, Oscillator, OutputGain],
 }
 ```
 
@@ -95,94 +113,81 @@ wavecraft_plugin! {
 - **URL** from `homepage` or `repository` field
 - **Email** parsed from authors
 
-### Adding Custom DSP
+### Enabling the Oscillator Example
 
-To implement custom audio processing, replace the built-in `Gain` processor with your own:
+The template ships with a complete oscillator in `processors/oscillator.rs`.
+To hear it, switch the signal-chain line in `lib.rs`:
 
 ```rust
-use wavecraft_core::prelude::*;
+// Before (silent — gain only, requires external audio input)
+signal: SignalChain![InputGain, OutputGain],
 
-// Custom processor struct
-pub struct MyCustomProcessor {
-    sample_rate: f32,
+// After (generates a 440 Hz sine wave)
+signal: SignalChain![InputGain, Oscillator, OutputGain],
+```
+
+Rebuild (`cargo xtask bundle`) and open the plugin in your DAW to hear the tone.
+
+### Adding a New Processor
+
+Follow these four steps:
+
+1. **Create the file** — e.g. `engine/src/processors/filter.rs`
+2. **Implement the trait:**
+
+```rust
+use wavecraft::prelude::*;
+use wavecraft::ProcessorParams;
+
+#[derive(ProcessorParams, Default, Clone)]
+pub struct FilterParams {
+    #[param(range = "20.0..=20000.0", default = 1000.0, unit = "Hz", factor = 2.5)]
+    pub cutoff: f32,
 }
 
-impl MyCustomProcessor {
-    pub fn new() -> Self {
-        Self { sample_rate: 44100.0 }
-    }
-}
+#[derive(Default)]
+pub struct Filter { /* state fields */ }
 
-// Implement the Processor trait
-impl Processor for MyCustomProcessor {
-    fn prepare(&mut self, sample_rate: f32, _max_block_size: usize) {
-        self.sample_rate = sample_rate;
-    }
+impl Processor for Filter {
+    type Params = FilterParams;
 
-    fn process(&mut self, _transport: &Transport, buffer: &mut Buffer) {
+    fn process(
+        &mut self,
+        buffer: &mut [&mut [f32]],
+        _transport: &Transport,
+        params: &Self::Params,
+    ) {
         // Your DSP code here (must be real-time safe!)
-        for channel in buffer.iter_mut() {
-            for sample in channel.iter_mut() {
-                *sample *= 0.5; // Example: reduce volume by half
-            }
-        }
-    }
-
-    fn reset(&mut self) {
-        // Called when playback stops - clear any state
+        let _ = params.cutoff; // use the parameter
     }
 }
+```
 
-// Use your custom processor in the plugin
-wavecraft_processor!(MyPluginProcessor => MyCustomProcessor);
+3. **Export in mod.rs:**
 
+```rust
+// engine/src/processors/mod.rs
+pub mod oscillator;
+pub mod filter;          // ← add
+
+pub use oscillator::Oscillator;
+pub use filter::Filter;  // ← add
+```
+
+4. **Wire into the signal chain:**
+
+```rust
+// engine/src/lib.rs
+use processors::{Oscillator, Filter};
+
+// Custom processors are used directly — no wavecraft_processor! wrapper needed.
 wavecraft_plugin! {
     name: "{{plugin_name_title}}",
-    signal: SignalChain![MyPluginProcessor],
+    signal: SignalChain![InputGain, Oscillator, Filter, OutputGain],
 }
 ```
 
-### Adding Parameters
-
-Define custom parameters using the `#[derive(ProcessorParams)]` macro:
-
-```rust
-use wavecraft_core::prelude::*;
-
-#[derive(ProcessorParams, Default)]
-struct MyParams {
-    #[param(range = "-60.0..=24.0", default = 0.0, unit = "dB")]
-    gain: f32,
-    
-    #[param(range = "0.0..=1.0", default = 1.0, unit = "%")]
-    mix: f32,
-}
-
-pub struct MyProcessor {
-    params: MyParams,
-}
-
-impl Processor for MyProcessor {
-    fn process(&mut self, _transport: &Transport, buffer: &mut Buffer) {
-        let gain_db = self.params.gain;
-        let gain_linear = db_to_linear(gain_db);
-        
-        for channel in buffer.iter_mut() {
-            for sample in channel.iter_mut() {
-                *sample *= gain_linear;
-            }
-        }
-    }
-}
-```
-
-Then update the UI to control your parameters:
-
-```tsx
-// In ui/src/App.tsx
-<ParameterSlider id="gain" />
-<ParameterSlider id="mix" />
-```
+The UI will automatically discover the new parameters — no React changes needed.
 
 ### Real-Time Safety Rules
 
@@ -236,15 +241,7 @@ cargo xtask clean
 - Parameter changes apply instantly to the audio stream
 - UI hot-reloading works while audio is running
 
-**Audio binary setup (included in new projects):**
-The template includes `engine/src/bin/dev-audio.rs` and the necessary configuration in `engine/Cargo.toml`:
-```toml
-[[bin]]
-name = "dev-audio"
-path = "src/bin/dev-audio.rs"
-```
-
-**Note:** If the audio binary fails to compile or you're working on a machine without audio hardware, the dev server continues with browser-only mode. You'll see helpful messages about enabling audio if it's not configured.
+**Note:** If audio hardware is unavailable, the dev server continues in browser-only mode with metering. Audio processing uses FFI to load your plugin's DSP code automatically — no extra binary needed.
 
 ---
 
@@ -268,7 +265,7 @@ These fields are automatically used for plugin metadata (vendor, URL, email).
 ```rust
 wavecraft_plugin! {
     name: "{{plugin_name_title}}",    // Display name in DAW
-    signal: SignalChain![{{plugin_name_pascal}}Gain],  // Processor chain entry point
+    signal: SignalChain![InputGain, OutputGain],  // Processor chain entry point
 }
 ```
 
@@ -319,9 +316,11 @@ wavecraft-protocol = { git = "https://github.com/RonHouben/wavecraft", tag = "{{
 **`Processor` trait** — Implement this for custom DSP:
 ```rust
 pub trait Processor {
-    fn prepare(&mut self, sample_rate: f32, max_block_size: usize);
-    fn process(&mut self, transport: &Transport, buffer: &mut Buffer);
-    fn reset(&mut self);
+    type Params: ProcessorParams + Default + Send + Sync + 'static;
+
+    fn process(&mut self, buffer: &mut [&mut [f32]], transport: &Transport, params: &Self::Params);
+    fn set_sample_rate(&mut self, _sample_rate: f32) {}
+    fn reset(&mut self) {}
 }
 ```
 

@@ -452,7 +452,7 @@ pub use wavecraft_core::{wavecraft_processor, wavecraft_plugin};
 
 **Macros:**
 
-- **`wavecraft_processor!`** — Creates named wrappers around built-in DSP processors:
+- **`wavecraft_processor!`** — Creates named wrappers around built-in DSP processors (not for custom types):
   ```rust
   wavecraft_processor!(InputGain => Gain);
   wavecraft_processor!(OutputGain => Gain);
@@ -463,12 +463,15 @@ pub use wavecraft_core::{wavecraft_processor, wavecraft_plugin};
   wavecraft_plugin! {
       name: "My Plugin",
       vendor: "Wavecraft",
-      signal: InputGain,
+      signal: SignalChain![InputGain, MyProcessor, OutputGain],
   }
   ```
+  Custom processors go directly in `SignalChain![]` — no wrapper needed.
 
 - **`#[derive(ProcessorParams)]`** — Auto-generates parameter metadata from struct definition:
   ```rust
+  use wavecraft::ProcessorParams; // derive macro import
+
   #[derive(ProcessorParams, Default)]
   struct MyParams {
       #[param(range = "-60.0..=24.0", default = 0.0, unit = "dB")]
@@ -493,8 +496,10 @@ my-plugin/
 ├── engine/
 │   ├── Cargo.toml           ← Depends on wavecraft-nih_plug (git tag, Cargo rename)
 │   └── src/
-│       ├── lib.rs           ← Plugin entry point
-│       └── dsp.rs           ← User's Processor implementation
+│       ├── lib.rs           ← Plugin assembly (signal chain + metadata)
+│       └── processors/      ← Custom DSP processors
+│           ├── mod.rs        ← Module exports
+│           └── oscillator.rs ← Example: sine-wave oscillator
 │
 ├── ui/
 │   ├── package.json         ← Depends on @wavecraft/core + @wavecraft/components
@@ -599,14 +604,15 @@ Wavecraft provides a declarative domain-specific language (DSL) for defining plu
 
 The DSL uses a two-layer macro system:
 
-1. **`wavecraft_processor!`** (declarative macro) — Wraps built-in DSP processors:
+1. **`wavecraft_processor!`** (declarative macro) — Wraps **built-in** DSP processors only:
    ```rust
    wavecraft_processor!(InputGain => Gain);
    wavecraft_processor!(Bypass => Passthrough);
    ```
-   - Creates newtype wrappers around built-in processors
+   - Creates newtype wrappers around built-in processors (`Gain`, `Passthrough`)
    - Delegates `Processor` trait implementation
-   - Maintains type distinction for compile-time safety
+   - Maintains type distinction for compile-time safety (wrapper name becomes parameter-ID prefix)
+   - **Not for custom processors** — types implementing `Processor` directly go straight into `SignalChain![]`
 
 2. **`wavecraft_plugin!`** (proc-macro) — Generates complete plugin implementation:
    ```rust
@@ -626,12 +632,17 @@ The DSL uses a two-layer macro system:
 
 3. **`#[derive(ProcessorParams)]`** — Auto-generates parameter metadata:
    ```rust
+   use wavecraft::prelude::*;
+   use wavecraft::ProcessorParams;  // derive macro (separate from trait in prelude)
+
    #[derive(ProcessorParams, Default)]
    struct GainParams {
        #[param(range = "-60.0..=24.0", default = 0.0, unit = "dB", group = "Input")]
        gain: f32,
    }
    ```
+   > **Import note:** `use wavecraft::prelude::*` brings in the `ProcessorParams` *trait*.
+   > The `#[derive(ProcessorParams)]` *derive macro* requires `use wavecraft::ProcessorParams;` — trait and derive macro coexist in different namespaces.
 
 ### Parameter Runtime Discovery
 
