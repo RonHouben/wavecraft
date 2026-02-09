@@ -4,6 +4,7 @@ use wavecraft::prelude::*;
 // Custom processors live in the `processors/` folder.
 // See `processors/oscillator.rs` for a complete example.
 mod processors;
+#[allow(unused_imports)] // Oscillator is unused in default signal chain
 use processors::Oscillator;
 
 // ---------------------------------------------------------------------------

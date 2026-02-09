@@ -1145,10 +1145,12 @@ cargo run --manifest-path /path/to/wavecraft/cli/Cargo.toml -- start --install
 - `--local-sdk` is still available as a manual override but is no longer needed
 
 **Test checklist for CLI/template changes:**
+
 1. `wavecraft create` completes without errors
 2. `wavecraft start` builds without compile errors
-3. `cargo xtask bundle` produces valid plugin bundles
-4. Plugin loads in a DAW
+3. **`cargo clippy` passes on generated project** — catch unused imports, dead code warnings
+4. `cargo xtask bundle` produces valid plugin bundles
+5. Plugin loads in a DAW
 
 ---
 

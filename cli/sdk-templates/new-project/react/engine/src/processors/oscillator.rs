@@ -20,6 +20,7 @@ use wavecraft::ProcessorParams;
 // that tells the framework (and the UI) about each knob/slider.
 
 #[derive(ProcessorParams, Default, Clone)]
+#[allow(dead_code)] // Unused in default signal chain (oscillator is commented out)
 pub struct OscillatorParams {
     /// Frequency in Hz.  `factor = 2.5` gives a logarithmic feel in the UI.
     #[param(range = "20.0..=5000.0", default = 440.0, unit = "Hz", factor = 2.5)]
@@ -41,6 +42,7 @@ pub struct OscillatorParams {
 /// - Sample-rate awareness (frequency → phase increment)
 /// - State management (`reset()` clears the phase)
 #[derive(Default)]
+#[allow(dead_code)] // Unused in default signal chain (oscillator is commented out)
 pub struct Oscillator {
     /// Current sample rate provided by the host.
     sample_rate: f32,
