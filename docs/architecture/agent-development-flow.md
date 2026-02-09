@@ -41,7 +41,7 @@ This project uses specialized agents with distinct responsibilities that hand of
      │  "Start Implementation"                                             
      ▼                                                                     
 ┌────────┐                                                                 
-│ Coder  │  Implementation + PR                                            
+│ Coder  │  Implementation + Create PR                                     
 └────┬───┘  └─► docs/feature-specs/{feature}/implementation-progress.md    
      │                                                                     
      │  "Test Implementation"                                              
@@ -72,6 +72,7 @@ This project uses specialized agents with distinct responsibilities that hand of
                                                            │      Archive  
                                                            ▼               
                                                     ✅ Feature Complete    
+                                                       (Manual PR Merge)    
 ```
 
 ## Handoff Summary
@@ -88,7 +89,7 @@ This project uses specialized agents with distinct responsibilities that hand of
 | Coder → Tester | "Re-test" | QA findings fixed |
 | QA → Architect | "Update architectural Docs" | No QA issues, implementation review |
 | Architect → PO | "Update roadmap" | Architecture docs updated |
-| **PO** | — | **Archive & Merge** | Archive feature spec, update roadmap, **then** merge PR |
+| **PO** | — | **Archive** | Archive feature spec, update roadmap |
 
 ## Key Documentation Artifacts
 
@@ -106,40 +107,84 @@ docs/feature-specs/{feature}/
 
 On completion, PO archives the entire feature folder to `docs/feature-specs/_archive/{feature}/`.
 
-## PR Merge Policy
+## PR Creation & Merge Policy
 
-**CRITICAL: PRs must NOT be merged until the PO has completed the following:**
+### PR Creation
+
+The **Coder** agent is responsible for creating Pull Requests using the `create-pull-request` skill. This happens after implementation is complete and pre-handoff checks pass.
+
+### PR Merge Policy
+
+**CRITICAL: PRs must NOT be merged until the following is completed:**
 
 1. ✅ QA approval received
 2. ✅ Feature spec archived to `docs/feature-specs/_archive/{feature}/`
 3. ✅ Roadmap updated (task marked complete, changelog entry added)
 4. ✅ Then and only then: PR can be merged
 
+**PR merging is done manually by the repository maintainer** — no agent has automated merge capabilities.
+
 **Rationale:** The feature spec documents the implementation. Archiving before merge ensures the documentation matches the merged code. Updating the roadmap before merge ensures accurate project tracking.
 
 ## Agent Constraints
 
-| Agent | Can Edit Code? | Can Edit Roadmap? | Can Edit Archived Specs? |
-|-------|----------------|-------------------|--------------------------|
-| PO | ❌ | ✅ (exclusive) | ❌ |
-| Architect | ❌ | ❌ | ❌ |
-| Planner | ❌ | ❌ | ❌ |
-| Coder | ✅ | ❌ | ❌ |
-| Tester | ❌ | ❌ | ❌ |
-| QA | ❌ | ❌ | ❌ |
-| DocWriter | ❌ (only `.md` in `docs/`) | ❌ | ❌ |
-| Search | ❌ (read-only) | ❌ | ❌ |
+### Editing Permissions
 
-**Note:** DocWriter can edit markdown documentation but not code. Search is read-only for research purposes.
+| Agent | Can Edit Code? | Can Edit Docs? | Can Edit Roadmap? | Can Edit Archived Specs? |
+|-------|----------------|----------------|-------------------|--------------------------||
+| PO | ❌ | ❌ | ✅ (exclusive) | ❌ |
+| Architect | ❌ | ❌ | ❌ | ❌ |
+| Planner | ❌ | ❌ | ❌ | ❌ |
+| Coder | ✅ | ✅ | ❌ | ❌ |
+| Tester | ❌ | ❌ | ❌ | ❌ |
+| QA | ❌ | ❌ | ❌ | ❌ |
+| DocWriter | ❌ | ✅ (only `.md` in `docs/`) | ❌ | ❌ |
+| Search | ❌ | ❌ | ❌ | ❌ |
+
+### Models & Tools
+
+| Agent | Model | Tools | Can Execute? |
+|-------|-------|-------|-------------|
+| **PO** | Claude Sonnet 4.5 | edit, read, search, web, agent | ❌ |
+| **Architect** | Claude Opus 4.6 | search, read, web, agent | ❌ |
+| **Planner** | Gemini 2.5 Pro | read, search, web, agent | ❌ |
+| **Coder** | Claude Sonnet 4.5 | vscode, execute, read, edit, search, web, agent, github/*, todo | ✅ |
+| **Tester** | Claude Sonnet 4.5 | read, search, execute, agent, playwright/*, github/*, web | ✅ |
+| **QA** | Claude Sonnet 4.5 | agent, search, read, web | ❌ |
+| **DocWriter** | Claude Sonnet 4.5 | read, search, edit, web, agent | ❌ |
+| **Search** | GPT-5.2-Codex (272K context) | read, search, web | ❌ |
+
+### Subagent Invocation
+
+Each agent can only invoke specific subagents:
+
+| Agent | Can Invoke |
+|-------|------------|
+| **PO** | Architect, DocWriter, Search |
+| **Architect** | Planner, PO, DocWriter, Search |
+| **Planner** | DocWriter, Search |
+| **Coder** | Tester, DocWriter, Search |
+| **Tester** | Coder, QA, DocWriter, Search |
+| **QA** | Coder, Architect, DocWriter, Search |
+| **DocWriter** | Search |
+| **Search** | — (none) |
+
+**Notes:**
+- DocWriter can edit markdown documentation in `docs/` but not code files. It is invoked as a subagent by other agents.
+- Search is read-only for codebase research. Its 272K context window enables analysis across many files simultaneously.
+- Only Coder and Tester have terminal execution access.
+- PO can only edit `docs/roadmap.md` and `docs/backlog.md`.
 
 ## When to Invoke Each Agent
 
 - **Start with PO** when: New feature request, prioritization question, roadmap update needed
 - **Use Architect** when: Design decisions needed, architectural review, defining boundaries
 - **Use Planner** when: Complex feature needs breakdown, multi-step implementation
-- **Use Coder** when: Ready to implement, bug fixes, code changes
+- **Use Coder** when: Ready to implement, bug fixes, code changes, creating PRs
 - **Use Tester** when: Feature ready for testing, runs `cargo xtask ci-check` first, then manual testing
 - **Use QA** when: Code review needed, static analysis, quality verification
+- **Use DocWriter** when: Documentation needs creating or updating (invoked as subagent by other agents)
+- **Use Search** when: Deep codebase research needed, finding patterns across files (invoked as subagent)
 
 ## Testing Workflow
 
