@@ -1,6 +1,7 @@
 ---
 name: po
 description: Product Owner for Wavecraft — audio plugin framework. Expert in user needs, feature prioritization, roadmap management, and product vision for audio software.
+model: Claude Sonnet 4 (copilot)
 tools: ["read", "search", "web", "todo", "edit", "agent", "execute", "vscode"]
 user-invokable: true
 handoffs: 

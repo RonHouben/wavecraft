@@ -21,6 +21,7 @@ use crate::dev_server::{DevServerHost, PluginLoader};
 use crate::project::{has_node_modules, ProjectMarkers};
 use wavecraft_bridge::IpcHandler;
 use wavecraft_dev_server::ws_server::WsServer;
+use wavecraft_protocol::ParameterInfo;
 
 /// Options for the `start` command.
 #[derive(Debug)]
@@ -231,6 +232,154 @@ fn install_dependencies(project: &ProjectMarkers) -> Result<()> {
     Ok(())
 }
 
+/// Path to the sidecar parameter cache file.
+fn sidecar_json_path(engine_dir: &Path) -> Result<PathBuf> {
+    let debug_dir = resolve_debug_dir(engine_dir)?;
+    Ok(debug_dir.join("wavecraft-params.json"))
+}
+
+/// Try reading cached parameters from the sidecar JSON file.
+///
+/// Returns `Some(params)` if the file exists and is newer than the dylib
+/// (i.e., no source changes since last extraction). Returns `None` otherwise.
+fn try_read_cached_params(engine_dir: &Path, verbose: bool) -> Option<Vec<ParameterInfo>> {
+    let sidecar_path = sidecar_json_path(engine_dir).ok()?;
+    if !sidecar_path.exists() {
+        return None;
+    }
+
+    // Check if sidecar is still valid (newer than any source file change)
+    let dylib_path = find_plugin_dylib(engine_dir).ok()?;
+    let sidecar_mtime = std::fs::metadata(&sidecar_path).ok()?.modified().ok()?;
+    let dylib_mtime = std::fs::metadata(&dylib_path).ok()?.modified().ok()?;
+
+    if dylib_mtime > sidecar_mtime {
+        if verbose {
+            println!("  Sidecar cache stale (dylib newer), rebuilding...");
+        }
+        return None;
+    }
+
+    PluginLoader::load_params_from_file(&sidecar_path).ok()
+}
+
+/// Write parameter metadata to the sidecar JSON cache.
+fn write_sidecar_cache(engine_dir: &Path, params: &[ParameterInfo]) -> Result<()> {
+    let sidecar_path = sidecar_json_path(engine_dir)?;
+    let json =
+        serde_json::to_string_pretty(params).context("Failed to serialize parameters")?;
+    std::fs::write(&sidecar_path, json).context("Failed to write sidecar cache")?;
+    Ok(())
+}
+
+/// Load plugin parameters using cached sidecar or feature-gated build.
+///
+/// Attempts in order:
+/// 1. Read cached `wavecraft-params.json` (instant, no build)
+/// 2. Build with `_param-discovery` feature (no nih-plug static init)
+/// 3. Fall back to normal build + FFI load (for older plugins)
+fn load_parameters(
+    engine_dir: &Path,
+    verbose: bool,
+) -> Result<(Vec<ParameterInfo>, Option<PluginLoader>)> {
+    // 1. Try cached sidecar
+    if let Some(params) = try_read_cached_params(engine_dir, verbose) {
+        println!(
+            "{} Loaded {} parameters (cached)",
+            style("✓").green(),
+            params.len()
+        );
+        return Ok((params, None));
+    }
+
+    // 2. Build with _param-discovery feature (skip nih-plug exports)
+    println!(
+        "{} Building for parameter discovery...",
+        style("→").cyan()
+    );
+    let build_result = Command::new("cargo")
+        .args(["build", "--lib", "--features", "_param-discovery"])
+        .current_dir(engine_dir)
+        .stdout(if verbose {
+            Stdio::inherit()
+        } else {
+            Stdio::null()
+        })
+        .stderr(Stdio::inherit())
+        .status();
+
+    match build_result {
+        Ok(status) if status.success() => {
+            // Discovery build succeeded — load params from safe dylib
+            let dylib_path = find_plugin_dylib(engine_dir)
+                .context("Failed to find plugin library after discovery build")?;
+
+            if verbose {
+                println!("  Found dylib: {}", dylib_path.display());
+            }
+
+            println!(
+                "{} Loading plugin parameters...",
+                style("→").cyan()
+            );
+            let loader = PluginLoader::load(&dylib_path)
+                .context("Failed to load plugin for parameter discovery")?;
+            let params = loader.parameters().to_vec();
+
+            // Write sidecar cache for next run
+            if let Err(e) = write_sidecar_cache(engine_dir, &params) {
+                if verbose {
+                    println!("  Warning: failed to write param cache: {}", e);
+                }
+            }
+
+            println!(
+                "{} Loaded {} parameters",
+                style("✓").green(),
+                params.len()
+            );
+            Ok((params, Some(loader)))
+        }
+        _ => {
+            // 3. Fallback: normal build (for older plugins without _param-discovery)
+            if verbose {
+                println!("  Discovery build failed, falling back to standard build...");
+            }
+            println!("{} Building plugin...", style("→").cyan());
+            let fallback_status = Command::new("cargo")
+                .args(["build", "--lib"])
+                .current_dir(engine_dir)
+                .stdout(if verbose {
+                    Stdio::inherit()
+                } else {
+                    Stdio::null()
+                })
+                .stderr(Stdio::inherit())
+                .status()
+                .context("Failed to run cargo build")?;
+
+            if !fallback_status.success() {
+                anyhow::bail!("Plugin build failed. Please fix the errors above.");
+            }
+
+            let dylib_path = find_plugin_dylib(engine_dir)?;
+            println!(
+                "{} Loading plugin parameters...",
+                style("→").cyan()
+            );
+            let loader = PluginLoader::load(&dylib_path)
+                .context("Failed to load plugin")?;
+            let params = loader.parameters().to_vec();
+            println!(
+                "{} Loaded {} parameters",
+                style("✓").green(),
+                params.len()
+            );
+            Ok((params, Some(loader)))
+        }
+    }
+}
+
 /// Run both development servers.
 fn run_dev_servers(
     project: &ProjectMarkers,
@@ -250,40 +399,8 @@ fn run_dev_servers(
     ensure_port_available(ws_port, "WebSocket server", "--port")?;
     ensure_port_available(ui_port, "UI dev server", "--ui-port")?;
 
-    // 1. Build the plugin in debug mode
-    println!("{} Building plugin...", style("→").cyan());
-    let build_status = Command::new("cargo")
-        .args(["build", "--lib"])
-        .current_dir(&project.engine_dir)
-        .stdout(if verbose {
-            Stdio::inherit()
-        } else {
-            Stdio::null()
-        })
-        .stderr(Stdio::inherit())
-        .status()
-        .context("Failed to run cargo build. Is Rust installed?")?;
-
-    if !build_status.success() {
-        anyhow::bail!("Plugin build failed. Please fix the errors above.");
-    }
-    println!("{} Plugin built", style("✓").green());
-
-    // 2. Find the plugin dylib
-    let dylib_path =
-        find_plugin_dylib(&project.engine_dir).context("Failed to find compiled plugin library")?;
-
-    if verbose {
-        println!("  Found dylib: {}", dylib_path.display());
-    }
-
-    // 3. Load parameters via FFI
-    println!("{} Loading plugin parameters...", style("→").cyan());
-    let loader = PluginLoader::load(&dylib_path)
-        .context("Failed to load plugin. Make sure it's compiled with wavecraft SDK.")?;
-
-    let params = loader.parameters().to_vec();
-    println!("{} Loaded {} parameters", style("✓").green(), params.len());
+    // 1. Build the plugin and load parameters (two-phase or cached)
+    let (params, loader) = load_parameters(&project.engine_dir, verbose)?;
 
     if verbose {
         for param in &params {
@@ -296,14 +413,14 @@ fn run_dev_servers(
         }
     }
 
-    // 4. Create AtomicParameterBridge for lock-free audio-thread param reads
+    // 2. Create AtomicParameterBridge for lock-free audio-thread param reads
     #[cfg(feature = "audio-dev")]
     let param_bridge = {
         use wavecraft_dev_server::atomic_params::AtomicParameterBridge;
         std::sync::Arc::new(AtomicParameterBridge::new(&params))
     };
 
-    // 5. Start embedded WebSocket server
+    // 3. Start embedded WebSocket server
     println!(
         "{} Starting WebSocket server on port {}...",
         style("→").cyan(),
@@ -325,7 +442,7 @@ fn run_dev_servers(
 
     println!("{} WebSocket server running", style("✓").green());
 
-    // 6. Try to start audio in-process via FFI (optional, graceful fallback)
+    // 4. Try to start audio in-process via FFI (optional, graceful fallback)
     // Store the AudioHandle so the cpal stream stays alive until shutdown.
     // When this variable is dropped (reverse declaration order for locals),
     // the FfiProcessor inside the closure is dropped while the Library in
@@ -333,14 +450,23 @@ fn run_dev_servers(
     #[cfg(feature = "audio-dev")]
     let _audio_handle = runtime.block_on(async {
         let ws_handle = server.handle();
-        try_start_audio_in_process(&loader, ws_handle, param_bridge.clone(), verbose)
+        match &loader {
+            Some(l) => try_start_audio_in_process(l, ws_handle, param_bridge.clone(), verbose),
+            None => {
+                // Loaded from cache — no loader available, skip audio
+                if verbose {
+                    println!("  Skipping audio (params loaded from cache, no dylib loaded)");
+                }
+                None
+            }
+        }
     });
     #[cfg(feature = "audio-dev")]
     let has_audio = _audio_handle.is_some();
     #[cfg(not(feature = "audio-dev"))]
     let has_audio = false;
 
-    // 7. Start UI dev server
+    // 5. Start UI dev server
     println!(
         "{} Starting UI dev server on port {}...",
         style("→").cyan(),

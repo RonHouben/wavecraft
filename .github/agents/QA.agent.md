@@ -1,6 +1,7 @@
 ---
 name: qa
 description: Quality Assurance agent focused on code quality and static code analysis.
+model: Claude Sonnet 4.5 (copilot)
 tools: ['agent', 'search', 'read', 'execute', 'edit']
 user-invokable: true
 handoffs:

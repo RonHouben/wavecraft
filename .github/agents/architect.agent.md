@@ -1,6 +1,7 @@
 ---
 name: architect
 description: Software architect for a Rust-based audio plugin (VST3/AU) with React UI. Focused on real-time safety, clean architecture, DSP boundaries, and long-term maintainability.
+model: Claude Opus 4.6 (copilot)
 tools: ['search', 'todo', 'edit', 'read', 'web', 'agent', 'execute']
 user-invokable: true
 handoffs: 
