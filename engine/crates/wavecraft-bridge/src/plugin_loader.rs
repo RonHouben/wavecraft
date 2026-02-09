@@ -19,6 +19,8 @@ pub enum PluginLoaderError {
     JsonParse(serde_json::Error),
     /// The returned string was not valid UTF-8.
     InvalidUtf8(std::str::Utf8Error),
+    /// Failed to read a file (e.g., sidecar JSON cache).
+    FileRead(std::io::Error),
 }
 
 impl std::fmt::Display for PluginLoaderError {
@@ -29,6 +31,7 @@ impl std::fmt::Display for PluginLoaderError {
             Self::NullPointer(func) => write!(f, "FFI function {} returned null", func),
             Self::JsonParse(e) => write!(f, "Failed to parse parameter JSON: {}", e),
             Self::InvalidUtf8(e) => write!(f, "Invalid UTF-8 in FFI response: {}", e),
+            Self::FileRead(e) => write!(f, "Failed to read file: {}", e),
         }
     }
 }
@@ -39,6 +42,7 @@ impl std::error::Error for PluginLoaderError {
             Self::LibraryLoad(e) => Some(e),
             Self::JsonParse(e) => Some(e),
             Self::InvalidUtf8(e) => Some(e),
+            Self::FileRead(e) => Some(e),
             _ => None,
         }
     }
@@ -78,6 +82,20 @@ pub struct PluginParamLoader {
 }
 
 impl PluginParamLoader {
+    /// Load parameters from a sidecar JSON file (bypasses FFI/dlopen).
+    ///
+    /// Used by `wavecraft start` to read cached parameter metadata without
+    /// loading the plugin dylib (which triggers nih-plug static initializers).
+    pub fn load_params_from_file<P: AsRef<Path>>(
+        json_path: P,
+    ) -> Result<Vec<ParameterInfo>, PluginLoaderError> {
+        let contents =
+            std::fs::read_to_string(json_path.as_ref()).map_err(PluginLoaderError::FileRead)?;
+        let params: Vec<ParameterInfo> =
+            serde_json::from_str(&contents).map_err(PluginLoaderError::JsonParse)?;
+        Ok(params)
+    }
+
     /// Load a plugin from the given path and extract its parameter metadata.
     pub fn load<P: AsRef<Path>>(dylib_path: P) -> Result<Self, PluginLoaderError> {
         // SAFETY: Loading a dynamic library is inherently unsafe. The caller
@@ -208,5 +226,74 @@ mod tests {
     fn test_null_pointer_error() {
         let err = PluginLoaderError::NullPointer("wavecraft_get_params_json");
         assert!(err.to_string().contains("null"));
+    }
+
+    #[test]
+    fn test_file_read_error() {
+        let err = PluginLoaderError::FileRead(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "file not found",
+        ));
+        assert!(err.to_string().contains("Failed to read file"));
+    }
+
+    #[test]
+    fn test_load_params_from_file() {
+        use wavecraft_protocol::ParameterType;
+
+        let dir = std::env::temp_dir().join("wavecraft_test_sidecar");
+        let _ = std::fs::create_dir_all(&dir);
+        let json_path = dir.join("wavecraft-params.json");
+
+        let params = vec![ParameterInfo {
+            id: "gain".to_string(),
+            name: "Gain".to_string(),
+            param_type: ParameterType::Float,
+            value: 0.5,
+            default: 0.5,
+            unit: Some("dB".to_string()),
+            group: Some("Main".to_string()),
+        }];
+
+        let json = serde_json::to_string_pretty(&params).unwrap();
+        std::fs::write(&json_path, &json).unwrap();
+
+        let loaded = PluginParamLoader::load_params_from_file(&json_path).unwrap();
+        assert_eq!(loaded.len(), 1);
+        assert_eq!(loaded[0].id, "gain");
+        assert_eq!(loaded[0].name, "Gain");
+        assert!((loaded[0].default - 0.5).abs() < f32::EPSILON);
+
+        // Cleanup
+        let _ = std::fs::remove_file(&json_path);
+        let _ = std::fs::remove_dir(&dir);
+    }
+
+    #[test]
+    fn test_load_params_from_file_not_found() {
+        let result = PluginParamLoader::load_params_from_file("/nonexistent/path.json");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err, PluginLoaderError::FileRead(_)));
+    }
+
+    #[test]
+    fn test_load_params_from_file_invalid_json() {
+        let dir = std::env::temp_dir().join("wavecraft_test_bad_json");
+        let _ = std::fs::create_dir_all(&dir);
+        let json_path = dir.join("bad-params.json");
+
+        std::fs::write(&json_path, "not valid json").unwrap();
+
+        let result = PluginParamLoader::load_params_from_file(&json_path);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            PluginLoaderError::JsonParse(_)
+        ));
+
+        // Cleanup
+        let _ = std::fs::remove_file(&json_path);
+        let _ = std::fs::remove_dir(&dir);
     }
 }
