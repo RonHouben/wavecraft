@@ -9,8 +9,6 @@
 
 ---
 
-## Rust
-
 ### Module Organization
 
 Follow the existing crate structure:

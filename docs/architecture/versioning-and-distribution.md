@@ -64,6 +64,43 @@ Wavecraft uses semantic versioning (SemVer) with automated version management vi
 
 6. **No manual sync** — CI keeps all versions in sync automatically.
 
+### How It Works
+
+The version is defined in `engine/Cargo.toml` under `[workspace.package]` and propagates to plugin metadata and the UI at build time via Vite's `define` configuration. The CLI version (`cli/Cargo.toml`) is the **user-facing entry point** — the workspace version should be kept aligned with the CLI version.
+
+1. A push to `main` triggers the CD pipeline (`continuous-deploy.yml`)
+2. `detect-changes` identifies which SDK components changed
+3. If **any** component changed, the CLI is also published (cascade trigger)
+4. For each package, CI compares the local version against the published registry version
+5. If the local version is not ahead, CI auto-bumps the patch version, commits as `github-actions[bot]`, and publishes
+6. The `github-actions[bot]` author is detected by the pipeline to prevent infinite re-triggering
+
+### Packages Auto-Bumped by CI
+
+- CLI (`cli/Cargo.toml`)
+- `@wavecraft/core` (npm)
+- `@wavecraft/components` (npm)
+- `engine/Cargo.toml` workspace version
+
+### What Developers Should Do
+
+- Do **not** manually bump any versions during feature development
+- If you need a specific version (e.g., minor bump for a breaking change), bump it in your PR — CI will respect the manual bump
+
+### What CI Does
+
+- Auto-patches all distribution packages when their local version ≤ registry version
+- Commits version bumps **locally only** (not pushed to `main`) — branch protection rulesets prevent direct pushes
+- Pushes **git tags only** for each published version (tags are not subject to branch protection)
+
+### Infinite Loop Prevention
+
+- Auto-bump commits are no longer pushed to `main`, so the infinite loop scenario does not arise
+- The `detect-changes` guard (`github-actions[bot]` author check) is kept as defense-in-depth
+- Preferred over `[skip ci]` because other workflows (CI, template validation) should still run normally
+
+The VersionBadge component in the UI displays the current version (e.g., "v0.9.0").
+
 ---
 
 ## Packaging & Distribution
