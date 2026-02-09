@@ -3,6 +3,7 @@ name: planner
 description: Expert planning specialist for complex features and refactoring. Use PROACTIVELY when users request feature implementation, architectural changes, or complex refactoring. Automatically activated for planning tasks.
 model: Gemini 2.5 Pro (copilot)
 tools: ["read", "search", "web", 'agent']
+agents: [docwriter]
 user-invokable: true
 handoffs: 
   - label: Start Implementation
