@@ -12,6 +12,8 @@ This project uses specialized agents with distinct responsibilities that hand of
 | **Coder** | Implements features, writes production code | Code changes, PRs |
 | **Tester** | Runs local CI pipeline, executes manual tests | `docs/feature-specs/{feature}/test-plan.md` |
 | **QA** | Static analysis, code quality verification | QA reports |
+| **DocWriter** | Creates and updates all documentation | All markdown files in `docs/` |
+| **Search** | Deep codebase research and analysis | Search results, code explanations |
 
 ## Standard Feature Development Flow
 
@@ -125,6 +127,10 @@ On completion, PO archives the entire feature folder to `docs/feature-specs/_arc
 | Coder | ✅ | ❌ | ❌ |
 | Tester | ❌ | ❌ | ❌ |
 | QA | ❌ | ❌ | ❌ |
+| DocWriter | ❌ (only `.md` in `docs/`) | ❌ | ❌ |
+| Search | ❌ (read-only) | ❌ | ❌ |
+
+**Note:** DocWriter can edit markdown documentation but not code. Search is read-only for research purposes.
 
 ## When to Invoke Each Agent
 
