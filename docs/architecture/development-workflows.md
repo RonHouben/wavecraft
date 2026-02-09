@@ -131,7 +131,14 @@ The environment constant is evaluated at module scope (not inside hooks) to comp
 
 ### Dev Audio via FFI
 
-When running `wavecraft start`, the CLI loads the user's compiled cdylib (already built for parameter discovery) and also attempts to load an FFI vtable symbol (`wavecraft_dev_create_processor`). If found, audio processing runs **in-process** via cpal — no separate binary or subprocess is needed. Users never see or write any audio capture code.
+When running `wavecraft start`, the CLI uses a **two-phase approach** for parameter loading:
+
+1. **Cached Parameter Discovery** — First checks for a cached `wavecraft-params.json` sidecar file
+2. **Feature-Gated Build** — If not cached, builds with `--features _param-discovery` which skips nih-plug's VST3/CLAP static initializers (preventing macOS `AudioComponentRegistrar` hangs during `dlopen`)
+3. **FFI Extraction** — Extracts parameter metadata from this safe dylib via `wavecraft_get_params_json` and caches it for subsequent runs
+4. **Backwards Compatibility** — Falls back to standard build for older plugins without the `_param-discovery` feature
+
+After parameter discovery completes, the CLI also attempts to load an FFI vtable symbol (`wavecraft_dev_create_processor`). This symbol is **not** gated by the `_param-discovery` feature and remains available regardless of which build was used. If found, audio processing runs **in-process** via cpal — no separate binary or subprocess is needed. Users never see or write any audio capture code.
 
 #### FFI Audio Architecture (Full-Duplex)
 
@@ -139,11 +146,22 @@ When running `wavecraft start`, the CLI loads the user's compiled cdylib (alread
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │  CLI Process (`wavecraft start`)                                             │
 │                                                                              │
+│  ┌──────────────────────────────────────────────────────────────────┐         │
+│  │  Phase 1: Parameter Discovery (two-phase)                       │         │
+│  │  1. Check for cached wavecraft-params.json                      │         │
+│  │  2. If not cached: cargo build --features _param-discovery      │         │
+│  │     (skips nih-plug static initializers, prevents dlopen hang)  │         │
+│  │  3. dlopen(cdylib) → wavecraft_get_params_json() → cache JSON   │         │
+│  │  4. Fallback: standard build for older plugins (no feature)     │         │
+│  └──────────────────────────────────────────────────────────────────┘         │
+│                                                                              │
 │  ┌─────────────────────┐     ┌──────────────────────────────┐                │
-│  │  dlopen(cdylib)      │     │  AtomicParameterBridge        │                │
-│  │  → params (existing) │     │  (Arc<AtomicF32> per param)   │                │
-│  │  → vtable (new)      │     │  WS writes ──► audio reads    │                │
-│  └──────────┬──────────┘     └──────────────┬───────────────┘                │
+│  │  Phase 2: Audio FFI  │     │  AtomicParameterBridge        │                │
+│  │  dlopen(cdylib)      │     │  (Arc<AtomicF32> per param)   │                │
+│  │  → vtable            │     │  WS writes ──► audio reads    │                │
+│  │    (not gated by     │     └──────────────┬───────────────┘                │
+│  │     _param-discovery)│                    │                                │
+│  └──────────┬──────────┘                    │                                │
 │             │                               │                                │
 │             ▼                               ▼                                │
 │  ┌─────────────────────────────────────────────────────────────────┐          │
