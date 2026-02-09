@@ -8,14 +8,13 @@ This document tracks implementation progress against the milestones defined in t
 
 ```
 ┌──────────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP          v0.11.0 | 86%   │
+│  WAVECRAFT ROADMAP          v0.11.0 | 91%   │
 ├──────────────────────────────────────────────┤
-│  ✅ M1-M18.5 Foundation → Template Polish   │
-│  ⏳ M18.6    Documentation Architecture     │
+│  ✅ M1-M18.6 Foundation → Docs Split        │
 │  ⏳ M19      User Testing                   │
 │  ⏳ M20      V1.0 Release                   │
 ├──────────────────────────────────────────────┤
-│  [██████████████████████████████████] 19/22 │
+│  [██████████████████████████████████] 20/22 │
 └──────────────────────────────────────────────┘
 ```
 
@@ -1158,46 +1157,46 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 ---
 
-## Milestone 18.6: Documentation Architecture Split ⏳
+## Milestone 18.6: Documentation Architecture Split ✅
 
 > **Goal:** Split large architecture documents (~1,500 lines each) into focused, topic-specific files to improve navigation for both human developers and AI agents, reducing token consumption by 80-90%.
 
-**Status: ⏳ Not Started**
+**Status: ✅ Complete**
 
 **Depends on:** None — pure documentation refactoring
 
 **Branch:** `feature/docs-split-architecture`  
 **Target Version:** `0.10.1` (patch — documentation-only change)
 
-**User Stories:** [docs/feature-specs/docs-split-architecture/user-stories.md](feature-specs/docs-split-architecture/user-stories.md)
+**User Stories:** [docs/feature-specs/_archive/docs-split-architecture/user-stories.md](feature-specs/_archive/docs-split-architecture/user-stories.md)
 
 | Task | Status | Notes |
 |------|--------|-------|
 | **Phase 1: Coding Standards Split** | | |
-| Create `coding-standards-typescript.md` (~400 lines) | ⏳ | TypeScript, React, hooks, build constants |
-| Create `coding-standards-css.md` (~150 lines) | ⏳ | TailwindCSS, theming, WebView styling |
-| Create `coding-standards-rust.md` (~600 lines) | ⏳ | Module org, DSL, xtask, FFI safety |
-| Create `coding-standards-testing.md` (~300 lines) | ⏳ | Testing, logging, error handling |
-| Update `coding-standards.md` to overview (~200 lines) | ⏳ | Navigation hub with quick reference |
+| Create `coding-standards-typescript.md` (~400 lines) | ✅ | TypeScript, React, hooks, build constants |
+| Create `coding-standards-css.md` (~150 lines) | ✅ | TailwindCSS, theming, WebView styling |
+| Create `coding-standards-rust.md` (~600 lines) | ✅ | Module org, DSL, xtask, FFI safety |
+| Create `coding-standards-testing.md` (~300 lines) | ✅ | Testing, logging, error handling |
+| Update `coding-standards.md` to overview (~200 lines) | ✅ | Navigation hub with quick reference |
 | **Phase 2: High-Level Design Split** | | |
-| Create `sdk-architecture.md` (~500 lines) | ⏳ | SDK distribution, crates, npm packages |
-| Create `declarative-plugin-dsl.md` (~300 lines) | ⏳ | DSL architecture, macros, discovery |
-| Create `development-workflows.md` (~400 lines) | ⏳ | Browser dev, FFI audio, build system |
-| Create `plugin-formats.md` (~300 lines) | ⏳ | VST3, CLAP, AU specifics |
-| Create `versioning-and-distribution.md` (~200 lines) | ⏳ | Version flow, packaging, signing |
-| Update `high-level-design.md` to overview (~400 lines) | ⏳ | Architecture diagram + navigation |
+| Create `sdk-architecture.md` (~500 lines) | ✅ | SDK distribution, crates, npm packages |
+| Create `declarative-plugin-dsl.md` (~300 lines) | ✅ | DSL architecture, macros, discovery |
+| Create `development-workflows.md` (~400 lines) | ✅ | Browser dev, FFI audio, build system |
+| Create `plugin-formats.md` (~300 lines) | ✅ | VST3, CLAP, AU specifics |
+| Create `versioning-and-distribution.md` (~200 lines) | ✅ | Version flow, packaging, signing |
+| Update `high-level-design.md` to overview (~400 lines) | ✅ | Architecture diagram + navigation |
 | **Phase 3: Cross-Reference Updates** | | |
-| Update `.github/copilot-instructions.md` | ⏳ | Reference new document structure |
-| Update `.github/skills/**/SKILL.md` | ⏳ | Update architecture doc links |
-| Update `docs/guides/*.md` | ⏳ | Update all cross-references |
-| Update `README.md` | ⏳ | Documentation links section |
-| Update archived feature specs if needed | ⏳ | Low priority (historical docs) |
+| Update `.github/copilot-instructions.md` | ✅ | Reference new document structure |
+| Update `.github/skills/**/SKILL.md` | ✅ | Update architecture doc links |
+| Update `docs/guides/*.md` | ✅ | Update all cross-references |
+| Update `README.md` | ✅ | Documentation links section |
+| Update archived feature specs if needed | ✅ | Low priority (historical docs) |
 | **Phase 4: Validation** | | |
-| Run `scripts/check-links.sh` | ⏳ | Zero broken links |
-| Grep for old references | ⏳ | `rg 'coding-standards\.md'` etc |
-| Test with AI agents | ⏳ | Verify token reduction |
-| Manual navigation testing | ⏳ | Hub documents are clear |
-| Add documentation structure guide | ⏳ | `CONTRIBUTING.md` section |
+| Run `scripts/check-links.sh` | ✅ | Zero broken links |
+| Grep for old references | ✅ | `rg 'coding-standards\.md'` etc |
+| Test with AI agents | ✅ | Verify token reduction |
+| Manual navigation testing | ✅ | Hub documents are clear |
+| Add documentation structure guide | ✅ | `CONTRIBUTING.md` section |
 
 **Key Deliverables:**
 - **9 new focused documents** (150-600 lines each)
@@ -1329,6 +1328,7 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 | Date | Update |
 |------|--------|
+| 2026-02-09 | **Milestone 18.6 complete (v0.10.1)**: Documentation Architecture Split. Split `coding-standards.md` (1,502 lines) and `high-level-design.md` (1,579 lines) into 9 focused topic documents + 2 navigation hubs. New docs: `coding-standards-typescript.md`, `coding-standards-css.md`, `coding-standards-rust.md`, `coding-standards-testing.md`, `sdk-architecture.md`, `declarative-plugin-dsl.md`, `development-workflows.md`, `plugin-formats.md`, `versioning-and-distribution.md`. 84.5% reduction in hub document size (3,081 → 479 lines). No document exceeds 600 lines. Zero broken links, 187 tests passing. Cross-references updated across 8 files including `.github/copilot-instructions.md`. QA approved (1 Medium finding fixed: missing `## Rust` heading). Archived to `_archive/docs-split-architecture/`. Progress: 91% (20/22 milestones). |
 | 2026-02-09 | **Milestone 18.5 complete (v0.11.0)**: Template Structure Improvement — Processors Module. Added `processors/` module to CLI template with sine-wave oscillator example demonstrating custom DSP processors with `#[derive(ProcessorParams)]`. Modular code organization teaches proper project structure from day one. Oscillator with frequency (20-20kHz) and level (0-1) parameters, phase accumulation, `set_sample_rate()` and `reset()` lifecycle methods. Safe defaults: gain-only signal chain by default, oscillator available as commented-out example. 23 files changed (873 insertions, 192 deletions). 12/12 manual tests, QA approved (PASS), architecture docs updated. Archived to `_archive/template-processors-module/`. Progress: 86% (19/22 milestones). |
 | 2026-02-08 | **Milestone 18.6 added: Documentation Architecture Split**: New infrastructure milestone to split large architecture documents into focused, topic-specific files. `coding-standards.md` (1,511 lines) splits into 5 documents (overview + TypeScript/CSS/Rust/Testing), `high-level-design.md` (1,562 lines) splits into 6 documents (overview + SDK/DSL/Workflows/Formats/Versioning). Target: 80-90% token reduction for AI agents, <30s navigation time for developers. Target version 0.10.1 (patch — documentation-only). 24 tasks across 4 phases (extraction, cross-references, validation). Milestone inserted between M18 (Complete) and M18.5 (Template Structure). Progress: 18/22 milestones (82%). Estimated effort: 4-6 hours. |
 | 2026-02-08 | **Milestone 18 complete (v0.10.0)**: Audio Pipeline Fixes & Mocking Cleanup fully implemented. (1) Full-duplex `AudioServer` with separate cpal input/output streams connected by `rtrb` SPSC ring buffer — audio now flows input → FfiProcessor::process() → output. (2) `AtomicParameterBridge` with `Arc<AtomicF32>` per parameter for lock-free WebSocket→audio thread parameter sync. (3) `MeterGenerator` deleted, fallback = silent zeros. (4) `useAllParameters` re-fetches on WebSocket reconnection. QA found 3 Medium issues (meter rate, tokio allocating on audio thread, unnecessary unsafe impl) — all fixed. 146 engine + 28 UI + 57 CLI tests passing. Architecture docs updated (high-level-design.md full-duplex diagram, coding-standards.md new patterns). Archived to `_archive/audio-pipeline-fixes/`. Progress: 86% (18/21 milestones). |
@@ -1432,14 +1432,14 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 17. ✅ **Milestone 17**: OS Audio Input for Dev Mode — Automatic audio input detection and processing (v0.8.0)
 18. ✅ **Milestone 18**: Audio Pipeline Fixes — Full-duplex audio, parameter sync, mocking cleanup (v0.10.0)
 19. ✅ **Milestone 18.5**: Template Structure Improvement — Processors module with oscillator example (v0.11.0)
+20. ✅ **Milestone 18.6**: Documentation Architecture Split — Split large docs into focused files (v0.10.1)
 
 ### Up Next
-20. ⏳ **Milestone 18.6**: Documentation Architecture Split — Split large docs into focused files (v0.10.1)
 21. ⏳ **Milestone 19**: User Testing — Beta testing with real plugin developers (v1.0.0-beta)
-21. ⏳ **Milestone 20**: V1.0 Release — First stable production release (v1.0.0)
+22. ⏳ **Milestone 20**: V1.0 Release — First stable production release (v1.0.0)
 
 ### Immediate Tasks
-1. ⏳ Begin Milestone 18.6 (Docs Split) — split architecture docs into focused files
-2. ⏳ After M18.6: Begin Milestone 19 (User Testing) — recruit beta testers
+1. ⏳ Begin Milestone 19 (User Testing) — recruit beta testers
+2. ⏳ After M19: Begin Milestone 20 (V1.0 Release)
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (crates.io publication, additional example plugins, etc.)
