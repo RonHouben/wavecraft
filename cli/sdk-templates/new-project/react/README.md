@@ -401,8 +401,8 @@ This copies bundles to your system plugin directories.
 
 - **[Wavecraft SDK Documentation](https://github.com/RonHouben/wavecraft)** — Full SDK reference
 - **[Getting Started Guide](https://github.com/RonHouben/wavecraft/blob/main/docs/guides/sdk-getting-started.md)** — Comprehensive tutorial
-- **[Coding Standards](https://github.com/RonHouben/wavecraft/blob/main/docs/architecture/coding-standards.md)** — Best practices
-- **[High-Level Design](https://github.com/RonHouben/wavecraft/blob/main/docs/architecture/high-level-design.md)** — Architecture overview
+- **[Coding Standards](https://github.com/RonHouben/wavecraft/blob/main/docs/architecture/coding-standards.md)** — Coding conventions and language-specific guides
+- **[High-Level Design](https://github.com/RonHouben/wavecraft/blob/main/docs/architecture/high-level-design.md)** — Architecture overview and detailed topic docs
 
 ## Support
 
