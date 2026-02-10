@@ -21,37 +21,24 @@ export interface ConnectionStatus {
 /**
  * Hook to monitor IPC connection status
  *
- * Polls the transport every second to detect connection changes.
+ * Uses event-based notification from IpcBridge for real-time updates.
  * Native transport is always connected, WebSocket may reconnect.
  *
  * @returns Connection status object
  */
 export function useConnectionStatus(): ConnectionStatus {
-  const [status, setStatus] = useState<ConnectionStatus>(() => {
-    const bridge = IpcBridge.getInstance();
-    const connected = bridge.isConnected();
-
-    let transport: TransportType;
-    if (isWebViewEnvironment()) {
-      transport = 'native';
-    } else if (connected) {
-      transport = 'websocket';
-    } else {
-      transport = 'none';
-    }
-
-    return { connected, transport };
+  const [status, setStatus] = useState<ConnectionStatus>({
+    connected: false,
+    transport: 'none',
   });
 
   useEffect(() => {
     const bridge = IpcBridge.getInstance();
+    const isNative = isWebViewEnvironment();
 
-    // Poll connection status every second
-    const intervalId = setInterval(() => {
-      const connected = bridge.isConnected();
-
+    const unsubscribe = bridge.onConnectionChange((connected) => {
       let transport: TransportType;
-      if (isWebViewEnvironment()) {
+      if (isNative) {
         transport = 'native';
       } else if (connected) {
         transport = 'websocket';
@@ -59,19 +46,15 @@ export function useConnectionStatus(): ConnectionStatus {
         transport = 'none';
       }
 
-      setStatus((prevStatus) => {
-        // Only update if status changed (avoid unnecessary re-renders)
-        if (prevStatus.connected !== connected || prevStatus.transport !== transport) {
+      setStatus((prev) => {
+        if (prev.connected !== connected || prev.transport !== transport) {
           return { connected, transport };
         }
-        return prevStatus;
+        return prev;
       });
-    }, 1000);
+    });
 
-    // Cleanup interval on unmount
-    return (): void => {
-      clearInterval(intervalId);
-    };
+    return unsubscribe;
   }, []);
 
   return status;

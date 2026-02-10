@@ -95,6 +95,19 @@ export class NativeTransport implements Transport {
   }
 
   /**
+   * Subscribe to connection state changes
+   *
+   * Native transport is always connected, so fires true immediately and never again.
+   */
+  onConnectionChange(callback: (connected: boolean) => void): () => void {
+    // Always connected. Fire true immediately, never again.
+    callback(true);
+    return () => {
+      /* no-op: native never transitions */
+    };
+  }
+
+  /**
    * Check if transport is connected (native is always connected)
    */
   isConnected(): boolean {

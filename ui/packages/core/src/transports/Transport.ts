@@ -42,6 +42,19 @@ export interface Transport {
   isConnected(): boolean;
 
   /**
+   * Subscribe to connection state changes
+   *
+   * Callback fires immediately with current state on subscribe (fire-on-subscribe pattern),
+   * then on every subsequent state transition.
+   *
+   * Optional: if not implemented, IpcBridge falls back to polling.
+   *
+   * @param callback - Receives true when connected, false when disconnected
+   * @returns Cleanup function to remove the listener
+   */
+  onConnectionChange?(callback: (connected: boolean) => void): () => void;
+
+  /**
    * Clean up resources (close connections, remove listeners)
    *
    * Should be called when the transport is no longer needed.

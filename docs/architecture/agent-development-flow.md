@@ -158,17 +158,17 @@ The **Coder** agent is responsible for creating Pull Requests using the `create-
 
 ### Models & Tools
 
-| Agent | Model | Tools | Can Execute? |
-|-------|-------|-------|-------------|
-| **Orchestrator** | Claude Sonnet 4.5 | read, search, agent, web | ❌ |
-| **PO** | Claude Sonnet 4.5 | edit, read, search, web, agent | ❌ |
-| **Architect** | Claude Opus 4.6 | search, read, web, agent | ❌ |
-| **Planner** | Gemini 2.5 Pro | read, search, web, agent | ❌ |
-| **Coder** | Claude Sonnet 4.5 | vscode, execute, read, edit, search, web, agent, github/*, todo | ✅ |
-| **Tester** | Claude Sonnet 4.5 | read, search, execute, agent, playwright/*, github/*, web | ✅ |
-| **QA** | Claude Sonnet 4.5 | agent, search, read, web | ❌ |
-| **DocWriter** | Claude Sonnet 4.5 | read, search, edit, web, agent | ❌ |
-| **Search** | GPT-5.2-Codex (272K context) | read, search, web | ❌ |
+| Agent | Model (prioritized fallback chain) | Tools | Can Execute? |
+|-------|-----------------------------------|-------|-------------|
+| **Orchestrator** | Claude Sonnet 4.5 → Gemini 2.5 Pro → GPT-5.1 | read, search, agent, web | ❌ |
+| **PO** | Claude Sonnet 4.5 → Gemini 2.5 Pro → GPT-5.2 | edit, read, search, web, agent | ❌ |
+| **Architect** | Claude Opus 4.6 → GPT-5.2-Codex → Gemini 2.5 Pro | search, read, web, agent | ❌ |
+| **Planner** | Gemini 2.5 Pro → Claude Sonnet 4.5 → GPT-5.1-Codex | read, search, web, agent | ❌ |
+| **Coder** | Claude Sonnet 4.5 → GPT-5.2-Codex → GPT-5.1-Codex | vscode, execute, read, edit, search, web, agent, github/*, todo | ✅ |
+| **Tester** | Claude Sonnet 4.5 → GPT-5.1 → Gemini 2.5 Pro | read, search, execute, agent, playwright/*, github/*, web | ✅ |
+| **QA** | Claude Sonnet 4.5 → GPT-5.2 → Gemini 2.5 Pro | agent, search, read, web | ❌ |
+| **DocWriter** | Claude Sonnet 4.5 → GPT-5.1 → Gemini 2.5 Pro | read, search, edit, web, agent | ❌ |
+| **Search** | GPT-5.2-Codex → Gemini 2.5 Pro → Claude Sonnet 4.5 | read, search, web | ❌ |
 
 ### Subagent Invocation
 
@@ -192,6 +192,32 @@ Each agent can only invoke specific subagents:
 - Search is read-only for codebase research. Its 272K context window enables analysis across many files simultaneously.
 - Only Coder and Tester have terminal execution access.
 - PO can only edit `docs/roadmap.md` and `docs/backlog.md`.
+
+### Search Delegation Pattern
+
+All specialized agents (except Orchestrator) can invoke the Search agent for deep codebase research. Each agent's instructions include a "Codebase Research" section that specifies:
+
+- **When to delegate** vs. use own search tools
+- **How to structure** Search requests (what + where + synthesize)
+- **Agent-specific examples** matching their typical research needs
+
+**Rule of thumb:** If the research requires reading >3 files or spans multiple layers, delegate to Search. For quick single-file lookups, use your own tools.
+
+**Search is read-only.** It returns findings and analysis. The invoking agent decides what to do with the results.
+
+### Documentation Delegation Pattern
+
+Four agents (Architect, Planner, Tester, QA) don't have `edit` tools but are responsible for creating documentation artifacts. Each agent's instructions include a "Documentation Delegation" section that specifies:
+
+- **When to delegate** — after generating complete document content
+- **Who to delegate to** — DocWriter (already in each agent's `agents:` list)
+- **What to pass** — complete markdown content + target filepath
+
+**Rule:** The delegating agent generates ALL content. DocWriter writes the file — it does not author technical documents.
+
+**Composition:** An agent may invoke Search for research AND DocWriter for persistence in the same workflow. Always: Search → generate content → DocWriter.
+
+---
 
 ## When to Invoke Each Agent
 

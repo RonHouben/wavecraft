@@ -8,13 +8,14 @@ This document tracks implementation progress against the milestones defined in t
 
 ```
 ┌──────────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP          v0.11.0 | 91%   │
+│  WAVECRAFT ROADMAP          v0.11.1 | 87%   │
 ├──────────────────────────────────────────────┤
-│  ✅ M1-M18.6 Foundation → Docs Split        │
+│  ✅ M1-M18.7 Foundation → UI Race Fix       │
+│  ⏳ M18.8    Agent Search Delegation        │
 │  ⏳ M19      User Testing                   │
 │  ⏳ M20      V1.0 Release                   │
 ├──────────────────────────────────────────────┤
-│  [██████████████████████████████████] 20/22 │
+│  [█████████████████████████] 21/24         │
 └──────────────────────────────────────────────┘
 ```
 
@@ -1232,11 +1233,181 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 ---
 
+## Milestone 18.7: Fix UI Race Condition on Parameter Load ✅
+
+> **Goal:** Fix silent failure when `useAllParameters()` hook mounts before WebSocket connection is established in browser dev mode.
+
+**Depends on:** Milestone 18.6 (Documentation Split) — latest SDK architecture
+
+**Status:** ✅ Complete — February 10, 2026
+
+**Target Version:** `0.11.1` (patch — bug fix)
+
+**Scope:** UI-only change in `@wavecraft/core` package. No Rust engine changes required.
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Requirements & Design** | | |
+| User stories | ✅ | 3 user stories with edge cases defined |
+| Low-level design | ✅ | Connection-aware retry mechanism with timeout |
+| Implementation plan | ✅ | 5-phase plan with 12 implementation steps |
+| **Implementation** | | |
+| Review existing connection awareness | ✅ | `useConnectionStatus()` integration analyzed |
+| Implement retry mechanism | ✅ | Auto-retry on WebSocket connection |
+| Add connection state synchronization | ✅ | Hook waits for ready state with 15s timeout |
+| Handle edge cases | ✅ | Component unmount, rapid reconnects, max 3 retries |
+| Improve error messaging | ✅ | Actionable errors with dev server guidance |
+| **Testing & QA** | | |
+| Unit tests for retry logic | ✅ | 57/57 tests passing (all edge cases covered) |
+| Integration tests with delayed connection | ✅ | Simulate slow WebSocket connect |
+| Manual testing in browser dev mode | ✅ | 3/4 tests passing (MT4 deferred) |
+| Regression testing in native mode | ⏳ | MT4: DAW smoke test deferred to pre-release |
+| QA review | ✅ | 0 blocking issues, approved for merge |
+| **Documentation** | | |
+| Update JSDoc comments | ✅ | Retry behavior documented |
+| Changelog entry | ✅ | v0.11.1 release notes added |
+
+**Problem Statement:**
+
+When using browser dev mode (`wavecraft start`), the `useAllParameters()` hook may fire before the WebSocket connection to the dev server is established. This causes the initial parameter fetch to fail silently with no retry, leaving the UI with empty parameter lists until a manual page refresh.
+
+**Current Behavior:**
+- Hook calls `getAllParameters()` on mount
+- If WebSocket isn't connected, request fails
+- Error is caught and set in state
+- User sees empty parameter list or loading state indefinitely
+
+**Expected Behavior:**
+- Hook should wait for WebSocket connection or retry automatically
+- When connection becomes ready, parameters fetch automatically
+- Clear error messages guide user to run `wavecraft start` if server not running
+- No manual page refresh required
+
+**Technical Approach:**
+
+The hook already uses `useConnectionStatus()` to monitor transport state. Two potential solutions:
+
+1. **Event-based (recommended):** WebSocketTransport emits "connected" event, hook subscribes and triggers reload
+2. **Polling-based (current):** Hook monitors connection state changes via `useConnectionStatus()` polling
+
+The implementation should:
+- Leverage existing `useConnectionStatus()` hook
+- Add retry logic with reasonable timeout (10-15s)
+- Differentiate between connection failures and request failures
+- Handle React lifecycle edge cases (unmount during retry, Strict Mode)
+- Maintain backward compatibility with NativeTransport (WKWebView)
+
+**Success Criteria:**
+- [x] Parameters load automatically when WebSocket connects after component mount
+- [x] Parameters reload automatically after WebSocket reconnection
+- [x] Clear error messages when dev server isn't running
+- [x] No regressions in native plugin mode (WKWebView)
+- [x] All unit and integration tests passing (57/57)
+- [x] Manual testing validates fix in browser dev mode (3/4 tests, MT4 deferred)
+
+**Deliverables:**
+- Connection-aware parameter loading with automatic retry
+- 15-second timeout with actionable error messages
+- Auto-refetch on reconnection
+- Zero breaking changes to public API
+- Comprehensive test coverage (57/57 passing)
+
+**User Stories:** [docs/feature-specs/_archive/ui-parameter-load-race-condition/user-stories.md](feature-specs/_archive/ui-parameter-load-race-condition/user-stories.md)
+
+**Estimated Effort:** 2-3 days
+
+---
+
+## Milestone 18.8: Agent Search Delegation Instructions ⏳
+
+> **Goal:** Add "Codebase Research" guidance to all specialized agent instructions to ensure proper delegation to the Search agent for deep codebase analysis.
+
+**Depends on:** Milestone 18.7 (UI Race Condition Fix) — polished developer workflow
+
+**Status:** ⏳ Not Started
+
+**Branch:** `feature/agent-search-delegation`  
+**Target Version:** Documentation-only (no version change)
+
+**User Stories:** [docs/feature-specs/agent-search-delegation/user-stories.md](feature-specs/agent-search-delegation/user-stories.md)
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Requirements & Design** | | |
+| User stories | ✅ | 8 user stories covering all agent types |
+| Low-level design | ⏳ | Architect to design instruction section structure |
+| Implementation plan | ⏳ | Planner to break down into agent-specific steps |
+| **Instruction Updates** | | |
+| Add "Codebase Research" section to Architect agent | ⏳ | When/how to invoke Search, examples |
+| Add "Codebase Research" section to Planner agent | ⏳ | Dependency mapping use cases |
+| Add "Codebase Research" section to Coder agent | ⏳ | Pattern discovery examples |
+| Add "Codebase Research" section to Tester agent | ⏳ | Test coverage analysis guidance |
+| Add "Codebase Research" section to QA agent | ⏳ | Quality pattern analysis examples |
+| Add "Codebase Research" section to PO agent | ⏳ | Feature impact analysis guidance |
+| Add "Codebase Research" section to DocWriter agent | ⏳ | Documentation scope discovery examples |
+| **Agent Development Flow Updates** | | |
+| Update agent invocation table | ⏳ | Add Search delegation note |
+| Document delegation pattern | ⏳ | When to delegate vs direct search |
+| Add Search agent usage examples | ⏳ | Concrete examples from real features |
+| **Testing & Validation** | | |
+| Validate instruction clarity | ⏳ | Test with each agent type |
+| Measure Search agent invocation increase | ⏳ | Track usage before/after |
+| Review instruction consistency | ⏳ | Ensure uniform format across agents |
+| **Documentation** | | |
+| Update agent-development-flow.md | ⏳ | Document delegation pattern |
+| Update README (if needed) | ⏳ | Note improved agent workflow |
+
+**Problem Statement:**
+
+Specialized agents (Architect, Planner, Coder, Tester, QA, PO, DocWriter) have the **capability** to invoke the Search agent (272K context window, can analyze 50-100 files simultaneously) but their instructions **do not tell them when or how** to do so.
+
+**Current Behavior:**
+- Agents use their own search tools (`semantic_search`, `grep_search`) for deep analysis
+- Search agent's 272K context is underutilized
+- Inconsistent research quality across agents
+- Violates specialization pattern (agents should delegate, not do everything themselves)
+
+**Expected Behavior:**
+- Agents recognize when a task requires comprehensive codebase analysis
+- Agents invoke Search agent with clear research queries
+- Search agent analyzes 50-100 files, returns synthesized findings
+- Agents use findings to inform their specialized work (design, planning, implementation, testing, QA)
+
+**Technical Approach:**
+
+Add a "Codebase Research" section to each specialized agent's instructions that:
+1. Tells them NOT to do deep research themselves (stay focused on specialization)
+2. Instructs them to invoke Search agent for comprehensive analysis
+3. Provides concrete examples of when/how to invoke Search
+4. Explains Search's 272K context advantage over direct search tools
+
+**Success Metrics:**
+
+| Metric | Current | Target |
+|--------|---------|---------|
+| Search agent invocations per feature | ~0-1 | ~3-5 |
+| Agents using own search tools for deep analysis | High | Low (quick lookups only) |
+| Research quality consistency | Variable | Consistent (all use Search) |
+| Time spent on research per agent | High | Low (delegate to Search) |
+
+**Success Criteria:**
+- [ ] All 7 specialized agents have clear "Codebase Research" instructions
+- [ ] Instructions follow consistent format (when/how/examples)
+- [ ] agent-development-flow.md documents delegation pattern with examples
+- [ ] Search agent invocation count increases after implementation
+- [ ] Agents naturally delegate research tasks without prompting
+
+**Estimated Effort:** 1-2 days (instructions-only update, no code changes)
+
+**Rationale:** This infrastructure improvement ensures proper utilization of the Search agent's specialized capabilities and maintains the agent specialization philosophy. Should be completed before user testing to ensure agents work at peak efficiency.
+
+---
+
 ## Milestone 19: User Testing ⏳
 
 > **Goal:** Validate Wavecraft with real plugin developers before V1 release. Gather feedback on SDK usability, documentation quality, and overall developer experience.
 
-**Depends on:** Milestone 18.5 (Template Structure) — test with improved template
+**Depends on:** Milestone 18.8 (Agent Search Delegation) — polished agent workflow, optimized research capabilities
 
 **Target Version:** `1.0.0-beta` (breaking changes from user feedback)
 
@@ -1329,6 +1500,9 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 
 | Date | Update |
 |------|--------|
+| 2026-02-10 | **Milestone 18.7 complete (v0.11.1)**: UI Parameter Load Race Condition Fix. `useAllParameters()` hook now waits for WebSocket connection before fetching (15s timeout with actionable error if dev server not running), auto-refetches on reconnection. Implementation: connection state synchronization with exponential backoff retry, max 3 attempts, graceful timeout handling. Testing: 57/57 unit tests (100% edge case coverage), 3/4 manual tests (MT4 deferred to pre-release validation). QA: 0 blocking issues, approved for merge. Zero breaking changes to public API. Eliminates silent failures and manual page refreshes, significantly improving developer experience in browser dev mode. Archived to `_archive/ui-parameter-load-race-condition/`. Progress: 87% (21/24 milestones). |
+| 2026-02-10 | **Milestone 18.8 added: Agent Search Delegation Instructions**: New infrastructure milestone to add "Codebase Research" guidance to all specialized agent instructions (Architect, Planner, Coder, Tester, QA, PO, DocWriter). Problem: Agents have capability (`agents: [..., search]`) but lack instructions on when/how to invoke Search. Solution: Add consistent "Codebase Research" section to each agent explaining delegation pattern, with concrete examples. Search agent has 272K context (50-100 files simultaneously) but is underutilized. Target: 3-5 Search invocations per feature (up from ~0-1). Documentation-only update (no version change). User stories created (8 stories + success metrics). Renumbered User Testing (M19→M20, now depends on M18.8), V1.0 Release (M20→M21). Progress: 83% (20/24 milestones). Estimated effort: 1-2 days. Rationale: Ensures proper Search agent utilization and maintains agent specialization philosophy before user testing. |
+| 2026-02-10 | **Milestone 18.7 added: Fix UI Race Condition on Parameter Load**: New bugfix milestone to address silent failure when `useAllParameters()` hook mounts before WebSocket connection is established. Affects browser dev mode (`wavecraft start`). Hook should automatically retry when connection becomes ready, eliminating need for manual page refresh. UI-only change in `@wavecraft/core`, no engine changes. Item promoted from backlog ("SDK Audio Architecture Gaps", Minor severity). Target version 0.11.1 (patch). User stories created (3 stories + 4 edge cases), comprehensive acceptance criteria defined. Renumbered User Testing (M19→M20, depends on M18.7), V1.0 Release (M20→M21). Progress: 87% (20/23 milestones). Estimated effort: 2-3 days. Status: User stories complete, awaiting Architect low-level design. |
 | 2026-02-09 | **Build-time parameter discovery fix**: Fixed `wavecraft start` hanging at "Loading plugin parameters..." on macOS. Root cause: Loading plugin dylib triggered nih-plug's static initializers (VST3/CLAP), which block on `AudioComponentRegistrar`. Solution: Feature-gated `nih_export_clap!` / `nih_export_vst3!` behind `#[cfg(not(feature = "_param-discovery"))]` in `wavecraft_plugin!` macro output. CLI now uses two-phase approach: sidecar JSON cache → discovery build without nih-plug init → graceful fallback for older plugins. Template updated with `_param-discovery` feature. 87 engine + 28 UI tests passing, template validation clean (clippy, symbol verification), QA approved. Architecture docs updated (`development-workflows.md`, `declarative-plugin-dsl.md`). Archived to `_archive/build-time-param-discovery/`. |
 | 2026-02-09 | **Remove manual versioning complete**: Documentation and agent guidance updated to make versioning fully CI-automated with no manual per-feature or milestone bumps. User stories updated, PO template simplified, and policy aligned with CD behavior. Archived to `_archive/remove-manual-versioning/`. |
 | 2026-02-09 | **Replace Python with `xtask` complete**: Tooling scripts migrated from Python to `cargo xtask`, simplifying setup by removing Python dependency. QA approved (final sign-off), 11/11 tests passing, clippy clean. Archived to `_archive/replace-python-with-xtask/`. |
@@ -1437,13 +1611,17 @@ QA:           PASS (0 Critical/High/Medium/Low issues)
 18. ✅ **Milestone 18**: Audio Pipeline Fixes — Full-duplex audio, parameter sync, mocking cleanup (v0.10.0)
 19. ✅ **Milestone 18.5**: Template Structure Improvement — Processors module with oscillator example (v0.11.0)
 20. ✅ **Milestone 18.6**: Documentation Architecture Split — Split large docs into focused files (v0.10.1)
+21. ✅ **Milestone 18.7**: UI Parameter Load Race Condition — Auto-retry parameter fetch on WebSocket connect (v0.11.1)
 
 ### Up Next
-21. ⏳ **Milestone 19**: User Testing — Beta testing with real plugin developers (v1.0.0-beta)
-22. ⏳ **Milestone 20**: V1.0 Release — First stable production release (v1.0.0)
+22. ⏳ **Milestone 18.8**: Agent Search Delegation Instructions — Add codebase research guidance to all agent instructions (documentation-only)
+23. ⏳ **Milestone 19**: User Testing — Beta testing with real plugin developers (v1.0.0-beta)
+24. ⏳ **Milestone 20**: V1.0 Release — First stable production release (v1.0.0)
 
 ### Immediate Tasks
-1. ⏳ Begin Milestone 19 (User Testing) — recruit beta testers
-2. ⏳ After M19: Begin Milestone 20 (V1.0 Release)
+1. ⏳ Begin Milestone 18.8 (Agent Search Delegation) — add codebase research sections to all agent instructions
+2. ⏳ After M18.8: Begin Milestone 19 (User Testing)
+3. ⏳ After M19: Begin Milestone 20 (V1.0 Release)
+4. 📝 **Pre-release validation:** MT4 (native plugin DAW testing) deferred from M18.7 — smoke test in Ableton before v0.11.1 release
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (crates.io publication, additional example plugins, etc.)

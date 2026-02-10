@@ -151,4 +151,41 @@ export class IpcBridge {
       }
     }
   }
+
+  /**
+   * Subscribe to transport connection state changes
+   *
+   * Uses transport's event-based notification if available,
+   * falls back to 1-second polling otherwise.
+   *
+   * @param callback - Receives true (connected) or false (disconnected)
+   * @returns Cleanup function
+   */
+  public onConnectionChange(callback: (connected: boolean) => void): () => void {
+    this.initialize();
+
+    if (!this.transport) {
+      callback(false);
+      return () => {};
+    }
+
+    // Prefer event-based if transport supports it
+    if (this.transport.onConnectionChange) {
+      return this.transport.onConnectionChange(callback);
+    }
+
+    // Fallback: poll every second (backward compat with custom transports)
+    let lastState = this.transport.isConnected();
+    callback(lastState); // Fire-on-subscribe
+
+    const intervalId = setInterval(() => {
+      const currentState = this.transport?.isConnected() ?? false;
+      if (currentState !== lastState) {
+        lastState = currentState;
+        callback(currentState);
+      }
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }
 }
