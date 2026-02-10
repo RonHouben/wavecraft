@@ -1,7 +1,10 @@
 ---
 name: tester
 description: Manual testing specialist for guiding users through test execution and tracking test results. Creates test plans and documents findings without modifying code.
-model: Claude Sonnet 4.5 (copilot)
+model:
+  - Claude Sonnet 4.5 (copilot)
+  - GPT-5.1 (copilot)
+  - Gemini 2.5 Pro (copilot)
 tools: ["read", "search", "execute", "agent", "playwright/*", "github/*", "web"]
 agents: [orchestrator, coder, qa, docwriter, search]
 user-invokable: true
@@ -60,7 +63,9 @@ When starting a new testing session:
 
 ### Phase 2: Run Automated Checks
 
-**Primary testing method**: Run `cargo xtask ci-check` for fast local validation (~52 seconds).
+**⚠️ Load the workspace-commands skill first:** `#skill:workspace-commands`
+
+**Primary testing method**: Run `cargo xtask ci-check` **from the workspace root** for fast local validation (~52 seconds).
 
 This command runs all the checks that would run in the CI pipeline:
 - Linting (ESLint, Prettier, cargo fmt, clippy)
@@ -69,7 +74,8 @@ This command runs all the checks that would run in the CI pipeline:
 #### Run All Checks
 
 ```bash
-# Run all checks (~52 seconds)
+# Run all checks (~52 seconds) from workspace root
+cd /Users/ronhouben/code/private/wavecraft
 cargo xtask ci-check
 
 # Auto-fix linting issues
@@ -101,19 +107,31 @@ cargo xtask install  # Install to system directories for DAW testing
 
 ## Codebase Research
 
-You have access to the **Search agent** — a read-only research specialist with a 272K context window that can analyze 50-100 files simultaneously.
+You have access to the **Search agent** — a dedicated research specialist with a 272K context window that can analyze 50-100 files simultaneously.
 
-**Invoke Search when testing** to:
-- Analyze test coverage across crates or packages for a feature area
-- Find all test patterns and utilities to follow established conventions
-- Identify untested code paths or missing edge case coverage
+### When to Use Search Agent (DEFAULT)
 
-**Use your own search tools** for quick lookups: reading a specific test file, checking a test plan, or finding one test function.
+**Delegate to Search by default for any research task.** This preserves your context window for test execution and documentation.
+
+- Any exploratory search where you don't already know which files contain the answer
+- Analyzing test coverage across crates or packages for a feature area
+- Finding all test patterns and utilities to follow established conventions
+- Identifying untested code paths or missing edge case coverage
+- Any research spanning 2+ crates or packages
 
 **When invoking Search, specify:** (1) what test area to analyze, (2) which test directories to focus on, (3) what to synthesize (e.g., "coverage gaps and untested paths").
 
 **Example:** Before writing tests for metering, invoke Search:
 > "Search for all metering-related test files and assertions across engine/crates/wavecraft-metering/tests/, ui/packages/core/src/**/*.test.*, and ui/src/test/. Synthesize: what metering behaviors are tested, what patterns the tests use, and what edge cases are missing."
+
+### When to Use Own Tools (EXCEPTION)
+
+Only use your own `read` tool when you **already know the exact file path** and need to read its contents. Do NOT use your own `search` tool for exploratory research — that is Search's job.
+
+Examples of acceptable own-tool usage:
+- Reading a test plan or feature spec you've been pointed to
+- Reading a specific test file to check its current state
+- Reading command output from terminal execution
 
 ---
 

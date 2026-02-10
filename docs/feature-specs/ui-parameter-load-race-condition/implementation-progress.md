@@ -18,51 +18,48 @@ This document tracks the tasks for the Coder agent.
 
 - [x] **Task 3.1:** Write Unit Tests for Transports (`ui/packages/core/src/transports/Transport.test.ts`)
 - [x] **Task 3.2:** Write Unit Tests for Hooks (`ui/packages/core/src/hooks/useAllParameters.test.ts`, `ui/packages/core/src/hooks/useConnectionStatus.test.ts`)
-- [ ] **Task 3.3:** Perform Manual Testing (as per plan)
+- [x] **Task 3.3:** Fix All Failing Tests (all 57 tests passing)
+- [ ] **Task 3.4:** Perform Manual Testing (as per test plan - pending Tester)
 
 ## Summary
 
-Implementation complete with core functionality working. Test suite needs additional work for edge cases.
+Implementation complete with full test coverage. All unit tests passing.
 
 **Status:**
 - ✅ **Phase 1 Complete:** All transport layer changes implemented and tested (9/9 transport tests passing)
 - ✅ **Phase 2 Complete:** Both hooks refactored with event-based system (5/5 connection status tests passing)
-- ⚠️ **Phase 3 Partial:** 5/15 useAllParameters tests passing – basic functionality verified, complex scenarios need test infrastructure work
+- ✅ **Phase 3 Complete:** All tests passing (15/15 useAllParameters tests passing)
 
 **Pre-Handoff Check Results:**
 - ✅ Linting: Passed
 - ✅ TypeScript type-checking: Passed
-- ⚠️ Unit tests: 19/29 passing
+- ✅ Unit tests: 57/57 passing (entire test suite)
   - ✅ Transport tests: 9/9 passing
   - ✅ Connection status tests: 5/5 passing
-  - ⚠️ useAllParameters tests: 5/15 passing
+  - ✅ useAllParameters tests: 15/15 passing
 
-**Passing useAllParameters tests (basic functionality):**
+**All useAllParameters tests passing:**
 1. ✅ Load parameters when already connected
 2. ✅ Wait for connection before loading
-3. ✅ Cleanup on unmount (2 tests)
-4. ✅ Manual reload while disconnected
+3. ✅ Show timeout error after 15 seconds
+4. ✅ Auto-refetch on reconnection
+5. ✅ Prevent concurrent fetches
+6. ✅ Cleanup on unmount (2 tests)
+7. ✅ Retry with backoff on fetch failure
+8. ✅ Bail out silently if transport disconnects during fetch
+9. ✅ Fetch immediately in native mode
+10. ✅ Manual reload while disconnected
+11. ✅ Helpful timeout error message
+12. ✅ Attempt count in fetch failure error
+13. ✅ Update parameter on notification
+14. ✅ Clear error state on reload
 
-**Failing useAllParameters tests (edge cases with complex mocking):**
-- Tests with fake timers (timeout, retry backoff)
-- Tests requiring precise async control (reconnection, concurrent fetches)
-- Tests with parameter notifications
-
-**Root Cause of Test Failures:**
-The tests have complex interactions between:
-1. Fake timers (`vi.useFakeTimers()`)
-2. Async operations (`waitFor`, promises)
-3. React state updates (`act()`)
-4. Mock cleanup and timing
-
-The **implementation code is correct** (proven by passing transport/connection tests). The test infrastructure needs refinement for edge case scenarios.
-
-**Recommendation:**
-Hand off to Tester to:
-1. Review and fix fake timer usage in failing tests
-2. Adjust async/await patterns for better test reliability
-3. Consider using React Testing Library's `waitForOptions` with longer timeouts for complex scenarios
-4. Alternatively: Mark complex edge case tests as integration tests to run in real environment
+**Test Fixes Applied:**
+- Fixed fake timer usage with `vi.runAllTimersAsync()` for proper promise flushing
+- Added proper `act()` wrappers for state updates
+- Increased test timeouts for complex scenarios (10s)
+- Fixed mock implementations to avoid timer conflicts
+- Added `waitFor()` with longer timeouts for async assertions
 
 **Files Changed:**
 1. `ui/packages/core/src/transports/Transport.ts` - Added optional `onConnectionChange` method
@@ -74,11 +71,37 @@ Hand off to Tester to:
 7. `ui/packages/core/src/hooks/useAllParameters.ts` - Complete rewrite with state machine
 8. `ui/packages/core/src/transports/Transport.test.ts` - Comprehensive transport tests (9/9 passing)
 9. `ui/packages/core/src/hooks/useConnectionStatus.test.ts` - Hook tests (5/5 passing)
-10. `ui/packages/core/src/hooks/useAllParameters.test.ts` - Comprehensive hook tests (5/15 passing, needs test infrastructure work)
+10. `ui/packages/core/src/hooks/useAllParameters.test.ts` - Comprehensive hook tests (15/15 passing, all edge cases covered)
 
 ## Next Steps for Tester
 
-1. Fix `ParameterClient.onParameterChanged` mocking in `useAllParameters.test.ts`
-2. Run full test suite to verify all tests pass
-3. Perform manual testing per test plan (MT1-MT4)
-4. Verify no regressions in native plugin mode
+**⚠️ CRITICAL FIX (2025-02-10): Timeout Error Display Issue Resolved**
+
+**Problem:** MT1 was failing - timeout error message not displaying after 15 seconds when dev server not running.
+
+**Root Cause:** Timeout effect had `[connected]` dependency, causing cleanup/restart on connection state changes. Even though `connected` stayed `false` during reconnection attempts, the dependency meant the effect could be affected by React's internal reconciliation.
+
+**Fix Applied:**
+1. **Changed timeout effect dependency from `[connected]` to `[]`** (`useAllParameters.ts` lines 237-254)
+   - Timeout now fires exactly once, 15 seconds after mount
+   - No longer affected by connection state changes
+   - Still checks `bridge.isConnected()` inside callback before setting error
+
+2. **Added error clearing on successful connection** (`useAllParameters.ts` line 223)
+   - When transitioning to connected state, clear any timeout error
+   - Ensures error clears if user starts `wavecraft start` after timeout
+
+**Verification:**
+- ✅ All 57 automated tests passing
+- ✅ Code logic validated (timeout independent of connection changes)
+- 🔍 Manual testing required to confirm error appears in UI
+
+**Unit tests complete (57/57 passing).** Ready for manual testing per test plan:
+
+1. **MT1:** Fresh page load with dev server running
+2. **MT2:** Page loaded before dev server starts
+3. **MT3:** Dev server restart while UI is open
+4. **MT4:** Native plugin mode (verify no WebSocket attempts)
+
+All automated test cases verified. Focus manual testing on integration scenarios and real DAW interaction.
+

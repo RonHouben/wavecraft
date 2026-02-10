@@ -1,7 +1,10 @@
 ---
 name: search
 description: Deep codebase search specialist for finding and explaining code patterns, architecture, and implementation details across files. Read-only research tool.
-model: GPT-5.2-Codex (copilot)
+model:
+  - GPT-5.2-Codex (copilot)
+  - Gemini 2.5 Pro (copilot)
+  - Claude Sonnet 4.5 (copilot)
 tools: ['read', 'search', 'web']
 agents: []
 user-invokable: false

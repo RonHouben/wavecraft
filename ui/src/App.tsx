@@ -15,11 +15,35 @@ import { useAllParameters, useParameterGroups, useWindowResizeSync } from '@wave
 
 function App(): React.JSX.Element {
   // Fetch all parameters and organize into groups
-  const { params, isLoading } = useAllParameters();
+  const { params, isLoading, error } = useAllParameters();
   const groups = useParameterGroups(params);
 
   // Sync window resize events to host
   useWindowResizeSync();
+
+  // Render parameters section content based on state
+  const renderParametersContent = (): React.JSX.Element => {
+    if (error) {
+      return (
+        <div className="rounded border-2 border-red-500/50 bg-red-900/20 p-4 text-red-300">
+          <p className="font-semibold">Error Loading Parameters</p>
+          <p className="mt-2 text-sm">{error.message}</p>
+        </div>
+      );
+    }
+
+    if (isLoading) {
+      return <p className="italic text-gray-500">Loading parameters...</p>;
+    }
+
+    return (
+      <div className="space-y-6">
+        {groups.map((group) => (
+          <ParameterGroup key={group.name} group={group} />
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div data-testid="app-root" className="flex min-h-full flex-col bg-plugin-dark">
@@ -40,15 +64,7 @@ function App(): React.JSX.Element {
           <h2 className="mb-4 border-b-2 border-plugin-border pb-2 text-xl text-gray-100">
             Parameters
           </h2>
-          {isLoading ? (
-            <p className="italic text-gray-500">Loading parameters...</p>
-          ) : (
-            <div className="space-y-6">
-              {groups.map((group) => (
-                <ParameterGroup key={group.name} group={group} />
-              ))}
-            </div>
-          )}
+          {renderParametersContent()}
         </section>
 
         <section className="mb-8">

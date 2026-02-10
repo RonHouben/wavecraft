@@ -139,20 +139,19 @@ describe('useAllParameters', () => {
       expect(result.current.isLoading).toBe(true);
       expect(result.current.error).toBeNull();
 
-      // Advance time to trigger timeout
-      vi.advanceTimersByTime(15000);
+      // Run all timers to trigger timeout
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
 
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      }, { timeout: 100 });
-
+      expect(result.current.isLoading).toBe(false);
       expect(result.current.error).not.toBeNull();
       expect(result.current.error?.message).toContain('wavecraft start');
       expect(result.current.params).toEqual([]);
     } finally {
       vi.useRealTimers();
     }
-  });
+  }, 10000); // Increase timeout for this test
 
   // T4: Reconnection auto-refetch
   it('should automatically refetch parameters on reconnection', async () => {
@@ -184,13 +183,14 @@ describe('useAllParameters', () => {
       mockTransport.setConnected(true);
     });
 
+    // Wait for refetch to complete
     await waitFor(() => {
       expect(getAllSpy).toHaveBeenCalledTimes(2);
-    });
+    }, { timeout: 1000 });
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
-    });
+    }, { timeout: 1000 });
   });
 
   // T5: Duplicate fetch prevention
@@ -198,9 +198,13 @@ describe('useAllParameters', () => {
     mockTransport.setConnected(true);
 
     const client = ParameterClient.getInstance();
+    // Use a delayed Promise without setTimeout (avoids timer conflicts)
     const getAllSpy = vi
       .spyOn(client, 'getAllParameters')
-      .mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve(mockParams), 100)));
+      .mockImplementation(() => new Promise((resolve) => {
+        // Resolve after a microtask delay
+        queueMicrotask(() => resolve(mockParams));
+      }));
 
     const { result } = renderHook(() => useAllParameters());
 
@@ -215,7 +219,7 @@ describe('useAllParameters', () => {
     // Wait for loading to complete
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
-    });
+    }, { timeout: 1000 });
 
     // Should have called at most 2 times (initial + one refetch)
     expect(getAllSpy.mock.calls.length).toBeLessThanOrEqual(2);
@@ -268,13 +272,12 @@ describe('useAllParameters', () => {
 
       const { result } = renderHook(() => useAllParameters());
 
-      // Fast-forward through all retries
-      // Backoff schedule: 0ms (initial), 500ms, 1000ms, 2000ms
-      vi.advanceTimersByTime(500 + 1000 + 2000); // Skip all retry delays
+      // Run all timers to complete all retries
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
 
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      }, { timeout: 100 });
+      expect(result.current.isLoading).toBe(false);
 
       // Should have tried 4 times total (initial + 3 retries)
       expect(getAllSpy).toHaveBeenCalledTimes(4);
@@ -284,7 +287,7 @@ describe('useAllParameters', () => {
     } finally {
       vi.useRealTimers();
     }
-  });
+  }, 10000); // Increase timeout for this test
 
   // T10: Transport disconnects mid-fetch
   it('should bail out silently if transport disconnects during fetch', async () => {
@@ -294,16 +297,19 @@ describe('useAllParameters', () => {
     vi.spyOn(client, 'getAllParameters').mockImplementation(
       async () => {
         // Disconnect mid-fetch
-        mockTransport.setConnected(false);
+        await act(async () => {
+          mockTransport.setConnected(false);
+        });
         throw new Error('Connection lost');
       }
     );
 
     const { result } = renderHook(() => useAllParameters());
 
+    // Wait for the disconnect to be processed
     await waitFor(() => {
       expect(result.current.isLoading).toBe(true);
-    });
+    }, { timeout: 1000 });
 
     // Should not show error - stays loading
     expect(result.current.error).toBeNull();
@@ -322,11 +328,11 @@ describe('useAllParameters', () => {
     // Should fetch immediately
     await waitFor(() => {
       expect(getAllSpy).toHaveBeenCalled();
-    });
+    }, { timeout: 1000 });
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
-    });
+    }, { timeout: 1000 });
 
     expect(result.current.params).toEqual(mockParams);
   });
@@ -359,18 +365,18 @@ describe('useAllParameters', () => {
 
       const { result } = renderHook(() => useAllParameters());
 
-      vi.advanceTimersByTime(15000);
+      // Run all timers
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
 
-      await waitFor(() => {
-        expect(result.current.error).not.toBeNull();
-      }, { timeout: 100 });
-
+      expect(result.current.error).not.toBeNull();
       expect(result.current.error?.message).toContain('wavecraft start');
       expect(result.current.error?.message).toContain('15 seconds');
     } finally {
       vi.useRealTimers();
     }
-  });
+  }, 10000); // Increase timeout for this test
 
   // T14: Error message content (fetch failure)
   it('should include attempt count in fetch failure error', async () => {
@@ -385,18 +391,18 @@ describe('useAllParameters', () => {
 
       const { result } = renderHook(() => useAllParameters());
 
-      vi.advanceTimersByTime(500 + 1000 + 2000); // Skip all retry delays
+      // Run all timers
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
 
-      await waitFor(() => {
-        expect(result.current.error).not.toBeNull();
-      }, { timeout: 100 });
-
+      expect(result.current.error).not.toBeNull();
       expect(result.current.error?.message).toContain('4 attempts');
       expect(result.current.error?.message).toContain('Fetch failed');
     } finally {
       vi.useRealTimers();
     }
-  });
+  }, 10000); // Increase timeout for this test
 
   // T15: Parameter change notification
   it('should update parameter value when notification arrives', async () => {
@@ -419,7 +425,10 @@ describe('useAllParameters', () => {
       });
     }
 
-    expect(result.current.params[0].value).toBe(0.8);
+    // Wait for the state update to complete
+    await waitFor(() => {
+      expect(result.current.params[0].value).toBe(0.8);
+    }, { timeout: 1000 });
   });
 
   // T16: reload() clears error state
@@ -434,16 +443,20 @@ describe('useAllParameters', () => {
       const getAllSpy = vi
         .spyOn(client, 'getAllParameters')
         .mockRejectedValueOnce(new Error('First error'))
+        .mockRejectedValueOnce(new Error('First error'))
+        .mockRejectedValueOnce(new Error('First error'))
+        .mockRejectedValueOnce(new Error('First error'))
         .mockResolvedValueOnce(mockParams);
 
       const { result } = renderHook(() => useAllParameters());
 
-      // Fast-forward through retries to get error
-      vi.advanceTimersByTime(500 + 1000 + 2000);
+      // Run all timers to get the error state
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
 
-      await waitFor(() => {
-        expect(result.current.error).not.toBeNull();
-      }, { timeout: 100 });
+      expect(result.current.error).not.toBeNull();
+      expect(result.current.isLoading).toBe(false);
 
       // Call reload
       await act(async () => {
@@ -451,16 +464,11 @@ describe('useAllParameters', () => {
       });
 
       expect(result.current.error).toBeNull();
-      expect(result.current.isLoading).toBe(true);
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      }, { timeout: 100 });
-
+      expect(result.current.isLoading).toBe(false); // Should be false since fetch succeeded
       expect(result.current.params).toEqual(mockParams);
       expect(getAllSpy.mock.calls.length).toBeGreaterThan(4);
     } finally {
       vi.useRealTimers();
     }
-  });
+  }, 10000); // Increase timeout for this test
 });

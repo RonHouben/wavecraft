@@ -220,6 +220,8 @@ export function useAllParameters(): UseAllParametersResult {
     if (connected && wasConnected !== true) {
       // Transition: disconnected/initial → connected
       logger.debug('useAllParameters: connection established, fetching parameters');
+      // Clear any timeout error when we successfully connect
+      setError(null);
       fetchParameters();
     }
 
@@ -233,11 +235,10 @@ export function useAllParameters(): UseAllParametersResult {
 
   // ─── Effect: Connection timeout ─────────────────────────────────────
   useEffect(() => {
-    if (connected) return; // Already connected — no timeout needed
-
     const timeoutId = setTimeout(() => {
       if (!mountedRef.current) return;
 
+      // Only set error if we're still not connected after timeout
       const bridge = IpcBridge.getInstance();
       if (!bridge.isConnected()) {
         setError(
@@ -251,7 +252,7 @@ export function useAllParameters(): UseAllParametersResult {
     }, CONNECTION_TIMEOUT_MS);
 
     return () => clearTimeout(timeoutId);
-  }, [connected]);
+  }, []); // Empty deps - timeout fires once after mount
 
   // ─── Effect: Subscribe to parameter change notifications ────────────
   useEffect(() => {
