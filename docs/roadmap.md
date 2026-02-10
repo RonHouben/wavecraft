@@ -8,14 +8,15 @@ This document tracks implementation progress against the milestones defined in t
 
 ```
 ┌──────────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP          v0.11.1 | 87%   │
+│  WAVECRAFT ROADMAP          v0.11.1 | 84%   │
 ├──────────────────────────────────────────────┤
 │  ✅ M1-M18.7 Foundation → UI Race Fix       │
 │  ⏳ M18.8    Agent Search Delegation        │
+│  ⏳ M18.9    Rust Hot-Reload for Dev        │
 │  ⏳ M19      User Testing                   │
 │  ⏳ M20      V1.0 Release                   │
 ├──────────────────────────────────────────────┤
-│  [█████████████████████████] 21/24         │
+│  [████████████████████████] 21/25          │
 └──────────────────────────────────────────────┘
 ```
 
@@ -1403,11 +1404,101 @@ Add a "Codebase Research" section to each specialized agent's instructions that:
 
 ---
 
+## Milestone 18.9: Rust Hot-Reload for Dev Mode ⏳
+
+> **Goal:** Automatically rebuild the plugin and reload parameters when Rust source files change during `wavecraft start`, bringing Rust development to parity with React HMR.
+
+**Depends on:** Milestone 18.7 (UI Race Condition Fix) — ensures parameter reload works reliably on WebSocket reconnect
+
+**Status:** ⏳ Not Started
+
+**Branch:** `feature/rust-hot-reload`  
+**Target Version:** `0.12.0` (minor — new feature)
+
+**User Stories:** To be created
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Requirements & Design** | | |
+| User stories | ⏳ | Define use cases and acceptance criteria |
+| Low-level design | ⏳ | Architect to design file watcher + rebuild flow |
+| Implementation plan | ⏳ | Planner to break down into detailed steps |
+| **Implementation** | | |
+| File watcher integration | ⏳ | Use `notify` crate or `cargo-watch` |
+| Debouncing strategy | ⏳ | Avoid rapid rebuilds on multi-file saves |
+| Rebuild orchestration | ⏳ | `cargo build --lib` + error handling |
+| WebSocket server restart | ⏳ | Reload parameter metadata after rebuild |
+| UI error display | ⏳ | Show build errors in browser (optional) |
+| Ignore patterns | ⏳ | Exclude `target/`, `Cargo.lock`, etc. |
+| **Testing & QA** | | |
+| Unit tests for file watcher | ⏳ | Debouncing, exclusions |
+| Integration tests | ⏳ | End-to-end hot-reload flow |
+| Manual testing | ⏳ | Real-world development scenarios |
+| QA review | ⏳ | Quality assurance sign-off |
+| **Documentation** | | |
+| Update SDK Getting Started guide | ⏳ | Document hot-reload behavior |
+| Update Development Workflows doc | ⏳ | Architecture of file watching system |
+
+**Problem Statement:**
+
+When using `wavecraft start` for development, the CLI builds the Rust plugin once at startup for parameter discovery. It starts a WebSocket server serving those parameters and spawns Vite for UI hot-reload.
+
+**Current Behavior:**
+- User modifies Rust source (e.g., adds `Oscillator` to signal chain)
+- Changes require manually stopping and restarting `wavecraft start`
+- No feedback that rebuild is needed
+- Breaks flow state
+
+**Expected Behavior:**
+- User saves Rust file
+- CLI detects change via file watcher
+- Rebuilds plugin dylib (`cargo build --lib`)
+- Reloads parameters via FFI
+- Restarts WebSocket server with new parameters
+- UI automatically reconnects and fetches new parameter list
+- User sees new oscillator parameters without manual restart
+
+**Technical Approach:**
+
+1. **File Watcher**: Use `notify` crate to watch Rust source files
+2. **Debouncing**: Wait 500ms after last change before rebuilding (avoid rapid rebuilds)
+3. **Rebuild**: Run `cargo build --lib --message-format=json` for structured errors
+4. **Parameter Reload**: Use existing FFI parameter discovery from M13
+5. **Server Restart**: Gracefully shut down and restart WebSocket server
+6. **UI Reconnection**: Frontend already handles this (M18.7 ensures parameters reload)
+
+**Known Patterns:**
+- `cargo-watch` — Watches files and runs commands on change
+- `notify` crate — Cross-platform file system notifications
+- `watchexec` — Generic file watcher with debouncing
+
+**Success Criteria:**
+- [ ] CLI detects Rust file changes within 1 second
+- [ ] Rebuilds complete within 10 seconds for typical changes
+- [ ] WebSocket clients auto-reconnect and reload parameters
+- [ ] Build errors shown in terminal (UI display optional)
+- [ ] No performance impact when files aren't changing
+- [ ] Works with typical Rust project structure
+
+**Rationale:** Hot-reload is table-stakes in modern development tooling (2026). Beta testers (M19) will experiment with the template — if they can't see Rust changes without manual restarts, it creates immediate friction and bad first impressions. This is critical polish for the final ~10% before V1.0.
+
+**User Impact:**
+- **Who benefits:** Every plugin developer using `wavecraft start`
+- **Frequency:** Dozens of times per development session
+- **Time savings:** ~10-15 seconds per change (eliminate stop/restart cycle)
+- **Flow preservation:** Maintains developer focus, avoids context switching
+
+**Estimated Effort:** 4-6 days
+
+---
+
 ## Milestone 19: User Testing ⏳
 
 > **Goal:** Validate Wavecraft with real plugin developers before V1 release. Gather feedback on SDK usability, documentation quality, and overall developer experience.
 
-**Depends on:** Milestone 18.8 (Agent Search Delegation) — polished agent workflow, optimized research capabilities
+**Depends on:** 
+- Milestone 18.8 (Agent Search Delegation) — polished agent workflow, optimized research capabilities
+- Milestone 18.9 (Rust Hot-Reload) — smooth development experience without manual restarts
 
 **Target Version:** `1.0.0-beta` (breaking changes from user feedback)
 
@@ -1500,6 +1591,7 @@ Add a "Codebase Research" section to each specialized agent's instructions that:
 
 | Date | Update |
 |------|--------|
+| 2026-02-10 | **Milestone 18.9 added: Rust Hot-Reload for Dev Mode**: New developer experience milestone to automatically rebuild plugin and reload parameters when Rust source files change during `wavecraft start`. User request from real developer who added `Oscillator` to signal chain and expected changes to appear without manual restart (like React HMR). Assessment: HIGH priority — table-stakes feature in modern tooling, critical for first impressions with beta testers (M19). File watcher + rebuild orchestration + WebSocket restart. Frontend already handles reconnection (M18.7). Target version 0.12.0 (minor). Estimated effort 4-6 days. Depends on M18.7 (ensures parameter reload works reliably), blocks M19 (want this working before beta testers). User stories + low-level design to be created. Renumbered User Testing (M19→M24) and V1.0 Release (M20→M25). Progress: 84% (21/25 milestones). Technical approach: `notify` crate for file watching, 500ms debounce, `cargo build --lib --message-format=json` for structured errors, FFI parameter reload, graceful WebSocket restart. Known patterns: `cargo-watch`, `watchexec`. Success criteria: <1s change detection, <10s rebuild, auto-reconnect/reload parameters, build errors in terminal. User impact: dozens of times per session, 10-15s time savings per change, flow preservation. |
 | 2026-02-10 | **Milestone 18.7 complete (v0.11.1)**: UI Parameter Load Race Condition Fix. `useAllParameters()` hook now waits for WebSocket connection before fetching (15s timeout with actionable error if dev server not running), auto-refetches on reconnection. Implementation: connection state synchronization with exponential backoff retry, max 3 attempts, graceful timeout handling. Testing: 57/57 unit tests (100% edge case coverage), 3/4 manual tests (MT4 deferred to pre-release validation). QA: 0 blocking issues, approved for merge. Zero breaking changes to public API. Eliminates silent failures and manual page refreshes, significantly improving developer experience in browser dev mode. Archived to `_archive/ui-parameter-load-race-condition/`. Progress: 87% (21/24 milestones). |
 | 2026-02-10 | **Milestone 18.8 added: Agent Search Delegation Instructions**: New infrastructure milestone to add "Codebase Research" guidance to all specialized agent instructions (Architect, Planner, Coder, Tester, QA, PO, DocWriter). Problem: Agents have capability (`agents: [..., search]`) but lack instructions on when/how to invoke Search. Solution: Add consistent "Codebase Research" section to each agent explaining delegation pattern, with concrete examples. Search agent has 272K context (50-100 files simultaneously) but is underutilized. Target: 3-5 Search invocations per feature (up from ~0-1). Documentation-only update (no version change). User stories created (8 stories + success metrics). Renumbered User Testing (M19→M20, now depends on M18.8), V1.0 Release (M20→M21). Progress: 83% (20/24 milestones). Estimated effort: 1-2 days. Rationale: Ensures proper Search agent utilization and maintains agent specialization philosophy before user testing. |
 | 2026-02-10 | **Milestone 18.7 added: Fix UI Race Condition on Parameter Load**: New bugfix milestone to address silent failure when `useAllParameters()` hook mounts before WebSocket connection is established. Affects browser dev mode (`wavecraft start`). Hook should automatically retry when connection becomes ready, eliminating need for manual page refresh. UI-only change in `@wavecraft/core`, no engine changes. Item promoted from backlog ("SDK Audio Architecture Gaps", Minor severity). Target version 0.11.1 (patch). User stories created (3 stories + 4 edge cases), comprehensive acceptance criteria defined. Renumbered User Testing (M19→M20, depends on M18.7), V1.0 Release (M20→M21). Progress: 87% (20/23 milestones). Estimated effort: 2-3 days. Status: User stories complete, awaiting Architect low-level design. |
@@ -1615,13 +1707,15 @@ Add a "Codebase Research" section to each specialized agent's instructions that:
 
 ### Up Next
 22. ⏳ **Milestone 18.8**: Agent Search Delegation Instructions — Add codebase research guidance to all agent instructions (documentation-only)
-23. ⏳ **Milestone 19**: User Testing — Beta testing with real plugin developers (v1.0.0-beta)
-24. ⏳ **Milestone 20**: V1.0 Release — First stable production release (v1.0.0)
+23. ⏳ **Milestone 18.9**: Rust Hot-Reload for Dev Mode — Auto-rebuild and reload parameters when Rust source files change (v0.12.0)
+24. ⏳ **Milestone 19**: User Testing — Beta testing with real plugin developers (v1.0.0-beta)
+25. ⏳ **Milestone 20**: V1.0 Release — First stable production release (v1.0.0)
 
 ### Immediate Tasks
 1. ⏳ Begin Milestone 18.8 (Agent Search Delegation) — add codebase research sections to all agent instructions
-2. ⏳ After M18.8: Begin Milestone 19 (User Testing)
-3. ⏳ After M19: Begin Milestone 20 (V1.0 Release)
+2. ⏳ After M18.8: Begin Milestone 18.9 (Rust Hot-Reload) — file watcher + rebuild orchestration
+3. ⏳ After M18.9: Begin Milestone 19 (User Testing)
+4. ⏳ After M19: Begin Milestone 20 (V1.0 Release)
 4. 📝 **Pre-release validation:** MT4 (native plugin DAW testing) deferred from M18.7 — smoke test in Ableton before v0.11.1 release
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (crates.io publication, additional example plugins, etc.)

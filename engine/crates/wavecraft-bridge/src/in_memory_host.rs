@@ -16,7 +16,7 @@ pub trait MeterProvider: Send + Sync {
 ///
 /// This is intended for development tools (like the CLI dev server) and tests.
 pub struct InMemoryParameterHost {
-    parameters: Vec<ParameterInfo>,
+    parameters: RwLock<Vec<ParameterInfo>>,
     values: RwLock<HashMap<String, f32>>,
     meter_provider: Option<Arc<dyn MeterProvider>>,
 }
@@ -30,7 +30,7 @@ impl InMemoryParameterHost {
             .collect();
 
         Self {
-            parameters,
+            parameters: RwLock::new(parameters),
             values: RwLock::new(values),
             meter_provider: None,
         }
@@ -46,6 +46,55 @@ impl InMemoryParameterHost {
         host
     }
 
+    /// Replace all parameters with new metadata from a fresh build.
+    ///
+    /// This method is used during hot-reload to update parameter definitions
+    /// while preserving existing parameter values where possible. Parameters
+    /// with matching IDs retain their current values; new parameters get
+    /// their default values; removed parameters are dropped.
+    ///
+    /// # Thread Safety
+    ///
+    /// This method acquires write locks on both the parameters and values maps.
+    /// If a lock is poisoned (from a previous panic), it recovers gracefully
+    /// by clearing the poisoned lock and continuing.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if both lock recovery attempts fail.
+    pub fn replace_parameters(&self, new_params: Vec<ParameterInfo>) -> Result<(), String> {
+        // Acquire values lock with poison recovery
+        let mut values = match self.values.write() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                eprintln!("⚠ Recovering from poisoned values lock");
+                poisoned.into_inner()
+            }
+        };
+
+        // Build new values map, preserving existing values where IDs match
+        let mut new_values = HashMap::new();
+        for param in &new_params {
+            let value = values.get(&param.id).copied().unwrap_or(param.default);
+            new_values.insert(param.id.clone(), value);
+        }
+
+        *values = new_values;
+        drop(values); // Release values lock before acquiring parameters lock
+
+        // Acquire parameters lock with poison recovery
+        let mut params = match self.parameters.write() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                eprintln!("⚠ Recovering from poisoned parameters lock");
+                poisoned.into_inner()
+            }
+        };
+
+        *params = new_params;
+        Ok(())
+    }
+
     fn current_value(&self, id: &str, default: f32) -> f32 {
         self.values
             .read()
@@ -57,7 +106,8 @@ impl InMemoryParameterHost {
 
 impl ParameterHost for InMemoryParameterHost {
     fn get_parameter(&self, id: &str) -> Option<ParameterInfo> {
-        let param = self.parameters.iter().find(|p| p.id == id)?;
+        let parameters = self.parameters.read().ok()?;
+        let param = parameters.iter().find(|p| p.id == id)?;
 
         Some(ParameterInfo {
             id: param.id.clone(),
@@ -71,7 +121,13 @@ impl ParameterHost for InMemoryParameterHost {
     }
 
     fn set_parameter(&self, id: &str, value: f32) -> Result<(), BridgeError> {
-        if !self.parameters.iter().any(|p| p.id == id) {
+        let parameters = self.parameters.read().ok();
+        let param_exists = parameters
+            .as_ref()
+            .map(|p| p.iter().any(|param| param.id == id))
+            .unwrap_or(false);
+        
+        if !param_exists {
             return Err(BridgeError::ParameterNotFound(id.to_string()));
         }
 
@@ -90,7 +146,12 @@ impl ParameterHost for InMemoryParameterHost {
     }
 
     fn get_all_parameters(&self) -> Vec<ParameterInfo> {
-        self.parameters
+        let parameters = match self.parameters.read() {
+            Ok(guard) => guard,
+            Err(_) => return Vec::new(), // Return empty on poisoned lock
+        };
+        
+        parameters
             .iter()
             .map(|param| ParameterInfo {
                 id: param.id.clone(),
@@ -209,5 +270,82 @@ mod tests {
         let read = host.get_meter_frame().expect("should have meter frame");
         assert!((read.peak_l - 0.7).abs() < f32::EPSILON);
         assert!((read.rms_r - 0.4).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_replace_parameters_preserves_values() {
+        let host = InMemoryParameterHost::new(test_params());
+
+        // Set custom values
+        host.set_parameter("gain", 0.75).expect("should set gain");
+        host.set_parameter("mix", 0.5).expect("should set mix");
+
+        // Add a new parameter
+        let new_params = vec![
+            ParameterInfo {
+                id: "gain".to_string(),
+                name: "Gain".to_string(),
+                param_type: ParameterType::Float,
+                value: 0.5,
+                default: 0.5,
+                unit: Some("dB".to_string()),
+                group: Some("Input".to_string()),
+            },
+            ParameterInfo {
+                id: "mix".to_string(),
+                name: "Mix".to_string(),
+                param_type: ParameterType::Float,
+                value: 1.0,
+                default: 1.0,
+                unit: Some("%".to_string()),
+                group: None,
+            },
+            ParameterInfo {
+                id: "freq".to_string(),
+                name: "Frequency".to_string(),
+                param_type: ParameterType::Float,
+                value: 440.0,
+                default: 440.0,
+                unit: Some("Hz".to_string()),
+                group: None,
+            },
+        ];
+
+        host.replace_parameters(new_params).expect("should replace parameters");
+
+        // Existing parameters should preserve their values
+        let gain = host.get_parameter("gain").expect("should find gain");
+        assert!((gain.value - 0.75).abs() < f32::EPSILON);
+
+        let mix = host.get_parameter("mix").expect("should find mix");
+        assert!((mix.value - 0.5).abs() < f32::EPSILON);
+
+        // New parameter should have default value
+        let freq = host.get_parameter("freq").expect("should find freq");
+        assert!((freq.value - 440.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_replace_parameters_removes_old() {
+        let host = InMemoryParameterHost::new(test_params());
+
+        // Replace with fewer parameters
+        let new_params = vec![ParameterInfo {
+            id: "gain".to_string(),
+            name: "Gain".to_string(),
+            param_type: ParameterType::Float,
+            value: 0.5,
+            default: 0.5,
+            unit: Some("dB".to_string()),
+            group: Some("Input".to_string()),
+        }];
+
+        host.replace_parameters(new_params).expect("should replace parameters");
+
+        // Old parameter should be gone
+        assert!(host.get_parameter("mix").is_none());
+
+        // Kept parameter should still be accessible
+        assert!(host.get_parameter("gain").is_some());
     }
 }

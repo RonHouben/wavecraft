@@ -65,6 +65,20 @@ impl DevServerHost {
             param_bridge: Some(bridge),
         }
     }
+
+    /// Replace all parameters with new metadata from a hot-reload.
+    ///
+    /// Preserves values for parameters with matching IDs. New parameters
+    /// get their default values. This is used by the hot-reload pipeline
+    /// to update parameter definitions without restarting the server.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if parameter replacement fails (e.g., unrecoverable
+    /// lock poisoning).
+    pub fn replace_parameters(&self, new_params: Vec<ParameterInfo>) -> Result<(), String> {
+        self.inner.replace_parameters(new_params)
+    }
 }
 
 impl ParameterHost for DevServerHost {

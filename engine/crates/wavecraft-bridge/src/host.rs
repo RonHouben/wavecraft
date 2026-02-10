@@ -128,3 +128,31 @@ pub trait ParameterHost: Send + Sync {
     /// `true` if the host accepted the resize request, `false` if rejected.
     fn request_resize(&self, width: u32, height: u32) -> bool;
 }
+
+/// Blanket implementation for Arc<T> where T: ParameterHost.
+///
+/// This allows IpcHandler and other components to hold Arc<Host> for shared
+/// ownership, which is needed for hot-reload where multiple components need
+/// mutable access to the host (e.g., IpcHandler for parameter updates,
+/// RebuildPipeline for parameter replacement).
+impl<T: ParameterHost> ParameterHost for std::sync::Arc<T> {
+    fn get_parameter(&self, id: &str) -> Option<ParameterInfo> {
+        (**self).get_parameter(id)
+    }
+
+    fn set_parameter(&self, id: &str, value: f32) -> Result<(), BridgeError> {
+        (**self).set_parameter(id, value)
+    }
+
+    fn get_all_parameters(&self) -> Vec<ParameterInfo> {
+        (**self).get_all_parameters()
+    }
+
+    fn get_meter_frame(&self) -> Option<MeterFrame> {
+        (**self).get_meter_frame()
+    }
+
+    fn request_resize(&self, width: u32, height: u32) -> bool {
+        (**self).request_resize(width, height)
+    }
+}

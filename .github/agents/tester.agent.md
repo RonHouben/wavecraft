@@ -5,7 +5,7 @@ model:
   - Claude Sonnet 4.5 (copilot)
   - GPT-5.1 (copilot)
   - Gemini 2.5 Pro (copilot)
-tools: ["read", "search", "execute", "agent", "playwright/*", "github/*", "web"]
+tools: ["read", "search", "execute", "agent", "playwright/*", "github/*", "web", 'todo']
 agents: [orchestrator, coder, qa, docwriter, search]
 user-invokable: true
 handoffs:
@@ -309,15 +309,45 @@ For tests requiring UI interaction or visual verification, use Playwright MCP to
 **Skill**: Read `.github/skills/playwright-mcp-ui-testing/SKILL.md` for detailed instructions.
 
 **Quick reference:**
-1. Ensure `cargo xtask dev` is running
+1. **Start dev servers**: `cargo xtask dev` (from workspace root)
 2. Use `mcp_playwright_browser_navigate` → `http://localhost:5173`
 3. Use `mcp_playwright_browser_snapshot` to get element refs
 4. Use `mcp_playwright_browser_take_screenshot` for visual capture
 5. Close with `mcp_playwright_browser_close` when done
+6. **⚠️ CRITICAL: Stop dev servers**: See "Graceful Server Shutdown" below
+
+**Graceful Server Shutdown:**
+
+After completing visual tests, **you MUST stop the dev servers** to prevent orphaned processes:
+
+```bash
+# Method 1: Stop cargo xtask dev processes (RECOMMENDED)
+pkill -f "cargo xtask dev"
+
+# Method 2: If Method 1 fails, find and kill the specific processes
+ps aux | grep "cargo xtask dev"
+# Note the PIDs, then:
+kill <PID>
+
+# Verify servers are stopped
+ps aux | grep "cargo xtask dev"  # Should return no results
+```
+
+**Why this matters:**
+- Orphaned dev servers consume system resources
+- Running servers prevent subsequent tests from binding to ports 5173 or 3001
+- Uncontrolled processes can interfere with other development work
+
+**When to shut down:**
+- After completing all visual test cases
+- Before handing off to another agent
+- On any error or test failure that requires stopping tests
+- At the end of every testing session
 
 ## Guidelines
 
 ### DO:
+- **Always stop dev servers after visual testing** using `pkill -f "cargo xtask dev"`
 - **Run `cargo xtask ci-check` first** as the primary validation method (~52s)
 - Use individual commands only to debug failures
 - Execute commands yourself to verify behavior
@@ -329,6 +359,7 @@ For tests requiring UI interaction or visual verification, use Playwright MCP to
 - Test macOS-specific jobs (bundle, sign) manually
 
 ### DON'T:
+- Don't leave dev servers running after testing — always shut them down gracefully
 - **NEVER modify source code** — not even "quick fixes" or "obvious bugs"
 - **NEVER fix bugs yourself** — always hand off to the coder agent
 - Don't skip the `cargo xtask ci-check` validation

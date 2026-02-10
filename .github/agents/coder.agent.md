@@ -2,8 +2,8 @@
 name: coder
 description: Senior software engineer implementing Rust audio plugins (nih-plug) with React UIs. Expert in real-time safe DSP code, VST3/CLAP integration, and cross-platform development.
 model:
-  - Claude Sonnet 4.5 (copilot)
   - GPT-5.2-Codex (copilot)
+  - Claude Sonnet 4.5 (copilot)
   - GPT-5.1-Codex (copilot)
 tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'github/*',  'todo']
 agents: [orchestrator, tester, docwriter, search]

@@ -32,6 +32,10 @@
 //! ```
 
 mod host;
+mod rebuild;
+mod session;
+mod watcher;
 
 pub use host::DevServerHost;
+pub use session::DevSession;
 pub use wavecraft_bridge::PluginParamLoader as PluginLoader;

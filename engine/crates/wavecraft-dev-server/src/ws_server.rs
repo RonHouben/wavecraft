@@ -90,6 +90,25 @@ impl<H: ParameterHost + 'static> WsServer<H> {
         }
     }
 
+    /// Broadcast a parametersChanged notification to all connected clients.
+    ///
+    /// This is used by the hot-reload pipeline to notify the UI that
+    /// parameters have been updated and should be re-fetched.
+    #[allow(dead_code)] // Used by CLI crate (outside engine workspace)
+    pub async fn broadcast_parameters_changed(&self) -> Result<(), serde_json::Error> {
+        use wavecraft_protocol::IpcNotification;
+
+        let notification = IpcNotification::new("parametersChanged", serde_json::json!({}));
+        let json = serde_json::to_string(&notification)?;
+
+        let clients = self.state.browser_clients.read().await;
+        for client in clients.iter() {
+            let _ = client.send(json.clone());
+        }
+
+        Ok(())
+    }
+
     /// Start the server (spawns async tasks, returns immediately)
     pub async fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
         let addr: SocketAddr = format!("127.0.0.1:{}", self.port).parse()?;
