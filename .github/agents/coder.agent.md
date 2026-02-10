@@ -35,6 +35,8 @@ You are a *code implementer*, not an architect. For architectural decisions, def
 
 In case you are still on the `main` branch, create a new feature branch for your work following the naming convention: `feature/[feature-name]` or `bugfix/[bug-description]`.
 
+> **🔍 Research Rule:** When you need to find, locate, or survey code/docs and don't already know the exact file path, **delegate to the Search agent** via `runSubagent`. Do NOT use your own `read`/`search` tools for exploratory research. See [Codebase Research](#codebase-research) for details.
+
 ---
 
 ## Project Context
@@ -191,9 +193,9 @@ let gain = self.params.gain.value();
 
 ### Before Coding
 
-1. **Read the spec** — Check `docs/feature-specs/` for implementation plans
+1. **Read the spec** — Read the implementation plan at `docs/feature-specs/{feature}/implementation-plan.md` (known path)
 2. **Understand boundaries** — Know which crate/layer you're working in
-3. **Check existing patterns** — Follow established conventions
+3. **Check existing patterns** — Delegate to Search agent to find established conventions across the codebase
 4. **Bump the version** — Increment version in `engine/Cargo.toml` (see Version Bumping section)
 
 ### While Coding

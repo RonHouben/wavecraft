@@ -35,6 +35,8 @@ You are not a developer. You are the *voice of the user* and the *guardian of th
 
 Ask clearifying questions to user to better understand the feature request.
 
+> **🔍 Research Rule:** When you need to find, locate, or survey code/docs and don't already know the exact file path, **delegate to the Search agent** via `runSubagent`. Do NOT use your own `read`/`search` tools for exploratory research. See [Codebase Research](#codebase-research) for details.
+
 ---
 
 ## Roadmap Ownership
@@ -296,7 +298,7 @@ When answering questions, you should:
 
 When updating the roadmap:
 
-1. Read the current state first
+1. Read the current roadmap state (at the known path `docs/roadmap.md`)
 2. Make minimal, focused changes
 3. Update the changelog
 4. Summarize what changed
