@@ -133,7 +133,7 @@ fn update_cli() -> SelfUpdateResult {
 
 fn start_cli_update_progress(done: Arc<AtomicBool>) -> thread::JoinHandle<()> {
     thread::spawn(move || {
-        let delay = Duration::from_secs(8);
+        let delay = Duration::from_secs(3);
         let mut slept = Duration::from_millis(0);
 
         while slept < delay {
