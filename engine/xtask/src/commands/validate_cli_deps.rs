@@ -26,6 +26,8 @@ use xtask::output::*;
 pub struct ValidateCliDepsConfig {
     /// Show verbose output (per-dependency details).
     pub verbose: bool,
+    /// Also verify crate availability on crates.io.
+    pub check_registry: bool,
 }
 
 /// A discovered `wavecraft-*` dependency from `cli/Cargo.toml`.
@@ -88,6 +90,31 @@ pub fn run(config: ValidateCliDepsConfig) -> Result<()> {
                 print_error_item(&format!("{} — {}", err.name, err.message));
             }
             errors.extend(dep_errors);
+        }
+    }
+
+    // Step 2.5: Check registry availability if requested
+    if config.check_registry {
+        println!();
+        print_header("Registry Availability Check");
+        for dep in &deps {
+            match check_registry_availability(dep) {
+                Ok(reg_errors) => {
+                    if reg_errors.is_empty() {
+                        if config.verbose {
+                            print_success_item(&format!("{} — available on crates.io", dep.name));
+                        }
+                    } else {
+                        for err in &reg_errors {
+                            print_error_item(&format!("{} — {}", err.name, err.message));
+                        }
+                        errors.extend(reg_errors);
+                    }
+                }
+                Err(e) => {
+                    print_error_item(&format!("{} — registry check failed: {}", dep.name, e));
+                }
+            }
         }
     }
 
@@ -220,6 +247,89 @@ fn validate_dependency(
     }
 
     errors
+}
+
+/// Generate the crates.io sparse index URL path prefix for a crate name.
+///
+/// The sparse index uses a specific directory structure based on crate name length:
+/// - 1 char: `1/{name}`
+/// - 2 chars: `2/{name}`
+/// - 3 chars: `3/{first_char}/{name}`
+/// - 4+ chars: `{first_two}/{next_two}/{name}`
+///
+/// Example: `wavecraft-core` → `wa/ve/wavecraft-core`
+fn crate_index_prefix(name: &str) -> String {
+    match name.len() {
+        0 => panic!("crate name cannot be empty"),
+        1 => format!("1/{}", name),
+        2 => format!("2/{}", name),
+        3 => format!("3/{}/{}", &name[..1], name),
+        _ => format!("{}/{}/{}", &name[..2], &name[2..4], name),
+    }
+}
+
+/// Check if a compatible version of the crate exists on crates.io.
+///
+/// Queries the crates.io sparse index to get the latest published version
+/// and checks if it satisfies the CLI's version requirement.
+fn check_registry_availability(dep: &CliDependency) -> Result<Vec<ValidationError>> {
+    let version_req = match &dep.version {
+        Some(v) => v,
+        None => {
+            return Ok(vec![ValidationError {
+                name: dep.name.clone(),
+                message: "no version specified for registry check".to_string(),
+            }]);
+        }
+    };
+
+    // Query crates.io sparse index
+    let url = format!("https://index.crates.io/{}", crate_index_prefix(&dep.name));
+
+    let response = ureq::get(&url)
+        .timeout(std::time::Duration::from_secs(10))
+        .call()
+        .with_context(|| format!("Failed to query crates.io for {}", dep.name))?;
+
+    let body = response
+        .into_string()
+        .with_context(|| format!("Failed to read response for {}", dep.name))?;
+
+    // Parse the latest version (last line of the index file)
+    let latest_version = body
+        .lines()
+        .last()
+        .and_then(|line| serde_json::from_str::<serde_json::Value>(line).ok())
+        .and_then(|v| v["vers"].as_str().map(String::from));
+
+    match latest_version {
+        Some(ver) => {
+            // Parse the CLI's version requirement as a semver range
+            // Cargo interprets `version = "0.11.0"` as `^0.11.0` (caret requirement)
+            let req_str = format!("^{}", version_req);
+            let req = semver::VersionReq::parse(&req_str)
+                .with_context(|| format!("Failed to parse version requirement: {}", req_str))?;
+
+            let published_ver = semver::Version::parse(&ver)
+                .with_context(|| format!("Failed to parse published version: {}", ver))?;
+
+            if req.matches(&published_ver) {
+                Ok(vec![]) // Compatible version exists
+            } else {
+                Ok(vec![ValidationError {
+                    name: dep.name.clone(),
+                    message: format!(
+                        "crates.io has v{} but CLI requires ^{} — engine may need version bump",
+                        ver, version_req
+                    ),
+                }])
+            }
+        }
+        None => Ok(vec![ValidationError {
+            name: dep.name.clone(),
+            message: "not found on crates.io".to_string(),
+        }]),
+    }
 }
 
 #[cfg(test)]
@@ -419,5 +529,52 @@ version = "0.1.0"
             errors.is_empty(),
             "Absent publish key should be treated as publishable, got errors: {errors:?}"
         );
+    }
+
+    #[test]
+    fn test_crate_index_prefix() {
+        // Test the crates.io sparse index URL path generation
+        assert_eq!(crate_index_prefix("a"), "1/a");
+        assert_eq!(crate_index_prefix("ab"), "2/ab");
+        assert_eq!(crate_index_prefix("abc"), "3/a/abc");
+        assert_eq!(crate_index_prefix("abcd"), "ab/cd/abcd");
+        assert_eq!(crate_index_prefix("wavecraft-core"), "wa/ve/wavecraft-core");
+        assert_eq!(
+            crate_index_prefix("wavecraft-bridge"),
+            "wa/ve/wavecraft-bridge"
+        );
+    }
+
+    #[test]
+    fn test_check_registry_config_default() {
+        // Verify that check_registry defaults to false
+        let config = ValidateCliDepsConfig::default();
+        assert!(
+            !config.check_registry,
+            "check_registry should default to false"
+        );
+        assert!(!config.verbose, "verbose should default to false");
+    }
+
+    /// Integration test that hits the real crates.io API.
+    /// Marked as #[ignore] by default - run with `cargo test -- --ignored`
+    #[test]
+    #[ignore]
+    fn test_check_registry_availability_real_crate() {
+        // Test with a well-known published crate
+        let dep = CliDependency {
+            name: "serde".to_string(),
+            has_version: true,
+            version: Some("1.0.0".to_string()),
+        };
+
+        let result = check_registry_availability(&dep);
+        assert!(
+            result.is_ok(),
+            "Should successfully query crates.io for serde"
+        );
+
+        let errors = result.unwrap();
+        assert!(errors.is_empty(), "serde should be available on crates.io");
     }
 }
