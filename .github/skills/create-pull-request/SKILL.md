@@ -73,7 +73,14 @@ Examples:
 
 ### Step 5: Create PR Summary File
 
+**⚠️ Use the `edit` tool to create this file - DO NOT use terminal commands like `echo`.**
+
 Create the file at `/docs/feature-specs/${featureName}/PR-summary.md` using the template from [assets/PR-summary-template.md](assets/PR-summary-template.md).
+
+**Tool usage:**
+- Use the `edit` tool or equivalent file creation capability
+- Never use `echo`, `cat`, or other terminal commands for file creation
+- The file editor ensures proper formatting and allows immediate editing if needed
 
 Fill in the auto-generated content for each section:
 - **Summary**: Based on commit messages and changed files

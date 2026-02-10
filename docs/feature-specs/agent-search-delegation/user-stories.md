@@ -1,17 +1,31 @@
-# User Stories: Agent Search Delegation
+# User Stories: Agent Delegation Patterns
 
 ## Overview
 
+This feature establishes clear delegation patterns for two critical agent capabilities:
+
+### 1. Search Delegation (Research)
+
 The Search agent has a 272K context window enabling deep codebase analysis across 50-100 files simultaneously. However, specialized agents (Architect, Planner, Coder, Tester, QA, PO, DocWriter) currently lack instructions on **when and how** to delegate research tasks to Search.
 
-This feature adds "Codebase Research" guidance to each agent's instructions, ensuring:
-- Consistent research quality across the workflow
-- Proper utilization of Search's specialized capabilities
-- Clear delegation patterns that match our agent specialization philosophy
-- Reduced redundant search operations by individual agents
-
 **Problem:** Agents have the capability (`agents: [..., search]`) but lack the knowledge of when to use it.  
-**Solution:** Explicit delegation instructions with concrete examples in each agent's mode instructions.
+**Solution:** Explicit "Codebase Research" sections in agent instructions with concrete examples.
+
+### 2. Documentation Delegation (File Creation)
+
+Four agents (Architect, Planner, Tester, QA) are instructed to CREATE documentation files but lack the `edit` tool. They can't actually write `.md` files.
+
+**Problem:** Agents try to create documents they can't edit, leading to workflow failures.  
+**Solution:** These agents generate document content/structure and invoke DocWriter to actually write the file.
+
+---
+
+## Benefits
+
+- **Consistent research quality** — All agents use Search for deep analysis
+- **Proper tool usage** — Agents delegate to specialists with the right capabilities
+- **Clear workflows** — No confusion about who creates what
+- **Reduced failures** — Agents don't attempt operations they can't perform
 
 ---
 
@@ -185,23 +199,117 @@ This feature adds "Codebase Research" guidance to each agent's instructions, ens
 
 ---
 
+## User Story 9: Architect Document Delegation
+
+**As an** Architect agent  
+**I want** clear instructions to delegate low-level-design.md creation to DocWriter  
+**So that** I don't try to create files I can't edit
+
+### Acceptance Criteria
+
+- [ ] Architect instructions clarify: "You generate design content, DocWriter writes the file"
+- [ ] Provides handoff format: "Generate complete markdown content → invoke DocWriter with filepath and content"
+- [ ] Includes example: "After completing design, invoke DocWriter to create `docs/feature-specs/{feature}/low-level-design-{feature}.md`"
+- [ ] Specifies Architect responsibility: structure, technical decisions, diagrams (as markdown)
+- [ ] Specifies DocWriter responsibility: file creation, formatting consistency
+
+### Notes
+
+- **Current problem:** Architect lacks `edit` tool but instructions say "create low-level-design.md"
+- **Solution:** Architect generates content, hands off to DocWriter for file creation
+- Maintains separation: technical design (Architect) vs documentation mechanics (DocWriter)
+
+---
+
+## User Story 10: Planner Document Delegation
+
+**As a** Planner agent  
+**I want** clear instructions to delegate implementation-plan.md creation to DocWriter  
+**So that** I can focus on planning logic without worrying about file operations
+
+### Acceptance Criteria
+
+- [ ] Planner instructions clarify delegation pattern for implementation-plan.md
+- [ ] Provides handoff format: "Generate step-by-step plan → invoke DocWriter"
+- [ ] Includes example: "After creating implementation steps, invoke DocWriter to create `docs/feature-specs/{feature}/implementation-plan.md`"
+- [ ] Specifies Planner responsibility: task breakdown, ordering, dependencies
+- [ ] Specifies DocWriter responsibility: file creation, markdown structure
+
+### Notes
+
+- **Current problem:** Planner lacks `edit` tool, can't create implementation-plan.md
+- **Solution:** Planner focuses on planning, delegates file writing
+- Cleaner separation of concerns: planning (Planner) vs documentation (DocWriter)
+
+---
+
+## User Story 11: Tester Document Delegation
+
+**As a** Tester agent  
+**I want** clear instructions to delegate test-plan.md creation to DocWriter  
+**So that** I can focus on test strategy without file creation concerns
+
+### Acceptance Criteria
+
+- [ ] Tester instructions clarify delegation pattern for test-plan.md
+- [ ] Provides handoff format: "Generate test cases → invoke DocWriter"
+- [ ] Includes example: "After defining test strategy, invoke DocWriter to create `docs/feature-specs/{feature}/test-plan.md`"
+- [ ] Specifies Tester responsibility: test cases, coverage analysis, execution results
+- [ ] Specifies DocWriter responsibility: file creation, consistent formatting
+
+### Notes
+
+- **Current problem:** Tester has `execute` tool but not `edit`, can't create test-plan.md
+- **Solution:** Tester designs tests, delegates documentation
+- Tester can still update test results by invoking DocWriter with updated content
+
+---
+
+## User Story 12: QA Document Delegation
+
+**As a** QA agent  
+**I want** clear instructions to delegate QA-report.md creation to DocWriter  
+**So that** I don't attempt file operations I can't perform
+
+### Acceptance Criteria
+
+- [ ] QA instructions clarify delegation pattern for QA-report.md
+- [ ] Provides handoff format: "Generate quality findings → invoke DocWriter"
+- [ ] Includes example: "After analysis, invoke DocWriter to create `docs/feature-specs/{feature}/QA-report.md`"
+- [ ] Specifies QA responsibility: quality analysis, issue identification, recommendations
+- [ ] Specifies DocWriter responsibility: file creation, report formatting
+
+### Notes
+
+- **Current problem:** QA agent lacks `edit` tool, can't create QA-report.md
+- **Solution:** QA analyzes quality, delegates report writing
+- Maintains focus: quality analysis (QA) vs documentation mechanics (DocWriter)
+
+---
+
 ## Success Metrics
 
 | Metric | Current | Target |
 |--------|---------|---------|
+| **Search Delegation** | | |
 | Search agent invocations per feature | ~0-1 | ~3-5 |
 | Agents using own search tools for deep analysis | High | Low (quick lookups only) |
 | Research quality consistency | Variable | Consistent (all use Search) |
 | Time spent on research per agent | High | Low (delegate to Search) |
+| **Documentation Delegation** | | |
+| Documentation creation failures | High (agents lack edit tool) | Zero |
+| DocWriter invocations per feature | ~0 | ~4 (Architect, Planner, Tester, QA) |
+| Time spent on file creation mechanics | High (agents retry/fail) | Low (DocWriter handles it) |
 
 ---
 
 ## Dependencies
 
 - No code changes required (instructions-only update)
-- Affects all 7 specialized agents
-- Requires coordination with DocWriter for instruction updates
-- Should update `agent-development-flow.md` to document pattern
+- **Search delegation:** Affects all 7 specialized agents
+- **Documentation delegation:** Affects 4 agents (Architect, Planner, Tester, QA) + DocWriter
+- Requires coordination with DocWriter for updated instructions
+- Should update `agent-development-flow.md` to document both patterns
 
 ---
 
@@ -209,8 +317,14 @@ This feature adds "Codebase Research" guidance to each agent's instructions, ens
 
 | Risk | Mitigation |
 |------|------------|
+| **Search Delegation** | |
 | Agents over-delegate (invoke Search for trivial lookups) | Provide "when to delegate" vs "when to search directly" guidance |
 | Search agent becomes bottleneck | Search is read-only, no bottleneck risk (parallel invocations OK) |
+| **Documentation Delegation** | |
+| Agents forget to delegate, try to create files anyway | Clear error messages + examples in instructions |
+| DocWriter becomes bottleneck | DocWriter is lightweight (file creation only), no bottleneck risk |
+| Content/formatting mismatches | Specify clear handoff format (filepath + complete markdown content) |
+| **General** | |
 | Instructions too long/complex | Keep concise: 5-7 bullet points per agent, concrete examples |
 | Agents ignore new instructions | Add examples that match real tasks they perform |
 
@@ -218,15 +332,26 @@ This feature adds "Codebase Research" guidance to each agent's instructions, ens
 
 ## Next Steps
 
-1. **Architect:** Design the "Codebase Research" section structure
-   - Define consistent format across all agents
-   - Create agent-specific examples
-   - Specify handoff protocol to Search agent
+1. **Architect:** Design both delegation patterns
+   - "Codebase Research" section structure (Search delegation)
+   - "Document Creation" section structure (DocWriter delegation)
+   - Define consistent formats across all agents
+   - Create agent-specific examples for both patterns
+   - Specify handoff protocols
 
-2. **Planner:** Create implementation plan for updating all agent instructions
+2. **Planner:** Create implementation plan for updating agent instructions
+   - 7 agents need Search delegation guidance
+   - 4 agents need DocWriter delegation guidance (+ DocWriter itself)
+   - Update `agent-development-flow.md` with both patterns
 
-3. **Coder:** Implement instruction updates + `agent-development-flow.md` changes
+3. **Coder:** Implement instruction updates
+   - Add "Codebase Research" sections to all agents
+   - Add "Document Creation" guidance to Architect, Planner, Tester, QA
+   - Update DocWriter to expect delegation requests
+   - Update `agent-development-flow.md`
 
-4. **Tester:** Validate agents correctly delegate research tasks
+4. **Tester:** Validate both delegation patterns
+   - Test Search delegation (agents correctly invoke Search for research)
+   - Test DocWriter delegation (agents successfully create documents via DocWriter)
 
-5. **QA:** Review instruction clarity and consistency
+5. **QA:** Review instruction clarity and consistency across both patterns

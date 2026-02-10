@@ -10,9 +10,19 @@ import type { IpcResponse } from '../types/ipc';
 export class MockTransport implements Transport {
   private connected = true;
   private notificationCallback: NotificationCallback | null = null;
+  private readonly connectionChangeCallbacks = new Set<(connected: boolean) => void>();
 
   public isConnected(): boolean {
     return this.connected;
+  }
+
+  public onConnectionChange(callback: (connected: boolean) => void): () => void {
+    this.connectionChangeCallbacks.add(callback);
+    // Fire immediately with current state (fire-on-subscribe)
+    callback(this.connected);
+    return () => {
+      this.connectionChangeCallbacks.delete(callback);
+    };
   }
 
   public async send(requestJson: string): Promise<string> {
@@ -42,6 +52,7 @@ export class MockTransport implements Transport {
   public dispose(): void {
     this.close();
     this.notificationCallback = null;
+    this.connectionChangeCallbacks.clear();
   }
 
   /**
@@ -58,6 +69,10 @@ export class MockTransport implements Transport {
    */
   public setConnected(connected: boolean): void {
     this.connected = connected;
+    // Emit connection change event
+    for (const callback of this.connectionChangeCallbacks) {
+      callback(connected);
+    }
   }
 
   /**

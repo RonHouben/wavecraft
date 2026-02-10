@@ -1,10 +1,17 @@
-# Low-Level Design: Agent Search Delegation
+# Low-Level Design: Agent Delegation Patterns
 
 ## Overview
 
-This design specifies how to add "Codebase Research" delegation instructions to each specialized agent, enabling them to invoke the Search agent (272K context, GPT-5.2-Codex) for deep codebase analysis instead of doing fragmented multi-tool research themselves.
+This design specifies two delegation patterns for specialized agents:
 
-The change is **instructions-only** — no code, no tooling changes, no modifications to the Search agent itself.
+1. **Search Delegation** — How agents invoke the Search agent (272K context, GPT-5.2-Codex) for deep codebase analysis instead of doing fragmented multi-tool research themselves.
+2. **Documentation Delegation** — How agents without `edit` tools invoke DocWriter to persist documentation artifacts they generate.
+
+Both patterns are **instructions-only** — no code, no tooling changes, no modifications to the target agents (Search, DocWriter) themselves.
+
+### Why Two Patterns in One Design
+
+These patterns share a common shape: an agent recognizes its own tool limitations, generates content or a structured request, and delegates the mechanical action to a specialist. They also **compose** — a single workflow step may require both (e.g., Architect invokes Search for research, then invokes DocWriter to save the design). Designing them together ensures consistent invocation conventions and avoids conflicting instructions.
 
 ---
 
@@ -68,9 +75,48 @@ The change is **instructions-only** — no code, no tooling changes, no modifica
 
 ---
 
-## Section Structure
+### AD-6: Documentation delegation uses content-first invocation, not filepath-first
 
-### Template (agent-agnostic structure)
+**Decision:** When an agent invokes DocWriter, it passes the **complete markdown content first**, then the target filepath. DocWriter's job is to write the file, not to generate the content.
+
+**Rationale:**
+- The invoking agent (Architect, Planner, etc.) is the domain expert. It knows what the document should contain.
+- DocWriter's value is in file creation mechanics (`edit` tool access) and enforcing formatting standards — not in generating domain-specific technical content.
+- Content-first invocation prevents DocWriter from re-interpreting or diluting the agent's intent.
+- This mirrors how humans work: "Here's my document — please save it to this path."
+
+**Rejected alternative:** Pass a brief outline and let DocWriter flesh it out. This shifts domain authority away from the specialist agent, introduces interpretation errors, and wastes DocWriter's context on content it isn't qualified to create.
+
+---
+
+### AD-7: Documentation delegation section is placed after "Codebase Research"
+
+**Decision:** The "Documentation Delegation" section follows immediately after "Codebase Research" in each agent's instructions.
+
+**Rationale:**
+- Natural workflow order: research first, then produce and save output.
+- Groups all delegation patterns together — agents learn "when to call for help" in one place.
+- Avoids scattering delegation instructions across workflow steps.
+
+---
+
+### AD-8: Only agents WITHOUT `edit` tools get documentation delegation instructions
+
+**Decision:** Only Architect, Planner, Tester, and QA receive the "Documentation Delegation" section. Coder, PO, and DocWriter do not.
+
+**Rationale:**
+- **Coder** has `edit` tools — can write files directly.
+- **PO** has `edit` tools — can write roadmap directly.
+- **DocWriter** IS the delegation target — doesn't delegate to itself.
+- Adding unnecessary instructions wastes context and creates confusion.
+
+---
+
+## Part 1: Search Delegation Pattern
+
+### Section Structure
+
+#### Template (agent-agnostic structure)
 
 ```markdown
 ## Codebase Research
@@ -97,7 +143,7 @@ You have access to the **Search agent** — a read-only specialist with a 272K c
 > [Agent-specific example here]
 ```
 
-### Constraints
+#### Constraints
 
 | Property | Value |
 |----------|-------|
@@ -108,9 +154,9 @@ You have access to the **Search agent** — a read-only specialist with a 272K c
 
 ---
 
-## Delegation Decision Matrix
+### Delegation Decision Matrix
 
-### Decision Rule (universal)
+#### Decision Rule (universal)
 
 ```
 IF the research requires reading >3 files to answer
@@ -121,7 +167,7 @@ THEN → Invoke Search
 ELSE → Use own tools (grep_search, read_file, semantic_search)
 ```
 
-### Agent-Specific Decision Table
+#### Agent-Specific Decision Table
 
 | Agent | Self-Search (own tools) | Delegate to Search |
 |-------|------------------------|--------------------|
@@ -135,9 +181,9 @@ ELSE → Use own tools (grep_search, read_file, semantic_search)
 
 ---
 
-## Search Invocation Format
+### Search Invocation Format
 
-### Prompt Structure
+#### Prompt Structure
 
 When an agent invokes the Search subagent, the prompt should follow this format:
 
@@ -147,9 +193,9 @@ Focus on [WHERE].
 Synthesize [WHAT TO RETURN].
 ```
 
-### Concrete Examples by Agent
+#### Concrete Examples by Agent
 
-#### Architect
+##### Architect
 
 ```
 Search the codebase for all parameter synchronization implementations.
@@ -159,7 +205,7 @@ Synthesize: what sync patterns exist, how they handle atomics vs message-passing
 and any inconsistencies between the Rust and TypeScript sides.
 ```
 
-#### Planner
+##### Planner
 
 ```
 Search the codebase for all files that reference or handle IPC messages.
@@ -168,7 +214,7 @@ Synthesize: a complete map of IPC touchpoints (files and functions),
 the message flow from UI to engine, and any shared type definitions.
 ```
 
-#### Coder
+##### Coder
 
 ```
 Search the codebase for how error handling is implemented across IPC boundaries.
@@ -177,7 +223,7 @@ Synthesize: the error types used, how errors propagate from Rust to TypeScript,
 and the established pattern I should follow for new error cases.
 ```
 
-#### Tester
+##### Tester
 
 ```
 Search the codebase for all test files related to parameter handling.
@@ -187,7 +233,7 @@ Synthesize: what parameter behaviors are tested, what patterns the tests follow,
 and any gaps where parameter edge cases are not covered.
 ```
 
-#### QA
+##### QA
 
 ```
 Search the codebase for all uses of unwrap() and expect() in production code paths.
@@ -197,7 +243,7 @@ which are in initialization code (acceptable), and which should be replaced
 with proper error handling.
 ```
 
-#### PO
+##### PO
 
 ```
 Search the codebase for the current state management architecture.
@@ -207,7 +253,7 @@ Synthesize: how plugin state is saved/restored, what infrastructure exists
 for preset management, and how much work a preset system would require.
 ```
 
-#### DocWriter
+##### DocWriter
 
 ```
 Search the codebase for all public APIs in the @wavecraft/core npm package.
@@ -218,13 +264,226 @@ of what it does, so I can verify documentation completeness.
 
 ---
 
+## Part 2: Documentation Delegation Pattern
+
+### The Problem
+
+Four agents are responsible for creating key documentation artifacts:
+
+| Agent | Artifact | Target Path |
+|-------|----------|-------------|
+| **Architect** | Low-level design | `docs/feature-specs/{feature}/low-level-design-{feature}.md` |
+| **Planner** | Implementation plan | `docs/feature-specs/{feature}/implementation-plan.md` |
+| **Tester** | Test plan | `docs/feature-specs/{feature}/test-plan.md` |
+| **QA** | QA report | `docs/feature-specs/{feature}/QA-report.md` |
+
+None of these agents have the `edit` tool. They can read and search, but cannot create or modify files. Today, this means their documentation output exists only in conversation context — it is not persisted to disk unless a human copies it or the Coder is asked to save it.
+
+### The Solution
+
+Each of these four agents delegates file creation to **DocWriter**, which has `edit` tools and is already in their `agents:` invocation list. The delegating agent generates the **complete content**, then invokes DocWriter with a structured request containing the content and target filepath.
+
+### Section Structure
+
+#### Template (for agents without `edit` tools)
+
+```markdown
+## Documentation Delegation
+
+You do NOT have `edit` tools. To persist documentation artifacts, invoke **DocWriter** as a subagent.
+
+**Your responsibility:** Generate the complete document content. You are the domain expert — DocWriter writes files, it does not create content for you.
+
+**When to invoke DocWriter:**
+- After completing your analysis/design, when you have a full document ready to save
+- When updating an existing document with new findings
+
+**Invocation format:**
+> Write the following content to `docs/feature-specs/{feature}/{filename}.md`:
+>
+> [complete markdown content here]
+
+**What NOT to do:**
+- Don't pass an outline and ask DocWriter to "flesh it out"
+- Don't skip file creation — your work must be persisted, not left in conversation
+- Don't ask Coder to save documentation (Coder's role is code, not docs)
+```
+
+#### Constraints
+
+| Property | Value |
+|----------|-------|
+| Max section length | 15-20 lines |
+| Tone | Direct, imperative. Match existing agent instruction style. |
+| Examples per agent | 1 concrete example matching the agent's primary artifact |
+| Placement | Immediately after "Codebase Research" section |
+
+---
+
+### Documentation Delegation Decision Matrix
+
+#### Decision Rule
+
+```
+IF you have generated a complete document that should be saved to docs/
+   AND you do NOT have `edit` tools
+THEN → Invoke DocWriter with complete content + target filepath
+
+IF you need to UPDATE an existing document
+THEN → Invoke DocWriter with the updated content + target filepath
+
+IF you only need to OUTPUT content in conversation (no file needed)
+THEN → No delegation needed
+```
+
+#### Agent-Specific Documentation Table
+
+| Agent | Primary Artifact | When to Invoke DocWriter | What to Pass |
+|-------|-----------------|--------------------------|--------------|
+| **Architect** | Low-level design | After design decisions are finalized | Complete LLD markdown + `docs/feature-specs/{feature}/low-level-design-{feature}.md` |
+| **Planner** | Implementation plan | After plan steps are defined and ordered | Complete plan markdown + `docs/feature-specs/{feature}/implementation-plan.md` |
+| **Tester** | Test plan | After test cases are written and structured | Complete test plan markdown + `docs/feature-specs/{feature}/test-plan.md` |
+| **QA** | QA report | After findings are analyzed and categorized | Complete QA report markdown + `docs/feature-specs/{feature}/QA-report.md` |
+
+---
+
+### DocWriter Invocation Format
+
+#### Prompt Structure (for documentation delegation)
+
+When an agent invokes DocWriter to persist a document:
+
+```
+Write the following content to `[TARGET_FILEPATH]`:
+
+[COMPLETE MARKDOWN CONTENT]
+```
+
+The invocation must include:
+1. **Target filepath** — exact path in `docs/` where the file should be created or updated
+2. **Complete content** — the full markdown document, ready to write as-is
+
+DocWriter should NOT rewrite or restructure the content. It may apply minor formatting fixes (e.g., trailing newline, consistent header levels) per its documentation standards.
+
+#### Concrete Examples by Agent
+
+##### Architect
+
+```
+Write the following content to
+`docs/feature-specs/parameter-validation/low-level-design-parameter-validation.md`:
+
+# Low-Level Design: Parameter Validation
+
+## Overview
+[...full design content generated by Architect...]
+
+## Architectural Decisions
+[...AD-1, AD-2, etc...]
+```
+
+##### Planner
+
+```
+Write the following content to
+`docs/feature-specs/parameter-validation/implementation-plan.md`:
+
+# Implementation Plan: Parameter Validation
+
+## Steps
+[...full plan content generated by Planner...]
+
+## Estimates
+[...per-step estimates...]
+```
+
+##### Tester
+
+```
+Write the following content to
+`docs/feature-specs/parameter-validation/test-plan.md`:
+
+# Test Plan: Parameter Validation
+
+## Test Cases
+[...full test cases generated by Tester...]
+
+## Coverage Matrix
+[...matrix content...]
+```
+
+##### QA
+
+```
+Write the following content to
+`docs/feature-specs/parameter-validation/QA-report.md`:
+
+# QA Report: Parameter Validation
+
+## Findings
+[...categorized findings generated by QA...]
+
+## Recommendations
+[...recommendations...]
+```
+
+---
+
+### Composing Both Patterns
+
+An agent may need **both** Search delegation and Documentation delegation in a single workflow. This is expected and natural.
+
+#### Typical Composed Workflow
+
+```
+┌─────────────┐     invoke      ┌──────────┐
+│   Agent      │ ──────────────►│  Search   │
+│ (Architect)  │◄────────────── │           │
+│              │   findings     └──────────┘
+│              │
+│  [uses findings to produce design]
+│              │
+│              │     invoke      ┌──────────┐
+│              │ ──────────────►│ DocWriter │
+│              │                │           │
+└─────────────┘                └──────────┘
+                               writes file to disk
+```
+
+#### Sequencing Rules
+
+1. **Search first, DocWriter second.** Research informs content. Never invoke DocWriter before the content is finalized.
+2. **Independent invocations.** Search and DocWriter are separate subagent calls. Do not combine them into one invocation.
+3. **Agent retains authority.** The delegating agent reviews Search findings and decides what goes into the document. DocWriter receives finished content, not raw search output.
+
+#### Example: Architect Composing Both
+
+```
+Step 1 — Research:
+  Invoke Search:
+    "Search for all parameter validation code across engine/crates/ and
+    ui/packages/core/. Synthesize: where validation happens, patterns used,
+    and gaps."
+
+Step 2 — Design (agent's own reasoning):
+  Use Search findings to write the low-level design document content.
+
+Step 3 — Persist:
+  Invoke DocWriter:
+    "Write the following content to
+    docs/feature-specs/parameter-validation/low-level-design-parameter-validation.md:
+    [complete LLD content]"
+```
+
+---
+
 ## Agent-Specific Section Content
 
-Below is the exact "Codebase Research" section for each agent. These are designed to be inserted directly into the respective `.agent.md` files.
+Below is the exact content for each agent. These are designed to be inserted directly into the respective `.agent.md` files.
 
 ### Architect (`architect.agent.md`)
 
-Insert after the "Project Context" section:
+#### Codebase Research (insert after "Project Context")
 
 ```markdown
 ## Codebase Research
@@ -245,9 +504,30 @@ You have access to the **Search agent** — a read-only research specialist with
 > "Search for all parameter validation and range-checking code across engine/crates/ and ui/packages/core/. Synthesize: where validation currently happens, what patterns are used, and any gaps where invalid values could propagate."
 ```
 
+#### Documentation Delegation (insert after "Codebase Research")
+
+```markdown
+## Documentation Delegation
+
+You do NOT have `edit` tools. To save your low-level design documents, invoke **DocWriter** as a subagent.
+
+**Your responsibility:** Generate the complete design document content. You are the architecture authority — DocWriter writes files, it does not create designs for you.
+
+**When to invoke DocWriter:**
+- After finalizing a low-level design, invoke DocWriter to write it to disk
+- After updating architectural decisions that require document changes
+
+**Invocation format:**
+> Write the following content to `docs/feature-specs/{feature}/low-level-design-{feature}.md`:
+>
+> [complete low-level design markdown]
+
+**Composed workflow:** If you invoked Search for research, use those findings to write your design, THEN invoke DocWriter to persist it. Search → Design → DocWriter.
+```
+
 ### Planner (`planner.agent.md`)
 
-Insert after the "Your Role" section:
+#### Codebase Research (insert after "Your Role")
 
 ```markdown
 ## Codebase Research
@@ -268,9 +548,30 @@ You have access to the **Search agent** — a read-only research specialist with
 > "Search for all files that send or receive IPC messages across engine/crates/wavecraft-bridge/, engine/crates/wavecraft-protocol/, and ui/packages/core/src/. Synthesize: a complete map of IPC touchpoints, message types, and the handler chain from UI to engine."
 ```
 
+#### Documentation Delegation (insert after "Codebase Research")
+
+```markdown
+## Documentation Delegation
+
+You do NOT have `edit` tools. To save your implementation plans, invoke **DocWriter** as a subagent.
+
+**Your responsibility:** Generate the complete implementation plan content. You are the planning authority — DocWriter writes files, it does not create plans for you.
+
+**When to invoke DocWriter:**
+- After finalizing the implementation plan with all steps, estimates, and dependencies
+- After revising a plan based on new information
+
+**Invocation format:**
+> Write the following content to `docs/feature-specs/{feature}/implementation-plan.md`:
+>
+> [complete implementation plan markdown]
+
+**Composed workflow:** If you invoked Search for scope analysis, use those findings to write your plan, THEN invoke DocWriter to persist it. Search → Plan → DocWriter.
+```
+
 ### Coder (`coder.agent.md`)
 
-Insert after the "Project Context" section (before "Coding Principles"):
+#### Codebase Research (insert after "Project Context", before "Coding Principles")
 
 ```markdown
 ## Codebase Research
@@ -290,9 +591,11 @@ You have access to the **Search agent** — a read-only research specialist with
 > "Search for how existing IPC message types are defined and handled across engine/crates/wavecraft-protocol/src/, engine/crates/wavecraft-bridge/src/, and ui/packages/core/src/. Synthesize: the pattern for adding a new message type end-to-end (Rust struct, handler, TypeScript type, client method)."
 ```
 
+*Note: Coder has `edit` tools — no Documentation Delegation section needed.*
+
 ### Tester (`tester.agent.md`)
 
-Insert after the "Project Context" section (before "Workflow"):
+#### Codebase Research (insert after "Project Context", before "Workflow")
 
 ```markdown
 ## Codebase Research
@@ -312,9 +615,30 @@ You have access to the **Search agent** — a read-only research specialist with
 > "Search for all metering-related test files and assertions across engine/crates/wavecraft-metering/tests/, ui/packages/core/src/**/*.test.*, and ui/src/test/. Synthesize: what metering behaviors are tested, what patterns the tests use, and what edge cases are missing."
 ```
 
+#### Documentation Delegation (insert after "Codebase Research")
+
+```markdown
+## Documentation Delegation
+
+You do NOT have `edit` tools. To save your test plans, invoke **DocWriter** as a subagent.
+
+**Your responsibility:** Generate the complete test plan content. You are the testing authority — DocWriter writes files, it does not create test plans for you.
+
+**When to invoke DocWriter:**
+- After writing all test cases, coverage matrices, and test results
+- After updating a test plan with new findings or retest results
+
+**Invocation format:**
+> Write the following content to `docs/feature-specs/{feature}/test-plan.md`:
+>
+> [complete test plan markdown]
+
+**Composed workflow:** If you invoked Search for coverage analysis, use those findings to write your test plan, THEN invoke DocWriter to persist it. Search → Test Plan → DocWriter.
+```
+
 ### QA (`QA.agent.md`)
 
-Insert after the "Project Context" section (before "Automated Checks Workflow"):
+#### Codebase Research (insert after "Project Context", before "Automated Checks Workflow")
 
 ```markdown
 ## Codebase Research
@@ -334,9 +658,30 @@ You have access to the **Search agent** — a read-only research specialist with
 > "Search for all error handling patterns across engine/crates/ (excluding test files). Synthesize: which crates use Result vs panic, where unwrap()/expect() appears in production paths, and any inconsistencies with the coding standards."
 ```
 
+#### Documentation Delegation (insert after "Codebase Research")
+
+```markdown
+## Documentation Delegation
+
+You do NOT have `edit` tools. To save your QA reports, invoke **DocWriter** as a subagent.
+
+**Your responsibility:** Generate the complete QA report content. You are the quality authority — DocWriter writes files, it does not create QA reports for you.
+
+**When to invoke DocWriter:**
+- After completing your analysis and categorizing all findings
+- After updating a report with fixes verified or new issues found
+
+**Invocation format:**
+> Write the following content to `docs/feature-specs/{feature}/QA-report.md`:
+>
+> [complete QA report markdown]
+
+**Composed workflow:** If you invoked Search for codebase-wide auditing, use those findings to write your QA report, THEN invoke DocWriter to persist it. Search → QA Report → DocWriter.
+```
+
 ### PO (`PO.agent.md`)
 
-Insert after the "Product Context" section (before "Your Guiding Principles"):
+#### Codebase Research (insert after "Product Context", before "Your Guiding Principles")
 
 ```markdown
 ## Codebase Research
@@ -356,9 +701,11 @@ You have access to the **Search agent** — a read-only research specialist with
 > "Search for all state save/restore and serialization code across engine/crates/ and ui/packages/core/. Synthesize: what state management infrastructure exists today, how plugin state is persisted, and how much of a preset system is already in place vs needs building."
 ```
 
+*Note: PO has `edit` tools — no Documentation Delegation section needed.*
+
 ### DocWriter (`docwriter.agent.md`)
 
-Insert after the "Project Documentation Structure" section (before "Documentation Standards"):
+#### Codebase Research (insert after "Project Documentation Structure", before "Documentation Standards")
 
 ```markdown
 ## Codebase Research
@@ -378,45 +725,51 @@ You have access to the **Search agent** — a read-only research specialist with
 > "Search for all IPC-related public APIs, types, and message handlers across engine/crates/wavecraft-bridge/, engine/crates/wavecraft-protocol/, and ui/packages/core/src/. Synthesize: every public function, type, and message format with a brief description, so I can ensure the documentation covers all touchpoints."
 ```
 
+*Note: DocWriter IS the delegation target for documentation — no Documentation Delegation section needed.*
+
 ---
 
 ## Integration with Existing Instructions
 
 ### Insertion Points (per file)
 
-| Agent File | Insert After Section | Insert Before Section |
-|------------|---------------------|-----------------------|
-| `architect.agent.md` | "Project Context" | "Architectural Principles You Must Enforce" |
-| `planner.agent.md` | "Your Role" | "Planning Process" |
-| `coder.agent.md` | "Project Context" | "Coding Principles You Must Follow" |
-| `tester.agent.md` | "Project Context" | "Workflow" |
-| `QA.agent.md` | "Project Context" | "Automated Checks Workflow" |
-| `PO.agent.md` | "Product Context" | "Your Guiding Principles" |
-| `docwriter.agent.md` | "Project Documentation Structure" | "Documentation Standards" |
+| Agent File | Codebase Research: Insert After | Codebase Research: Insert Before | Doc Delegation: Insert After | Doc Delegation: Insert Before |
+|------------|--------------------------------|----------------------------------|------------------------------|-------------------------------|
+| `architect.agent.md` | "Project Context" | "Architectural Principles You Must Enforce" | "Codebase Research" | "Architectural Principles You Must Enforce" |
+| `planner.agent.md` | "Your Role" | "Planning Process" | "Codebase Research" | "Planning Process" |
+| `coder.agent.md` | "Project Context" | "Coding Principles You Must Follow" | — (has `edit` tools) | — |
+| `tester.agent.md` | "Project Context" | "Workflow" | "Codebase Research" | "Workflow" |
+| `QA.agent.md` | "Project Context" | "Automated Checks Workflow" | "Codebase Research" | "Automated Checks Workflow" |
+| `PO.agent.md` | "Product Context" | "Your Guiding Principles" | — (has `edit` tools) | — |
+| `docwriter.agent.md` | "Project Documentation Structure" | "Documentation Standards" | — (is the target) | — |
 
 ### Files NOT Modified
 
 | File | Reason |
 |------|--------|
-| `orchestrator.agent.md` | Pure router, doesn't do research |
-| `search.agent.md` | Already correct; the delegation target doesn't need delegation instructions |
+| `orchestrator.agent.md` | Pure router, doesn't do research or create documentation |
+| `search.agent.md` | Search delegation target, doesn't need delegation instructions |
 
-### `agent-development-flow.md` Update
+### `agent-development-flow.md` Updates
 
-Add a new section after "Subagent Invocation" titled "Search Delegation Pattern":
+#### 1. Update "Search Delegation Pattern" subsection (already exists)
+
+No changes needed — the existing subsection is correct.
+
+#### 2. Add new "Documentation Delegation Pattern" subsection after "Search Delegation Pattern"
 
 ```markdown
-### Search Delegation Pattern
+### Documentation Delegation Pattern
 
-All specialized agents (except Orchestrator) can invoke the Search agent for deep codebase research. Each agent's instructions include a "Codebase Research" section that specifies:
+Four agents (Architect, Planner, Tester, QA) don't have `edit` tools but are responsible for creating documentation artifacts. Each agent's instructions include a "Documentation Delegation" section that specifies:
 
-- **When to delegate** vs. use own search tools
-- **How to structure** Search requests (what + where + synthesize)
-- **Agent-specific examples** matching their typical research needs
+- **When to delegate** — after generating complete document content
+- **Who to delegate to** — DocWriter (already in each agent's `agents:` list)
+- **What to pass** — complete markdown content + target filepath
 
-**Rule of thumb:** If the research requires reading >3 files or spans multiple layers, delegate to Search. For quick single-file lookups, use your own tools.
+**Rule:** The delegating agent generates ALL content. DocWriter writes the file — it does not author technical documents.
 
-**Search is read-only.** It returns findings and analysis. The invoking agent decides what to do with the results.
+**Composition:** An agent may invoke Search for research AND DocWriter for persistence in the same workflow. Always: Search → generate content → DocWriter.
 ```
 
 ---
@@ -426,18 +779,22 @@ All specialized agents (except Orchestrator) can invoke the Search agent for dee
 ### Phase 1: Update Agent Instructions (single PR)
 
 1. Add "Codebase Research" section to all 7 agent files
-2. Update `agent-development-flow.md` with Search delegation pattern
-3. All changes in one PR — this is a documentation-only change with no risk of breaking running agents
+2. Add "Documentation Delegation" section to 4 agent files (Architect, Planner, Tester, QA)
+3. Update `agent-development-flow.md` with both delegation pattern subsections
+4. All changes in one PR — this is a documentation-only change with no risk of breaking running agents
 
 ### Phase 2: Validation (next 3-5 features)
 
-1. During the next 3-5 feature development cycles, Orchestrator (or human) observes whether agents invoke Search
-2. If agents underuse Search, refine trigger examples to be more specific
-3. If agents overuse Search for trivial lookups, tighten the self-search criteria
+1. During the next 3-5 feature development cycles, observe whether agents:
+   - Invoke Search appropriately (not over/under-delegating)
+   - Invoke DocWriter to persist their documentation artifacts
+   - Follow the content-first invocation format
+2. If agents skip DocWriter and leave content in conversation, strengthen the "must persist" language
+3. If agents pass outlines instead of complete content, add explicit examples of correct vs. incorrect invocations
 
 ### Rollback
 
-If the instructions cause problems (e.g., agents waste time on unnecessary Search invocations), the sections can be removed in a single commit with no side effects.
+If the instructions cause problems, the sections can be removed in a single commit with no side effects. The two patterns are independent — one can be rolled back without affecting the other.
 
 ---
 
@@ -446,28 +803,36 @@ If the instructions cause problems (e.g., agents waste time on unnecessary Searc
 ### Immediate (PR review)
 
 - [ ] Each agent's "Codebase Research" section follows the template structure
+- [ ] Each applicable agent's "Documentation Delegation" section follows the template structure
 - [ ] Examples reference real Wavecraft codebase patterns (not generic placeholders)
-- [ ] Section length is ≤30 lines per agent
-- [ ] Insertion point doesn't break existing section flow
-- [ ] `agent-development-flow.md` is updated
+- [ ] Section length is ≤30 lines for Research, ≤20 lines for Documentation per agent
+- [ ] Insertion points don't break existing section flow
+- [ ] `agent-development-flow.md` is updated with both delegation patterns
 
 ### Ongoing (observational, across features)
 
 | Metric | How to Measure | Target |
 |--------|----------------|--------|
 | Search invocations per feature | Count Search subagent calls during feature dev cycles | 3-5 per feature (up from ~0-1) |
+| DocWriter invocations per feature | Count DocWriter subagent calls by non-edit agents | 1-2 per feature (up from 0) |
 | Self-search for deep analysis | Observe if agents still do long grep chains for multi-file questions | Rare (quick lookups only) |
-| Research quality | Review whether agent outputs (designs, plans, reviews) cite comprehensive codebase evidence | Consistent cross-crate awareness |
-| Instruction compliance | Check if agents follow the what/where/synthesize prompt format | High adherence |
+| Doc persistence rate | Check if agent-generated docs are saved to disk vs left in conversation | 100% (all artifacts persisted) |
+| Research quality | Review whether agent outputs cite comprehensive codebase evidence | Consistent cross-crate awareness |
+| Content-first compliance | Check if DocWriter receives complete content vs outlines | High adherence |
+| Instruction compliance | Check if agents follow the what/where/synthesize prompt format (Search) | High adherence |
 
 ### Anti-Patterns to Watch For
 
-| Anti-Pattern | Symptom | Fix |
-|--------------|---------|-----|
-| Over-delegation | Agent invokes Search for a single-file read | Add more explicit "use own tools" examples |
-| Under-delegation | Agent does 10+ grep searches instead of one Search call | Add more explicit trigger scenarios |
-| Vague prompts | Agent invokes Search with "find parameter code" | Add prompt structure enforcement to examples |
-| Ignored results | Agent invokes Search but doesn't use the findings | Investigate if Search output format needs tuning |
+| Anti-Pattern | Symptom | Affected Pattern | Fix |
+|--------------|---------|------------------|-----|
+| Over-delegation to Search | Agent invokes Search for a single-file read | Search | Add more explicit "use own tools" examples |
+| Under-delegation to Search | Agent does 10+ grep searches instead of one Search call | Search | Add more explicit trigger scenarios |
+| Vague Search prompts | Agent invokes Search with "find parameter code" | Search | Add prompt structure enforcement to examples |
+| Ignored Search results | Agent invokes Search but doesn't use the findings | Search | Investigate if Search output format needs tuning |
+| Skipped DocWriter | Agent generates content but doesn't invoke DocWriter to save it | Documentation | Strengthen "must persist" language; add reminder at end of workflow |
+| Outline delegation | Agent passes a brief outline and tells DocWriter to write the doc | Documentation | Add explicit anti-example showing incorrect vs correct invocation |
+| Delegating to Coder | Agent asks Coder to save documentation instead of DocWriter | Documentation | Add explicit "Don't ask Coder to save docs" instruction |
+| Double-writing | Agent generates content AND tries to use non-existent edit tools | Documentation | Ensure agent instructions clearly state tool limitations |
 
 ---
 
@@ -476,10 +841,13 @@ If the instructions cause problems (e.g., agents waste time on unnecessary Searc
 | Risk | Probability | Impact | Mitigation |
 |------|-------------|--------|------------|
 | Agents ignore new instructions | Medium | Low | Examples are concrete and match real tasks; iterate if needed |
-| Instructions inflate context budget | Low | Low | ~25 lines per agent; negligible vs. total instruction size |
+| Instructions inflate context budget | Low | Low | ~25 lines Research + ~15 lines Documentation per agent; negligible vs. total instruction size |
 | Search returns low-quality results | Low | Medium | Search agent is already well-specified; prompt structure improves input quality |
 | Over-delegation for trivial queries | Medium | Low | Clear "use own tools" criteria; can tighten in Phase 2 |
-| Instructions conflict with existing workflow | Very Low | Medium | Section is additive; doesn't modify existing instructions |
+| Instructions conflict with existing workflow | Very Low | Medium | Sections are additive; don't modify existing instructions |
+| Agents skip DocWriter persistence | Medium | Medium | Explicit "must persist" language; Orchestrator can verify file existence before handoff |
+| DocWriter rewrites agent content | Low | Medium | Clear instruction: "write as-is, minor formatting only" |
+| Large documents exceed DocWriter context | Low | Low | Documents are typically <500 lines; well within context limits |
 
 ---
 
@@ -487,15 +855,15 @@ If the instructions cause problems (e.g., agents waste time on unnecessary Searc
 
 | File | Change | Lines Added |
 |------|--------|-------------|
-| `.github/agents/architect.agent.md` | Add "Codebase Research" section | ~20 |
-| `.github/agents/planner.agent.md` | Add "Codebase Research" section | ~20 |
+| `.github/agents/architect.agent.md` | Add "Codebase Research" + "Documentation Delegation" sections | ~35 |
+| `.github/agents/planner.agent.md` | Add "Codebase Research" + "Documentation Delegation" sections | ~35 |
 | `.github/agents/coder.agent.md` | Add "Codebase Research" section | ~20 |
-| `.github/agents/tester.agent.md` | Add "Codebase Research" section | ~20 |
-| `.github/agents/QA.agent.md` | Add "Codebase Research" section | ~20 |
+| `.github/agents/tester.agent.md` | Add "Codebase Research" + "Documentation Delegation" sections | ~35 |
+| `.github/agents/QA.agent.md` | Add "Codebase Research" + "Documentation Delegation" sections | ~35 |
 | `.github/agents/PO.agent.md` | Add "Codebase Research" section | ~20 |
 | `.github/agents/docwriter.agent.md` | Add "Codebase Research" section | ~20 |
-| `docs/architecture/agent-development-flow.md` | Add "Search Delegation Pattern" subsection | ~15 |
-| **Total** | 8 files modified | ~175 lines |
+| `docs/architecture/agent-development-flow.md` | Add "Search Delegation Pattern" + "Documentation Delegation Pattern" subsections | ~25 |
+| **Total** | **8 files modified** | **~225 lines** |
 
 ---
 

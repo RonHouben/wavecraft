@@ -44,6 +44,7 @@ export class WebSocketTransport implements Transport {
 
   private readonly pendingRequests = new Map<RequestId, PendingRequest>();
   private readonly notificationCallbacks = new Set<NotificationCallback>();
+  private readonly connectionChangeCallbacks = new Set<(connected: boolean) => void>();
 
   constructor(options: WebSocketTransportOptions) {
     this.url = options.url;
@@ -100,6 +101,20 @@ export class WebSocketTransport implements Transport {
   }
 
   /**
+   * Subscribe to connection state changes
+   *
+   * Fires immediately with current state, then on each state transition.
+   */
+  onConnectionChange(callback: (connected: boolean) => void): () => void {
+    this.connectionChangeCallbacks.add(callback);
+    // Fire immediately with current state (fire-on-subscribe pattern)
+    callback(this.isConnected());
+    return () => {
+      this.connectionChangeCallbacks.delete(callback);
+    };
+  }
+
+  /**
    * Check if transport is connected
    */
   isConnected(): boolean {
@@ -133,6 +148,7 @@ export class WebSocketTransport implements Transport {
 
     // Clear notification callbacks
     this.notificationCallbacks.clear();
+    this.connectionChangeCallbacks.clear();
   }
 
   /**
@@ -152,6 +168,7 @@ export class WebSocketTransport implements Transport {
         this.isConnecting = false;
         this.reconnectAttempts = 0;
         logger.info('WebSocketTransport connected', { url: this.url });
+        this.emitConnectionChange(true);
       };
 
       this.ws.onmessage = (event: MessageEvent): void => {
@@ -165,6 +182,7 @@ export class WebSocketTransport implements Transport {
       this.ws.onclose = (): void => {
         this.isConnecting = false;
         this.ws = null;
+        this.emitConnectionChange(false);
 
         if (!this.isDisposed && !this.maxAttemptsReached) {
           this.scheduleReconnect();
@@ -257,6 +275,19 @@ export class WebSocketTransport implements Transport {
           error,
           method: notification.method,
         });
+      }
+    }
+  }
+
+  /**
+   * Emit connection state change to all subscribers
+   */
+  private emitConnectionChange(connected: boolean): void {
+    for (const callback of this.connectionChangeCallbacks) {
+      try {
+        callback(connected);
+      } catch (error) {
+        logger.error('WebSocketTransport connection change callback error', { error });
       }
     }
   }
