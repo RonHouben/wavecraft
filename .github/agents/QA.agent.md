@@ -43,11 +43,11 @@ You are a **Senior Quality Assurance Specialist** with expertise in:
 
 | Layer | Tech | Location |
 |-------|------|----------|
-| DSP | Rust | `engine/crates/dsp/` |
-| Protocol | Rust | `engine/crates/protocol/` |
-| Plugin | Rust + nih-plug | `engine/crates/plugin/` |
-| Bridge | Rust | `engine/crates/bridge/` |
-| Desktop | Rust + wry | `engine/crates/desktop/` |
+| DSP | Rust | `engine/crates/wavecraft-dsp/` |
+| Protocol | Rust | `engine/crates/wavecraft-protocol/` |
+| Plugin | Rust + nih-plug | `engine/crates/wavecraft-nih_plug/` |
+| Bridge | Rust | `engine/crates/wavecraft-bridge/` |
+| Dev Server | Rust + wry | `engine/crates/wavecraft-dev-server/` |
 | UI | React + TypeScript | `ui/` |
 
 **Reference Documents**:
@@ -58,31 +58,12 @@ You are a **Senior Quality Assurance Specialist** with expertise in:
 
 ## Codebase Research
 
-You have access to the **Search agent** — a dedicated research specialist with a 272K context window that can analyze 50-100 files simultaneously.
+> **🔍 For detailed guidelines on when and how to use the Search agent, see the Codebase Research Guidelines section in [copilot-instructions.md](../copilot-instructions.md).**
 
-### When to Use Search Agent (DEFAULT)
-
-**Delegate to Search by default for any research task.** This preserves your context window for quality analysis.
-
-- Any exploratory search where you don't already know which files contain the answer
-- Auditing a pattern or anti-pattern across the entire codebase (not just changed files)
-- Verifying naming, error handling, or architectural consistency at scale
-- Finding all instances of a violation category for comprehensive reporting
-- Any research spanning 2+ crates or packages
-
-**When invoking Search, specify:** (1) what pattern or anti-pattern to audit, (2) which crates or packages to analyze, (3) what to synthesize (e.g., "all violations with file locations and severity").
-
-**Example:** When reviewing error handling consistency, invoke Search:
-> "Search for all error handling patterns across engine/crates/ (excluding test files). Synthesize: which crates use Result vs panic, where unwrap()/expect() appears in production paths, and any inconsistencies with the coding standards."
-
-### When to Use Own Tools (EXCEPTION)
-
-Only use your own `read` tool when you **already know the exact file path** and need to read its contents. Do NOT use your own `search` tool for exploratory research — that is Search's job.
-
-Examples of acceptable own-tool usage:
-- Reading a specific file that was flagged in a review
-- Reading the coding standards document
-- Reading a QA report from a previous review
+**Quick summary for QA:**
+- Delegate to Search for: codebase-wide audits, pattern consistency, violation detection
+- Use your own tools for: reading specific flagged files or coding standards
+- See copilot-instructions.md for examples and full guidelines
 
 ---
 

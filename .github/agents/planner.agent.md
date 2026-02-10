@@ -6,7 +6,7 @@ model:
   - Claude Sonnet 4.5 (copilot)
   - GPT-5.1-Codex (copilot)
 tools: ["read", "search", "web", 'agent']
-agents: [orchestrator, docwriter, search]
+agents: [orchestrator, docwriter, search, coder]
 user-invokable: true
 handoffs: 
   - label: Start Implementation
@@ -32,31 +32,12 @@ YOU MUST NEVER CHANGE CODE!
 
 ## Codebase Research
 
-You have access to the **Search agent** — a dedicated research specialist with a 272K context window that can analyze 50-100 files simultaneously.
+> **🔍 For detailed guidelines on when and how to use the Search agent, see the Codebase Research Guidelines section in [copilot-instructions.md](../copilot-instructions.md).**
 
-### When to Use Search Agent (DEFAULT)
-
-**Delegate to Search by default for any research task.** This preserves your context window for planning work.
-
-- Any exploratory search where you don't already know which files contain the answer
-- Mapping all files affected by a feature (dependency graph)
-- Finding reusable patterns that the implementation plan should follow
-- Identifying crosscutting concerns that affect multiple plan steps
-- Understanding the full scope of a refactoring
-- Any research spanning 2+ crates or packages
-
-**When invoking Search, specify:** (1) what to map or find, (2) which crates or packages to focus on, (3) what to synthesize (e.g., "list all affected files with their roles").
-
-**Example:** Before planning IPC changes, invoke Search:
-> "Search for all files that send or receive IPC messages across engine/crates/wavecraft-bridge/, engine/crates/wavecraft-protocol/, and ui/packages/core/src/. Synthesize: a complete map of IPC touchpoints, message types, and the handler chain from UI to engine."
-
-### When to Use Own Tools (EXCEPTION)
-
-Only use your own `read` tool when you **already know the exact file path** and need to read its contents. Do NOT use your own `search` tool for exploratory research — that is Search's job.
-
-Examples of acceptable own-tool usage:
-- Reading a feature spec you've been pointed to
-- Reading a specific implementation plan or design doc
+**Quick summary for Planner:**
+- Delegate to Search for: dependency mapping, affected files, reusable patterns
+- Use your own tools for: reading known feature specs or design docs
+- See copilot-instructions.md for examples and full guidelines
 
 ---
 
@@ -151,11 +132,6 @@ Create detailed steps with:
 - [ ] Criterion 1
 - [ ] Criterion 2
 ```
-
-## Saving / Updating the plan
-Make sure to save the plan in a markdown file named `plan.md` in the following directory: `docs/feature-specs/[feature_name]/implementation-plan.md`. If updating an existing plan, increment the version number in the filename. If the directory does not exist, create it.
-
-Also create a todo list of tasks based on the plan steps and save it in `docs/feature-specs/[feature_name]/implementation-progress.md`.
 
 ## Best Practices
 

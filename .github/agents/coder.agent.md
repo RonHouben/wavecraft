@@ -58,10 +58,10 @@ This project is a **Rust-based audio effects plugin framework** with a React UI.
 
 ```
 engine/crates/
-├── dsp/        # Pure DSP algorithms (no plugin deps)
-├── protocol/   # Shared contracts (param IDs, ranges)
-├── plugin/     # nih-plug host integration
-└── bridge/     # UI ↔ Audio IPC
+├── wavecraft-dsp/        # Pure DSP algorithms (no plugin deps)
+├── wavecraft-protocol/   # Shared contracts (param IDs, ranges)
+├── wavecraft-nih_plug/   # nih-plug host integration
+└── wavecraft-bridge/     # UI ↔ Audio IPC
 ```
 
 When implementing a feature from the `docs/feature-specs/` directory, keep track of your progress in the file `docs/feature-specs/[feature_name]/implementation-progress.md`.
@@ -70,31 +70,12 @@ When implementing a feature from the `docs/feature-specs/` directory, keep track
 
 ## Codebase Research
 
-You have access to the **Search agent** — a dedicated research specialist with a 272K context window that can analyze 50-100 files simultaneously.
+> **🔍 For detailed guidelines on when and how to use the Search agent, see the Codebase Research Guidelines section in [copilot-instructions.md](../copilot-instructions.md).**
 
-### When to Use Search Agent (DEFAULT)
-
-**Delegate to Search by default for any research task.** This preserves your context window for implementation work — which is where you need it most.
-
-- Any exploratory search where you don't already know which files contain the answer
-- Understanding how a pattern is implemented across multiple files before following it
-- Finding all locations that need updating for a cross-cutting change
-- Discovering conventions for something you haven't implemented before in this codebase
-- Any research spanning 2+ crates or packages
-
-**When invoking Search, specify:** (1) what pattern or implementation to find, (2) which crates or packages to focus on, (3) what to synthesize (e.g., "the established pattern I should follow").
-
-**Example:** Before adding a new IPC message type, invoke Search:
-> "Search for how existing IPC message types are defined and handled across engine/crates/wavecraft-protocol/src/, engine/crates/wavecraft-bridge/src/, and ui/packages/core/src/. Synthesize: the pattern for adding a new message type end-to-end (Rust struct, handler, TypeScript type, client method)."
-
-### When to Use Own Tools (EXCEPTION)
-
-Only use your own `read` and `search` tools when you **already know the exact file path or symbol name**. Do NOT use your own tools for exploratory research — that is Search's job.
-
-Examples of acceptable own-tool usage:
-- Reading a file you're about to edit (you know the path)
-- Grepping for a specific symbol name you already know (e.g., `MeterFrame`)
-- Checking the output of a build command
+**Quick summary for Coder:**
+- Delegate to Search for: exploratory searches, pattern discovery, cross-cutting changes
+- Use your own tools for: reading files you're about to edit (known paths)
+- See copilot-instructions.md for examples and full guidelines
 
 ---
 
@@ -136,13 +117,13 @@ Keep these domains strictly separate:
 
 | Domain | Location | Responsibility |
 |--------|----------|----------------|
-| **DSP** | `engine/crates/dsp/` | Pure audio math, no framework deps |
-| **Protocol** | `engine/crates/protocol/` | Parameter IDs, ranges, conversion functions |
-| **Plugin** | `engine/crates/plugin/` | nih-plug glue, host interaction, editor |
-| **Bridge** | `engine/crates/bridge/` | UI ↔ Audio IPC (ring buffers, messaging) |
+| **DSP** | `engine/crates/wavecraft-dsp/` | Pure audio math, no framework deps |
+| **Protocol** | `engine/crates/wavecraft-protocol/` | Parameter IDs, ranges, conversion functions |
+| **Plugin** | `engine/crates/wavecraft-nih_plug/` | nih-plug glue, host interaction, editor |
+| **Bridge** | `engine/crates/wavecraft-bridge/` | UI ↔ Audio IPC (ring buffers, messaging) |
 | **UI** | `ui/` | React components, state, visualization |
 
-Never import `nih_plug` in the `dsp` crate. Never put DSP logic in the `plugin` crate.
+Never import `nih_plug` in the `wavecraft-dsp` crate. Never put DSP logic in the `wavecraft-nih_plug` crate.
 
 ---
 
@@ -151,10 +132,10 @@ Never import `nih_plug` in the `dsp` crate. Never put DSP logic in the `plugin` 
 Parameters are the **only contract** between UI and audio:
 
 ```rust
-// In protocol/src/params.rs — Canonical definitions
+// In wavecraft-protocol/src/params.rs — Canonical definitions
 pub enum ParamId { Gain = 0, Drive = 1, ... }
 
-// In plugin/src/params.rs — nih-plug wrappers
+// In wavecraft-nih_plug/src/params.rs — nih-plug wrappers
 #[derive(Params)]
 pub struct PluginParams {
     #[id = "gain"]
@@ -337,8 +318,6 @@ If this command shows ANY failures, you are NOT allowed to hand off. Fix the iss
 ---
 
 ## Pre-Handoff Checklist
-
-**⚠️ Load the workspace-commands skill first:** `#skill:workspace-commands`
 
 **Before handing off to Tester or QA, always run these checks from the workspace root:**
 

@@ -46,42 +46,23 @@ You are a **Manual Testing Specialist** with expertise in:
 
 | Layer | Tech | Location |
 |-------|------|----------|
-| DSP | Rust | `engine/crates/dsp/` |
-| Protocol | Rust | `engine/crates/protocol/` |
-| Plugin | Rust + nih-plug | `engine/crates/plugin/` |
-| Bridge | Rust | `engine/crates/bridge/` |
-| Desktop | Rust + wry | `engine/crates/desktop/` |
+| DSP | Rust | `engine/crates/wavecraft-dsp/` |
+| Protocol | Rust | `engine/crates/wavecraft-protocol/` |
+| Plugin | Rust + nih-plug | `engine/crates/wavecraft-nih_plug/` |
+| Bridge | Rust | `engine/crates/wavecraft-bridge/` |
+| Dev Server | Rust + wry | `engine/crates/wavecraft-dev-server/` |
 | UI | React + TypeScript | `ui/` |
 
 ---
 
 ## Codebase Research
 
-You have access to the **Search agent** — a dedicated research specialist with a 272K context window that can analyze 50-100 files simultaneously.
+> **🔍 For detailed guidelines on when and how to use the Search agent, see the Codebase Research Guidelines section in [copilot-instructions.md](../copilot-instructions.md).**
 
-### When to Use Search Agent (DEFAULT)
-
-**Delegate to Search by default for any research task.** This preserves your context window for test execution and documentation.
-
-- Any exploratory search where you don't already know which files contain the answer
-- Analyzing test coverage across crates or packages for a feature area
-- Finding all test patterns and utilities to follow established conventions
-- Identifying untested code paths or missing edge case coverage
-- Any research spanning 2+ crates or packages
-
-**When invoking Search, specify:** (1) what test area to analyze, (2) which test directories to focus on, (3) what to synthesize (e.g., "coverage gaps and untested paths").
-
-**Example:** Before writing tests for metering, invoke Search:
-> "Search for all metering-related test files and assertions across engine/crates/wavecraft-metering/tests/, ui/packages/core/src/**/*.test.*, and ui/src/test/. Synthesize: what metering behaviors are tested, what patterns the tests use, and what edge cases are missing."
-
-### When to Use Own Tools (EXCEPTION)
-
-Only use your own `read` tool when you **already know the exact file path** and need to read its contents. Do NOT use your own `search` tool for exploratory research — that is Search's job.
-
-Examples of acceptable own-tool usage:
-- Reading a test plan or feature spec you've been pointed to
-- Reading a specific test file to check its current state
-- Reading command output from terminal execution
+**Quick summary for Tester:**
+- Delegate to Search for: test coverage analysis, pattern discovery, missing edge cases
+- Use your own tools for: reading known test files or command output
+- See copilot-instructions.md for examples and full guidelines
 
 ---
 
@@ -97,8 +78,6 @@ When starting a new testing session:
 
 ### Phase 2: Run Automated Checks
 
-**⚠️ Load the workspace-commands skill first:** `#skill:workspace-commands`
-
 **Primary testing method**: Run `cargo xtask ci-check` **from the workspace root** for fast local validation (~52 seconds).
 
 This command runs all the checks that would run in the CI pipeline:
@@ -109,7 +88,6 @@ This command runs all the checks that would run in the CI pipeline:
 
 ```bash
 # Run all checks (~52 seconds) from workspace root
-cd /Users/ronhouben/code/private/wavecraft
 cargo xtask ci-check
 
 # Auto-fix linting issues

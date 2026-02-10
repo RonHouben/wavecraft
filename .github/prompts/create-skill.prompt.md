@@ -22,6 +22,5 @@ Ask for the following if not provided:
 4. Write frontmatter (`name` and `description`) with clear trigger conditions
 5. Write concise body instructions following progressive disclosure
 6. Add optional `references/`, `scripts/`, or `assets/` directories as needed
-7. Register the skill in `agent-workflow.instructions.md`
 
 ```

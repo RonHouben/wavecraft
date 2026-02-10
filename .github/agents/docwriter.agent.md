@@ -51,30 +51,12 @@ docs/
 
 ## Codebase Research
 
-You have access to the **Search agent** — a dedicated research specialist with a 272K context window that can analyze 50-100 files simultaneously.
+> **🔍 For detailed guidelines on when and how to use the Search agent, see the Codebase Research Guidelines section in [copilot-instructions.md](../copilot-instructions.md).**
 
-### When to Use Search Agent (DEFAULT)
-
-**Delegate to Search by default for any research task.** This preserves your context window for documentation writing.
-
-- Any exploratory search where you don't already know which files contain the answer
-- Discovering all code related to a topic you're documenting (ensure completeness)
-- Finding undocumented public APIs that need documentation
-- Mapping the scope of a feature across crates and packages
-- Any research spanning 2+ crates or packages
-
-**When invoking Search, specify:** (1) what topic or API surface to discover, (2) which packages or crates to scan, (3) what to synthesize (e.g., "all public exports with descriptions").
-
-**Example:** Before documenting the IPC system, invoke Search:
-> "Search for all IPC-related public APIs, types, and message handlers across engine/crates/wavecraft-bridge/, engine/crates/wavecraft-protocol/, and ui/packages/core/src/. Synthesize: every public function, type, and message format with a brief description, so I can ensure the documentation covers all touchpoints."
-
-### When to Use Own Tools (EXCEPTION)
-
-Only use your own `read` tool when you **already know the exact file path** and need to read its contents. Do NOT use your own `search` tool for exploratory research — that is Search's job.
-
-Examples of acceptable own-tool usage:
-- Reading an existing doc to check its current content before updating
-- Reading a specific file referenced by the invoking agent
+**Quick summary for DocWriter:**
+- Delegate to Search for: API discovery, feature scope mapping, completeness checks
+- Use your own tools for: reading existing docs you're updating
+- See copilot-instructions.md for examples and full guidelines
 
 ---
 

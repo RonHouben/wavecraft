@@ -9,7 +9,7 @@ This skill guides the creation of custom agents (`.agent.md` files) for VS Code 
 
 ## Agent File Location
 
-Agents live in the `agents/` directory of the ClientSafeAI repository (`/Users/ronhouben/code/ksyos/ClientSafeAI/agents/`). The filename becomes the default agent name if no `name` field is specified.
+Agents live in the `.github/agents/` directory. The filename becomes the default agent name if no `name` field is specified.
 
 ## Agent File Structure
 
@@ -102,7 +102,7 @@ Keep instructions concise and specific. The agent is already smart — only add 
 
 ## Body Writing Guidelines
 
-- Start with a clear role definition: "You are a [role] agent for ClientSafeWeb."
+- Start with a clear role definition: "You are a [role] agent for Wavecraft."
 - Use Markdown headers to organize sections
 - Reference `.github/copilot-instructions.md` for project conventions when relevant
 - Use the `#tool:<tool-name>` syntax to reference specific tools in instructions
@@ -119,7 +119,7 @@ description: Review code changes for security vulnerabilities
 tools: ['read', 'search', 'todo']
 ---
 
-You are a security review agent for ClientSafeWeb.
+You are a security review agent for Wavecraft.
 
 # Rules
 - Never modify files. Your role is analysis only.

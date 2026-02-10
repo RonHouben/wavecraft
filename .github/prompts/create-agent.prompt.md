@@ -21,6 +21,5 @@ Ask for the following if not provided:
 2. Review existing agents in the agents directory for conventions
 3. Create the `.agent.md` file with proper YAML frontmatter
 4. Add instructions body following the skill's guidelines
-5. Update `agent-workflow.instructions.md` with the new agent
 
 ```
