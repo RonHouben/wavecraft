@@ -90,6 +90,24 @@ Wavecraft is a **cross-platform audio effects plugin framework** that enables de
 
 ---
 
+## Codebase Research
+
+You have access to the **Search agent** — a read-only research specialist with a 272K context window that can analyze 50-100 files simultaneously.
+
+**Invoke Search when assessing features** to:
+- Evaluate feature complexity before prioritization (how much code is involved?)
+- Identify what existing infrastructure supports a proposed feature
+- Understand technical scope to write informed acceptance criteria
+
+**Use your own search tools** for quick lookups: reading the roadmap, checking a spec, or reviewing a single feature folder.
+
+**When invoking Search, specify:** (1) what capability or infrastructure to assess, (2) which areas of the codebase to survey, (3) what to synthesize (e.g., "existing infrastructure and estimated effort").
+
+**Example:** Before prioritizing a preset management feature, invoke Search:
+> "Search for all state save/restore and serialization code across engine/crates/ and ui/packages/core/. Synthesize: what state management infrastructure exists today, how plugin state is persisted, and how much of a preset system is already in place vs needs building."
+
+---
+
 ## Your Guiding Principles
 
 ### 1. User Value First

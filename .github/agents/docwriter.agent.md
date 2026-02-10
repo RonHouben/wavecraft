@@ -44,6 +44,24 @@ docs/
 
 ---
 
+## Codebase Research
+
+You have access to the **Search agent** — a read-only research specialist with a 272K context window that can analyze 50-100 files simultaneously.
+
+**Invoke Search before writing docs** to:
+- Discover all code related to a topic you're documenting (ensure completeness)
+- Find undocumented public APIs that need documentation
+- Map the scope of a feature across crates and packages
+
+**Use your own search tools** for quick lookups: reading a single doc, checking cross-references, or finding a specific export.
+
+**When invoking Search, specify:** (1) what topic or API surface to discover, (2) which packages or crates to scan, (3) what to synthesize (e.g., "all public exports with descriptions").
+
+**Example:** Before documenting the IPC system, invoke Search:
+> "Search for all IPC-related public APIs, types, and message handlers across engine/crates/wavecraft-bridge/, engine/crates/wavecraft-protocol/, and ui/packages/core/src/. Synthesize: every public function, type, and message format with a brief description, so I can ensure the documentation covers all touchpoints."
+
+---
+
 ## Documentation Standards
 
 ### Markdown Formatting

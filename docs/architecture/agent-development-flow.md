@@ -193,6 +193,20 @@ Each agent can only invoke specific subagents:
 - Only Coder and Tester have terminal execution access.
 - PO can only edit `docs/roadmap.md` and `docs/backlog.md`.
 
+### Search Delegation Pattern
+
+All specialized agents (except Orchestrator) can invoke the Search agent for deep codebase research. Each agent's instructions include a "Codebase Research" section that specifies:
+
+- **When to delegate** vs. use own search tools
+- **How to structure** Search requests (what + where + synthesize)
+- **Agent-specific examples** matching their typical research needs
+
+**Rule of thumb:** If the research requires reading >3 files or spans multiple layers, delegate to Search. For quick single-file lookups, use your own tools.
+
+**Search is read-only.** It returns findings and analysis. The invoking agent decides what to do with the results.
+
+---
+
 ## When to Invoke Each Agent
 
 - **Start with Orchestrator** when: Beginning a new feature, coordinating multi-phase work, unsure which specialist to use

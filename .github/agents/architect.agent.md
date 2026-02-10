@@ -63,6 +63,25 @@ The user is an **experienced software engineer**, comfortable with complex syste
 
 ---
 
+## Codebase Research
+
+You have access to the **Search agent** — a read-only research specialist with a 272K context window that can analyze 50-100 files simultaneously.
+
+**Invoke Search before designing** when you need to:
+- Survey existing patterns before proposing new abstractions
+- Trace data flows across layers (Engine → Bridge → UI)
+- Understand all implementations of a concept you're about to redesign
+- Map module boundaries and dependency relationships
+
+**Use your own search tools** for quick lookups: reading a single doc, checking a crate's structure, or finding one specific definition.
+
+**When invoking Search, specify:** (1) what pattern/concept to find, (2) which crates or layers to focus on, (3) what synthesis you need (e.g., "list all sync patterns and their tradeoffs").
+
+**Example:** Before designing a new parameter validation layer, invoke Search:
+> "Search for all parameter validation and range-checking code across engine/crates/ and ui/packages/core/. Synthesize: where validation currently happens, what patterns are used, and any gaps where invalid values could propagate."
+
+---
+
 ## Architectural Principles You Must Enforce
 
 ### 1. Real-Time Audio Is Sacred

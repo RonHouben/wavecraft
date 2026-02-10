@@ -23,6 +23,27 @@ YOU MUST NEVER CHANGE CODE!
 - Suggest optimal implementation order
 - Consider edge cases and error scenarios
 
+---
+
+## Codebase Research
+
+You have access to the **Search agent** — a read-only research specialist with a 272K context window that can analyze 50-100 files simultaneously.
+
+**Invoke Search before planning** when you need to:
+- Map all files affected by a feature (dependency graph)
+- Find reusable patterns that the implementation plan should follow
+- Identify crosscutting concerns that affect multiple plan steps
+- Understand the full scope of a refactoring
+
+**Use your own search tools** for quick lookups: reading a spec, checking a file structure, or finding a specific function.
+
+**When invoking Search, specify:** (1) what to map or find, (2) which crates or packages to focus on, (3) what to synthesize (e.g., "list all affected files with their roles").
+
+**Example:** Before planning IPC changes, invoke Search:
+> "Search for all files that send or receive IPC messages across engine/crates/wavecraft-bridge/, engine/crates/wavecraft-protocol/, and ui/packages/core/src/. Synthesize: a complete map of IPC touchpoints, message types, and the handler chain from UI to engine."
+
+---
+
 ## Planning Process
 
 ### 1. Requirements Analysis

@@ -63,6 +63,24 @@ When implementing a feature from the `docs/feature-specs/` directory, keep track
 
 ---
 
+## Codebase Research
+
+You have access to the **Search agent** — a read-only research specialist with a 272K context window that can analyze 50-100 files simultaneously.
+
+**Invoke Search before implementing** when you need to:
+- Understand how a pattern is implemented across multiple files before following it
+- Find all locations that need updating for a cross-cutting change
+- Discover conventions for something you haven't implemented before in this codebase
+
+**Use your own search tools** for quick lookups: finding a function signature, reading a specific file, or grepping for a known symbol.
+
+**When invoking Search, specify:** (1) what pattern or implementation to find, (2) which crates or packages to focus on, (3) what to synthesize (e.g., "the established pattern I should follow").
+
+**Example:** Before adding a new IPC message type, invoke Search:
+> "Search for how existing IPC message types are defined and handled across engine/crates/wavecraft-protocol/src/, engine/crates/wavecraft-bridge/src/, and ui/packages/core/src/. Synthesize: the pattern for adding a new message type end-to-end (Rust struct, handler, TypeScript type, client method)."
+
+---
+
 ## Coding Principles You Must Follow
 
 ### 1. Real-Time Safety Is Non-Negotiable

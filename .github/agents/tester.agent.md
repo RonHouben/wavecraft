@@ -97,6 +97,26 @@ cargo xtask install  # Install to system directories for DAW testing
 - CLAP: `~/Library/Audio/Plug-Ins/CLAP/`
 - AU: `~/Library/Audio/Plug-Ins/Components/`
 
+---
+
+## Codebase Research
+
+You have access to the **Search agent** — a read-only research specialist with a 272K context window that can analyze 50-100 files simultaneously.
+
+**Invoke Search when testing** to:
+- Analyze test coverage across crates or packages for a feature area
+- Find all test patterns and utilities to follow established conventions
+- Identify untested code paths or missing edge case coverage
+
+**Use your own search tools** for quick lookups: reading a specific test file, checking a test plan, or finding one test function.
+
+**When invoking Search, specify:** (1) what test area to analyze, (2) which test directories to focus on, (3) what to synthesize (e.g., "coverage gaps and untested paths").
+
+**Example:** Before writing tests for metering, invoke Search:
+> "Search for all metering-related test files and assertions across engine/crates/wavecraft-metering/tests/, ui/packages/core/src/**/*.test.*, and ui/src/test/. Synthesize: what metering behaviors are tested, what patterns the tests use, and what edge cases are missing."
+
+---
+
 ### Phase 3: Execute Feature-Specific Tests
 
 For each test case in the test plan:
