@@ -228,7 +228,11 @@ enum Commands {
         about = "Validate CLI wavecraft-* dependency versions and publishability",
         name = "validate-cli-deps"
     )]
-    ValidateCliDeps,
+    ValidateCliDeps {
+        /// Also verify crate availability on crates.io
+        #[arg(long)]
+        check_registry: bool,
+    },
 
     /// Validate CLI template generation
     #[command(
@@ -381,9 +385,10 @@ fn main() -> Result<()> {
             };
             commands::check::run(config)
         }
-        Some(Commands::ValidateCliDeps) => {
+        Some(Commands::ValidateCliDeps { check_registry }) => {
             let config = commands::validate_cli_deps::ValidateCliDepsConfig {
                 verbose: cli.verbose,
+                check_registry,
             };
             commands::validate_cli_deps::run(config)
         }
