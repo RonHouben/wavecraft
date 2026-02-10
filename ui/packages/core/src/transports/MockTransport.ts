@@ -89,6 +89,11 @@ export class MockTransport implements Transport {
           name: 'Mock Parameter',
         };
 
+      case 'getAllParameters':
+        return {
+          parameters: [],
+        };
+
       case 'getMeterFrame':
         return {
           frame: {
@@ -104,6 +109,9 @@ export class MockTransport implements Transport {
         return { accepted: true };
 
       case 'setParameter':
+        return {};
+
+      case 'ping':
         return {};
 
       default:
