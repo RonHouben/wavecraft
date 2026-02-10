@@ -11,7 +11,6 @@ use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::time::Duration;
 use tokio::io::AsyncReadExt;
 use tokio::process::Command;
 use tokio::sync::watch;
@@ -20,8 +19,8 @@ use wavecraft_dev_server::ws_server::WsServer;
 use wavecraft_protocol::ParameterInfo;
 
 use super::host::DevServerHost;
-use crate::dev_server::PluginLoader;
 use crate::commands::start::write_sidecar_cache;
+use crate::project::param_extract::{extract_params_subprocess, DEFAULT_EXTRACT_TIMEOUT};
 
 /// Concurrency control for rebuild operations.
 ///
@@ -325,39 +324,11 @@ impl RebuildPipeline {
             elapsed.as_secs_f64()
         );
 
-        let engine_dir = self.engine_dir.clone();
-        let load_result = tokio::time::timeout(
-            Duration::from_secs(30),
-            tokio::task::spawn_blocking(move || {
-                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                    load_parameters_from_dylib(engine_dir)
-                }))
-            }),
-        )
-        .await;
-
-        let params = match load_result {
-            Err(_) => {
-                anyhow::bail!(
-                    "Timeout loading parameters from dylib (30s). This may indicate a macOS library loading issue. Try restarting `wavecraft start`."
-                );
-            }
-            Ok(join_result) => match join_result {
-                Err(join_err) => {
-                    anyhow::bail!("Failed to join parameter load task: {}", join_err);
-                }
-                Ok(Ok(Ok(params))) => params,
-                Ok(Ok(Err(e))) => {
-                    return Err(e).context("Failed to load parameters from dylib");
-                }
-                Ok(Err(panic_payload)) => {
-                    anyhow::bail!(
-                        "Panic while loading parameters from dylib: {}",
-                        panic_message(panic_payload)
-                    );
-                }
-            },
-        };
+        // Load parameters via subprocess (with built-in timeout and panic safety)
+        let params = load_parameters_from_dylib(self.engine_dir.clone())
+            .await
+            .context("Failed to load parameters from rebuilt dylib")?;
+        
         let param_count_change = params.len() as i32 - old_count;
 
         Ok((params, param_count_change))
@@ -379,12 +350,12 @@ impl RebuildPipeline {
     }
 }
 
-/// Load parameters from the rebuilt dylib using FFI.
+/// Load parameters from the rebuilt dylib via subprocess isolation.
 ///
 /// To avoid dylib caching issues on macOS, we copy the dylib to a unique
-/// temporary location before loading. This ensures libloading reads the
-/// fresh file from disk rather than returning a cached library handle.
-fn load_parameters_from_dylib(engine_dir: PathBuf) -> Result<Vec<ParameterInfo>> {
+/// temporary location before loading. The subprocess extracts parameters
+/// and exits cleanly, with the temp file deleted after.  
+async fn load_parameters_from_dylib(engine_dir: PathBuf) -> Result<Vec<ParameterInfo>> {
     use crate::project::find_plugin_dylib;
 
     println!("  {} Finding plugin dylib...", style("→").dim());
@@ -396,11 +367,12 @@ fn load_parameters_from_dylib(engine_dir: PathBuf) -> Result<Vec<ParameterInfo>>
     let temp_path = create_temp_dylib_copy(&lib_path)?;
     println!("  {} Temp: {}", style("→").dim(), temp_path.display());
 
-    println!("  {} Loading dylib via FFI...", style("→").dim());
-    let params = PluginLoader::load_params_only(&temp_path)
-        .with_context(|| format!("Failed to load dylib: {}", temp_path.display()))?;
+    println!("  {} Loading parameters via subprocess...", style("→").dim());
+    let params = extract_params_subprocess(&temp_path, DEFAULT_EXTRACT_TIMEOUT)
+        .await
+        .with_context(|| format!("Failed to extract parameters from: {}", temp_path.display()))?;
     println!(
-        "  {} Loaded {} parameters via FFI",
+        "  {} Loaded {} parameters via subprocess",
         style("→").dim(),
         params.len()
     );

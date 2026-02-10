@@ -10,6 +10,10 @@ description = "Procedural macros for Wavecraft plugin DSL"
 [lib]
 proc-macro = true
 
+[features]
+default = []
+_param-discovery = []  # Internal: used by wavecraft start for fast param loading
+
 [dependencies]
 syn = { version = "2", features = ["full", "parsing", "extra-traits"] }
 quote = "1"

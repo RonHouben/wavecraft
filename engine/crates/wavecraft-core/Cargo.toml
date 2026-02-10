@@ -13,6 +13,9 @@ crate-type = ["rlib"]
 
 [features]
 default = []
+_param-discovery = [
+    "wavecraft-macros/_param-discovery",
+]
 
 [dependencies]
 wavecraft-protocol.workspace = true

@@ -134,20 +134,21 @@ fn apply_local_dev_overrides(content: &str, vars: &TemplateVariables) -> Result<
         // - Simple: crate = { git = "...", tag = "..." }
         // - With package: crate = { package = "crate", git = "...", tag = "..." }
         // - With optional: crate = { git = "...", tag = "...", optional = true }
-        // - With both: crate = { package = "crate", git = "...", tag = "...", optional = true }
+        // - With features: crate = { git = "...", tag = "...", features = ["..."] }
+        // - With both: crate = { package = "crate", git = "...", tag = "...", optional = true, features = [...] }
         let git_pattern = format!(
-            r#"(?s)({}\s*=\s*\{{\s*)(?:package\s*=\s*"[^"]*"\s*,\s*)?(git\s*=\s*"https://github\.com/RonHouben/wavecraft"\s*,\s*tag\s*=\s*"[^"]*")\s*((?:,\s*optional\s*=\s*\w+)?)\s*\}}"#,
+            r#"(?s)({}\s*=\s*\{{\s*)(?:package\s*=\s*"[^"]*"\s*,\s*)?git\s*=\s*"https://github\.com/RonHouben/wavecraft"\s*,\s*tag\s*=\s*"[^"]*"\s*((?:,\s*[^}}]*)?)\}}"#,
             regex::escape(crate_name)
         );
 
         let re = Regex::new(&git_pattern)
             .with_context(|| format!("Invalid regex pattern for crate: {}", crate_name))?;
 
-        // Perform replacement preserving package and optional attributes
+        // Perform replacement preserving package and any extra attributes
         result = re
             .replace_all(&result, |caps: &regex::Captures| {
                 let prefix = &caps[1]; // "crate = { "
-                let optional = &caps[3]; // ", optional = true" or empty
+                let extra_attrs = &caps[2]; // ", optional = true, features = [...]" or empty
 
                 // Check if package attribute exists in the original
                 let package_attr = if caps[0].contains("package") {
@@ -162,7 +163,7 @@ fn apply_local_dev_overrides(content: &str, vars: &TemplateVariables) -> Result<
                     package_attr,
                     sdk_path.display(),
                     crate_name,
-                    optional
+                    extra_attrs
                 )
             })
             .to_string();
@@ -207,7 +208,7 @@ wavecraft-protocol = { git = "https://github.com/RonHouben/wavecraft", tag = "v0
 wavecraft-dsp = { git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.0" }
 wavecraft-bridge = { git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.0" }
 wavecraft-metering = { git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.0" }
-wavecraft-dev-server = { git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.0" }
+wavecraft-dev-server = { git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.0", features = ["audio"], optional = true }
 "#;
 
         // Create a temp directory to use as the SDK path
@@ -258,6 +259,22 @@ wavecraft-dev-server = { git = "https://github.com/RonHouben/wavecraft", tag = "
                 result
             );
         }
+
+        // Verify extra attributes (features, optional) are preserved for dev-server
+        assert!(
+            result.contains(
+                "wavecraft-dev-server = { path = \""
+            ),
+            "Expected wavecraft-dev-server to use path dependency"
+        );
+        assert!(
+            result.contains("features = [\"audio\"]"),
+            "Expected wavecraft-dev-server features to be preserved"
+        );
+        assert!(
+            result.contains("optional = true"),
+            "Expected wavecraft-dev-server optional flag to be preserved"
+        );
     }
 
     #[test]

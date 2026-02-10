@@ -280,11 +280,13 @@ pub(crate) fn write_sidecar_cache(engine_dir: &Path, params: &[ParameterInfo]) -
 
 /// Load plugin parameters using cached sidecar or feature-gated build.
 ///
-/// Attempts in order:
-/// 1. Read cached `wavecraft-params.json` (instant, no build)
-/// 2. Build with `_param-discovery` feature (no nih-plug static init)
-/// 3. Fall back to normal build + FFI load (for older plugins)
-fn load_parameters(
+/// Returns parameter metadata and optionally a PluginLoader (when audio-dev
+/// feature is enabled and the vtable is available).
+///
+/// Two-phase process:
+/// 1. Try reading from cached sidecar (fast path)
+/// 2. Otherwise: build with _param-discovery, load via subprocess (or in-process for audio-dev), write sidecar
+async fn load_parameters(
     engine_dir: &Path,
     verbose: bool,
 ) -> Result<(Vec<ParameterInfo>, Option<PluginLoader>)> {
@@ -339,8 +341,9 @@ fn load_parameters(
             };
             #[cfg(not(feature = "audio-dev"))]
             let (params, loader) = {
-                let params = PluginLoader::load_params_only(&dylib_path)
-                    .context("Failed to load plugin for parameter discovery")?;
+                let params = extract_params_subprocess(&dylib_path, DEFAULT_EXTRACT_TIMEOUT)
+                    .await
+                    .context("Failed to extract parameters from plugin")?;
                 (params, None)
             };
 
@@ -386,8 +389,9 @@ fn load_parameters(
             };
             #[cfg(not(feature = "audio-dev"))]
             let (params, loader) = {
-                let params = PluginLoader::load_params_only(&dylib_path)
-                    .context("Failed to load plugin")?;
+                let params = extract_params_subprocess(&dylib_path, DEFAULT_EXTRACT_TIMEOUT)
+                    .await
+                    .context("Failed to extract parameters from plugin")?;
                 (params, None)
             };
             println!("{} Loaded {} parameters", style("✓").green(), params.len());
@@ -416,7 +420,9 @@ fn run_dev_servers(
     ensure_port_available(ui_port, "UI dev server", "--ui-port")?;
 
     // 1. Build the plugin and load parameters (two-phase or cached)
-    let (params, loader) = load_parameters(&project.engine_dir, verbose)?;
+    // Create tokio runtime for async parameter loading
+    let runtime = tokio::runtime::Runtime::new().context("Failed to create async runtime")?;
+    let (params, loader) = runtime.block_on(load_parameters(&project.engine_dir, verbose))?;
 
     if verbose {
         for param in &params {
@@ -451,9 +457,7 @@ fn run_dev_servers(
     let host = std::sync::Arc::new(host);
     let handler = std::sync::Arc::new(IpcHandler::new(host.clone()));
 
-    // Create tokio runtime for the WebSocket server
-    let runtime = tokio::runtime::Runtime::new().context("Failed to create async runtime")?;
-
+    // Start WebSocket server (runtime already created above for param loading)
     let server = std::sync::Arc::new(WsServer::new(ws_port, handler.clone(), verbose));
     runtime.block_on(async { server.start().await.map_err(|e| anyhow::anyhow!("{}", e)) })?;
 
