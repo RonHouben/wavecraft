@@ -115,10 +115,6 @@ fn update_cli() -> SelfUpdateResult {
         return SelfUpdateResult::AlreadyUpToDate;
     }
 
-    // Update found — notify user
-    println!("📦 Installing update...");
-    let _ = io::stdout().flush();
-
     // A new version was installed — query it
     match get_installed_version() {
         Ok(new_version) => {
@@ -151,7 +147,7 @@ fn start_cli_update_progress(done: Arc<AtomicBool>) -> thread::JoinHandle<()> {
         }
 
         if !done.load(Ordering::Relaxed) {
-            println!("⏳ Still checking... this can take a minute on slow networks.");
+            println!("📦 Downloading and installing... this may take a minute on slow networks.");
             let _ = io::stdout().flush();
         }
     })
