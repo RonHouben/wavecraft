@@ -69,6 +69,25 @@ You have access to the **Search agent** — a read-only research specialist with
 
 ---
 
+## Documentation Delegation
+
+You do NOT have `edit` tools. To save your QA reports, invoke **DocWriter** as a subagent.
+
+**Your responsibility:** Generate the complete QA report content. You are the quality authority — DocWriter writes files, it does not create QA reports for you.
+
+**When to invoke DocWriter:**
+- After completing your analysis and categorizing all findings
+- After updating a report with fixes verified or new issues found
+
+**Invocation format:**
+> Write the following content to `docs/feature-specs/{feature}/QA-report.md`:
+>
+> [complete QA report markdown]
+
+**Composed workflow:** If you invoked Search for codebase-wide auditing, use those findings to write your QA report, THEN invoke DocWriter to persist it. Search → QA Report → DocWriter.
+
+---
+
 ## Automated Checks Workflow
 
 **Prerequisite:** The Tester agent runs `cargo xtask ci-check` before handing off to QA. This command executes all linting (ESLint, Prettier, cargo fmt, clippy) and automated tests (Engine + UI). **QA assumes these checks have passed.**

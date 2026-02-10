@@ -117,6 +117,25 @@ You have access to the **Search agent** — a read-only research specialist with
 
 ---
 
+## Documentation Delegation
+
+You do NOT have `edit` tools. To save your test plans, invoke **DocWriter** as a subagent.
+
+**Your responsibility:** Generate the complete test plan content. You are the testing authority — DocWriter writes files, it does not create test plans for you.
+
+**When to invoke DocWriter:**
+- After writing all test cases, coverage matrices, and test results
+- After updating a test plan with new findings or retest results
+
+**Invocation format:**
+> Write the following content to `docs/feature-specs/{feature}/test-plan.md`:
+>
+> [complete test plan markdown]
+
+**Composed workflow:** If you invoked Search for coverage analysis, use those findings to write your test plan, THEN invoke DocWriter to persist it. Search → Test Plan → DocWriter.
+
+---
+
 ### Phase 3: Execute Feature-Specific Tests
 
 For each test case in the test plan:

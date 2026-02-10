@@ -205,6 +205,18 @@ All specialized agents (except Orchestrator) can invoke the Search agent for dee
 
 **Search is read-only.** It returns findings and analysis. The invoking agent decides what to do with the results.
 
+### Documentation Delegation Pattern
+
+Four agents (Architect, Planner, Tester, QA) don't have `edit` tools but are responsible for creating documentation artifacts. Each agent's instructions include a "Documentation Delegation" section that specifies:
+
+- **When to delegate** — after generating complete document content
+- **Who to delegate to** — DocWriter (already in each agent's `agents:` list)
+- **What to pass** — complete markdown content + target filepath
+
+**Rule:** The delegating agent generates ALL content. DocWriter writes the file — it does not author technical documents.
+
+**Composition:** An agent may invoke Search for research AND DocWriter for persistence in the same workflow. Always: Search → generate content → DocWriter.
+
 ---
 
 ## When to Invoke Each Agent
