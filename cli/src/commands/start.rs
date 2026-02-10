@@ -260,7 +260,9 @@ fn try_read_cached_params(engine_dir: &Path, verbose: bool) -> Option<Vec<Parame
         return None;
     }
 
-    PluginLoader::load_params_from_file(&sidecar_path).ok()
+    // Load parameters from JSON file (inline to avoid publish dep issues)
+    let contents = std::fs::read_to_string(&sidecar_path).ok()?;
+    serde_json::from_str(&contents).ok()
 }
 
 /// Write parameter metadata to the sidecar JSON cache.
