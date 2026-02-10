@@ -1,4 +1,5 @@
 use anyhow::{bail, Context, Result};
+use std::io::{self, Write};
 use std::path::Path;
 use std::process::Command;
 use std::sync::{
@@ -147,6 +148,7 @@ fn start_cli_update_progress(done: Arc<AtomicBool>) -> thread::JoinHandle<()> {
 
         if !done.load(Ordering::Relaxed) {
             println!("⏳ Still checking... this can take a minute on slow networks.");
+            let _ = io::stdout().flush();
         }
     })
 }
