@@ -284,10 +284,7 @@ fn check_registry_availability(dep: &CliDependency) -> Result<Vec<ValidationErro
     };
 
     // Query crates.io sparse index
-    let url = format!(
-        "https://index.crates.io/{}",
-        crate_index_prefix(&dep.name)
-    );
+    let url = format!("https://index.crates.io/{}", crate_index_prefix(&dep.name));
 
     let response = ureq::get(&url)
         .timeout(std::time::Duration::from_secs(10))
@@ -312,7 +309,7 @@ fn check_registry_availability(dep: &CliDependency) -> Result<Vec<ValidationErro
             let req_str = format!("^{}", version_req);
             let req = semver::VersionReq::parse(&req_str)
                 .with_context(|| format!("Failed to parse version requirement: {}", req_str))?;
-            
+
             let published_ver = semver::Version::parse(&ver)
                 .with_context(|| format!("Failed to parse published version: {}", ver))?;
 
@@ -542,14 +539,20 @@ version = "0.1.0"
         assert_eq!(crate_index_prefix("abc"), "3/a/abc");
         assert_eq!(crate_index_prefix("abcd"), "ab/cd/abcd");
         assert_eq!(crate_index_prefix("wavecraft-core"), "wa/ve/wavecraft-core");
-        assert_eq!(crate_index_prefix("wavecraft-bridge"), "wa/ve/wavecraft-bridge");
+        assert_eq!(
+            crate_index_prefix("wavecraft-bridge"),
+            "wa/ve/wavecraft-bridge"
+        );
     }
 
     #[test]
     fn test_check_registry_config_default() {
         // Verify that check_registry defaults to false
         let config = ValidateCliDepsConfig::default();
-        assert!(!config.check_registry, "check_registry should default to false");
+        assert!(
+            !config.check_registry,
+            "check_registry should default to false"
+        );
         assert!(!config.verbose, "verbose should default to false");
     }
 
@@ -566,8 +569,11 @@ version = "0.1.0"
         };
 
         let result = check_registry_availability(&dep);
-        assert!(result.is_ok(), "Should successfully query crates.io for serde");
-        
+        assert!(
+            result.is_ok(),
+            "Should successfully query crates.io for serde"
+        );
+
         let errors = result.unwrap();
         assert!(errors.is_empty(), "serde should be available on crates.io");
     }
