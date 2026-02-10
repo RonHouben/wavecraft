@@ -6,6 +6,7 @@ This project uses specialized agents with distinct responsibilities that hand of
 
 | Agent | Role | Key Outputs |
 |-------|------|-------------|
+| **Orchestrator** | Workflow coordinator, routes work between agents | Phase tracking, handoff decisions |
 | **PO** (Product Owner) | Owns product vision, roadmap, feature prioritization | User stories, `docs/roadmap.md` |
 | **Architect** | Designs system architecture, enforces technical constraints | Low-level designs in `docs/feature-specs/{feature}/` |
 | **Planner** | Creates detailed implementation plans | `docs/feature-specs/{feature}/implementation-plan.md` |
@@ -17,9 +18,12 @@ This project uses specialized agents with distinct responsibilities that hand of
 
 ## Standard Feature Development Flow
 
+**Note:** The Orchestrator agent serves as the central coordinator for this workflow, routing work between specialized agents. Users can start with either the Orchestrator (recommended for full features) or go directly to a specific agent for targeted work.
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                        FEATURE DEVELOPMENT FLOW                         │
+│                   (Orchestrator coordinates all phases)                 │
 └─────────────────────────────────────────────────────────────────────────┘
 
   ┌──────┐                                                                 
@@ -77,19 +81,31 @@ This project uses specialized agents with distinct responsibilities that hand of
 
 ## Handoff Summary
 
+**Note:** The Orchestrator agent coordinates these handoffs. Agents can hand off directly (when context is clear) or route through Orchestrator (recommended for phase transitions).
+
 | From | To | Trigger | What Gets Passed |
 |------|----|---------|------------------|
-| PO → Architect | "Create low level design" | Feature requirements, user stories |
-| Architect → Planner | "Create implementation plan" | Low-level design document |
-| Planner → Coder | "Start Implementation" | Implementation plan |
-| Coder → Tester | "Test Implementation" | Completed implementation |
-| Tester → Coder | "Fix Issues" | Test failures documented in test-plan.md |
-| Tester → QA | "Run QA" | All tests passing |
-| QA → Coder | "Fix findings" | QA report with severity/location |
-| Coder → Tester | "Re-test" | QA findings fixed |
-| QA → Architect | "Update architectural Docs" | No QA issues, implementation review |
-| Architect → PO | "Update roadmap" | Architecture docs updated |
-| **PO** | — | **Archive** | Archive feature spec, update roadmap |
+| Orchestrator → PO | "Define requirements" | User's feature request |
+| PO → Orchestrator | "Requirements complete" | User stories document |
+| Orchestrator → Architect | "Create design" | User stories |
+| Architect → Orchestrator | "Design complete" | Low-level design document |
+| Orchestrator → Planner | "Create plan" | Low-level design |
+| Planner → Orchestrator | "Plan complete" | Implementation plan |
+| Orchestrator → Coder | "Start implementation" | Implementation plan |
+| Coder → Orchestrator | "Implementation complete" | Code + PR + progress doc |
+| Orchestrator → Tester | "Test implementation" | Completed implementation |
+| Tester → Orchestrator | "Tests complete/failed" | Test results + test plan |
+| Orchestrator → Coder | "Fix issues" | Test failures |
+| Orchestrator → QA | "Quality review" | All tests passing |
+| QA → Orchestrator | "QA complete/issues" | QA report |
+| Orchestrator → Coder | "Fix findings" | QA issues |
+| Orchestrator → Architect | "Update docs" | Implementation review |
+| Orchestrator → PO | "Archive feature" | Complete feature |
+
+**Direct handoffs** (bypass Orchestrator when appropriate):
+- Coder ↔ Tester: Rapid fix/retest cycles
+- Tester → QA: Direct handoff when all tests pass
+- QA → Coder: Direct handoff for minor fixes
 
 ## Key Documentation Artifacts
 
@@ -131,8 +147,7 @@ The **Coder** agent is responsible for creating Pull Requests using the `create-
 ### Editing Permissions
 
 | Agent | Can Edit Code? | Can Edit Docs? | Can Edit Roadmap? | Can Edit Archived Specs? |
-|-------|----------------|----------------|-------------------|--------------------------||
-| PO | ❌ | ❌ | ✅ (exclusive) | ❌ |
+|-------|----------------|----------------|-------------------|--------------------------||| Orchestrator | ❌ | ❌ | ❌ | ❌ || PO | ❌ | ❌ | ✅ (exclusive) | ❌ |
 | Architect | ❌ | ❌ | ❌ | ❌ |
 | Planner | ❌ | ❌ | ❌ | ❌ |
 | Coder | ✅ | ✅ | ❌ | ❌ |
@@ -145,6 +160,7 @@ The **Coder** agent is responsible for creating Pull Requests using the `create-
 
 | Agent | Model | Tools | Can Execute? |
 |-------|-------|-------|-------------|
+| **Orchestrator** | Claude Sonnet 4.5 | read, search, agent, web | ❌ |
 | **PO** | Claude Sonnet 4.5 | edit, read, search, web, agent | ❌ |
 | **Architect** | Claude Opus 4.6 | search, read, web, agent | ❌ |
 | **Planner** | Gemini 2.5 Pro | read, search, web, agent | ❌ |
@@ -160,16 +176,18 @@ Each agent can only invoke specific subagents:
 
 | Agent | Can Invoke |
 |-------|------------|
-| **PO** | Architect, DocWriter, Search |
-| **Architect** | Planner, PO, DocWriter, Search |
-| **Planner** | DocWriter, Search |
-| **Coder** | Tester, DocWriter, Search |
-| **Tester** | Coder, QA, DocWriter, Search |
-| **QA** | Coder, Architect, DocWriter, Search |
-| **DocWriter** | Search |
+| **Orchestrator** | PO, Architect, Planner, Coder, Tester, QA, DocWriter, Search |
+| **PO** | Orchestrator, Architect, DocWriter, Search |
+| **Architect** | Orchestrator, Planner, PO, DocWriter, Search |
+| **Planner** | Orchestrator, DocWriter, Search |
+| **Coder** | Orchestrator, Tester, DocWriter, Search |
+| **Tester** | Orchestrator, Coder, QA, DocWriter, Search |
+| **QA** | Orchestrator, Coder, Architect, DocWriter, Search |
+| **DocWriter** | Orchestrator, Search |
 | **Search** | — (none) |
 
 **Notes:**
+- Orchestrator can invoke all agents and serves as the central workflow coordinator. All agents can hand back to Orchestrator for routing to the next phase.
 - DocWriter can edit markdown documentation in `docs/` but not code files. It is invoked as a subagent by other agents.
 - Search is read-only for codebase research. Its 272K context window enables analysis across many files simultaneously.
 - Only Coder and Tester have terminal execution access.
@@ -177,7 +195,8 @@ Each agent can only invoke specific subagents:
 
 ## When to Invoke Each Agent
 
-- **Start with PO** when: New feature request, prioritization question, roadmap update needed
+- **Start with Orchestrator** when: Beginning a new feature, coordinating multi-phase work, unsure which specialist to use
+- **Start with PO** when: Quick roadmap questions, backlog prioritization (no full feature workflow needed)
 - **Use Architect** when: Design decisions needed, architectural review, defining boundaries
 - **Use Planner** when: Complex feature needs breakdown, multi-step implementation
 - **Use Coder** when: Ready to implement, bug fixes, code changes, creating PRs

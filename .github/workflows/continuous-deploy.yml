@@ -42,6 +42,8 @@ jobs:
               - 'engine/crates/wavecraft-bridge/**'
               - 'engine/crates/wavecraft-metering/**'
               - 'engine/crates/wavecraft-macros/**'
+              - 'engine/crates/wavecraft-dev-server/**'
+              - 'engine/Cargo.toml'
             npm-core:
               - 'ui/packages/core/**'
             npm-components:

@@ -3,7 +3,7 @@ name: docwriter
 description: Technical documentation specialist for creating and updating all project documentation. Enforces documentation standards and maintains consistency.
 model: Claude Sonnet 4.5 (copilot)
 tools: ['read', 'search', 'edit', 'web', 'agent']
-agents: [search]
+agents: [orchestrator, search]
 user-invokable: false
 ---
 
