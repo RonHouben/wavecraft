@@ -2,8 +2,8 @@
 name: coder
 description: Senior software engineer implementing Rust audio plugins (nih-plug) with React UIs. Expert in real-time safe DSP code, VST3/CLAP integration, and cross-platform development.
 model:
-  - GPT-5.2-Codex (copilot)
   - Claude Sonnet 4.5 (copilot)
+  - GPT-5.2-Codex (copilot)
   - GPT-5.1-Codex (copilot)
 tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'github/*',  'todo']
 agents: [orchestrator, tester, docwriter, search]
@@ -329,34 +329,39 @@ window.ipc.postMessage(JSON.stringify({
 
 **Verification command (run this before ANY handoff):**
 ```bash
-cargo xtask ci-check
+cargo xtask ci-check --fix
 ```
+
+This runs engine + UI checks via the root alias to `engine/xtask`.
 
 If this command shows ANY failures, you are NOT allowed to hand off. Fix the issues first.
 
 ---
 
-## Pre-Handoff Checklist
+## Repo-wide Verification (Required Before Handoff)
 
-**⚠️ Load the workspace-commands skill first:** `#skill:workspace-commands`
+**Run from workspace root.** This is a BLOCKING requirement before handing off to any other agent.
 
-**Before handing off to Tester or QA, always run these checks from the workspace root:**
-
+**1. Engine + UI checks (always run):**
 ```bash
-# 1. All linting passes
-cargo xtask lint
-
-# 2. TypeScript type-checking (UI changes)
-cd ui && npm run typecheck
-
-# 3. All tests pass
-cargo xtask test --ui        # UI unit tests
-cargo xtask test --engine    # Engine tests (if Rust code changed)
+cargo xtask ci-check --fix
 ```
 
-**⚠️ CRITICAL**: `npm run typecheck` is NOT run by `npm test` (Vitest). Always run it explicitly to catch type errors that CI will fail on.
+This command runs engine + UI linting (with auto-fix), formatting, and tests via the root alias to `engine/xtask`.
 
-**Why this matters**: CI runs these checks in separate jobs. If any fail, the PR will be blocked. Running locally first saves time and prevents pipeline failures.
+**2. CLI checks (when `cli/` touched):**
+```bash
+cargo fmt --manifest-path cli/Cargo.toml
+cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings
+cargo test --manifest-path cli/Cargo.toml
+```
+
+**3. Template validation (when changing templates or CLI template logic):**
+```bash
+cargo xtask ci-validate-template
+```
+
+**⚠️ CRITICAL**: If ANY check fails, you MUST fix the issue before handoff. No exceptions.
 
 ---
 

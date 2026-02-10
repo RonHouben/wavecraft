@@ -11,6 +11,7 @@ use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::io::AsyncReadExt;
 use tokio::process::Command;
 use tokio::sync::watch;
@@ -20,6 +21,7 @@ use wavecraft_protocol::ParameterInfo;
 
 use super::host::DevServerHost;
 use crate::dev_server::PluginLoader;
+use crate::commands::start::write_sidecar_cache;
 
 /// Concurrency control for rebuild operations.
 ///
@@ -118,6 +120,10 @@ impl RebuildPipeline {
                 Ok((params, param_count_change)) => {
                     let mut reload_ok = true;
 
+                    if let Err(e) = write_sidecar_cache(&self.engine_dir, &params) {
+                        println!("  Warning: failed to update param cache: {}", e);
+                    }
+
                     println!("  {} Updating parameter host...", style("→").dim());
                     let replace_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                         self.host.replace_parameters(params.clone())
@@ -129,7 +135,7 @@ impl RebuildPipeline {
                         }
                         Ok(Err(e)) => {
                             reload_ok = false;
-                            eprintln!(
+                            println!(
                                 "  {} Failed to replace parameters: {:#}",
                                 style("✗").red(),
                                 e
@@ -137,7 +143,7 @@ impl RebuildPipeline {
                         }
                         Err(panic_payload) => {
                             reload_ok = false;
-                            eprintln!(
+                            println!(
                                 "  {} Panic while replacing parameters: {}",
                                 style("✗").red(),
                                 panic_message(panic_payload)
@@ -159,7 +165,7 @@ impl RebuildPipeline {
                             }
                             Ok(Err(e)) => {
                                 reload_ok = false;
-                                eprintln!(
+                                println!(
                                     "  {} Failed to notify UI clients: {:#}",
                                     style("✗").red(),
                                     e
@@ -167,7 +173,7 @@ impl RebuildPipeline {
                             }
                             Err(join_err) => {
                                 reload_ok = false;
-                                eprintln!(
+                                println!(
                                     "  {} Panic while notifying UI clients: {}",
                                     style("✗").red(),
                                     join_err
@@ -198,14 +204,14 @@ impl RebuildPipeline {
                             let _ = tx.send(params);
                         }
                     } else {
-                        eprintln!(
+                        println!(
                             "  {} Hot-reload aborted — parameters not fully applied",
                             style("✗").red()
                         );
                     }
                 }
                 Err(e) => {
-                    eprintln!("  {} Build failed:\n{}", style("✗").red(), e);
+                    println!("  {} Build failed:\n{}", style("✗").red(), e);
                     // Preserve old state, don't update parameters
                 }
             }
@@ -319,20 +325,38 @@ impl RebuildPipeline {
             elapsed.as_secs_f64()
         );
 
-        // Load parameters from rebuilt dylib (panic-safe)
-        let params = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            self.load_parameters_from_dylib()
-        })) {
-            Ok(Ok(params)) => params,
-            Ok(Err(e)) => {
-                return Err(e).context("Failed to load parameters from dylib");
-            }
-            Err(panic_payload) => {
+        let engine_dir = self.engine_dir.clone();
+        let load_result = tokio::time::timeout(
+            Duration::from_secs(30),
+            tokio::task::spawn_blocking(move || {
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    load_parameters_from_dylib(engine_dir)
+                }))
+            }),
+        )
+        .await;
+
+        let params = match load_result {
+            Err(_) => {
                 anyhow::bail!(
-                    "Panic while loading parameters from dylib: {}",
-                    panic_message(panic_payload)
+                    "Timeout loading parameters from dylib (30s). This may indicate a macOS library loading issue. Try restarting `wavecraft start`."
                 );
             }
+            Ok(join_result) => match join_result {
+                Err(join_err) => {
+                    anyhow::bail!("Failed to join parameter load task: {}", join_err);
+                }
+                Ok(Ok(Ok(params))) => params,
+                Ok(Ok(Err(e))) => {
+                    return Err(e).context("Failed to load parameters from dylib");
+                }
+                Ok(Err(panic_payload)) => {
+                    anyhow::bail!(
+                        "Panic while loading parameters from dylib: {}",
+                        panic_message(panic_payload)
+                    );
+                }
+            },
         };
         let param_count_change = params.len() as i32 - old_count;
 
@@ -353,57 +377,69 @@ impl RebuildPipeline {
         let _ = child.kill().await;
         Ok(())
     }
-    /// Load parameters from the rebuilt dylib using FFI.
-    ///
-    /// To avoid dylib caching issues on macOS, we copy the dylib to a unique
-    /// temporary location before loading. This ensures libloading reads the
-    /// fresh file from disk rather than returning a cached library handle.
-    fn load_parameters_from_dylib(&self) -> Result<Vec<ParameterInfo>> {
-        use crate::project::find_plugin_dylib;
+}
 
-        let lib_path = find_plugin_dylib(&self.engine_dir)
-            .context("Failed to find plugin dylib after rebuild")?;
+/// Load parameters from the rebuilt dylib using FFI.
+///
+/// To avoid dylib caching issues on macOS, we copy the dylib to a unique
+/// temporary location before loading. This ensures libloading reads the
+/// fresh file from disk rather than returning a cached library handle.
+fn load_parameters_from_dylib(engine_dir: PathBuf) -> Result<Vec<ParameterInfo>> {
+    use crate::project::find_plugin_dylib;
 
-        // Copy dylib to unique temporary path to avoid OS-level caching
-        let temp_path = self.create_temp_dylib_copy(&lib_path)?;
+    println!("  {} Finding plugin dylib...", style("→").dim());
+    let lib_path =
+        find_plugin_dylib(&engine_dir).context("Failed to find plugin dylib after rebuild")?;
+    println!("  {} Found: {}", style("→").dim(), lib_path.display());
 
-        let loader = PluginLoader::load(&temp_path)
-            .with_context(|| format!("Failed to load dylib: {}", temp_path.display()))?;
+    println!("  {} Copying to temp location...", style("→").dim());
+    let temp_path = create_temp_dylib_copy(&lib_path)?;
+    println!("  {} Temp: {}", style("→").dim(), temp_path.display());
 
-        let params = loader.parameters().to_vec();
+    println!("  {} Loading dylib via FFI...", style("→").dim());
+    let params = PluginLoader::load_params_only(&temp_path)
+        .with_context(|| format!("Failed to load dylib: {}", temp_path.display()))?;
+    println!(
+        "  {} Loaded {} parameters via FFI",
+        style("→").dim(),
+        params.len()
+    );
 
-        // Clean up temp file
-        let _ = std::fs::remove_file(&temp_path);
+    // Clean up temp file
+    let _ = std::fs::remove_file(&temp_path);
 
-        Ok(params)
-    }
+    Ok(params)
+}
 
-    /// Create a temporary copy of the dylib with a unique name.
-    ///
-    /// This ensures libloading loads a fresh dylib rather than returning
-    /// a cached handle from a previous load of the same path.
-    fn create_temp_dylib_copy(&self, dylib_path: &std::path::Path) -> Result<PathBuf> {
-        use std::time::{SystemTime, UNIX_EPOCH};
+/// Create a temporary copy of the dylib with a unique name.
+///
+/// This ensures libloading loads a fresh dylib rather than returning
+/// a cached handle from a previous load of the same path.
+fn create_temp_dylib_copy(dylib_path: &std::path::Path) -> Result<PathBuf> {
+    use std::time::{SystemTime, UNIX_EPOCH};
 
-        let extension = dylib_path
-            .extension()
-            .and_then(|e| e.to_str())
-            .unwrap_or("dylib");
+    let extension = dylib_path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("dylib");
 
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|duration| duration.as_millis())
-            .unwrap_or(0);
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis())
+        .unwrap_or(0);
 
-        let temp_name = format!("wavecraft_hotreload_{}.{}", timestamp, extension);
-        let temp_dir = std::env::temp_dir();
-        let temp_path = temp_dir.join(temp_name);
+    let temp_name = format!("wavecraft_hotreload_{}.{}", timestamp, extension);
+    let temp_dir = std::env::temp_dir();
+    let temp_path = temp_dir.join(temp_name);
 
-        std::fs::copy(dylib_path, &temp_path)
-            .with_context(|| format!("Failed to copy dylib to temp location: {}", temp_path.display()))?;
+    std::fs::copy(dylib_path, &temp_path).with_context(|| {
+        format!(
+            "Failed to copy dylib to temp location: {}",
+            temp_path.display()
+        )
+    })?;
 
-        Ok(temp_path)
-    }
+    Ok(temp_path)
 }
 
 async fn read_to_end(mut reader: impl tokio::io::AsyncRead + Unpin) -> Result<Vec<u8>> {

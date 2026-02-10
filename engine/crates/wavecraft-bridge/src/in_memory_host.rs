@@ -126,7 +126,7 @@ impl ParameterHost for InMemoryParameterHost {
             .as_ref()
             .map(|p| p.iter().any(|param| param.id == id))
             .unwrap_or(false);
-        
+
         if !param_exists {
             return Err(BridgeError::ParameterNotFound(id.to_string()));
         }
@@ -150,7 +150,7 @@ impl ParameterHost for InMemoryParameterHost {
             Ok(guard) => guard,
             Err(_) => return Vec::new(), // Return empty on poisoned lock
         };
-        
+
         parameters
             .iter()
             .map(|param| ParameterInfo {
@@ -311,7 +311,8 @@ mod tests {
             },
         ];
 
-        host.replace_parameters(new_params).expect("should replace parameters");
+        host.replace_parameters(new_params)
+            .expect("should replace parameters");
 
         // Existing parameters should preserve their values
         let gain = host.get_parameter("gain").expect("should find gain");
@@ -340,7 +341,8 @@ mod tests {
             group: Some("Input".to_string()),
         }];
 
-        host.replace_parameters(new_params).expect("should replace parameters");
+        host.replace_parameters(new_params)
+            .expect("should replace parameters");
 
         // Old parameter should be gone
         assert!(host.get_parameter("mix").is_none());

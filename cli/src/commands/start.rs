@@ -271,7 +271,7 @@ fn try_read_cached_params(engine_dir: &Path, verbose: bool) -> Option<Vec<Parame
 }
 
 /// Write parameter metadata to the sidecar JSON cache.
-fn write_sidecar_cache(engine_dir: &Path, params: &[ParameterInfo]) -> Result<()> {
+pub(crate) fn write_sidecar_cache(engine_dir: &Path, params: &[ParameterInfo]) -> Result<()> {
     let sidecar_path = sidecar_json_path(engine_dir)?;
     let json = serde_json::to_string_pretty(params).context("Failed to serialize parameters")?;
     std::fs::write(&sidecar_path, json).context("Failed to write sidecar cache")?;
@@ -330,9 +330,19 @@ fn load_parameters(
             }
 
             println!("{} Loading plugin parameters...", style("→").cyan());
-            let loader = PluginLoader::load(&dylib_path)
-                .context("Failed to load plugin for parameter discovery")?;
-            let params = loader.parameters().to_vec();
+            #[cfg(feature = "audio-dev")]
+            let (params, loader) = {
+                let loader = PluginLoader::load(&dylib_path)
+                    .context("Failed to load plugin for parameter discovery")?;
+                let params = loader.parameters().to_vec();
+                (params, Some(loader))
+            };
+            #[cfg(not(feature = "audio-dev"))]
+            let (params, loader) = {
+                let params = PluginLoader::load_params_only(&dylib_path)
+                    .context("Failed to load plugin for parameter discovery")?;
+                (params, None)
+            };
 
             // Write sidecar cache for next run
             if let Err(e) = write_sidecar_cache(engine_dir, &params) {
@@ -342,7 +352,7 @@ fn load_parameters(
             }
 
             println!("{} Loaded {} parameters", style("✓").green(), params.len());
-            Ok((params, Some(loader)))
+            Ok((params, loader))
         }
         _ => {
             // 3. Fallback: normal build (for older plugins without _param-discovery)
@@ -368,10 +378,20 @@ fn load_parameters(
 
             let dylib_path = find_plugin_dylib(engine_dir)?;
             println!("{} Loading plugin parameters...", style("→").cyan());
-            let loader = PluginLoader::load(&dylib_path).context("Failed to load plugin")?;
-            let params = loader.parameters().to_vec();
+            #[cfg(feature = "audio-dev")]
+            let (params, loader) = {
+                let loader = PluginLoader::load(&dylib_path).context("Failed to load plugin")?;
+                let params = loader.parameters().to_vec();
+                (params, Some(loader))
+            };
+            #[cfg(not(feature = "audio-dev"))]
+            let (params, loader) = {
+                let params = PluginLoader::load_params_only(&dylib_path)
+                    .context("Failed to load plugin")?;
+                (params, None)
+            };
             println!("{} Loaded {} parameters", style("✓").green(), params.len());
-            Ok((params, Some(loader)))
+            Ok((params, loader))
         }
     }
 }

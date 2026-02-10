@@ -2,8 +2,8 @@
 name: planner
 description: Expert planning specialist for complex features and refactoring. Use PROACTIVELY when users request feature implementation, architectural changes, or complex refactoring. Automatically activated for planning tasks.
 model:
-  - Gemini 2.5 Pro (copilot)
   - Claude Sonnet 4.5 (copilot)
+  - Gemini 2.5 Pro (copilot)
   - GPT-5.1-Codex (copilot)
 tools: ["read", "search", "web", 'agent','todo']
 agents: [orchestrator, docwriter, search, coder]

@@ -2,8 +2,8 @@
 name: qa
 description: Quality Assurance agent focused on code quality and static code analysis.
 model:
-  - Claude Sonnet 4.5 (copilot)
   - GPT-5.2 (copilot)
+  - Claude Sonnet 4.5 (copilot)
   - Gemini 2.5 Pro (copilot)
 tools: ['agent', 'search', 'read', 'web', 'todo']
 agents: [orchestrator, coder, architect, docwriter, search]
