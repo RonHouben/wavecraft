@@ -744,7 +744,7 @@ This test plan validates the unification of CLI's `dev_server` module and engine
 
 ---
 
-### Issue #3: Deprecated test helper function in CLI tests
+### Issue #3: Deprecated test helper function in CLI tests — ✅ RESOLVED
 
 - **Severity**: Low (MINOR)
 - **Test Case**: TC-024
@@ -764,6 +764,7 @@ This test plan validates the unification of CLI's `dev_server` module and engine
   - [cli/tests/version_flag.rs](../../../cli/tests/version_flag.rs#L1)
   - [cli/tests/update_command.rs](../../../cli/tests/update_command.rs#L1)
 - **Suggested Fix**: Replace `use assert_cmd::cargo::cargo_bin;` with macro usage: `cargo::cargo_bin!("wavecraft")`
+- **Resolution**: Upon inspection, both test files already use the macro form `assert_cmd::cargo::cargo_bin!("wavecraft")`. Clippy passes cleanly with no deprecation warnings. This issue was already resolved.
 
 ---
 
