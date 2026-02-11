@@ -5,6 +5,7 @@
 //! parameter changes to an optional AtomicParameterBridge for lock-free
 //! audio-thread access.
 
+#[cfg(feature = "audio")]
 use std::sync::Arc;
 use wavecraft_bridge::{BridgeError, InMemoryParameterHost, ParameterHost};
 use wavecraft_protocol::{MeterFrame, ParameterInfo};

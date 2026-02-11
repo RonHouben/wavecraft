@@ -1,9 +1,8 @@
-use assert_cmd::cargo::cargo_bin;
 use std::process::Command;
 
 #[test]
 fn test_version_flag_long_form() {
-    let mut cmd = Command::new(cargo_bin!("wavecraft"));
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wavecraft"));
     cmd.arg("--version");
 
     let output = cmd.output().expect("Failed to execute wavecraft binary");
@@ -14,7 +13,7 @@ fn test_version_flag_long_form() {
 
 #[test]
 fn test_version_flag_short_form() {
-    let mut cmd = Command::new(cargo_bin!("wavecraft"));
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wavecraft"));
     cmd.arg("-V");
 
     let output = cmd.output().expect("Failed to execute wavecraft binary");
@@ -25,7 +24,7 @@ fn test_version_flag_short_form() {
 
 #[test]
 fn test_version_flag_format() {
-    let mut cmd = Command::new(cargo_bin!("wavecraft"));
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wavecraft"));
     cmd.arg("--version");
 
     let output = cmd.output().expect("Failed to execute wavecraft binary");
@@ -54,7 +53,7 @@ fn test_version_flag_format() {
 
 #[test]
 fn test_help_shows_version_flag() {
-    let mut cmd = Command::new(cargo_bin!("wavecraft"));
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wavecraft"));
     cmd.arg("--help");
 
     let output = cmd.output().expect("Failed to execute wavecraft binary");
