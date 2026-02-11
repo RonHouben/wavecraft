@@ -25,7 +25,6 @@ wavecraft-bridge = { path = "crates/wavecraft-bridge", version = "0.12.1" }
 wavecraft-macros = { path = "crates/wavecraft-macros", version = "0.12.1" }
 wavecraft-core = { path = "crates/wavecraft-core", version = "0.12.1" }
 wavecraft-metering = { path = "crates/wavecraft-metering", version = "0.12.1" }
-wavecraft-dev-server = { path = "crates/wavecraft-dev-server", version = "0.12.1" }
 
 # Internal crates (not published to crates.io)
 wavecraft-nih_plug = { path = "crates/wavecraft-nih_plug" }

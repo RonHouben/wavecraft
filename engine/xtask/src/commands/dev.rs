@@ -1,76 +1,56 @@
-//! Development server command - runs both WebSocket and UI dev servers.
+//! Development server command - runs `wavecraft start` via the CLI.
 
 use anyhow::{Context, Result};
-use std::process::{Child, Command, Stdio};
+use std::process::{Command, Stdio};
 use std::sync::mpsc;
 use std::thread;
 use xtask::output::*;
 use xtask::paths;
 
-/// Run both WebSocket and UI dev servers concurrently.
+/// Run the development server via `wavecraft start` CLI command.
 ///
-/// This command:
-/// 1. Starts the WebSocket server (Rust) on the specified port
-/// 2. Starts the Vite UI dev server (npm)
-/// 3. Handles Ctrl+C to shut down both servers cleanly
+/// This command invokes the Wavecraft CLI which manages:
+/// 1. WebSocket server (Rust) for IPC
+/// 2. Vite UI dev server
+/// 3. Hot-reload pipeline (file watcher + rebuild)
+/// 4. Optional in-process audio
 ///
 /// # Arguments
 /// * `port` - WebSocket server port (default: 9000)
 /// * `verbose` - Show detailed output
 pub fn run(port: u16, verbose: bool) -> Result<()> {
-    print_header("Wavecraft Development Servers");
+    print_header("Wavecraft Development Server");
 
-    // Get paths to engine and UI directories
+    // Locate the CLI manifest relative to the engine directory
     let engine_dir = paths::engine_dir()?;
-    let ui_dir = paths::ui_dir()?;
+    let cli_manifest = engine_dir.join("../cli/Cargo.toml");
+
+    let mut args = vec!["run", "--manifest-path"];
+    let cli_manifest_str = cli_manifest.to_string_lossy().to_string();
+    args.push(&cli_manifest_str);
+    args.push("--features");
+    args.push("audio-dev");
+    args.push("--");
+    args.push("start");
+
+    let port_str = port.to_string();
+    args.push("--port");
+    args.push(&port_str);
+
+    if verbose {
+        args.push("--verbose");
+    }
 
     println!();
-    print_status(&format!("Starting WebSocket server on port {}", port));
+    print_status(&format!("Starting wavecraft start (port {})", port));
+    println!();
 
-    // Start WebSocket server in background
-    let port_str = port.to_string();
-    let mut ws_args = vec![
-        "run",
-        "-p",
-        "wavecraft-dev-server",
-        "--release",
-        "--",
-        "--dev-server",
-        "--port",
-        &port_str,
-    ];
-    if verbose {
-        ws_args.push("--verbose");
-    }
-    let ws_server = Command::new("cargo")
-        .args(&ws_args)
-        .current_dir(&engine_dir)
-        .stdout(Stdio::inherit()) // Always show connection messages
+    let mut child = Command::new("cargo")
+        .args(&args)
+        .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .spawn()
-        .context("Failed to start WebSocket server")?;
-
-    // Give the server a moment to start
-    thread::sleep(std::time::Duration::from_millis(500));
-
-    println!();
-    print_status("Starting UI dev server on http://localhost:5173");
-
-    // Start UI dev server (this will be in foreground)
-    let mut ui_server = Command::new("npm")
-        .args(["run", "dev"])
-        .current_dir(&ui_dir)
-        .spawn()
-        .context("Failed to start UI dev server")?;
-
-    println!();
-    print_success("Both servers running!");
-    println!();
-    println!("  WebSocket: ws://127.0.0.1:{}", port);
-    println!("  UI:        http://localhost:5173");
-    println!();
-    println!("Press Ctrl+C to stop both servers");
-    println!();
+        .context("Failed to start wavecraft CLI")?;
 
     // Set up Ctrl+C handler
     let (tx, rx) = mpsc::channel();
@@ -79,53 +59,25 @@ pub fn run(port: u16, verbose: bool) -> Result<()> {
     })
     .context("Error setting Ctrl+C handler")?;
 
-    // Wait for Ctrl+C or UI server to exit
-    let ui_result = thread::spawn(move || ui_server.wait());
+    // Wait for Ctrl+C or CLI process to exit
+    let child_result = thread::spawn(move || child.wait());
 
-    // Block until either Ctrl+C or UI server exits
     match rx.recv_timeout(std::time::Duration::from_millis(100)) {
         Ok(_) | Err(mpsc::RecvTimeoutError::Disconnected) => {
-            // Ctrl+C received, kill both servers
             println!();
-            print_status("Shutting down servers...");
+            print_status("Shutting down...");
         }
         Err(mpsc::RecvTimeoutError::Timeout) => {
-            // No Ctrl+C yet, check if UI server is still running
-            if ui_result.is_finished() {
-                print_status("UI server exited, stopping WebSocket server...");
+            if child_result.is_finished() {
+                // CLI exited on its own
             } else {
-                // Wait indefinitely for Ctrl+C
                 let _ = rx.recv();
                 println!();
-                print_status("Shutting down servers...");
+                print_status("Shutting down...");
             }
         }
     }
 
-    // Kill both servers
-    kill_process_group(ws_server)?;
-
-    print_success("Servers stopped");
-    Ok(())
-}
-
-/// Kill a process and its children on Unix systems
-#[cfg(unix)]
-fn kill_process_group(mut child: Child) -> Result<()> {
-    use nix::sys::signal::{Signal, kill};
-    use nix::unistd::Pid;
-
-    let pid = child.id();
-    // Kill the process group (negative PID)
-    let _ = kill(Pid::from_raw(-(pid as i32)), Signal::SIGTERM);
-    thread::sleep(std::time::Duration::from_millis(500));
-    let _ = child.kill();
-    Ok(())
-}
-
-/// Kill a process on Windows
-#[cfg(windows)]
-fn kill_process_group(mut child: Child) -> Result<()> {
-    let _ = child.kill();
+    print_success("Development server stopped");
     Ok(())
 }

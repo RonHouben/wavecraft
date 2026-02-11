@@ -1,5 +1,4 @@
 mod commands;
-mod dev_server;
 mod project;
 mod sdk_detect;
 mod template;

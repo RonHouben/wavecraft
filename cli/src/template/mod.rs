@@ -91,14 +91,13 @@ fn extract_dir(dir: &Dir, target_dir: &Path, vars: &TemplateVariables) -> Result
     Ok(())
 }
 
-/// SDK crates that need to be replaced when using local dev mode.
-const SDK_CRATES: [&str; 6] = [
+/// SDK crates under `engine/crates/` that need path replacement in local dev mode.
+const SDK_CRATES: [&str; 5] = [
     "wavecraft-core",
     "wavecraft-protocol",
     "wavecraft-dsp",
     "wavecraft-bridge",
     "wavecraft-metering",
-    "wavecraft-dev-server",
 ];
 
 /// Replaces git dependencies with local path dependencies for SDK crates.
@@ -169,6 +168,34 @@ fn apply_local_dev_overrides(content: &str, vars: &TemplateVariables) -> Result<
             .to_string();
     }
 
+    // Handle wavecraft-dev-server separately — it lives at the repo root (dev-server/),
+    // not under engine/crates/ like the other SDK crates.
+    let sdk_root = sdk_path
+        .parent()
+        .and_then(|engine| engine.parent())
+        .unwrap_or(&sdk_path);
+    let dev_server_git_pattern = r#"(?s)(wavecraft-dev-server\s*=\s*\{\s*)(?:package\s*=\s*"[^"]*"\s*,\s*)?git\s*=\s*"https://github\.com/RonHouben/wavecraft"\s*,\s*tag\s*=\s*"[^"]*"\s*((?:,\s*[^}]*)?)}"#;
+    let dev_server_re = Regex::new(dev_server_git_pattern)
+        .context("Invalid regex pattern for wavecraft-dev-server")?;
+    result = dev_server_re
+        .replace_all(&result, |caps: &regex::Captures| {
+            let prefix = &caps[1];
+            let extra_attrs = &caps[2];
+            let package_attr = if caps[0].contains("package") {
+                r#"package = "wavecraft-dev-server", "#.to_string()
+            } else {
+                String::new()
+            };
+            format!(
+                r#"{}{}path = "{}/dev-server"{} }}"#,
+                prefix,
+                package_attr,
+                sdk_root.display(),
+                extra_attrs
+            )
+        })
+        .to_string();
+
     Ok(result)
 }
 
@@ -211,15 +238,22 @@ wavecraft-metering = { git = "https://github.com/RonHouben/wavecraft", tag = "v0
 wavecraft-dev-server = { git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.0", features = ["audio"], optional = true }
 "#;
 
-        // Create a temp directory to use as the SDK path
+        // Create a temp directory simulating the SDK layout:
+        //   {root}/engine/crates/  ← sdk_path
+        //   {root}/dev-server/     ← wavecraft-dev-server location
         let temp = tempdir().unwrap();
-        let sdk_path = temp.path().to_path_buf();
+        let sdk_root = temp.path();
+        let sdk_path = sdk_root.join("engine").join("crates");
+        fs::create_dir_all(&sdk_path).unwrap();
 
-        // Create the crate directories so canonicalize works
+        // Create the engine crate directories so canonicalize works
         for crate_name in &SDK_CRATES {
             fs::create_dir_all(sdk_path.join(crate_name)).unwrap();
         }
         fs::create_dir_all(sdk_path.join("wavecraft-nih_plug")).unwrap();
+
+        // Create the dev-server directory at the SDK root
+        fs::create_dir_all(sdk_root.join("dev-server")).unwrap();
 
         let vars = TemplateVariables::new(
             "test-plugin".to_string(),
@@ -261,11 +295,21 @@ wavecraft-dev-server = { git = "https://github.com/RonHouben/wavecraft", tag = "
         }
 
         // Verify extra attributes (features, optional) are preserved for dev-server
+        // dev-server path should point to {sdk_root}/dev-server, not {sdk_path}/wavecraft-dev-server
         assert!(
-            result.contains(
-                "wavecraft-dev-server = { path = \""
-            ),
-            "Expected wavecraft-dev-server to use path dependency"
+            result.contains("wavecraft-dev-server = { path = \""),
+            "Expected wavecraft-dev-server to use path dependency, got: {}",
+            result
+        );
+        assert!(
+            result.contains("/dev-server\""),
+            "Expected wavecraft-dev-server path to end with /dev-server, got: {}",
+            result
+        );
+        assert!(
+            !result.contains("/wavecraft-dev-server\""),
+            "Expected wavecraft-dev-server path to NOT be under engine/crates/, got: {}",
+            result
         );
         assert!(
             result.contains("features = [\"audio\"]"),

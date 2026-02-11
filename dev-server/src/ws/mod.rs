@@ -36,12 +36,10 @@ impl ServerState {
 /// Constructed via [`WsServer::handle()`]. Used by the CLI to forward
 /// meter updates from the in-process audio callback to browser clients.
 #[derive(Clone)]
-#[allow(dead_code)] // Used by CLI crate (outside engine workspace)
 pub struct WsHandle {
     state: Arc<ServerState>,
 }
 
-#[allow(dead_code)] // Used by CLI crate (outside engine workspace)
 impl WsHandle {
     /// Broadcast a JSON string to all connected browser clients.
     pub async fn broadcast(&self, json: &str) {
@@ -83,7 +81,6 @@ impl<H: ParameterHost + 'static> WsServer<H> {
     ///
     /// The returned `WsHandle` is non-generic, `Clone`, and can be moved
     /// into async tasks (e.g., for forwarding meter updates from audio).
-    #[allow(dead_code)] // Used by CLI crate (outside engine workspace)
     pub fn handle(&self) -> WsHandle {
         WsHandle {
             state: Arc::clone(&self.state),
@@ -94,7 +91,6 @@ impl<H: ParameterHost + 'static> WsServer<H> {
     ///
     /// This is used by the hot-reload pipeline to notify the UI that
     /// parameters have been updated and should be re-fetched.
-    #[allow(dead_code)] // Used by CLI crate (outside engine workspace)
     pub async fn broadcast_parameters_changed(&self) -> Result<(), serde_json::Error> {
         use wavecraft_protocol::IpcNotification;
 
@@ -296,12 +292,26 @@ async fn handle_connection<H: ParameterHost>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::AppState;
+    use wavecraft_bridge::InMemoryParameterHost;
+    use wavecraft_protocol::{ParameterInfo, ParameterType};
+
+    /// Simple test host for unit tests
+    fn test_host() -> InMemoryParameterHost {
+        InMemoryParameterHost::new(vec![ParameterInfo {
+            id: "gain".to_string(),
+            name: "Gain".to_string(),
+            param_type: ParameterType::Float,
+            value: 0.5,
+            default: 0.5,
+            unit: Some("dB".to_string()),
+            group: Some("Input".to_string()),
+        }])
+    }
 
     #[tokio::test]
     async fn test_server_creation() {
-        let state = AppState::new();
-        let handler = Arc::new(IpcHandler::new(state));
+        let host = test_host();
+        let handler = Arc::new(IpcHandler::new(host));
         let server = WsServer::new(9001, handler, false);
 
         // Just verify we can create a server without panicking

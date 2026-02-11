@@ -1,67 +1,59 @@
-//! Hot-reload rebuild pipeline for `wavecraft start`
+//! Hot-reload rebuild pipeline
 //!
 //! This module provides automatic rebuilding when Rust source files change.
 //! The pipeline watches for file changes, triggers a Cargo build, and updates
 //! the development server's parameter state without dropping WebSocket connections.
+//!
+//! CLI-specific functions (dylib discovery, subprocess param extraction, sidecar
+//! caching) are injected via [`RebuildCallbacks`] to keep this crate CLI-agnostic.
 
 use anyhow::{Context, Result};
 use console::style;
 use std::any::Any;
-use std::path::PathBuf;
+use std::future::Future;
+use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::process::Stdio;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::io::AsyncReadExt;
 use tokio::process::Command;
 use tokio::sync::watch;
 use wavecraft_bridge::ParameterHost;
-use wavecraft_dev_server::ws_server::WsServer;
 use wavecraft_protocol::ParameterInfo;
 
-use super::host::DevServerHost;
-use crate::commands::start::write_sidecar_cache;
-use crate::project::param_extract::{extract_params_subprocess, DEFAULT_EXTRACT_TIMEOUT};
+use crate::host::DevServerHost;
+use crate::reload::guard::BuildGuard;
+use crate::ws::WsServer;
 
-/// Concurrency control for rebuild operations.
+/// Callback type for loading parameters from a rebuilt dylib.
 ///
-/// Ensures only one build runs at a time, with at most one pending.
-/// Uses atomics for lock-free coordination between watcher and builder.
-pub struct BuildGuard {
-    building: AtomicBool,
-    pending: AtomicBool,
-}
+/// The closure receives the engine directory and must return the loaded
+/// parameters. This is injected by the CLI to handle dylib discovery,
+/// temp copying, and subprocess extraction.
+pub type ParamLoaderFn = Arc<
+    dyn Fn(PathBuf) -> Pin<Box<dyn Future<Output = Result<Vec<ParameterInfo>>> + Send>>
+        + Send
+        + Sync,
+>;
 
-impl BuildGuard {
-    pub fn new() -> Self {
-        Self {
-            building: AtomicBool::new(false),
-            pending: AtomicBool::new(false),
-        }
-    }
+/// Callback type for writing parameter cache to a sidecar file.
+pub type SidecarWriterFn = Arc<dyn Fn(&Path, &[ParameterInfo]) -> Result<()> + Send + Sync>;
 
-    /// Try to start a build. Returns true if acquired.
-    pub fn try_start(&self) -> bool {
-        self.building
-            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
-            .is_ok()
-    }
-
-    /// Mark a pending rebuild request (received during active build).
-    pub fn mark_pending(&self) {
-        self.pending.store(true, Ordering::SeqCst);
-    }
-
-    /// Complete current build. Returns true if a pending build should start.
-    pub fn complete(&self) -> bool {
-        self.building.store(false, Ordering::SeqCst);
-        self.pending.swap(false, Ordering::SeqCst)
-    }
-}
-
-impl Default for BuildGuard {
-    fn default() -> Self {
-        Self::new()
-    }
+/// Callbacks for CLI-specific operations.
+///
+/// The rebuild pipeline needs to perform operations that depend on CLI
+/// infrastructure (dylib discovery, subprocess parameter extraction,
+/// sidecar caching). These are injected as callbacks to keep the
+/// dev-server crate independent of CLI internals.
+pub struct RebuildCallbacks {
+    /// Engine package name for `cargo build --package` flag.
+    /// `None` means no `--package` flag (single-crate project).
+    pub package_name: Option<String>,
+    /// Optional sidecar cache writer (writes params to JSON file).
+    pub write_sidecar: Option<SidecarWriterFn>,
+    /// Loads parameters from the rebuilt dylib (async).
+    /// Receives the engine directory and returns parsed parameters.
+    pub param_loader: ParamLoaderFn,
 }
 
 /// Rebuild pipeline for hot-reload.
@@ -73,7 +65,8 @@ pub struct RebuildPipeline {
     host: Arc<DevServerHost>,
     ws_server: Arc<WsServer<Arc<DevServerHost>>>,
     shutdown_rx: watch::Receiver<bool>,
-    #[cfg(feature = "audio-dev")]
+    callbacks: RebuildCallbacks,
+    #[cfg(feature = "audio")]
     audio_reload_tx: Option<tokio::sync::mpsc::UnboundedSender<Vec<ParameterInfo>>>,
 }
 
@@ -86,7 +79,8 @@ impl RebuildPipeline {
         host: Arc<DevServerHost>,
         ws_server: Arc<WsServer<Arc<DevServerHost>>>,
         shutdown_rx: watch::Receiver<bool>,
-        #[cfg(feature = "audio-dev")] audio_reload_tx: Option<
+        callbacks: RebuildCallbacks,
+        #[cfg(feature = "audio")] audio_reload_tx: Option<
             tokio::sync::mpsc::UnboundedSender<Vec<ParameterInfo>>,
         >,
     ) -> Self {
@@ -96,7 +90,8 @@ impl RebuildPipeline {
             host,
             ws_server,
             shutdown_rx,
-            #[cfg(feature = "audio-dev")]
+            callbacks,
+            #[cfg(feature = "audio")]
             audio_reload_tx,
         }
     }
@@ -119,18 +114,25 @@ impl RebuildPipeline {
                 Ok((params, param_count_change)) => {
                     let mut reload_ok = true;
 
-                    if let Err(e) = write_sidecar_cache(&self.engine_dir, &params) {
+                    if let Some(ref writer) = self.callbacks.write_sidecar
+                        && let Err(e) = writer(&self.engine_dir, &params)
+                    {
                         println!("  Warning: failed to update param cache: {}", e);
                     }
 
                     println!("  {} Updating parameter host...", style("→").dim());
-                    let replace_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        self.host.replace_parameters(params.clone())
-                    }));
+                    let replace_result =
+                        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                            self.host.replace_parameters(params.clone())
+                        }));
 
                     match replace_result {
                         Ok(Ok(())) => {
-                            println!("  {} Updated {} parameters", style("→").dim(), params.len());
+                            println!(
+                                "  {} Updated {} parameters",
+                                style("→").dim(),
+                                params.len()
+                            );
                         }
                         Ok(Err(e)) => {
                             reload_ok = false;
@@ -197,8 +199,8 @@ impl RebuildPipeline {
                             change_info
                         );
 
-                        // Trigger audio reload if audio-dev is enabled
-                        #[cfg(feature = "audio-dev")]
+                        // Trigger audio reload if audio is enabled
+                        #[cfg(feature = "audio")]
                         if let Some(ref tx) = self.audio_reload_tx {
                             let _ = tx.send(params);
                         }
@@ -229,8 +231,6 @@ impl RebuildPipeline {
 
     /// Execute a Cargo build and load new parameters on success.
     async fn do_build(&self) -> Result<(Vec<ParameterInfo>, i32)> {
-        use crate::project::read_engine_package_name;
-
         if *self.shutdown_rx.borrow() {
             anyhow::bail!("Build cancelled due to shutdown");
         }
@@ -251,8 +251,8 @@ impl RebuildPipeline {
             "--message-format=json",
         ]);
 
-        if let Some(package_name) = read_engine_package_name(&self.engine_dir) {
-            cmd.args(["--package", &package_name]);
+        if let Some(ref package_name) = self.callbacks.package_name {
+            cmd.args(["--package", package_name]);
         }
 
         let mut child = cmd
@@ -302,12 +302,11 @@ impl RebuildPipeline {
             // Try to extract compiler errors from JSON
             let mut error_lines = Vec::new();
             for line in stdout.lines().chain(stderr.lines()) {
-                if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
-                    if json["reason"] == "compiler-message" {
-                        if let Some(message) = json["message"]["rendered"].as_str() {
-                            error_lines.push(message.to_string());
-                        }
-                    }
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(line)
+                    && json["reason"] == "compiler-message"
+                    && let Some(message) = json["message"]["rendered"].as_str()
+                {
+                    error_lines.push(message.to_string());
                 }
             }
 
@@ -324,11 +323,13 @@ impl RebuildPipeline {
             elapsed.as_secs_f64()
         );
 
-        // Load parameters via subprocess (with built-in timeout and panic safety)
-        let params = load_parameters_from_dylib(self.engine_dir.clone())
+        // Load parameters via the injected callback
+        let loader = Arc::clone(&self.callbacks.param_loader);
+        let engine_dir = self.engine_dir.clone();
+        let params = loader(engine_dir)
             .await
             .context("Failed to load parameters from rebuilt dylib")?;
-        
+
         let param_count_change = params.len() as i32 - old_count;
 
         Ok((params, param_count_change))
@@ -350,70 +351,6 @@ impl RebuildPipeline {
     }
 }
 
-/// Load parameters from the rebuilt dylib via subprocess isolation.
-///
-/// To avoid dylib caching issues on macOS, we copy the dylib to a unique
-/// temporary location before loading. The subprocess extracts parameters
-/// and exits cleanly, with the temp file deleted after.  
-async fn load_parameters_from_dylib(engine_dir: PathBuf) -> Result<Vec<ParameterInfo>> {
-    use crate::project::find_plugin_dylib;
-
-    println!("  {} Finding plugin dylib...", style("→").dim());
-    let lib_path =
-        find_plugin_dylib(&engine_dir).context("Failed to find plugin dylib after rebuild")?;
-    println!("  {} Found: {}", style("→").dim(), lib_path.display());
-
-    println!("  {} Copying to temp location...", style("→").dim());
-    let temp_path = create_temp_dylib_copy(&lib_path)?;
-    println!("  {} Temp: {}", style("→").dim(), temp_path.display());
-
-    println!("  {} Loading parameters via subprocess...", style("→").dim());
-    let params = extract_params_subprocess(&temp_path, DEFAULT_EXTRACT_TIMEOUT)
-        .await
-        .with_context(|| format!("Failed to extract parameters from: {}", temp_path.display()))?;
-    println!(
-        "  {} Loaded {} parameters via subprocess",
-        style("→").dim(),
-        params.len()
-    );
-
-    // Clean up temp file
-    let _ = std::fs::remove_file(&temp_path);
-
-    Ok(params)
-}
-
-/// Create a temporary copy of the dylib with a unique name.
-///
-/// This ensures libloading loads a fresh dylib rather than returning
-/// a cached handle from a previous load of the same path.
-fn create_temp_dylib_copy(dylib_path: &std::path::Path) -> Result<PathBuf> {
-    use std::time::{SystemTime, UNIX_EPOCH};
-
-    let extension = dylib_path
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("dylib");
-
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_millis())
-        .unwrap_or(0);
-
-    let temp_name = format!("wavecraft_hotreload_{}.{}", timestamp, extension);
-    let temp_dir = std::env::temp_dir();
-    let temp_path = temp_dir.join(temp_name);
-
-    std::fs::copy(dylib_path, &temp_path).with_context(|| {
-        format!(
-            "Failed to copy dylib to temp location: {}",
-            temp_path.display()
-        )
-    })?;
-
-    Ok(temp_path)
-}
-
 async fn read_to_end(mut reader: impl tokio::io::AsyncRead + Unpin) -> Result<Vec<u8>> {
     let mut buffer = Vec::new();
     reader
@@ -430,68 +367,5 @@ fn panic_message(payload: Box<dyn Any + Send>) -> String {
         msg.to_string()
     } else {
         "Unknown panic".to_string()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_build_guard_single_build() {
-        let guard = BuildGuard::new();
-
-        // First try_start should succeed
-        assert!(guard.try_start());
-
-        // Second try_start should fail (build in progress)
-        assert!(!guard.try_start());
-
-        // Complete without pending should return false
-        assert!(!guard.complete());
-
-        // After complete, try_start should succeed again
-        assert!(guard.try_start());
-        guard.complete();
-    }
-
-    #[test]
-    fn test_build_guard_pending() {
-        let guard = BuildGuard::new();
-
-        // Start a build
-        assert!(guard.try_start());
-
-        // Try to start another (should fail)
-        assert!(!guard.try_start());
-
-        // Mark as pending
-        guard.mark_pending();
-
-        // Complete should return true (pending build)
-        assert!(guard.complete());
-
-        // Now try_start should succeed (for the pending build)
-        assert!(guard.try_start());
-        assert!(!guard.complete());
-    }
-
-    #[test]
-    fn test_build_guard_multiple_pending() {
-        let guard = BuildGuard::new();
-
-        // Start a build
-        assert!(guard.try_start());
-
-        // Mark pending multiple times (only one pending should be stored)
-        guard.mark_pending();
-        guard.mark_pending();
-        guard.mark_pending();
-
-        // Complete should return true once
-        assert!(guard.complete());
-
-        // Second complete should return false (no more pending)
-        assert!(!guard.complete());
     }
 }

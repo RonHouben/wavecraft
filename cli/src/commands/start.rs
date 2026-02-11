@@ -19,14 +19,16 @@ use std::thread;
 use std::time::Duration;
 use tokio::sync::watch;
 
-use crate::dev_server::{DevServerHost, DevSession, PluginLoader};
 use crate::project::{
     find_plugin_dylib, has_node_modules, read_engine_package_name, resolve_debug_dir,
     ProjectMarkers,
 };
 use wavecraft_bridge::IpcHandler;
-use wavecraft_dev_server::ws_server::WsServer;
+use wavecraft_dev_server::{DevServerHost, DevSession, RebuildCallbacks, WsServer};
 use wavecraft_protocol::ParameterInfo;
+
+/// Re-export PluginParamLoader for audio dev mode
+use wavecraft_bridge::PluginParamLoader as PluginLoader;
 
 /// Options for the `start` command.
 #[derive(Debug)]
@@ -100,12 +102,11 @@ fn prompt_install() -> Result<bool> {
 #[cfg(feature = "audio-dev")]
 fn try_start_audio_in_process(
     loader: &PluginLoader,
-    ws_handle: wavecraft_dev_server::ws_server::WsHandle,
-    param_bridge: std::sync::Arc<wavecraft_dev_server::atomic_params::AtomicParameterBridge>,
+    ws_handle: wavecraft_dev_server::WsHandle,
+    param_bridge: std::sync::Arc<wavecraft_dev_server::AtomicParameterBridge>,
     verbose: bool,
-) -> Option<wavecraft_dev_server::audio_server::AudioHandle> {
-    use wavecraft_dev_server::audio_server::{AudioConfig, AudioServer};
-    use wavecraft_dev_server::ffi_processor::FfiProcessor;
+) -> Option<wavecraft_dev_server::AudioHandle> {
+    use wavecraft_dev_server::{AudioConfig, AudioServer, FfiProcessor};
 
     println!();
     println!("{} Checking for audio processor...", style("→").cyan());
@@ -438,7 +439,7 @@ fn run_dev_servers(
     // 2. Create AtomicParameterBridge for lock-free audio-thread param reads
     #[cfg(feature = "audio-dev")]
     let param_bridge = {
-        use wavecraft_dev_server::atomic_params::AtomicParameterBridge;
+        use wavecraft_dev_server::AtomicParameterBridge;
         std::sync::Arc::new(AtomicParameterBridge::new(&params))
     };
 
@@ -468,12 +469,26 @@ fn run_dev_servers(
 
     // 4. Initialize hot-reload development session
     println!("{} Setting up hot-reload...", style("→").cyan());
+
+    // Create rebuild callbacks: wire CLI-specific functions into the dev-server pipeline
+    let callbacks = RebuildCallbacks {
+        package_name: read_engine_package_name(&project.engine_dir),
+        write_sidecar: Some(std::sync::Arc::new(|engine_dir: &Path, params: &[ParameterInfo]| {
+            write_sidecar_cache(engine_dir, params)
+        })),
+        param_loader: std::sync::Arc::new(move |engine_dir: PathBuf| {
+            Box::pin(load_parameters_from_dylib(engine_dir))
+                as std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<ParameterInfo>>> + Send>>
+        }),
+    };
+
     let dev_session = runtime.block_on(async {
         DevSession::new(
             project.engine_dir.clone(),
             host.clone(),
             server.clone(),
             shutdown_rx,
+            callbacks,
             #[cfg(feature = "audio-dev")]
             None, // Audio handle will be added if audio starts
         )
@@ -653,4 +668,75 @@ fn kill_process(child: &mut GroupChild) -> Result<()> {
     let _ = child.kill();
     let _ = child.wait();
     Ok(())
+}
+
+/// Load parameters from the rebuilt dylib via subprocess isolation.
+///
+/// To avoid dylib caching issues on macOS, we copy the dylib to a unique
+/// temporary location before loading. The subprocess extracts parameters
+/// and exits cleanly, with the temp file deleted after.
+///
+/// This function stays in the CLI because it depends on CLI-specific
+/// infrastructure: `find_plugin_dylib`, `extract_params_subprocess`,
+/// and `create_temp_dylib_copy`.
+async fn load_parameters_from_dylib(engine_dir: PathBuf) -> Result<Vec<ParameterInfo>> {
+    use crate::project::param_extract::{extract_params_subprocess, DEFAULT_EXTRACT_TIMEOUT};
+
+    println!("  {} Finding plugin dylib...", style("→").dim());
+    let lib_path =
+        find_plugin_dylib(&engine_dir).context("Failed to find plugin dylib after rebuild")?;
+    println!("  {} Found: {}", style("→").dim(), lib_path.display());
+
+    println!("  {} Copying to temp location...", style("→").dim());
+    let temp_path = create_temp_dylib_copy(&lib_path)?;
+    println!("  {} Temp: {}", style("→").dim(), temp_path.display());
+
+    println!(
+        "  {} Loading parameters via subprocess...",
+        style("→").dim()
+    );
+    let params = extract_params_subprocess(&temp_path, DEFAULT_EXTRACT_TIMEOUT)
+        .await
+        .with_context(|| format!("Failed to extract parameters from: {}", temp_path.display()))?;
+    println!(
+        "  {} Loaded {} parameters via subprocess",
+        style("→").dim(),
+        params.len()
+    );
+
+    // Clean up temp file
+    let _ = std::fs::remove_file(&temp_path);
+
+    Ok(params)
+}
+
+/// Create a temporary copy of the dylib with a unique name.
+///
+/// This ensures libloading loads a fresh dylib rather than returning
+/// a cached handle from a previous load of the same path.
+fn create_temp_dylib_copy(dylib_path: &Path) -> Result<PathBuf> {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let extension = dylib_path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("dylib");
+
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis())
+        .unwrap_or(0);
+
+    let temp_name = format!("wavecraft_hotreload_{}.{}", timestamp, extension);
+    let temp_dir = std::env::temp_dir();
+    let temp_path = temp_dir.join(temp_name);
+
+    std::fs::copy(dylib_path, &temp_path).with_context(|| {
+        format!(
+            "Failed to copy dylib to temp location: {}",
+            temp_path.display()
+        )
+    })?;
+
+    Ok(temp_path)
 }

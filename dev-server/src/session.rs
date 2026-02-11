@@ -7,14 +7,15 @@ use anyhow::Result;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::{mpsc, watch};
-use wavecraft_dev_server::ws_server::WsServer;
 
-use super::host::DevServerHost;
-use super::rebuild::{BuildGuard, RebuildPipeline};
-use super::watcher::{FileWatcher, WatchEvent};
+use crate::host::DevServerHost;
+use crate::reload::guard::BuildGuard;
+use crate::reload::rebuild::{RebuildCallbacks, RebuildPipeline};
+use crate::reload::watcher::{FileWatcher, WatchEvent};
+use crate::ws::WsServer;
 
-#[cfg(feature = "audio-dev")]
-use wavecraft_dev_server::audio_server::AudioHandle;
+#[cfg(feature = "audio")]
+use crate::audio::server::AudioHandle;
 
 /// Development session managing WebSocket server, file watcher, and rebuild pipeline.
 ///
@@ -35,8 +36,8 @@ pub struct DevSession {
     /// Shutdown signal receiver (kept alive for the lifetime of the session)
     #[allow(dead_code)]
     _shutdown_rx: watch::Receiver<bool>,
-    /// Audio processing handle (if audio-dev is enabled)
-    #[cfg(feature = "audio-dev")]
+    /// Audio processing handle (if audio is enabled)
+    #[cfg(feature = "audio")]
     #[allow(dead_code)] // Kept alive for the lifetime of the session
     _audio_handle: Option<AudioHandle>,
 }
@@ -49,7 +50,9 @@ impl DevSession {
     /// * `engine_dir` - Path to the engine directory
     /// * `host` - Parameter host (shared with IPC handler and pipeline)
     /// * `ws_server` - WebSocket server (shared with pipeline)
-    /// * `audio_handle` - Optional audio processing handle (audio-dev only)
+    /// * `shutdown_rx` - Shutdown signal receiver
+    /// * `callbacks` - CLI-specific callbacks for rebuild pipeline
+    /// * `audio_handle` - Optional audio processing handle (audio feature only)
     ///
     /// # Returns
     ///
@@ -60,7 +63,8 @@ impl DevSession {
         host: Arc<DevServerHost>,
         ws_server: Arc<WsServer<Arc<DevServerHost>>>,
         shutdown_rx: watch::Receiver<bool>,
-        #[cfg(feature = "audio-dev")] audio_handle: Option<AudioHandle>,
+        callbacks: RebuildCallbacks,
+        #[cfg(feature = "audio")] audio_handle: Option<AudioHandle>,
     ) -> Result<Self> {
         // Create channel for watch events
         let (watch_tx, mut watch_rx) = mpsc::unbounded_channel::<WatchEvent>();
@@ -76,7 +80,8 @@ impl DevSession {
             Arc::clone(&host),
             Arc::clone(&ws_server),
             shutdown_rx.clone(),
-            #[cfg(feature = "audio-dev")]
+            callbacks,
+            #[cfg(feature = "audio")]
             None, // Audio reload will be handled separately if needed
         ));
 
@@ -145,7 +150,7 @@ impl DevSession {
             _pipeline_handle: pipeline_handle,
             ws_server,
             _shutdown_rx: shutdown_rx,
-            #[cfg(feature = "audio-dev")]
+            #[cfg(feature = "audio")]
             _audio_handle: audio_handle,
         })
     }

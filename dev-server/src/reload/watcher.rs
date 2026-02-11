@@ -106,7 +106,10 @@ impl FileWatcher {
             changed_paths.dedup();
 
             if let Err(e) = tx.send(WatchEvent::RustFilesChanged(changed_paths)) {
-                eprintln!("Warning: File watcher failed to send event (channel closed): {:?}", e);
+                eprintln!(
+                    "Warning: File watcher failed to send event (channel closed): {:?}",
+                    e
+                );
             }
         }
     }
