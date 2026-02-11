@@ -14,6 +14,10 @@ on:
         description: 'Force publish engine crates (ignore change detection)'
         type: boolean
         default: false
+      force-publish-dev-server:
+        description: 'Force publish dev-server (ignore change detection)'
+        type: boolean
+        default: false
       force-publish-npm-core:
         description: 'Force publish @wavecraft/core (ignore change detection)'
         type: boolean
@@ -40,6 +44,7 @@ jobs:
       engine: ${{ steps.filter.outputs.engine == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force-publish-engine) }}
       npm-core: ${{ steps.filter.outputs.npm-core == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force-publish-npm-core) }}
       npm-components: ${{ steps.filter.outputs.npm-components == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force-publish-npm-components) }}
+      dev-server: ${{ steps.filter.outputs.dev-server == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force-publish-dev-server) }}
       any_sdk_changed: ${{ steps.aggregate.outputs.any_sdk_changed }}
     steps:
       - uses: actions/checkout@v4
@@ -59,8 +64,9 @@ jobs:
               - 'engine/crates/wavecraft-bridge/**'
               - 'engine/crates/wavecraft-metering/**'
               - 'engine/crates/wavecraft-macros/**'
-              - 'dev-server/**'
               - 'engine/Cargo.toml'
+            dev-server:
+              - 'dev-server/**'
             npm-core:
               - 'ui/packages/core/**'
             npm-components:
@@ -71,10 +77,12 @@ jobs:
         run: |
           if [[ "${{ steps.filter.outputs.cli }}" == "true" || \
                 "${{ steps.filter.outputs.engine }}" == "true" || \
+                "${{ steps.filter.outputs.dev-server }}" == "true" || \
                 "${{ steps.filter.outputs.npm-core }}" == "true" || \
                 "${{ steps.filter.outputs.npm-components }}" == "true" || \
                 "${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-cli }}" == "true" || \
                 "${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-engine }}" == "true" || \
+                "${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-dev-server }}" == "true" || \
                 "${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-npm-core }}" == "true" || \
                 "${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-npm-components }}" == "true" ]]; then
             echo "any_sdk_changed=true" >> $GITHUB_OUTPUT
@@ -314,7 +322,7 @@ jobs:
     needs: [detect-changes, publish-engine]
     if: |
       !cancelled() &&
-      (needs.detect-changes.outputs.engine == 'true' || needs.detect-changes.outputs.cli == 'true') &&
+      needs.detect-changes.outputs.dev-server == 'true' &&
       (needs.publish-engine.result == 'success' || needs.publish-engine.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
