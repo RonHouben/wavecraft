@@ -14,7 +14,8 @@ tools:
     'playwright/*',
     'github/*',
     'web',
-    'todo'
+    'todo',
+    'memory'
   ]
 agents: [orchestrator, coder, qa, docwriter, search]
 user-invokable: true

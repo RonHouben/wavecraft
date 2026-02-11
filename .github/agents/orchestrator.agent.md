@@ -5,8 +5,8 @@ model:
   - Claude Sonnet 4.5 (copilot)
   - Gemini 2.5 Pro (copilot)
   - GPT-5.1 (copilot)
-tools: ["read", "search", "agent", "web", 'todo']
-agents: [po, architect, planner, coder, tester, qa, docwriter, search ]
+tools: ['read', 'search', 'agent', 'web', 'todo', 'memory']
+agents: [po, architect, planner, coder, tester, qa, docwriter, search]
 user-invokable: true
 handoffs:
   - label: Requirements Phase
@@ -82,16 +82,16 @@ The standard flow is:
 
 Before handing off to the next agent, verify the required artifacts exist:
 
-| Phase | Agent | Required Input | Output Artifact |
-|-------|-------|----------------|-----------------|
-| Requirements | PO | User request | `docs/feature-specs/{feature}/user-stories.md` |
-| Design | Architect | User stories | `docs/feature-specs/{feature}/low-level-design-{feature}.md` |
-| Planning | Planner | Low-level design | `docs/feature-specs/{feature}/implementation-plan.md` |
-| Implementation | Coder | Implementation plan | Code changes + PR + `implementation-progress.md` |
-| Testing | Tester | Completed implementation | `docs/feature-specs/{feature}/test-plan.md` |
-| QA | QA | Passing tests | `docs/feature-specs/{feature}/QA-report.md` |
-| Arch Update | Architect | QA approval | Updated architecture docs |
-| Archive | PO | Complete feature | Archived spec + updated roadmap |
+| Phase          | Agent     | Required Input           | Output Artifact                                              |
+| -------------- | --------- | ------------------------ | ------------------------------------------------------------ |
+| Requirements   | PO        | User request             | `docs/feature-specs/{feature}/user-stories.md`               |
+| Design         | Architect | User stories             | `docs/feature-specs/{feature}/low-level-design-{feature}.md` |
+| Planning       | Planner   | Low-level design         | `docs/feature-specs/{feature}/implementation-plan.md`        |
+| Implementation | Coder     | Implementation plan      | Code changes + PR + `implementation-progress.md`             |
+| Testing        | Tester    | Completed implementation | `docs/feature-specs/{feature}/test-plan.md`                  |
+| QA             | QA        | Passing tests            | `docs/feature-specs/{feature}/QA-report.md`                  |
+| Arch Update    | Architect | QA approval              | Updated architecture docs                                    |
+| Archive        | PO        | Complete feature         | Archived spec + updated roadmap                              |
 
 ## Agent Routing Map
 
@@ -111,21 +111,25 @@ You can invoke any of these agents:
 Not all work follows the standard feature flow. Handle these cases:
 
 ### Hotfix
+
 ```
 Orchestrator → Coder → Tester → (if pass) → PO (roadmap update)
 ```
 
 ### Refactoring
+
 ```
 Orchestrator → Architect (design) → Coder → Tester → QA
 ```
 
 ### Documentation Update
+
 ```
 Orchestrator → DocWriter
 ```
 
 ### Bug Fix
+
 ```
 Orchestrator → Coder → Tester → (if needed) QA
 ```
@@ -140,6 +144,7 @@ When a subagent completes their work and returns control:
 4. **Invoke next specialist** with clear context
 
 Example:
+
 ```
 "Architect has completed the low-level design at docs/feature-specs/audio-metering/low-level-design-audio-metering.md.
 
@@ -172,16 +177,19 @@ Use file existence checks to validate phase completion when uncertain.
 ## Edge Cases
 
 ### Test Failures
+
 ```
 Tester → reports failures → You → Coder (with test report) → Tester (re-test)
 ```
 
 ### QA Issues Found
+
 ```
 QA → reports issues → You → Coder (with QA report) → Tester (re-test) → QA (re-review)
 ```
 
 ### Architectural Changes During Implementation
+
 ```
 Coder → discovers arch issue → You → Architect (review) → Coder (continue)
 ```
@@ -189,6 +197,7 @@ Coder → discovers arch issue → You → Architect (review) → Coder (continu
 ## Key Constraint
 
 You are **stateless**. You do not maintain persistent memory of features across conversations. Always rely on:
+
 - File existence checks
 - Feature spec folder contents
 - Roadmap status

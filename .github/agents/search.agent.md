@@ -5,7 +5,7 @@ model:
   - GPT-5.2-Codex (copilot)
   - Gemini 2.5 Pro (copilot)
   - Claude Sonnet 4.5 (copilot)
-tools: ['read', 'search', 'web', 'todo']
+tools: ['read', 'search', 'web', 'todo', 'memory']
 agents: []
 user-invokable: false
 ---

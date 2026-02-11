@@ -5,7 +5,7 @@ model:
   - GPT-5.2 (copilot)
   - Claude Sonnet 4.5 (copilot)
   - Gemini 2.5 Pro (copilot)
-tools: ['agent', 'search', 'read', 'web', 'todo']
+tools: ['agent', 'search', 'read', 'web', 'todo', 'memory']
 agents: [orchestrator, coder, architect, docwriter, search]
 user-invokable: true
 handoffs:

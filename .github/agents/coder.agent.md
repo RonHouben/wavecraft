@@ -15,7 +15,8 @@ tools:
     'web',
     'agent',
     'github/*',
-    'todo'
+    'todo',
+    'memory'
   ]
 agents: [orchestrator, tester, docwriter, search]
 user-invokable: true
