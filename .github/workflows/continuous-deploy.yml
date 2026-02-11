@@ -352,9 +352,18 @@ jobs:
         run: |
           TARGET="${{ needs.publish-engine.outputs.version }}"
           echo "Syncing dev-server to engine version $TARGET"
-          sed -i '/^\[package\]/,/^\[/{s/^version = ".*"/version = "'"$TARGET"'"/}' dev-server/Cargo.toml
-          sed -i 's/\(wavecraft-bridge.*version = \)"[^"]*"/\1"'"$TARGET"'"/' dev-server/Cargo.toml
-          sed -i 's/\(wavecraft-protocol.*version = \)"[^"]*"/\1"'"$TARGET"'"/' dev-server/Cargo.toml
+          
+          # Update package version (simple replacement - only one version in [package])
+          sed -i 's/^version = ".*"/version = "'"$TARGET"'"/' dev-server/Cargo.toml
+          
+          # Update dependency versions (format: name = { path = "...", version = "..." })
+          sed -i 's/\(wavecraft-bridge = { .*version = \)"[^"]*"/\1"'"$TARGET"'"/' dev-server/Cargo.toml
+          sed -i 's/\(wavecraft-protocol = { .*version = \)"[^"]*"/\1"'"$TARGET"'"/' dev-server/Cargo.toml
+          
+          # Verify changes
+          echo "Updated dev-server/Cargo.toml:"
+          grep -m1 'version = "' dev-server/Cargo.toml
+          grep -E 'wavecraft-(bridge|protocol)' dev-server/Cargo.toml
 
       - name: Determine publish version
         id: version
