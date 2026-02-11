@@ -395,7 +395,14 @@ jobs:
           NEW=$(npx --yes semver "$PUBLISHED" -i patch)
           echo "Bumping engine workspace from ${{ steps.version.outputs.current }} to $NEW"
           
-          cargo ws version custom "$NEW" --yes --no-git-commit --all
+          # Add --force only for manual workflow_dispatch triggers
+          FORCE_FLAG=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            FORCE_FLAG='--force "*"'
+            echo "Manual trigger detected - using --force flag"
+          fi
+          
+          cargo ws version custom "$NEW" --yes --no-git-commit --all $FORCE_FLAG
           
           # Verify the bump actually changed files
           if git diff --quiet; then
