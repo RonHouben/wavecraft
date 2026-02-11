@@ -70,27 +70,27 @@ Wavecraft distributes its SDK through two channels:
 
 All SDK crates use the `wavecraft-*` naming convention for clear identification:
 
-| Crate | Purpose | Publishable | User Interaction |
-|-------|---------|-------------|------------------|
-| `wavecraft-nih_plug` | nih-plug integration, WebView editor, plugin exports | ❌ Git only | **Primary dependency** — users import via Cargo rename: `wavecraft = { package = "wavecraft-nih_plug" }` |
-| `wavecraft-core` | Core SDK types, declarative macros, no nih_plug dependency | ✅ crates.io | Re-exported via wavecraft-nih_plug |
-| `wavecraft-macros` | Procedural macros: `ProcessorParams` derive, `wavecraft_plugin!` proc-macro | ✅ crates.io | Used indirectly via wavecraft-nih_plug |
-| `wavecraft-protocol` | IPC contracts, parameter types, JSON-RPC definitions, FFI vtable contract (`DevProcessorVTable`) | ✅ crates.io | Implements `ParamSet` trait |
-| `wavecraft-bridge` | IPC handler, `ParameterHost` trait, `PluginParamLoader` (dlopen + param/vtable loading) | ✅ crates.io | CLI uses for plugin loading |
-| `wavecraft-metering` | Real-time safe SPSC ring buffer for audio → UI metering | ✅ crates.io | Uses `MeterProducer` in DSP |
-| `wavecraft-dsp` | DSP primitives, `Processor` trait, built-in processors | ✅ crates.io | Implements `Processor` trait |
-| `wavecraft-dev-server` | WebSocket dev server, `DevAudioProcessor` trait, `FfiProcessor` wrapper, `AudioServer` (full-duplex), `AtomicParameterBridge` | ✅ crates.io | CLI uses for dev mode |
+| Crate                  | Purpose                                                                                                                                                                                                                                                                                       | Publishable                     | User Interaction                                                                                         |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `wavecraft-nih_plug`   | nih-plug integration, WebView editor, plugin exports                                                                                                                                                                                                                                          | ❌ Git only                     | **Primary dependency** — users import via Cargo rename: `wavecraft = { package = "wavecraft-nih_plug" }` |
+| `wavecraft-core`       | Core SDK types, declarative macros, no nih_plug dependency                                                                                                                                                                                                                                    | ✅ crates.io                    | Re-exported via wavecraft-nih_plug                                                                       |
+| `wavecraft-macros`     | Procedural macros: `ProcessorParams` derive, `wavecraft_plugin!` proc-macro                                                                                                                                                                                                                   | ✅ crates.io                    | Used indirectly via wavecraft-nih_plug                                                                   |
+| `wavecraft-protocol`   | IPC contracts, parameter types, JSON-RPC definitions, FFI vtable contract (`DevProcessorVTable`)                                                                                                                                                                                              | ✅ crates.io                    | Implements `ParamSet` trait                                                                              |
+| `wavecraft-bridge`     | IPC handler, `ParameterHost` trait, `PluginParamLoader` (dlopen + param/vtable loading)                                                                                                                                                                                                       | ✅ crates.io                    | CLI uses for plugin loading                                                                              |
+| `wavecraft-metering`   | Real-time safe SPSC ring buffer for audio → UI metering                                                                                                                                                                                                                                       | ✅ crates.io                    | Uses `MeterProducer` in DSP                                                                              |
+| `wavecraft-dsp`        | DSP primitives, `Processor` trait, built-in processors                                                                                                                                                                                                                                        | ✅ crates.io                    | Implements `Processor` trait                                                                             |
+| `wavecraft-dev-server` | Unified dev server at `dev-server/` (repo root): WebSocket server, `DevAudioProcessor` trait, `FfiProcessor` wrapper, `AudioServer` (full-duplex), `AtomicParameterBridge`, hot-reload, file watching. Feature-gated audio (`default = ["audio"]`). CLI uses with `default-features = false`. | ❌ Standalone (publish = false) | CLI uses for dev mode                                                                                    |
 
-> **Why the split?** The `nih_plug` crate cannot be published to crates.io (it has unpublished dependencies). By isolating nih_plug integration in `wavecraft-nih_plug` (git-only), all other crates become publishable. User projects depend on `wavecraft-nih_plug` via git tag, while the ecosystem gains crates.io discoverability for the rest of the SDK.
+> **Why the split?** The `nih_plug` crate cannot be published to crates.io (it has unpublished dependencies). By isolating nih_plug integration in `wavecraft-nih_plug` (git-only), all other crates become publishable. User projects depend on `wavecraft-nih_plug` via git tag, while the ecosystem gains crates.io discoverability for the rest of the SDK. The `wavecraft-dev-server` crate lives at the repository root (`dev-server/`) because it bridges CLI and engine concerns and is never distributed to end users — it's an internal development tool.
 
 ## npm Package Structure (UI)
 
 The UI SDK is distributed as npm packages, enabling standard JavaScript/TypeScript dependency management:
 
-| Package | Purpose | Exports |
-|---------|---------|---------|
-| `@wavecraft/core` | IPC bridge, React hooks, utilities, types | `useParameter`, `useAllParameters`, `useMeterFrame`, `IpcBridge`, `Logger`, types |
-| `@wavecraft/components` | Pre-built React components | `Meter`, `ParameterSlider`, `ParameterGroup`, `ParameterToggle`, `VersionBadge`, `ConnectionStatus`, `LatencyMonitor`, `ResizeHandle`, `ResizeControls` |
+| Package                 | Purpose                                   | Exports                                                                                                                                                 |
+| ----------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@wavecraft/core`       | IPC bridge, React hooks, utilities, types | `useParameter`, `useAllParameters`, `useMeterFrame`, `IpcBridge`, `Logger`, types                                                                       |
+| `@wavecraft/components` | Pre-built React components                | `Meter`, `ParameterSlider`, `ParameterGroup`, `ParameterToggle`, `VersionBadge`, `ConnectionStatus`, `LatencyMonitor`, `ResizeHandle`, `ResizeControls` |
 
 **Subpath Exports:**
 
@@ -152,10 +152,11 @@ pub use wavecraft_core::{wavecraft_processor, wavecraft_plugin};
 **Key Traits:**
 
 1. **`Processor`** — Core DSP abstraction for audio processing:
+
    ```rust
    pub trait Processor: Send + 'static {
        type Params: ProcessorParams + Default + Send + Sync + 'static;
-       
+
        fn process(&mut self, buffer: &mut [&mut [f32]], transport: &Transport, params: &Self::Params);
        fn set_sample_rate(&mut self, _sample_rate: f32) {}
        fn reset(&mut self) {}
@@ -163,6 +164,7 @@ pub use wavecraft_core::{wavecraft_processor, wavecraft_plugin};
    ```
 
 2. **`ProcessorParams`** — Parameter metadata for runtime discovery (typically via `#[derive(ProcessorParams)]`):
+
    ```rust
    pub trait ProcessorParams: Default + Send + Sync + 'static {
        fn param_specs() -> &'static [ParamSpec];
@@ -181,12 +183,14 @@ pub use wavecraft_core::{wavecraft_processor, wavecraft_plugin};
 **Macros:**
 
 - **`wavecraft_processor!`** — Creates named wrappers around built-in DSP processors (not for custom types):
+
   ```rust
   wavecraft_processor!(InputGain => Gain);
   wavecraft_processor!(OutputGain => Gain);
   ```
 
 - **`wavecraft_plugin!`** — Generates complete plugin implementation from minimal DSL:
+
   ```rust
   wavecraft_plugin! {
       name: "My Plugin",
@@ -194,9 +198,11 @@ pub use wavecraft_core::{wavecraft_processor, wavecraft_plugin};
       signal: SignalChain![InputGain, MyProcessor, OutputGain],
   }
   ```
+
   Custom processors go directly in `SignalChain![]` — no wrapper needed.
 
 - **`#[derive(ProcessorParams)]`** — Auto-generates parameter metadata from struct definition:
+
   ```rust
   use wavecraft::ProcessorParams; // derive macro import
 
@@ -269,12 +275,14 @@ import { Meter, ParameterSlider, VersionBadge } from '@wavecraft/components';
 export function App() {
   const params = useAllParameters();
   const meters = useMeterFrame();
-  
+
   return (
     <div>
       <VersionBadge />
       <Meter leftDb={meters?.leftDb} rightDb={meters?.rightDb} />
-      {params.map(p => <ParameterSlider key={p.id} parameter={p} />)}
+      {params.map((p) => (
+        <ParameterSlider key={p.id} parameter={p} />
+      ))}
     </div>
   );
 }

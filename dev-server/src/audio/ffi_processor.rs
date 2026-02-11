@@ -107,6 +107,11 @@ impl Drop for FfiProcessor {
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+    use std::sync::Mutex;
+
+    // Mutex to serialize tests that share static mock flags.
+    // This prevents race conditions when tests run in parallel.
+    static TEST_LOCK: Mutex<()> = Mutex::new(());
 
     // Static flags for mock vtable functions
     static CREATE_CALLED: AtomicBool = AtomicBool::new(false);
@@ -174,6 +179,7 @@ mod tests {
 
     #[test]
     fn test_ffi_processor_lifecycle() {
+        let _guard = TEST_LOCK.lock().unwrap();
         reset_flags();
         let vtable = mock_vtable();
 
@@ -196,6 +202,7 @@ mod tests {
 
     #[test]
     fn test_ffi_processor_set_sample_rate_and_reset() {
+        let _guard = TEST_LOCK.lock().unwrap();
         reset_flags();
         let vtable = mock_vtable();
 
@@ -212,6 +219,7 @@ mod tests {
 
     #[test]
     fn test_ffi_processor_null_create_returns_none() {
+        let _guard = TEST_LOCK.lock().unwrap();
         reset_flags();
         let mut vtable = mock_vtable();
         vtable.create = mock_create_null;
@@ -226,6 +234,7 @@ mod tests {
 
     #[test]
     fn test_ffi_processor_empty_channels_noop() {
+        let _guard = TEST_LOCK.lock().unwrap();
         reset_flags();
         let vtable = mock_vtable();
         let mut processor = FfiProcessor::new(&vtable).expect("create should succeed");

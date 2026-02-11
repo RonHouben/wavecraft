@@ -72,6 +72,7 @@ The IPC system uses a factory pattern to automatically select the appropriate tr
 ### How It Works
 
 1. **Environment Detection** (`environment.ts`):
+
    ```typescript
    export function isWebViewEnvironment(): boolean {
      return globalThis.__WAVECRAFT_IPC__ !== undefined;
@@ -79,10 +80,11 @@ The IPC system uses a factory pattern to automatically select the appropriate tr
    ```
 
 2. **Transport Selection** (`transports/index.ts`):
+
    ```typescript
    // Module-level constant (evaluated once)
    const IS_WEBVIEW = isWebViewEnvironment();
-   
+
    export function getTransport(): Transport {
      if (IS_WEBVIEW) {
        return new NativeTransport();
@@ -112,16 +114,10 @@ cargo xtask dev
 
 # Start embedded dev server from a plugin project (recommended for plugin authors)
 wavecraft start
-
-# Or manually:
-# Terminal 1: Start WebSocket server
-cargo run -p wavecraft-dev-server -- --dev-server --port 9000
-
-# Terminal 2: Start Vite dev server
-cd ui && npm run dev
 ```
 
 **Dev server startup behavior (CLI `wavecraft start`):**
+
 - Performs preflight checks to ensure the WebSocket and UI ports are free before starting any servers.
 - Starts the UI dev server with strict port binding (no auto-switching). If the UI port is in use, startup fails fast with a clear error and no servers are left running.
 
@@ -191,17 +187,19 @@ After parameter discovery completes, the CLI also attempts to load an FFI vtable
 
 The `DevProcessorVTable` (`wavecraft-protocol`) is a `#[repr(C)]` struct with `extern "C"` function pointers:
 
-| Function | Purpose |
-|----------|---------|
-| `create` | Heap-allocate a new processor instance (returns `*mut c_void`) |
-| `process` | Process deinterleaved audio buffers in-place |
-| `set_sample_rate` | Update the processor's sample rate |
-| `reset` | Clear processor state (delay lines, filters, etc.) |
-| `drop` | Free the processor instance |
+| Function          | Purpose                                                        |
+| ----------------- | -------------------------------------------------------------- |
+| `create`          | Heap-allocate a new processor instance (returns `*mut c_void`) |
+| `process`         | Process deinterleaved audio buffers in-place                   |
+| `set_sample_rate` | Update the processor's sample rate                             |
+| `reset`           | Clear processor state (delay lines, filters, etc.)             |
+| `drop`            | Free the processor instance                                    |
 
 The vtable includes a `version` field (`DEV_PROCESSOR_VTABLE_VERSION`) so the CLI can detect incompatible changes and fall back gracefully instead of invoking undefined behavior.
 
 #### Key Components
+
+> **Note:** `wavecraft-dev-server` is a standalone crate at `dev-server/` (repository root), not under `engine/crates/`. It bridges CLI and engine concerns and is never distributed to end users.
 
 - **`DevProcessorVTable`** (`wavecraft-protocol`): Versioned C-ABI vtable defining the FFI contract between user cdylib and CLI.
 - **`wavecraft_dev_create_processor`** (`wavecraft-macros` generated): FFI symbol exported by `wavecraft_plugin!` that returns the vtable. Every `extern "C"` function is wrapped in `catch_unwind` for panic safety.
@@ -216,6 +214,7 @@ The vtable includes a `version` field (`DEV_PROCESSOR_VTABLE_VERSION`) so the CL
 All processor memory is allocated and freed **inside the dylib** via vtable functions (`create` → `Box::into_raw`, `drop` → `Box::from_raw`). The CLI never allocates or frees processor memory, avoiding cross-allocator issues.
 
 **Drop ordering invariant:** The `FfiProcessor` (which holds vtable function pointers into the loaded library) must be dropped **before** the `PluginParamLoader` (which holds the `Library`). This is enforced by:
+
 1. **Struct field order** in `PluginParamLoader`: `_library` is the last field, so it's dropped last.
 2. **Local variable order** in the CLI: `_audio_handle` is declared after `loader`, so it's dropped first (reverse declaration order for locals).
 
@@ -249,26 +248,25 @@ The FFI vtable v1 `process()` does not accept parameters directly. The bridge in
 
 Wavecraft uses a Rust-based build system (`xtask`) that provides a unified interface for building, testing, signing, and distributing plugins.
 
-
 ### Available Commands
 
-| Command | Description |
-|---------|-------------|
-| `cargo xtask ci-check` | **Pre-push validation** — Run lint + tests locally (~52s, 26x faster than Docker CI) |
-| `cargo xtask dev` | Start WebSocket + Vite dev servers for browser development |
-| `cargo xtask bundle` | Build and bundle VST3/CLAP plugins |
-| `cargo xtask test` | Run all tests (Engine + UI) |
-| `cargo xtask test --ui` | Run UI tests only (Vitest) |
-| `cargo xtask test --engine` | Run Engine tests only (cargo test) |
-| `cargo xtask lint` | Run linters for UI and/or engine code |
-| `cargo xtask desktop` | Build and run the desktop POC |
-| `cargo xtask au` | Build AU wrapper (macOS only) |
-| `cargo xtask install` | Install plugins to system directories |
-| `cargo xtask clean` | Clean all build artifacts across workspace (engine/target, cli/target, ui/dist, ui/coverage, target/tmp) with disk space reporting |
-| `cargo xtask all` | Run full build pipeline (test → bundle → au → install) |
-| `cargo xtask sign` | Sign plugin bundles for macOS distribution |
-| `cargo xtask notarize` | Notarize plugin bundles with Apple |
-| `cargo xtask release` | Complete release workflow (build → sign → notarize) |
+| Command                     | Description                                                                                                                        |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `cargo xtask ci-check`      | **Pre-push validation** — Run lint + tests locally (~52s, 26x faster than Docker CI)                                               |
+| `cargo xtask dev`           | Start WebSocket + Vite dev servers for browser development                                                                         |
+| `cargo xtask bundle`        | Build and bundle VST3/CLAP plugins                                                                                                 |
+| `cargo xtask test`          | Run all tests (Engine + UI)                                                                                                        |
+| `cargo xtask test --ui`     | Run UI tests only (Vitest)                                                                                                         |
+| `cargo xtask test --engine` | Run Engine tests only (cargo test)                                                                                                 |
+| `cargo xtask lint`          | Run linters for UI and/or engine code                                                                                              |
+| `cargo xtask desktop`       | Build and run the desktop POC                                                                                                      |
+| `cargo xtask au`            | Build AU wrapper (macOS only)                                                                                                      |
+| `cargo xtask install`       | Install plugins to system directories                                                                                              |
+| `cargo xtask clean`         | Clean all build artifacts across workspace (engine/target, cli/target, ui/dist, ui/coverage, target/tmp) with disk space reporting |
+| `cargo xtask all`           | Run full build pipeline (test → bundle → au → install)                                                                             |
+| `cargo xtask sign`          | Sign plugin bundles for macOS distribution                                                                                         |
+| `cargo xtask notarize`      | Notarize plugin bundles with Apple                                                                                                 |
+| `cargo xtask release`       | Complete release workflow (build → sign → notarize)                                                                                |
 
 ### Development Workflow
 
@@ -329,18 +327,22 @@ cargo xtask notarize --full
 Wavecraft plugins require code signing for distribution. The build system provides two signing modes:
 
 **Ad-Hoc Signing** (local development):
+
 ```bash
 cargo xtask sign --adhoc
 ```
+
 - No Apple Developer account required
 - Plugins work on your local machine only
 - Cannot be notarized or distributed
 
 **Developer ID Signing** (distribution):
+
 ```bash
 export APPLE_SIGNING_IDENTITY="Developer ID Application: Your Name (TEAM_ID)"
 cargo xtask sign
 ```
+
 - Requires Apple Developer Program membership ($99/year)
 - Enables notarization and distribution
 - Required for plugins to load without Gatekeeper warnings
@@ -350,6 +352,7 @@ cargo xtask sign
 Apple notarization is required for distributed plugins to load on macOS Catalina+.
 
 **Two-Step Workflow** (CI/CD friendly):
+
 ```bash
 cargo xtask notarize --submit   # Submit and get request ID
 # ... wait 5-30 minutes ...
@@ -358,6 +361,7 @@ cargo xtask notarize --staple   # Attach ticket when approved
 ```
 
 **Blocking Workflow** (local development):
+
 ```bash
 cargo xtask notarize --full     # Submit, wait, and staple
 ```
@@ -383,6 +387,7 @@ See [macOS Signing Guide](../guides/macos-signing.md) for complete setup instruc
 Wavecraft uses GitHub Actions for continuous integration and release automation.
 
 **CI** (`.github/workflows/ci.yml`):
+
 - Triggers on PRs to `main` (not on merge/push — code already validated via PR)
 - Manual trigger available via `workflow_dispatch`
 - Validates code quality: linting (ESLint, Prettier, cargo fmt, clippy), documentation links
@@ -390,11 +395,13 @@ Wavecraft uses GitHub Actions for continuous integration and release automation.
 - Does NOT build plugin bundles — that's the Release workflow's responsibility
 
 **Template Validation** (`.github/workflows/template-validation.yml`):
+
 - Triggers on PRs to `main` (not on merge/push)
 - Manual trigger available via `workflow_dispatch`
 - Scaffolds test plugin with CLI and validates compilation
 
 **Continuous Deploy** (`.github/workflows/continuous-deploy.yml`):
+
 - Triggers on push to `main` (after PR merge)
 - Detects changed packages via path filters and publishes to crates.io/npm
 - **Auto-bump:** If local version ≤ published version, CI auto-bumps the patch version, commits as `github-actions[bot]`, and publishes
@@ -403,6 +410,7 @@ Wavecraft uses GitHub Actions for continuous integration and release automation.
 - See [CI/CD Pipeline Guide](../guides/ci-pipeline.md) for details
 
 **Release Build** (`.github/workflows/release.yml`):
+
 - Triggers on version tags (`v*`) or manual dispatch
 - Imports Developer ID certificate from secrets
 - Signs with hardened runtime and entitlements
@@ -448,28 +456,29 @@ Wavecraft supports browser-based visual testing using Playwright MCP for agent-d
 
 All UI components have `data-testid` attributes for reliable Playwright selection:
 
-| Component | Test ID Pattern | Example |
-|-----------|-----------------|---------|
-| App Root | `app-root` | Full page container |
-| Meter | `meter-{L\|R}[-{peak\|rms\|db}]` | `meter-L-peak` |
-| Parameter | `param-{id}[-{label\|slider\|value}]` | `param-gain-slider` |
-| Version | `version-badge` | Version display |
-| Connection | `connection-status` | WebSocket status |
+| Component  | Test ID Pattern                       | Example             |
+| ---------- | ------------------------------------- | ------------------- |
+| App Root   | `app-root`                            | Full page container |
+| Meter      | `meter-{L\|R}[-{peak\|rms\|db}]`      | `meter-L-peak`      |
+| Parameter  | `param-{id}[-{label\|slider\|value}]` | `param-gain-slider` |
+| Version    | `version-badge`                       | Version display     |
+| Connection | `connection-status`                   | WebSocket status    |
 
 ### Baseline Storage
 
 Visual baselines are stored externally (not in git) at `~/.wavecraft/visual-baselines/`:
+
 - Keeps repository lean
 - Independent versioning from code
 - Shareable across development machines
 
 ### Key Design Decisions
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Automation tool | Playwright MCP | Agent-native, no custom scripts |
-| Baseline location | External (`~/.wavecraft/`) | Repository stays lean |
-| Test orchestration | Agent-driven | On-demand, not CI |
-| Component targeting | `data-testid` attributes | Stable selectors |
+| Decision            | Choice                     | Rationale                       |
+| ------------------- | -------------------------- | ------------------------------- |
+| Automation tool     | Playwright MCP             | Agent-native, no custom scripts |
+| Baseline location   | External (`~/.wavecraft/`) | Repository stays lean           |
+| Test orchestration  | Agent-driven               | On-demand, not CI               |
+| Component targeting | `data-testid` attributes   | Stable selectors                |
 
 See [Visual Testing Guide](../guides/visual-testing.md) for complete setup and usage instructions.

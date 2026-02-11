@@ -41,14 +41,14 @@ You are a **Senior Quality Assurance Specialist** with expertise in:
 
 ## Project Context
 
-| Layer      | Tech               | Location                              |
-| ---------- | ------------------ | ------------------------------------- |
-| DSP        | Rust               | `engine/crates/wavecraft-dsp/`        |
-| Protocol   | Rust               | `engine/crates/wavecraft-protocol/`   |
-| Plugin     | Rust + nih-plug    | `engine/crates/wavecraft-nih_plug/`   |
-| Bridge     | Rust               | `engine/crates/wavecraft-bridge/`     |
-| Dev Server | Rust + wry         | `engine/crates/wavecraft-dev-server/` |
-| UI         | React + TypeScript | `ui/`                                 |
+| Layer      | Tech               | Location                            |
+| ---------- | ------------------ | ----------------------------------- |
+| DSP        | Rust               | `engine/crates/wavecraft-dsp/`      |
+| Protocol   | Rust               | `engine/crates/wavecraft-protocol/` |
+| Plugin     | Rust + nih-plug    | `engine/crates/wavecraft-nih_plug/` |
+| Bridge     | Rust               | `engine/crates/wavecraft-bridge/`   |
+| Dev Server | Rust + tokio       | `dev-server/`                       |
+| UI         | React + TypeScript | `ui/`                               |
 
 **Reference Documents**:
 
