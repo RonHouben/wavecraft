@@ -7,23 +7,23 @@ on:
   workflow_dispatch:
     inputs:
       force-publish-cli:
-        description: 'Force publish CLI (ignore change detection)'
+        description: "Force publish CLI (ignore change detection)"
         type: boolean
         default: false
       force-publish-engine:
-        description: 'Force publish engine crates (ignore change detection)'
+        description: "Force publish engine crates (ignore change detection)"
         type: boolean
         default: false
       force-publish-dev-server:
-        description: 'Force publish dev-server (ignore change detection)'
+        description: "Force publish dev-server (ignore change detection)"
         type: boolean
         default: false
       force-publish-npm-core:
-        description: 'Force publish @wavecraft/core (ignore change detection)'
+        description: "Force publish @wavecraft/core (ignore change detection)"
         type: boolean
         default: false
       force-publish-npm-components:
-        description: 'Force publish @wavecraft/components (ignore change detection)'
+        description: "Force publish @wavecraft/components (ignore change detection)"
         type: boolean
         default: false
 
@@ -95,7 +95,13 @@ jobs:
   # ============================================================================
   publish-cli:
     needs:
-      [detect-changes, publish-engine, publish-dev-server, publish-npm-core, publish-npm-components]
+      [
+        detect-changes,
+        publish-engine,
+        publish-dev-server,
+        publish-npm-core,
+        publish-npm-components,
+      ]
     if: |
       !cancelled() &&
       needs.detect-changes.outputs.any_sdk_changed == 'true' &&
@@ -147,7 +153,7 @@ jobs:
           # Query with explicit HTTP status check
           HTTP_CODE=$(curl -s -o /tmp/crate-index.txt -w "%{http_code}" \
             "https://index.crates.io/wa/ve/wavecraft")
-          
+
           if [ "$HTTP_CODE" -ne 200 ]; then
             echo "⚠️  crates.io index returned HTTP $HTTP_CODE"
             echo "registry_available=false" >> $GITHUB_OUTPUT
@@ -173,13 +179,13 @@ jobs:
           CURRENT=$(cargo metadata --manifest-path cli/Cargo.toml --no-deps --format-version 1 | jq -r '.packages[0].version')
           PUBLISHED="${{ steps.registry.outputs.published }}"
           REGISTRY_OK="${{ steps.registry.outputs.registry_available }}"
-          
+
           echo "current=$CURRENT" >> $GITHUB_OUTPUT
           echo "Local version:     $CURRENT"
           echo "Published version: $PUBLISHED"
           echo "Registry OK:       $REGISTRY_OK"
           echo "Force publish:     $IS_FORCE_PUBLISH"
-          
+
           # Decision logic
           if [ "$REGISTRY_OK" != "true" ]; then
             # Registry unavailable — cannot determine if bump needed
@@ -323,7 +329,7 @@ jobs:
           # Query with explicit HTTP status check
           HTTP_CODE=$(curl -s -o /tmp/crate-index.txt -w "%{http_code}" \
             "https://index.crates.io/wa/ve/wavecraft-core")
-          
+
           if [ "$HTTP_CODE" -ne 200 ]; then
             echo "⚠️  crates.io index returned HTTP $HTTP_CODE"
             echo "registry_available=false" >> $GITHUB_OUTPUT
@@ -349,13 +355,13 @@ jobs:
           CURRENT=$(grep -m1 'version = "' engine/Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
           PUBLISHED="${{ steps.registry.outputs.published }}"
           REGISTRY_OK="${{ steps.registry.outputs.registry_available }}"
-          
+
           echo "current=$CURRENT" >> $GITHUB_OUTPUT
           echo "Local version:     $CURRENT"
           echo "Published version: $PUBLISHED"
           echo "Registry OK:       $REGISTRY_OK"
           echo "Force publish:     $IS_FORCE_PUBLISH"
-          
+
           # Decision logic
           if [ "$REGISTRY_OK" != "true" ]; then
             # Registry unavailable — cannot determine if bump needed
@@ -394,22 +400,22 @@ jobs:
           PUBLISHED="${{ steps.registry.outputs.published }}"
           NEW=$(npx --yes semver "$PUBLISHED" -i patch)
           echo "Bumping engine workspace from ${{ steps.version.outputs.current }} to $NEW"
-          
+
           # Add --force only for manual workflow_dispatch triggers
           FORCE_ARGS=()
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             FORCE_ARGS=(--force "*")
             echo "Manual trigger detected — using --force *"
           fi
-          
+
           cargo ws version custom "$NEW" --yes --no-git-commit --all "${FORCE_ARGS[@]}"
-          
+
           # Verify the bump actually changed files
           if git diff --quiet; then
             echo "❌ cargo ws version custom did not modify any files"
             exit 1
           fi
-          
+
           echo "version=$NEW" >> $GITHUB_OUTPUT
           echo "✅ Auto-bumped engine crates to $NEW"
 
@@ -513,29 +519,29 @@ jobs:
         run: |
           TARGET="${{ needs.publish-engine.outputs.version }}"
           echo "Syncing dev-server to engine version $TARGET"
-          
+
           # ── 1. Update dev-server's own version and dependency versions ──
           sed -i 's/^version = ".*"/version = "'"$TARGET"'"/' dev-server/Cargo.toml
           sed -i 's/\(wavecraft-bridge = { .*version = \)"[^"]*"/\1"'"$TARGET"'"/' dev-server/Cargo.toml
           sed -i 's/\(wavecraft-protocol = { .*version = \)"[^"]*"/\1"'"$TARGET"'"/' dev-server/Cargo.toml
-          
+
           # ── 2. Replay the engine version bump locally ──
           # publish-engine bumped these in its (now-gone) workspace.
           # We must match them so path dep resolution succeeds.
-          
+
           # 2a. Engine workspace package version
           sed -i '/^\[workspace\.package\]/,/^\[/{s/^version = ".*"/version = "'"$TARGET"'"/}' engine/Cargo.toml
-          
+
           # 2b. Engine workspace dependency version specifiers
           sed -i 's/\(wavecraft-[a-z_]* = { .*version = \)"[^"]*"/\1"'"$TARGET"'"/' engine/Cargo.toml
-          
+
           # 2c. Individual crate package versions
           for crate_dir in engine/crates/wavecraft-*/; do
             if [ -f "$crate_dir/Cargo.toml" ]; then
               sed -i '/^\[package\]/,/^\[/{s/^version = ".*"/version = "'"$TARGET"'"/}' "$crate_dir/Cargo.toml"
             fi
           done
-          
+
           # ── 3. Verify ──
           echo "=== dev-server/Cargo.toml ==="
           head -3 dev-server/Cargo.toml
@@ -552,7 +558,7 @@ jobs:
         run: |
           TARGET="${{ needs.publish-engine.outputs.version }}"
           echo "Waiting for wavecraft-bridge $TARGET and wavecraft-protocol $TARGET on crates.io..."
-          
+
           wait_for_crate() {
             local CRATE=$1
             local VERSION=$2
@@ -576,10 +582,10 @@ jobs:
             echo "❌ Timed out waiting for $CRATE $VERSION after $((MAX_ATTEMPTS * DELAY))s"
             return 1
           }
-          
+
           wait_for_crate "wavecraft-protocol" "$TARGET"
           wait_for_crate "wavecraft-bridge" "$TARGET"
-          
+
           # Force Cargo to refresh its index cache
           cargo search wavecraft-bridge --limit 1 > /dev/null 2>&1 || true
 
@@ -589,7 +595,7 @@ jobs:
           # Query with explicit HTTP status check
           HTTP_CODE=$(curl -s -o /tmp/crate-index.txt -w "%{http_code}" \
             "https://index.crates.io/wa/ve/wavecraft-dev-server")
-          
+
           if [ "$HTTP_CODE" -ne 200 ]; then
             echo "⚠️  crates.io index returned HTTP $HTTP_CODE"
             echo "registry_available=false" >> $GITHUB_OUTPUT
@@ -615,13 +621,13 @@ jobs:
           CURRENT=$(grep -m1 'version = "' dev-server/Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
           PUBLISHED="${{ steps.registry.outputs.published }}"
           REGISTRY_OK="${{ steps.registry.outputs.registry_available }}"
-          
+
           echo "current=$CURRENT" >> $GITHUB_OUTPUT
           echo "Local version:     $CURRENT"
           echo "Published version: $PUBLISHED"
           echo "Registry OK:       $REGISTRY_OK"
           echo "Force publish:     $IS_FORCE_PUBLISH"
-          
+
           # Decision logic
           if [ "$REGISTRY_OK" != "true" ]; then
             # Registry unavailable — cannot determine if bump needed
@@ -656,7 +662,7 @@ jobs:
         id: bump
         if: steps.version.outputs.action == 'bump'
         run: |
-          PUBLISHED=${{ steps.version.outputs.published }}
+          PUBLISHED="${{ steps.registry.outputs.published }}"
           NEW=$(npx --yes semver "$PUBLISHED" -i patch)
           sed -i '/^\[package\]/,/^\[/{s/^version = ".*"/version = "'"$NEW"'"/}' dev-server/Cargo.toml
           echo "version=$NEW" >> $GITHUB_OUTPUT
@@ -704,7 +710,7 @@ jobs:
         run: |
           MAX_ATTEMPTS=3
           DELAY=30
-          
+
           for i in $(seq 1 $MAX_ATTEMPTS); do
             echo "Publish attempt $i/$MAX_ATTEMPTS..."
             if cargo publish; then
@@ -718,7 +724,7 @@ jobs:
               DELAY=$((DELAY * 2))
             fi
           done
-          
+
           echo "❌ All publish attempts failed"
           exit 1
 
