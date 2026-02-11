@@ -6,7 +6,6 @@ license = "MIT"
 authors = ["Wavecraft Team"]
 description = "Unified development server for Wavecraft plugin UI testing"
 repository = "https://github.com/RonHouben/wavecraft"
-publish = false
 
 [dependencies]
 # Engine crates

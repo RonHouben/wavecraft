@@ -87,11 +87,12 @@ jobs:
   # ============================================================================
   publish-cli:
     needs:
-      [detect-changes, publish-engine, publish-npm-core, publish-npm-components]
+      [detect-changes, publish-engine, publish-dev-server, publish-npm-core, publish-npm-components]
     if: |
       !cancelled() &&
       needs.detect-changes.outputs.any_sdk_changed == 'true' &&
       (needs.publish-engine.result == 'success' || needs.publish-engine.result == 'skipped') &&
+      (needs.publish-dev-server.result == 'success' || needs.publish-dev-server.result == 'skipped') &&
       (needs.publish-npm-core.result == 'success' || needs.publish-npm-core.result == 'skipped') &&
       (needs.publish-npm-components.result == 'success' || needs.publish-npm-components.result == 'skipped')
     runs-on: ubuntu-latest
@@ -305,6 +306,116 @@ jobs:
 
       - name: Push tags only
         run: git push origin --tags
+
+  # ============================================================================
+  # Job 3b: Publish dev-server crate to crates.io
+  # ============================================================================
+  publish-dev-server:
+    needs: [detect-changes, publish-engine]
+    if: |
+      !cancelled() &&
+      (needs.detect-changes.outputs.engine == 'true' || needs.detect-changes.outputs.cli == 'true') &&
+      (needs.publish-engine.result == 'success' || needs.publish-engine.result == 'skipped')
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+    outputs:
+      version: ${{ steps.final.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pkg-config \
+            libasound2-dev
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: dev-server
+
+      - name: Sync version with engine (if engine published)
+        if: needs.publish-engine.outputs.version != ''
+        run: |
+          TARGET="${{ needs.publish-engine.outputs.version }}"
+          echo "Syncing dev-server to engine version $TARGET"
+          sed -i '/^\[package\]/,/^\[/{s/^version = ".*"/version = "'"$TARGET"'"/}' dev-server/Cargo.toml
+          sed -i 's/\(wavecraft-bridge.*version = \)"[^"]*"/\1"'"$TARGET"'"/' dev-server/Cargo.toml
+          sed -i 's/\(wavecraft-protocol.*version = \)"[^"]*"/\1"'"$TARGET"'"/' dev-server/Cargo.toml
+
+      - name: Determine publish version
+        id: version
+        run: |
+          CURRENT=$(grep -m1 'version = "' dev-server/Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
+          PUBLISHED=$(curl -s "https://index.crates.io/wa/ve/wavecraft-dev-server" \
+            | tail -1 | jq -r '.vers' 2>/dev/null || echo "0.0.0")
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          echo "published=$PUBLISHED" >> $GITHUB_OUTPUT
+
+          if [ "$CURRENT" != "$PUBLISHED" ] && \
+             [ "$(printf '%s\n' "$PUBLISHED" "$CURRENT" | sort -V | tail -1)" = "$CURRENT" ]; then
+            echo "version=$CURRENT" >> $GITHUB_OUTPUT
+            echo "Publishing dev-server $CURRENT (latest on crates.io: $PUBLISHED)"
+          else
+            echo "Auto-bumping: local $CURRENT not ahead of crates.io $PUBLISHED"
+          fi
+
+      - name: Auto-bump patch version (if needed)
+        id: bump
+        if: steps.version.outputs.version == ''
+        run: |
+          PUBLISHED=${{ steps.version.outputs.published }}
+          NEW=$(npx --yes semver "$PUBLISHED" -i patch)
+          sed -i '/^\[package\]/,/^\[/{s/^version = ".*"/version = "'"$NEW"'"/}' dev-server/Cargo.toml
+          echo "version=$NEW" >> $GITHUB_OUTPUT
+          echo "bumped=true" >> $GITHUB_OUTPUT
+          echo "Auto-bumped dev-server to $NEW"
+
+      - name: Commit auto-bump locally
+        if: steps.bump.outputs.bumped == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add dev-server/Cargo.toml
+          git commit -m "chore: bump wavecraft-dev-server to ${{ steps.bump.outputs.version }} [auto-bump]"
+
+      - name: Set final version
+        id: final
+        run: |
+          VERSION="${{ steps.version.outputs.version }}${{ steps.bump.outputs.version }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Verify publishability (dry-run)
+        working-directory: dev-server
+        run: cargo publish --dry-run
+
+      - name: Authenticate with crates.io (OIDC)
+        id: crates-auth
+        uses: rust-lang/crates-io-auth-action@v1
+
+      - name: Publish to crates.io
+        working-directory: dev-server
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.crates-auth.outputs.token }}
+        run: cargo publish
+
+      - name: Create and push git tag
+        run: |
+          git tag "wavecraft-dev-server-v${{ steps.final.outputs.version }}"
+          git push origin "wavecraft-dev-server-v${{ steps.final.outputs.version }}"
 
   # ============================================================================
   # Job 4: Publish @wavecraft/core to npm

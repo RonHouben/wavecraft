@@ -39,6 +39,8 @@ struct CliDependency {
     has_version: bool,
     /// The version string, if present.
     version: Option<String>,
+    /// The path to the crate (relative to cli/), if specified.
+    path: Option<String>,
 }
 
 /// Validation error for a single dependency.
@@ -159,22 +161,24 @@ fn discover_wavecraft_deps(toml_content: &str) -> Result<Vec<CliDependency>> {
             continue;
         }
 
-        let (has_version, version) = match value {
+        let (has_version, version, path) = match value {
             toml::Value::Table(table) => {
                 let ver = table.get("version").and_then(|v| v.as_str());
-                (ver.is_some(), ver.map(String::from))
+                let p = table.get("path").and_then(|v| v.as_str());
+                (ver.is_some(), ver.map(String::from), p.map(String::from))
             }
             toml::Value::String(ver) => {
                 // Simple string dep like `wavecraft-foo = "1.0"` — has version
-                (true, Some(ver.clone()))
+                (true, Some(ver.clone()), None)
             }
-            _ => (false, None),
+            _ => (false, None, None),
         };
 
         result.push(CliDependency {
             name: name.clone(),
             has_version,
             version,
+            path,
         });
     }
 
@@ -200,10 +204,17 @@ fn validate_dependency(
     }
 
     // Check 2: crate publishability
-    let crate_toml_path = project_root
-        .join("engine/crates")
-        .join(&dep.name)
-        .join("Cargo.toml");
+    // Resolve crate location from `path` key or fallback to convention
+    let crate_toml_path = if let Some(ref p) = dep.path {
+        // Path is relative to cli/Cargo.toml, resolve from cli/ dir
+        project_root.join("cli").join(p).join("Cargo.toml")
+    } else {
+        // Fallback: convention-based lookup for old deps
+        project_root
+            .join("engine/crates")
+            .join(&dep.name)
+            .join("Cargo.toml")
+    };
 
     if !crate_toml_path.exists() {
         errors.push(ValidationError {
