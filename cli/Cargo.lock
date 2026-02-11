@@ -1893,7 +1893,6 @@ dependencies = [
  "nix 0.29.0",
  "notify",
  "notify-debouncer-full",
- "parking_lot",
  "rtrb",
  "serde_json",
  "tokio",

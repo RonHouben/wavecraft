@@ -16,7 +16,7 @@ use wavecraft_bridge::{IpcHandler, ParameterHost};
 /// Shared state for tracking connected clients
 struct ServerState {
     /// Connected browser clients (for broadcasting meter updates)
-    browser_clients: Arc<RwLock<Vec<tokio::sync::mpsc::UnboundedSender<String>>>>,
+    browser_clients: Arc<RwLock<Vec<tokio::sync::mpsc::Sender<String>>>>,
     /// Audio client ID (if connected)
     audio_client: Arc<RwLock<Option<String>>>,
 }
@@ -45,7 +45,9 @@ impl WsHandle {
     pub async fn broadcast(&self, json: &str) {
         let clients = self.state.browser_clients.read().await;
         for client in clients.iter() {
-            let _ = client.send(json.to_owned());
+            if let Err(e) = client.try_send(json.to_owned()) {
+                warn!("Failed to broadcast message to client: {}", e);
+            }
         }
     }
 }
@@ -99,7 +101,9 @@ impl<H: ParameterHost + 'static> WsServer<H> {
 
         let clients = self.state.browser_clients.read().await;
         for client in clients.iter() {
-            let _ = client.send(json.clone());
+            if let Err(e) = client.try_send(json.clone()) {
+                warn!("Failed to send parametersChanged notification to client: {}", e);
+            }
         }
 
         Ok(())
@@ -172,12 +176,15 @@ async fn handle_connection<H: ParameterHost>(
     info!("WebSocket connection established: {}", addr);
 
     let (mut write, mut read) = ws_stream.split();
-    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<String>();
+    let (tx, mut rx) = tokio::sync::mpsc::channel::<String>(128);
 
     // Track this client for broadcasting
     let mut is_audio_client = false;
-    state.browser_clients.write().await.push(tx.clone());
-    let client_index = state.browser_clients.read().await.len() - 1;
+    let client_index = {
+        let mut clients = state.browser_clients.write().await;
+        clients.push(tx.clone());
+        clients.len() - 1
+    };
 
     // Spawn task to send messages from channel to WebSocket
     let write_task = tokio::spawn(async move {
@@ -197,47 +204,59 @@ async fn handle_connection<H: ParameterHost>(
                     debug!("Received from {}: {}", addr, json);
                 }
 
-                // Check if this is an audio client registration
-                if json.contains("\"method\":\"registerAudio\"") {
-                    is_audio_client = true;
-                    info!("Audio client registered: {}", addr);
+                // Try to parse as IPC request for structured routing
+                let parsed_req = serde_json::from_str::<wavecraft_protocol::IpcRequest>(&json);
+                
+                if let Ok(ref req) = parsed_req {
+                    // Handle registerAudio
+                    if req.method == "registerAudio" {
+                        is_audio_client = true;
+                        info!("Audio client registered: {}", addr);
 
-                    // Parse to extract client_id
-                    if let Ok(req) = serde_json::from_str::<wavecraft_protocol::IpcRequest>(&json)
-                        && let Some(params) = req.params
-                        && let Ok(audio_params) = serde_json::from_value::<
-                            wavecraft_protocol::RegisterAudioParams,
-                        >(params)
-                    {
-                        *state.audio_client.write().await = Some(audio_params.client_id.clone());
-                    }
-
-                    // Send success response
-                    let response = wavecraft_protocol::IpcResponse::success(
-                        wavecraft_protocol::RequestId::Number(1),
-                        wavecraft_protocol::RegisterAudioResult {
-                            status: "registered".to_string(),
-                        },
-                    );
-                    let response_json = serde_json::to_string(&response).unwrap();
-                    if let Err(e) = tx.send(response_json) {
-                        error!("Error sending response: {}", e);
-                        break;
-                    }
-                    continue;
-                }
-
-                // Check if this is a meter update notification from audio client
-                if is_audio_client && json.contains("\"method\":\"meterUpdate\"") {
-                    // Broadcast to all browser clients
-                    let clients = state.browser_clients.read().await;
-                    for (idx, client) in clients.iter().enumerate() {
-                        if idx != client_index {
-                            // Don't send back to audio client
-                            let _ = client.send(json.clone());
+                        // Parse to extract client_id
+                        if let Some(params) = req.params.clone()
+                            && let Ok(audio_params) = serde_json::from_value::<
+                                wavecraft_protocol::RegisterAudioParams,
+                            >(params)
+                        {
+                            *state.audio_client.write().await = Some(audio_params.client_id.clone());
                         }
+
+                        // Send success response using the request's id
+                        let response = wavecraft_protocol::IpcResponse::success(
+                            req.id.clone(),
+                            wavecraft_protocol::RegisterAudioResult {
+                                status: "registered".to_string(),
+                            },
+                        );
+                        let response_json = match serde_json::to_string(&response) {
+                            Ok(json) => json,
+                            Err(e) => {
+                                error!("Failed to serialize registerAudio response: {}", e);
+                                break;
+                            }
+                        };
+                        if let Err(e) = tx.try_send(response_json) {
+                            error!("Error sending response: {}", e);
+                            break;
+                        }
+                        continue;
                     }
-                    continue;
+                    
+                    // Handle meterUpdate from audio client
+                    if is_audio_client && req.method == "meterUpdate" {
+                        // Broadcast to all browser clients
+                        let clients = state.browser_clients.read().await;
+                        for (idx, client) in clients.iter().enumerate() {
+                            if idx != client_index {
+                                // Don't send back to audio client
+                                if let Err(e) = client.try_send(json.clone()) {
+                                    warn!("Failed to broadcast meter update to client {}: {}", idx, e);
+                                }
+                            }
+                        }
+                        continue;
+                    }
                 }
 
                 // Route through existing IpcHandler
@@ -249,7 +268,7 @@ async fn handle_connection<H: ParameterHost>(
                 }
 
                 // Send response
-                if let Err(e) = tx.send(response) {
+                if let Err(e) = tx.try_send(response) {
                     error!("Error queueing response: {}", e);
                     break;
                 }
