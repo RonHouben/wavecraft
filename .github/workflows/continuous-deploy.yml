@@ -5,6 +5,23 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      force-publish-cli:
+        description: 'Force publish CLI (ignore change detection)'
+        type: boolean
+        default: false
+      force-publish-engine:
+        description: 'Force publish engine crates (ignore change detection)'
+        type: boolean
+        default: false
+      force-publish-npm-core:
+        description: 'Force publish @wavecraft/core (ignore change detection)'
+        type: boolean
+        default: false
+      force-publish-npm-components:
+        description: 'Force publish @wavecraft/components (ignore change detection)'
+        type: boolean
+        default: false
 
 concurrency:
   group: continuous-deploy
@@ -19,10 +36,10 @@ jobs:
     # Skip if the triggering commit was made by the CI bot (auto-bump) to prevent infinite loops
     if: github.event.head_commit.author.name != 'github-actions[bot]'
     outputs:
-      cli: ${{ steps.filter.outputs.cli }}
-      engine: ${{ steps.filter.outputs.engine }}
-      npm-core: ${{ steps.filter.outputs.npm-core }}
-      npm-components: ${{ steps.filter.outputs.npm-components }}
+      cli: ${{ steps.filter.outputs.cli == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force-publish-cli) }}
+      engine: ${{ steps.filter.outputs.engine == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force-publish-engine) }}
+      npm-core: ${{ steps.filter.outputs.npm-core == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force-publish-npm-core) }}
+      npm-components: ${{ steps.filter.outputs.npm-components == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force-publish-npm-components) }}
       any_sdk_changed: ${{ steps.aggregate.outputs.any_sdk_changed }}
     steps:
       - uses: actions/checkout@v4
@@ -55,7 +72,11 @@ jobs:
           if [[ "${{ steps.filter.outputs.cli }}" == "true" || \
                 "${{ steps.filter.outputs.engine }}" == "true" || \
                 "${{ steps.filter.outputs.npm-core }}" == "true" || \
-                "${{ steps.filter.outputs.npm-components }}" == "true" ]]; then
+                "${{ steps.filter.outputs.npm-components }}" == "true" || \
+                "${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-cli }}" == "true" || \
+                "${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-engine }}" == "true" || \
+                "${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-npm-core }}" == "true" || \
+                "${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-npm-components }}" == "true" ]]; then
             echo "any_sdk_changed=true" >> $GITHUB_OUTPUT
           else
             echo "any_sdk_changed=false" >> $GITHUB_OUTPUT
