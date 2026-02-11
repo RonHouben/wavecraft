@@ -395,7 +395,7 @@ jobs:
           NEW=$(npx --yes semver "$PUBLISHED" -i patch)
           echo "Bumping engine workspace from ${{ steps.version.outputs.current }} to $NEW"
           
-          cargo ws version custom "$NEW" --yes --no-git-push --no-git-tag --no-git-commit --allow-branch main
+          cargo ws version custom "$NEW" --yes --no-git --allow-branch main
           
           # Verify the bump actually changed files
           if git diff --quiet; then
