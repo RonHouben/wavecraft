@@ -5,7 +5,7 @@
 
 use anyhow::Result;
 use notify::RecursiveMode;
-use notify_debouncer_full::{new_debouncer, DebounceEventResult, Debouncer, FileIdMap};
+use notify_debouncer_full::{new_debouncer, DebounceEventResult, Debouncer, RecommendedCache};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -21,7 +21,7 @@ pub enum WatchEvent {
 /// File watcher with debouncing for Rust source files
 pub struct FileWatcher {
     #[allow(dead_code)] // Kept alive for the lifetime of the watcher
-    debouncer: Debouncer<notify::RecommendedWatcher, FileIdMap>,
+    debouncer: Debouncer<notify::RecommendedWatcher, RecommendedCache>,
     #[allow(dead_code)] // Kept alive for the lifetime of the watcher
     _shutdown_rx: watch::Receiver<bool>,
 }
