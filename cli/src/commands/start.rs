@@ -27,6 +27,9 @@ use wavecraft_bridge::IpcHandler;
 use wavecraft_dev_server::{DevServerHost, DevSession, RebuildCallbacks, WsServer};
 use wavecraft_protocol::ParameterInfo;
 
+#[cfg(not(feature = "audio-dev"))]
+use crate::project::param_extract::{extract_params_subprocess, DEFAULT_EXTRACT_TIMEOUT};
+
 /// Re-export PluginParamLoader for audio dev mode
 use wavecraft_bridge::PluginParamLoader as PluginLoader;
 
@@ -423,6 +426,7 @@ fn run_dev_servers(
     // 1. Build the plugin and load parameters (two-phase or cached)
     // Create tokio runtime for async parameter loading
     let runtime = tokio::runtime::Runtime::new().context("Failed to create async runtime")?;
+    #[cfg_attr(not(feature = "audio-dev"), allow(unused_variables))]
     let (params, loader) = runtime.block_on(load_parameters(&project.engine_dir, verbose))?;
 
     if verbose {

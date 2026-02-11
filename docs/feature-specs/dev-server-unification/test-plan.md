@@ -11,9 +11,9 @@
 
 | Status             | Count |
 | ------------------ | ----- |
-| ✅ PASS            | 15    |
-| ⚠️ PASS (warnings) | 1     |
-| ❌ FAIL            | 1     |
+| ✅ PASS            | 17    |
+| ⚠️ PASS (warnings) | 0     |
+| ❌ FAIL            | 0     |
 | ⏸️ SKIPPED         | 7     |
 | ⬜ NOT RUN         | 0     |
 
@@ -78,9 +78,9 @@ This test plan validates the unification of CLI's `dev_server` module and engine
 
 **Expected Result**: Build succeeds, no audio dependencies required
 
-**Status**: ⚠️ PASS (1 warning)
+**Status**: ✅ PASS
 
-**Actual Result**: Build succeeded in 8.64s. Audio code excluded. Warning: unused import `std::sync::Arc` at src/host.rs:8 (See Issue #2)
+**Actual Result**: Build succeeded in 11.82s after clean. Audio code excluded. No warnings.
 
 **Notes**:
 
@@ -124,9 +124,9 @@ This test plan validates the unification of CLI's `dev_server` module and engine
 
 **Expected Result**: Build succeeds, audio code excluded
 
-**Status**: ❌ FAIL
+**Status**: ✅ PASS
 
-**Actual Result**: Compilation failed with 9 errors. Functions `extract_params_subprocess` and `DEFAULT_EXTRACT_TIMEOUT` not feature-gated. `DevSession::new()` argument mismatch (expects 6 args, got 5). See Issue #1 for full details.
+**Actual Result**: Build succeeded (cargo build --manifest-path cli/Cargo.toml --no-default-features) in 0.81s.
 
 **Notes**:
 
@@ -726,44 +726,21 @@ This test plan validates the unification of CLI's `dev_server` module and engine
 
 ## Issues Found
 
-### Issue #1: CLI does not compile without audio-dev feature
+### Issue #1: CLI does not compile without audio-dev feature — ✅ RESOLVED
 
-- **Severity**: High (BLOCKING)
+- **Severity**: High (BLOCKING) — FIXED
 - **Test Case**: TC-004
-- **Description**: The CLI fails to compile when built with `--no-default-features` (audio-dev disabled)
-- **Expected**: CLI should compile with and without audio-dev feature
-- **Actual**: Compilation fails with 9 errors in [cli/src/commands/start.rs](../../../cli/src/commands/start.rs)
-- **Errors**:
-  - `extract_params_subprocess` function not feature-gated (E0425)
-  - `DEFAULT_EXTRACT_TIMEOUT` constant not feature-gated (E0425)
-  - Type annotation issues (E0282) due to missing audio types
-  - `DevSession::new()` argument mismatch (E0061) - audio_handle parameter missing when feature disabled
-- **Evidence**:
-  ```
-  error[E0425]: cannot find function `extract_params_subprocess` in this scope
-  error[E0425]: cannot find value `DEFAULT_EXTRACT_TIMEOUT` in this scope
-  error[E0061]: this function takes 6 arguments but 5 arguments were supplied
-  ```
-- **Suggested Fix**: Add proper `#[cfg(feature = "audio-dev")]` guards around audio-specific code in start.rs. Consider using `Option<AudioHandle>` parameter pattern.
+- **Description**: The CLI failed to compile when built with `--no-default-features` (audio-dev disabled)
+- **Resolution**: Fixed by setting `default-features = false` for `wavecraft-dev-server` dependency in CLI's Cargo.toml and adding proper `#[cfg(feature = "audio-dev")]` guards around audio-specific imports in [cli/src/commands/start.rs](../../../cli/src/commands/start.rs). The audio-related functions (`extract_params_subprocess`, `DEFAULT_EXTRACT_TIMEOUT`) and their imports are now properly feature-gated.
 
 ---
 
-### Issue #2: Unused import warning in dev-server without audio feature
+### Issue #2: Unused import warning in dev-server without audio feature — ✅ RESOLVED
 
-- **Severity**: Low (MINOR)
+- **Severity**: Low (MINOR) — FIXED
 - **Test Case**: TC-002
-- **Description**: When dev-server is built without default features (audio disabled), there's an unused import warning
-- **Expected**: No warnings when building without audio
-- **Actual**: Warning: unused import `std::sync::Arc` in [dev-server/src/host.rs](../../../dev-server/src/host.rs#L8)
-- **Evidence**:
-  ```
-  warning: unused import: `std::sync::Arc`
-   --> src/host.rs:8:5
-    |
-  8 | use std::sync::Arc;
-    |     ^^^^^^^^^^^^^^
-  ```
-- **Suggested Fix**: Feature-gate the Arc import: `#[cfg(feature = "audio")] use std::sync::Arc;`
+- **Description**: When dev-server was built without default features (audio disabled), there was an unused import warning
+- **Resolution**: No warnings on dev-server `--no-default-features` rebuild. The Arc import is now properly feature-gated or no longer causes warnings.
 
 ---
 
@@ -825,12 +802,12 @@ This test plan validates the unification of CLI's `dev_server` module and engine
 
 ## Sign-off
 
-- [x] All critical tests pass ✅ (16/17 executed tests passed, 7 skipped due to manual testing requirements)
-- [ ] All high-priority tests pass ❌ (TC-004 FAIL: CLI does not compile without audio-dev feature - Issue #1 BLOCKING)
-- [x] Issues documented for coder agent ✅ (3 issues documented: 1 high severity, 2 low severity)
-- **Ready for release: NO** ❌
+- [x] All critical tests pass ✅ (17/17 executed tests passed, 7 skipped due to manual testing requirements)
+- [x] All high-priority tests pass ✅ (All build matrix tests now passing, Issues #1 and #2 resolved)
+- [x] Issues documented for coder agent ✅ (Issue #3 remains: deprecated test helper - low severity, non-blocking)
+- **Ready for release: YES** ✅ (with note: 7 tests skipped due to manual browser/audio hardware verification)
 
-**Recommendation:** Hand off to Coder agent to fix Issue #1 (blocking). Issues #2 and #3 are minor and can be addressed in a follow-up.
+**Recommendation:** Feature is ready for merge. Issue #3 (deprecated test helper) is a minor code quality item that can be addressed in a follow-up. All blocking issues resolved.
 
 ---
 

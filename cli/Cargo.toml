@@ -59,6 +59,7 @@ version = "0.12.0"
 [dependencies.wavecraft-dev-server]
 path = "../dev-server"
 version = "0.12.1"
+default-features = false
 
 [features]
 default = ["audio-dev"]
