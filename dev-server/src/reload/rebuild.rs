@@ -68,6 +68,9 @@ pub struct RebuildPipeline {
     callbacks: RebuildCallbacks,
     #[cfg(feature = "audio")]
     audio_reload_tx: Option<tokio::sync::mpsc::UnboundedSender<Vec<ParameterInfo>>>,
+    /// Channel for canceling the current parameter extraction when superseded.
+    cancel_param_load_tx: watch::Sender<bool>,
+    cancel_param_load_rx: watch::Receiver<bool>,
 }
 
 impl RebuildPipeline {
@@ -84,6 +87,7 @@ impl RebuildPipeline {
             tokio::sync::mpsc::UnboundedSender<Vec<ParameterInfo>>,
         >,
     ) -> Self {
+        let (cancel_param_load_tx, cancel_param_load_rx) = watch::channel(false);
         Self {
             guard,
             engine_dir,
@@ -93,6 +97,8 @@ impl RebuildPipeline {
             callbacks,
             #[cfg(feature = "audio")]
             audio_reload_tx,
+            cancel_param_load_tx,
+            cancel_param_load_rx,
         }
     }
 
@@ -100,12 +106,17 @@ impl RebuildPipeline {
     pub async fn handle_change(&self) -> Result<()> {
         if !self.guard.try_start() {
             self.guard.mark_pending();
+            // Cancel any ongoing parameter extraction - it will be superseded
+            let _ = self.cancel_param_load_tx.send(true);
             println!(
                 "  {} Build already in progress, queuing rebuild...",
                 style("→").dim()
             );
             return Ok(());
         }
+
+        // Reset cancellation flag at the start of a new build cycle
+        let _ = self.cancel_param_load_tx.send(false);
 
         loop {
             let result = self.do_build().await;
@@ -128,11 +139,7 @@ impl RebuildPipeline {
 
                     match replace_result {
                         Ok(Ok(())) => {
-                            println!(
-                                "  {} Updated {} parameters",
-                                style("→").dim(),
-                                params.len()
-                            );
+                            println!("  {} Updated {} parameters", style("→").dim(), params.len());
                         }
                         Ok(Err(e)) => {
                             reload_ok = false;
@@ -323,12 +330,29 @@ impl RebuildPipeline {
             elapsed.as_secs_f64()
         );
 
-        // Load parameters via the injected callback
+        // Load parameters via the injected callback, but race against cancellation
         let loader = Arc::clone(&self.callbacks.param_loader);
         let engine_dir = self.engine_dir.clone();
-        let params = loader(engine_dir)
-            .await
-            .context("Failed to load parameters from rebuilt dylib")?;
+        let mut cancel_rx = self.cancel_param_load_rx.clone();
+
+        let params = tokio::select! {
+            result = loader(engine_dir) => {
+                result.context("Failed to load parameters from rebuilt dylib")?
+            }
+            _ = cancel_rx.changed() => {
+                if *cancel_rx.borrow_and_update() {
+                    println!(
+                        "  {} Parameter extraction cancelled — superseded by newer change",
+                        style("⚠").yellow()
+                    );
+                    anyhow::bail!("Parameter extraction cancelled due to newer file change");
+                }
+                // If cancellation was reset to false, continue waiting
+                loader(self.engine_dir.clone())
+                    .await
+                    .context("Failed to load parameters from rebuilt dylib")?
+            }
+        };
 
         let param_count_change = params.len() as i32 - old_count;
 
@@ -338,7 +362,7 @@ impl RebuildPipeline {
     async fn kill_build_process(&self, child: &mut tokio::process::Child) -> Result<()> {
         #[cfg(unix)]
         {
-            use nix::sys::signal::{kill, Signal};
+            use nix::sys::signal::{Signal, kill};
             use nix::unistd::Pid;
 
             if let Some(pid) = child.id() {

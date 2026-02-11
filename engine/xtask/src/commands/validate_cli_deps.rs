@@ -482,6 +482,7 @@ wavecraft-protocol = { path = "../engine/crates/wavecraft-protocol", version = "
             name: "wavecraft-nonexistent".to_string(),
             has_version: true,
             version: Some("0.1.0".to_string()),
+            path: Some("../engine/crates/wavecraft-nonexistent".to_string()),
         };
         // Use a temp dir so the crate path definitely doesn't exist
         let fake_root = std::env::temp_dir().join("wavecraft-test-missing-crate");
@@ -497,6 +498,8 @@ wavecraft-protocol = { path = "../engine/crates/wavecraft-protocol", version = "
     #[test]
     fn test_validate_dependency_malformed_toml() {
         let tmp = tempfile::tempdir().expect("should create temp dir");
+        // Create cli dir for path resolution
+        std::fs::create_dir_all(tmp.path().join("cli")).unwrap();
         let crate_dir = tmp.path().join("engine/crates/wavecraft-broken");
         std::fs::create_dir_all(&crate_dir).unwrap();
         std::fs::write(crate_dir.join("Cargo.toml"), "this is not valid [[[ toml").unwrap();
@@ -505,6 +508,7 @@ wavecraft-protocol = { path = "../engine/crates/wavecraft-protocol", version = "
             name: "wavecraft-broken".to_string(),
             has_version: true,
             version: Some("0.1.0".to_string()),
+            path: Some("../engine/crates/wavecraft-broken".to_string()),
         };
         let errors = validate_dependency(&dep, tmp.path());
         assert_eq!(errors.len(), 1);
@@ -518,6 +522,8 @@ wavecraft-protocol = { path = "../engine/crates/wavecraft-protocol", version = "
     #[test]
     fn test_publish_key_absent_is_publishable() {
         let tmp = tempfile::tempdir().expect("should create temp dir");
+        // Create cli dir for path resolution
+        std::fs::create_dir_all(tmp.path().join("cli")).unwrap();
         let crate_dir = tmp.path().join("engine/crates/wavecraft-publishable");
         std::fs::create_dir_all(&crate_dir).unwrap();
         std::fs::write(
@@ -534,6 +540,7 @@ version = "0.1.0"
             name: "wavecraft-publishable".to_string(),
             has_version: true,
             version: Some("0.1.0".to_string()),
+            path: Some("../engine/crates/wavecraft-publishable".to_string()),
         };
         let errors = validate_dependency(&dep, tmp.path());
         assert!(
@@ -577,6 +584,7 @@ version = "0.1.0"
             name: "serde".to_string(),
             has_version: true,
             version: Some("1.0.0".to_string()),
+            path: None, // External crate, no path
         };
 
         let result = check_registry_availability(&dep);
