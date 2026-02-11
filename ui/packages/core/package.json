@@ -1,6 +1,6 @@
 {
   "name": "@wavecraft/core",
-  "version": "0.7.5",
+  "version": "0.7.22",
   "description": "Core SDK for Wavecraft audio plugins — IPC bridge, hooks, and utilities",
   "type": "module",
   "main": "./dist/index.js",
