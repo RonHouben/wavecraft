@@ -1,6 +1,6 @@
 {
   "name": "@wavecraft/components",
-  "version": "0.7.4",
+  "version": "0.7.13",
   "description": "Pre-built React components for Wavecraft audio plugins",
   "type": "module",
   "main": "./dist/index.js",
