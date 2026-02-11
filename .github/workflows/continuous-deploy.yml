@@ -264,6 +264,7 @@ jobs:
             --yes \
             --no-git-push \
             --allow-branch main \
+            --from-git \
             --dry-run
 
       - name: Authenticate with crates.io (OIDC)
@@ -278,7 +279,8 @@ jobs:
           cargo ws publish \
             --yes \
             --no-git-push \
-            --allow-branch main
+            --allow-branch main \
+            --from-git
 
       - name: Push tags only
         run: git push origin --tags
