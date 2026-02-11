@@ -5,12 +5,13 @@
 //! parameter changes to an optional AtomicParameterBridge for lock-free
 //! audio-thread access.
 
+#[cfg(feature = "audio")]
 use std::sync::Arc;
 use wavecraft_bridge::{BridgeError, InMemoryParameterHost, ParameterHost};
 use wavecraft_protocol::{MeterFrame, ParameterInfo};
 
-#[cfg(feature = "audio-dev")]
-use wavecraft_dev_server::atomic_params::AtomicParameterBridge;
+#[cfg(feature = "audio")]
+use crate::audio::atomic_params::AtomicParameterBridge;
 
 /// Development server host for browser-based UI testing
 ///
@@ -25,7 +26,7 @@ use wavecraft_dev_server::atomic_params::AtomicParameterBridge;
 /// The `AtomicParameterBridge` uses lock-free atomics for audio thread.
 pub struct DevServerHost {
     inner: InMemoryParameterHost,
-    #[cfg(feature = "audio-dev")]
+    #[cfg(feature = "audio")]
     param_bridge: Option<Arc<AtomicParameterBridge>>,
 }
 
@@ -36,15 +37,15 @@ impl DevServerHost {
     ///
     /// * `parameters` - Parameter metadata loaded from the plugin FFI
     ///
-    /// Used by tests and the non-audio-dev build path. When `audio-dev` is
+    /// Used by tests and the non-audio build path. When `audio` is
     /// enabled (default), production code uses `with_param_bridge()` instead.
-    #[cfg_attr(feature = "audio-dev", allow(dead_code))]
+    #[cfg_attr(feature = "audio", allow(dead_code))]
     pub fn new(parameters: Vec<ParameterInfo>) -> Self {
         let inner = InMemoryParameterHost::new(parameters);
 
         Self {
             inner,
-            #[cfg(feature = "audio-dev")]
+            #[cfg(feature = "audio")]
             param_bridge: None,
         }
     }
@@ -53,7 +54,7 @@ impl DevServerHost {
     ///
     /// When a bridge is provided, `set_parameter()` will write updates
     /// to both the inner store and the bridge (for audio-thread reads).
-    #[cfg(feature = "audio-dev")]
+    #[cfg(feature = "audio")]
     pub fn with_param_bridge(
         parameters: Vec<ParameterInfo>,
         bridge: Arc<AtomicParameterBridge>,
@@ -64,6 +65,20 @@ impl DevServerHost {
             inner,
             param_bridge: Some(bridge),
         }
+    }
+
+    /// Replace all parameters with new metadata from a hot-reload.
+    ///
+    /// Preserves values for parameters with matching IDs. New parameters
+    /// get their default values. This is used by the hot-reload pipeline
+    /// to update parameter definitions without restarting the server.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if parameter replacement fails (e.g., unrecoverable
+    /// lock poisoning).
+    pub fn replace_parameters(&self, new_params: Vec<ParameterInfo>) -> Result<(), String> {
+        self.inner.replace_parameters(new_params)
     }
 }
 
@@ -76,11 +91,9 @@ impl ParameterHost for DevServerHost {
         let result = self.inner.set_parameter(id, value);
 
         // Forward to atomic bridge for audio-thread access (lock-free)
-        #[cfg(feature = "audio-dev")]
-        if result.is_ok() {
-            if let Some(ref bridge) = self.param_bridge {
-                bridge.write(id, value);
-            }
+        #[cfg(feature = "audio")]
+        if result.is_ok() && let Some(ref bridge) = self.param_bridge {
+            bridge.write(id, value);
         }
 
         result

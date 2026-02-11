@@ -38,9 +38,13 @@ function App(): React.JSX.Element {
 
     return (
       <div className="space-y-6">
-        {groups.map((group) => (
-          <ParameterGroup key={group.name} group={group} />
-        ))}
+        {groups.map((group) => {
+          const groupKey =
+            `${group.name}:${group.parameters.map((param) => param.id).join('|')}` +
+            Math.random() * 1000;
+
+          return <ParameterGroup key={groupKey} group={group} />;
+        })}
       </div>
     );
   };

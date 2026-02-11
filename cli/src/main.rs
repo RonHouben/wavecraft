@@ -1,5 +1,4 @@
 mod commands;
-mod dev_server;
 mod project;
 mod sdk_detect;
 mod template;
@@ -99,6 +98,13 @@ enum Commands {
         Can be run from any directory. When outside a project, only the CLI is updated."
     )]
     Update,
+
+    /// Extract parameters from a plugin dylib (hidden — internal use only)
+    #[command(hide = true)]
+    ExtractParams {
+        /// Path to the plugin dylib
+        dylib_path: std::path::PathBuf,
+    },
 }
 
 fn main() -> Result<()> {
@@ -146,6 +152,10 @@ fn main() -> Result<()> {
 
         Commands::Update => {
             commands::update::run()?;
+        }
+
+        Commands::ExtractParams { dylib_path } => {
+            commands::extract_params::execute(dylib_path)?;
         }
     }
 

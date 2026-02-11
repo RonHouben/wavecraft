@@ -19,12 +19,12 @@ Wavecraft is an audio effects plugin framework (VST3) for **macOS + Ableton Live
 
 ## Architecture
 
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| **Audio/DSP** | Rust (nih-plug) | Real-time audio processing |
-| **Plugin API** | VST3 (primary), CLAP, AU (via clap-wrapper) | DAW integration |
-| **UI** | React (Vite) | User interface |
-| **UI Embedding** | wry (WKWebView on macOS) | WebView embedding |
+| Layer            | Technology                                  | Purpose                    |
+| ---------------- | ------------------------------------------- | -------------------------- |
+| **Audio/DSP**    | Rust (nih-plug)                             | Real-time audio processing |
+| **Plugin API**   | VST3 (primary), CLAP, AU (via clap-wrapper) | DAW integration            |
+| **UI**           | React (Vite)                                | User interface             |
+| **UI Embedding** | wry (WKWebView on macOS)                    | WebView embedding          |
 
 Communication between UI and audio uses lock-free parameter systems and ring buffers to maintain real-time safety.
 
@@ -44,9 +44,9 @@ Communication between UI and audio uses lock-free parameter systems and ring buf
 
 Wavecraft's UI code is published as two npm packages under the `@wavecraft` organization:
 
-| Package | Description |
-|---------|-------------|
-| [@wavecraft/core](https://www.npmjs.com/package/@wavecraft/core) | IPC bridge, React hooks, and utilities |
+| Package                                                                      | Description                                               |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------- |
+| [@wavecraft/core](https://www.npmjs.com/package/@wavecraft/core)             | IPC bridge, React hooks, and utilities                    |
 | [@wavecraft/components](https://www.npmjs.com/package/@wavecraft/components) | Pre-built React components (Meter, ParameterSlider, etc.) |
 
 ```bash
@@ -57,15 +57,15 @@ npm install @wavecraft/core @wavecraft/components
 
 Wavecraft's Rust SDK is published to crates.io:
 
-| Crate | Description |
-|-------|-------------|
-| [wavecraft](https://crates.io/crates/wavecraft) | CLI tool for scaffolding new plugins |
-| [wavecraft-core](https://crates.io/crates/wavecraft-core) | nih-plug VST3/CLAP integration |
-| [wavecraft-dsp](https://crates.io/crates/wavecraft-dsp) | Pure DSP algorithms, `Processor` trait |
-| [wavecraft-protocol](https://crates.io/crates/wavecraft-protocol) | Shared parameter definitions |
-| [wavecraft-macros](https://crates.io/crates/wavecraft-macros) | Procedural macros (`wavecraft_plugin!`, etc.) |
-| [wavecraft-bridge](https://crates.io/crates/wavecraft-bridge) | UI ↔ Audio IPC handling |
-| [wavecraft-metering](https://crates.io/crates/wavecraft-metering) | SPSC ring buffer for real-time meters |
+| Crate                                                             | Description                                   |
+| ----------------------------------------------------------------- | --------------------------------------------- |
+| [wavecraft](https://crates.io/crates/wavecraft)                   | CLI tool for scaffolding new plugins          |
+| [wavecraft-core](https://crates.io/crates/wavecraft-core)         | nih-plug VST3/CLAP integration                |
+| [wavecraft-dsp](https://crates.io/crates/wavecraft-dsp)           | Pure DSP algorithms, `Processor` trait        |
+| [wavecraft-protocol](https://crates.io/crates/wavecraft-protocol) | Shared parameter definitions                  |
+| [wavecraft-macros](https://crates.io/crates/wavecraft-macros)     | Procedural macros (`wavecraft_plugin!`, etc.) |
+| [wavecraft-bridge](https://crates.io/crates/wavecraft-bridge)     | UI ↔ Audio IPC handling                       |
+| [wavecraft-metering](https://crates.io/crates/wavecraft-metering) | SPSC ring buffer for real-time meters         |
 
 ```bash
 # Install CLI
@@ -79,6 +79,20 @@ wavecraft create my-plugin
 
 ```
 wavecraft/
+├── cli/                          # Wavecraft CLI tool
+│   ├── src/                      # CLI source code
+│   └── sdk-templates/            # Project templates embedded in CLI
+│       └── new-project/react/    # React UI template (default)
+│
+├── dev-server/                   # Unified dev server (standalone crate)
+│   ├── Cargo.toml                # Not in engine workspace
+│   └── src/                      # Dev server source
+│       ├── ws/                   # WebSocket server
+│       ├── audio/                # Audio I/O (feature-gated)
+│       ├── reload/               # Hot-reload & file watching
+│       ├── host.rs               # DevServerHost implementation
+│       └── session.rs            # Session management
+│
 ├── engine/                       # Rust audio engine & plugin
 │   ├── Cargo.toml                # Workspace root
 │   └── crates/
@@ -86,8 +100,7 @@ wavecraft/
 │       ├── wavecraft-dsp/        # Pure DSP (Processor trait, built-in processors)
 │       ├── wavecraft-bridge/     # UI ↔ Audio IPC (ParameterHost trait)
 │       ├── wavecraft-protocol/   # Shared contracts (param IDs, JSON-RPC types)
-│       ├── wavecraft-metering/   # SPSC ring buffer for real-time meters
-│       └── wavecraft-dev-server/ # Development server (WebSocket, WebView)
+│       └── wavecraft-metering/   # SPSC ring buffer for real-time meters
 │
 ├── ui/                           # React SPA (Vite + TypeScript)
 │   ├── packages/
@@ -95,11 +108,6 @@ wavecraft/
 │   │   └── components/           # @wavecraft/components package source
 │   ├── src/                      # Dev app for testing packages
 │   └── dist/                     # Build output (embedded in plugin)
-│
-├── cli/                          # Wavecraft CLI tool
-│   ├── src/                      # CLI source code
-│   └── sdk-templates/            # Project templates embedded in CLI
-│       └── new-project/react/    # React UI template (default)
 │
 ├── docs/                         # Architecture & specs
 └── packaging/                    # Platform installers
@@ -140,21 +148,21 @@ cargo xtask all
 
 ### Available Commands
 
-| Command | Description |
-|---------|-------------|
-| `cargo xtask bundle` | Build and bundle VST3/CLAP plugins |
-| `cargo xtask bundle --debug` | Debug build (faster compile, no optimizations) |
-| `cargo xtask bundle --install` | Build and install plugins in one step |
-| `cargo xtask test` | Run all tests (engine + UI) |
-| `cargo xtask test --ui` | Run UI tests only (npm test) |
-| `cargo xtask test --engine` | Run engine tests only (cargo test) |
-| `cargo xtask test --all` | Test all workspace crates |
-| `cargo xtask au` | Build AU wrapper (macOS only, requires CMake) |
-| `cargo xtask install` | Install plugins to system directories |
-| `cargo xtask clean` | Clean build artifacts |
-| `cargo xtask clean --installed --force` | Also remove installed plugins |
-| `cargo xtask all` | Full pipeline: test → bundle → au → install |
-| `cargo xtask all --dry-run` | Preview what would be done |
+| Command                                 | Description                                    |
+| --------------------------------------- | ---------------------------------------------- |
+| `cargo xtask bundle`                    | Build and bundle VST3/CLAP plugins             |
+| `cargo xtask bundle --debug`            | Debug build (faster compile, no optimizations) |
+| `cargo xtask bundle --install`          | Build and install plugins in one step          |
+| `cargo xtask test`                      | Run all tests (engine + UI)                    |
+| `cargo xtask test --ui`                 | Run UI tests only (npm test)                   |
+| `cargo xtask test --engine`             | Run engine tests only (cargo test)             |
+| `cargo xtask test --all`                | Test all workspace crates                      |
+| `cargo xtask au`                        | Build AU wrapper (macOS only, requires CMake)  |
+| `cargo xtask install`                   | Install plugins to system directories          |
+| `cargo xtask clean`                     | Clean build artifacts                          |
+| `cargo xtask clean --installed --force` | Also remove installed plugins                  |
+| `cargo xtask all`                       | Full pipeline: test → bundle → au → install    |
+| `cargo xtask all --dry-run`             | Preview what would be done                     |
 
 ### Feature Flags
 
@@ -165,8 +173,8 @@ Feature flags enable optional functionality in the plugin. Pass them via `-f` or
 cargo xtask bundle -f assert_process_allocs
 ```
 
-| Feature | Description |
-|---------|-------------|
+| Feature                 | Description                                                                                                                            |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `assert_process_allocs` | Enable runtime allocation detection on the audio thread (debug builds only). Useful for verifying real-time safety during development. |
 
 **Note:** The React UI is built automatically as part of every plugin build.
@@ -186,11 +194,11 @@ packaging/macos/au-wrapper/build/
 
 ### Installation Directories
 
-| Platform | VST3 | CLAP | AU |
-|----------|------|------|----|
-| macOS | `~/Library/Audio/Plug-Ins/VST3/` | `~/Library/Audio/Plug-Ins/CLAP/` | `~/Library/Audio/Plug-Ins/Components/` |
-| Windows | `C:\Program Files\Common Files\VST3\` | `C:\Program Files\Common Files\CLAP\` | N/A |
-| Linux | `~/.vst3/` | `~/.clap/` | N/A |
+| Platform | VST3                                  | CLAP                                  | AU                                     |
+| -------- | ------------------------------------- | ------------------------------------- | -------------------------------------- |
+| macOS    | `~/Library/Audio/Plug-Ins/VST3/`      | `~/Library/Audio/Plug-Ins/CLAP/`      | `~/Library/Audio/Plug-Ins/Components/` |
+| Windows  | `C:\Program Files\Common Files\VST3\` | `C:\Program Files\Common Files\CLAP\` | N/A                                    |
+| Linux    | `~/.vst3/`                            | `~/.clap/`                            | N/A                                    |
 
 ## Contributing
 

@@ -8,20 +8,30 @@
 //! 5. Starts the Vite dev server for UI hot-reloading
 
 use anyhow::{Context, Result};
+use command_group::{CommandGroup, GroupChild};
 use console::style;
 use std::io::{self, Write};
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
+use std::process::{Command, Stdio};
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
+use tokio::sync::watch;
 
-use crate::dev_server::{DevServerHost, PluginLoader};
-use crate::project::{has_node_modules, ProjectMarkers};
+use crate::project::{
+    find_plugin_dylib, has_node_modules, read_engine_package_name, resolve_debug_dir,
+    ProjectMarkers,
+};
 use wavecraft_bridge::IpcHandler;
-use wavecraft_dev_server::ws_server::WsServer;
+use wavecraft_dev_server::{DevServerHost, DevSession, RebuildCallbacks, WsServer};
 use wavecraft_protocol::ParameterInfo;
+
+#[cfg(not(feature = "audio-dev"))]
+use crate::project::param_extract::{extract_params_subprocess, DEFAULT_EXTRACT_TIMEOUT};
+
+/// Re-export PluginParamLoader for audio dev mode
+use wavecraft_bridge::PluginParamLoader as PluginLoader;
 
 /// Options for the `start` command.
 #[derive(Debug)]
@@ -95,12 +105,11 @@ fn prompt_install() -> Result<bool> {
 #[cfg(feature = "audio-dev")]
 fn try_start_audio_in_process(
     loader: &PluginLoader,
-    ws_handle: wavecraft_dev_server::ws_server::WsHandle,
-    param_bridge: std::sync::Arc<wavecraft_dev_server::atomic_params::AtomicParameterBridge>,
+    ws_handle: wavecraft_dev_server::WsHandle,
+    param_bridge: std::sync::Arc<wavecraft_dev_server::AtomicParameterBridge>,
     verbose: bool,
-) -> Option<wavecraft_dev_server::audio_server::AudioHandle> {
-    use wavecraft_dev_server::audio_server::{AudioConfig, AudioServer};
-    use wavecraft_dev_server::ffi_processor::FfiProcessor;
+) -> Option<wavecraft_dev_server::AudioHandle> {
+    use wavecraft_dev_server::{AudioConfig, AudioServer, FfiProcessor};
 
     println!();
     println!("{} Checking for audio processor...", style("→").cyan());
@@ -266,21 +275,22 @@ fn try_read_cached_params(engine_dir: &Path, verbose: bool) -> Option<Vec<Parame
 }
 
 /// Write parameter metadata to the sidecar JSON cache.
-fn write_sidecar_cache(engine_dir: &Path, params: &[ParameterInfo]) -> Result<()> {
+pub(crate) fn write_sidecar_cache(engine_dir: &Path, params: &[ParameterInfo]) -> Result<()> {
     let sidecar_path = sidecar_json_path(engine_dir)?;
-    let json =
-        serde_json::to_string_pretty(params).context("Failed to serialize parameters")?;
+    let json = serde_json::to_string_pretty(params).context("Failed to serialize parameters")?;
     std::fs::write(&sidecar_path, json).context("Failed to write sidecar cache")?;
     Ok(())
 }
 
 /// Load plugin parameters using cached sidecar or feature-gated build.
 ///
-/// Attempts in order:
-/// 1. Read cached `wavecraft-params.json` (instant, no build)
-/// 2. Build with `_param-discovery` feature (no nih-plug static init)
-/// 3. Fall back to normal build + FFI load (for older plugins)
-fn load_parameters(
+/// Returns parameter metadata and optionally a PluginLoader (when audio-dev
+/// feature is enabled and the vtable is available).
+///
+/// Two-phase process:
+/// 1. Try reading from cached sidecar (fast path)
+/// 2. Otherwise: build with _param-discovery, load via subprocess (or in-process for audio-dev), write sidecar
+async fn load_parameters(
     engine_dir: &Path,
     verbose: bool,
 ) -> Result<(Vec<ParameterInfo>, Option<PluginLoader>)> {
@@ -295,12 +305,17 @@ fn load_parameters(
     }
 
     // 2. Build with _param-discovery feature (skip nih-plug exports)
-    println!(
-        "{} Building for parameter discovery...",
-        style("→").cyan()
-    );
-    let build_result = Command::new("cargo")
-        .args(["build", "--lib", "--features", "_param-discovery"])
+    println!("{} Building for parameter discovery...", style("→").cyan());
+
+    // Get package name for --package flag (targets correct crate with path deps)
+    let mut build_cmd = Command::new("cargo");
+    build_cmd.args(["build", "--lib", "--features", "_param-discovery"]);
+
+    if let Some(package_name) = read_engine_package_name(engine_dir) {
+        build_cmd.args(["--package", &package_name]);
+    }
+
+    let build_result = build_cmd
         .current_dir(engine_dir)
         .stdout(if verbose {
             Stdio::inherit()
@@ -320,13 +335,21 @@ fn load_parameters(
                 println!("  Found dylib: {}", dylib_path.display());
             }
 
-            println!(
-                "{} Loading plugin parameters...",
-                style("→").cyan()
-            );
-            let loader = PluginLoader::load(&dylib_path)
-                .context("Failed to load plugin for parameter discovery")?;
-            let params = loader.parameters().to_vec();
+            println!("{} Loading plugin parameters...", style("→").cyan());
+            #[cfg(feature = "audio-dev")]
+            let (params, loader) = {
+                let loader = PluginLoader::load(&dylib_path)
+                    .context("Failed to load plugin for parameter discovery")?;
+                let params = loader.parameters().to_vec();
+                (params, Some(loader))
+            };
+            #[cfg(not(feature = "audio-dev"))]
+            let (params, loader) = {
+                let params = extract_params_subprocess(&dylib_path, DEFAULT_EXTRACT_TIMEOUT)
+                    .await
+                    .context("Failed to extract parameters from plugin")?;
+                (params, None)
+            };
 
             // Write sidecar cache for next run
             if let Err(e) = write_sidecar_cache(engine_dir, &params) {
@@ -335,12 +358,8 @@ fn load_parameters(
                 }
             }
 
-            println!(
-                "{} Loaded {} parameters",
-                style("✓").green(),
-                params.len()
-            );
-            Ok((params, Some(loader)))
+            println!("{} Loaded {} parameters", style("✓").green(), params.len());
+            Ok((params, loader))
         }
         _ => {
             // 3. Fallback: normal build (for older plugins without _param-discovery)
@@ -365,19 +384,22 @@ fn load_parameters(
             }
 
             let dylib_path = find_plugin_dylib(engine_dir)?;
-            println!(
-                "{} Loading plugin parameters...",
-                style("→").cyan()
-            );
-            let loader = PluginLoader::load(&dylib_path)
-                .context("Failed to load plugin")?;
-            let params = loader.parameters().to_vec();
-            println!(
-                "{} Loaded {} parameters",
-                style("✓").green(),
-                params.len()
-            );
-            Ok((params, Some(loader)))
+            println!("{} Loading plugin parameters...", style("→").cyan());
+            #[cfg(feature = "audio-dev")]
+            let (params, loader) = {
+                let loader = PluginLoader::load(&dylib_path).context("Failed to load plugin")?;
+                let params = loader.parameters().to_vec();
+                (params, Some(loader))
+            };
+            #[cfg(not(feature = "audio-dev"))]
+            let (params, loader) = {
+                let params = extract_params_subprocess(&dylib_path, DEFAULT_EXTRACT_TIMEOUT)
+                    .await
+                    .context("Failed to extract parameters from plugin")?;
+                (params, None)
+            };
+            println!("{} Loaded {} parameters", style("✓").green(), params.len());
+            Ok((params, loader))
         }
     }
 }
@@ -402,7 +424,10 @@ fn run_dev_servers(
     ensure_port_available(ui_port, "UI dev server", "--ui-port")?;
 
     // 1. Build the plugin and load parameters (two-phase or cached)
-    let (params, loader) = load_parameters(&project.engine_dir, verbose)?;
+    // Create tokio runtime for async parameter loading
+    let runtime = tokio::runtime::Runtime::new().context("Failed to create async runtime")?;
+    #[cfg_attr(not(feature = "audio-dev"), allow(unused_variables))]
+    let (params, loader) = runtime.block_on(load_parameters(&project.engine_dir, verbose))?;
 
     if verbose {
         for param in &params {
@@ -418,7 +443,7 @@ fn run_dev_servers(
     // 2. Create AtomicParameterBridge for lock-free audio-thread param reads
     #[cfg(feature = "audio-dev")]
     let param_bridge = {
-        use wavecraft_dev_server::atomic_params::AtomicParameterBridge;
+        use wavecraft_dev_server::AtomicParameterBridge;
         std::sync::Arc::new(AtomicParameterBridge::new(&params))
     };
 
@@ -434,23 +459,54 @@ fn run_dev_servers(
     #[cfg(not(feature = "audio-dev"))]
     let host = DevServerHost::new(params);
 
-    let handler = std::sync::Arc::new(IpcHandler::new(host));
+    let host = std::sync::Arc::new(host);
+    let handler = std::sync::Arc::new(IpcHandler::new(host.clone()));
 
-    // Create tokio runtime for the WebSocket server
-    let runtime = tokio::runtime::Runtime::new().context("Failed to create async runtime")?;
-
-    let server = WsServer::new(ws_port, handler.clone(), verbose);
+    // Start WebSocket server (runtime already created above for param loading)
+    let server = std::sync::Arc::new(WsServer::new(ws_port, handler.clone(), verbose));
     runtime.block_on(async { server.start().await.map_err(|e| anyhow::anyhow!("{}", e)) })?;
 
     println!("{} WebSocket server running", style("✓").green());
 
-    // 4. Try to start audio in-process via FFI (optional, graceful fallback)
+    // Create shutdown broadcast channel
+    let (shutdown_tx, shutdown_rx) = watch::channel(false);
+
+    // 4. Initialize hot-reload development session
+    println!("{} Setting up hot-reload...", style("→").cyan());
+
+    // Create rebuild callbacks: wire CLI-specific functions into the dev-server pipeline
+    let callbacks = RebuildCallbacks {
+        package_name: read_engine_package_name(&project.engine_dir),
+        write_sidecar: Some(std::sync::Arc::new(|engine_dir: &Path, params: &[ParameterInfo]| {
+            write_sidecar_cache(engine_dir, params)
+        })),
+        param_loader: std::sync::Arc::new(move |engine_dir: PathBuf| {
+            Box::pin(load_parameters_from_dylib(engine_dir))
+                as std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<ParameterInfo>>> + Send>>
+        }),
+    };
+
+    let dev_session = runtime.block_on(async {
+        DevSession::new(
+            project.engine_dir.clone(),
+            host.clone(),
+            server.clone(),
+            shutdown_rx,
+            callbacks,
+            #[cfg(feature = "audio-dev")]
+            None, // Audio handle will be added if audio starts
+        )
+    })?;
+    println!("{} Watching engine/src/ for changes", style("👀").cyan());
+    println!();
+
+    // 5. Try to start audio in-process via FFI (optional, graceful fallback)
     // Store the AudioHandle so the cpal stream stays alive until shutdown.
     // When this variable is dropped (reverse declaration order for locals),
     // the FfiProcessor inside the closure is dropped while the Library in
     // `loader` is still loaded — preserving vtable pointer validity.
     #[cfg(feature = "audio-dev")]
-    let _audio_handle = runtime.block_on(async {
+    let audio_handle = runtime.block_on(async {
         let ws_handle = server.handle();
         match &loader {
             Some(l) => try_start_audio_in_process(l, ws_handle, param_bridge.clone(), verbose),
@@ -464,11 +520,11 @@ fn run_dev_servers(
         }
     });
     #[cfg(feature = "audio-dev")]
-    let has_audio = _audio_handle.is_some();
+    let has_audio = audio_handle.is_some();
     #[cfg(not(feature = "audio-dev"))]
     let has_audio = false;
 
-    // 5. Start UI dev server
+    // 6. Start UI dev server
     println!(
         "{} Starting UI dev server on port {}...",
         style("→").cyan(),
@@ -481,7 +537,7 @@ fn run_dev_servers(
         .current_dir(&project.ui_dir)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
-        .spawn()
+        .group_spawn()
         .context("Failed to start UI dev server")?;
 
     // Give the UI server a moment to fail fast (e.g., port already in use).
@@ -507,7 +563,23 @@ fn run_dev_servers(
     println!();
 
     // Wait for shutdown (keeps runtime alive)
-    wait_for_shutdown(ui_server, runtime)
+    let shutdown_reason = wait_for_shutdown(ui_server, shutdown_tx)?;
+
+    #[cfg(feature = "audio-dev")]
+    drop(audio_handle);
+    drop(dev_session);
+    drop(runtime);
+
+    match shutdown_reason {
+        ShutdownReason::UiExited(status) => Err(anyhow::anyhow!(
+            "UI dev server exited unexpectedly with status {}",
+            status
+        )),
+        ShutdownReason::UiExitedUnknown => Err(anyhow::anyhow!(
+            "UI dev server exited unexpectedly"
+        )),
+        ShutdownReason::CtrlC | ShutdownReason::ChannelClosed => Ok(()),
+    }
 }
 
 fn ensure_port_available(port: u16, label: &str, flag: &str) -> Result<()> {
@@ -526,142 +598,28 @@ fn ensure_port_available(port: u16, label: &str, flag: &str) -> Result<()> {
     }
 }
 
-/// Find the plugin dylib in the target directory.
-///
-/// Searches for `.dylib` (macOS), `.so` (Linux), or `.dll` (Windows)
-/// files in `engine/target/debug/`.
-fn find_plugin_dylib(engine_dir: &Path) -> Result<PathBuf> {
-    let debug_dir = resolve_debug_dir(engine_dir)?;
-
-    // Look for library files with platform-specific extensions
-    #[cfg(target_os = "macos")]
-    let extension = "dylib";
-    #[cfg(target_os = "linux")]
-    let extension = "so";
-    #[cfg(target_os = "windows")]
-    let extension = "dll";
-
-    // Find library files (skip deps/ subdirectory)
-    let entries = std::fs::read_dir(&debug_dir).context("Failed to read debug directory")?;
-
-    let candidates: Vec<PathBuf> = entries
-        .filter_map(|e| e.ok())
-        .map(|e| e.path())
-        .filter(|p| {
-            p.extension().is_some_and(|ext| ext == extension)
-                && p.file_name().is_some_and(|n| {
-                    let name = n.to_string_lossy();
-                    if cfg!(target_os = "windows") {
-                        !name.starts_with("lib")
-                    } else {
-                        name.starts_with("lib")
-                    }
-                })
-        })
-        .collect();
-
-    if candidates.is_empty() {
-        anyhow::bail!(
-            "No plugin library found in {}.\n\
-             Make sure the engine crate has `crate-type = [\"cdylib\"]` in Cargo.toml.",
-            debug_dir.display()
-        );
-    }
-
-    // Prefer the dylib that matches the engine crate name
-    if let Some(crate_name) = read_engine_crate_name(engine_dir) {
-        let expected_stem = crate_name.replace('-', "_");
-        if let Some(matched) = candidates
-            .iter()
-            .find(|p| library_matches_name(p, &expected_stem, extension))
-        {
-            return Ok(matched.to_path_buf());
-        }
-    }
-
-    if candidates.len() == 1 {
-        return Ok(candidates.into_iter().next().unwrap());
-    }
-
-    // Multiple libraries - pick the one most recently modified
-    let mut sorted = candidates;
-    sorted.sort_by_key(|p| {
-        std::fs::metadata(p)
-            .and_then(|m| m.modified())
-            .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
-    });
-    Ok(sorted.pop().unwrap())
-}
-
-fn resolve_debug_dir(engine_dir: &Path) -> Result<PathBuf> {
-    let engine_debug = engine_dir.join("target").join("debug");
-    if engine_debug.exists() {
-        return Ok(engine_debug);
-    }
-
-    let workspace_debug = engine_dir.parent().map(|p| p.join("target").join("debug"));
-
-    if let Some(debug_dir) = workspace_debug {
-        if debug_dir.exists() {
-            return Ok(debug_dir);
-        }
-    }
-
-    anyhow::bail!(
-        "Build output directory not found. Tried:\n  - {}\n  - {}\n\
-         Run `cargo build` first.",
-        engine_debug.display(),
-        engine_dir
-            .parent()
-            .map(|p| p.join("target").join("debug").display().to_string())
-            .unwrap_or_else(|| "<workspace root unavailable>".to_string())
-    );
-}
-
-fn read_engine_crate_name(engine_dir: &Path) -> Option<String> {
-    let cargo_toml_path = engine_dir.join("Cargo.toml");
-    let contents = std::fs::read_to_string(cargo_toml_path).ok()?;
-    let manifest: toml::Value = toml::from_str(&contents).ok()?;
-
-    let lib_name = manifest
-        .get("lib")
-        .and_then(|lib| lib.get("name"))
-        .and_then(|name| name.as_str())
-        .map(|name| name.to_string());
-
-    if lib_name.is_some() {
-        return lib_name;
-    }
-
-    manifest
-        .get("package")
-        .and_then(|pkg| pkg.get("name"))
-        .and_then(|name| name.as_str())
-        .map(|name| name.to_string())
-}
-
-fn library_matches_name(path: &Path, expected_stem: &str, extension: &str) -> bool {
-    let file_name = match path.file_name().and_then(|n| n.to_str()) {
-        Some(name) => name,
-        None => return false,
-    };
-
-    if cfg!(target_os = "windows") {
-        file_name.eq_ignore_ascii_case(&format!("{}.{}", expected_stem, extension))
-    } else {
-        file_name.eq_ignore_ascii_case(&format!("lib{}.{}", expected_stem, extension))
-    }
-}
-
 /// Set up Ctrl+C handler and wait for shutdown.
 ///
 /// Audio runs in-process (via FFI) on the tokio runtime's thread pool,
 /// so dropping the runtime is sufficient to stop audio. Only the UI
 /// child process needs explicit cleanup.
-fn wait_for_shutdown(mut ui_server: Child, _runtime: tokio::runtime::Runtime) -> Result<()> {
+#[derive(Debug)]
+enum ShutdownReason {
+    CtrlC,
+    UiExited(i32),
+    UiExitedUnknown,
+    ChannelClosed,
+}
+
+fn wait_for_shutdown(
+    mut ui_server: GroupChild,
+    shutdown_tx: watch::Sender<bool>,
+) -> Result<ShutdownReason> {
     let (tx, rx) = mpsc::channel();
+    let shutdown_tx_for_handler = shutdown_tx.clone();
 
     ctrlc::set_handler(move || {
+        let _ = shutdown_tx_for_handler.send(true);
         let _ = tx.send(());
     })
     .context("Failed to set Ctrl+C handler")?;
@@ -671,9 +629,10 @@ fn wait_for_shutdown(mut ui_server: Child, _runtime: tokio::runtime::Runtime) ->
             Ok(_) => {
                 println!();
                 println!("{} Shutting down servers...", style("→").cyan());
-                kill_process(ui_server)?;
+                let _ = shutdown_tx.send(true);
+                kill_process(&mut ui_server)?;
                 println!("{} Servers stopped", style("✓").green());
-                return Ok(());
+                return Ok(ShutdownReason::CtrlC);
             }
             Err(mpsc::RecvTimeoutError::Timeout) => {
                 // Check UI server
@@ -688,42 +647,100 @@ fn wait_for_shutdown(mut ui_server: Child, _runtime: tokio::runtime::Runtime) ->
                         status
                     );
                     println!("{} Shutting down servers...", style("→").cyan());
+                    let _ = shutdown_tx.send(true);
                     println!("{} Servers stopped", style("✓").green());
-                    return Err(anyhow::anyhow!(
-                        "UI dev server exited unexpectedly with status {}",
-                        status
-                    ));
+                    if let Some(code) = status.code() {
+                        return Ok(ShutdownReason::UiExited(code));
+                    }
+                    return Ok(ShutdownReason::UiExitedUnknown);
                 }
             }
             Err(mpsc::RecvTimeoutError::Disconnected) => {
                 println!();
                 println!("{} Shutting down servers...", style("→").cyan());
-                kill_process(ui_server)?;
+                let _ = shutdown_tx.send(true);
+                kill_process(&mut ui_server)?;
                 println!("{} Servers stopped", style("✓").green());
-                return Ok(());
+                return Ok(ShutdownReason::ChannelClosed);
             }
         }
     }
 }
 
-/// Kill a child process gracefully.
-#[cfg(unix)]
-fn kill_process(mut child: Child) -> Result<()> {
-    use nix::sys::signal::{kill, Signal};
-    use nix::unistd::Pid;
-
-    let pid = child.id();
-    // Send SIGTERM to process group (negative PID kills the group)
-    let _ = kill(Pid::from_raw(-(pid as i32)), Signal::SIGTERM);
-    thread::sleep(Duration::from_millis(500));
-    // Force kill if still running
+/// Kill a child process group gracefully.
+fn kill_process(child: &mut GroupChild) -> Result<()> {
     let _ = child.kill();
+    let _ = child.wait();
     Ok(())
 }
 
-/// Kill a child process on Windows.
-#[cfg(windows)]
-fn kill_process(mut child: Child) -> Result<()> {
-    let _ = child.kill();
-    Ok(())
+/// Load parameters from the rebuilt dylib via subprocess isolation.
+///
+/// To avoid dylib caching issues on macOS, we copy the dylib to a unique
+/// temporary location before loading. The subprocess extracts parameters
+/// and exits cleanly, with the temp file deleted after.
+///
+/// This function stays in the CLI because it depends on CLI-specific
+/// infrastructure: `find_plugin_dylib`, `extract_params_subprocess`,
+/// and `create_temp_dylib_copy`.
+async fn load_parameters_from_dylib(engine_dir: PathBuf) -> Result<Vec<ParameterInfo>> {
+    use crate::project::param_extract::{extract_params_subprocess, DEFAULT_EXTRACT_TIMEOUT};
+
+    println!("  {} Finding plugin dylib...", style("→").dim());
+    let lib_path =
+        find_plugin_dylib(&engine_dir).context("Failed to find plugin dylib after rebuild")?;
+    println!("  {} Found: {}", style("→").dim(), lib_path.display());
+
+    println!("  {} Copying to temp location...", style("→").dim());
+    let temp_path = create_temp_dylib_copy(&lib_path)?;
+    println!("  {} Temp: {}", style("→").dim(), temp_path.display());
+
+    println!(
+        "  {} Loading parameters via subprocess...",
+        style("→").dim()
+    );
+    let params = extract_params_subprocess(&temp_path, DEFAULT_EXTRACT_TIMEOUT)
+        .await
+        .with_context(|| format!("Failed to extract parameters from: {}", temp_path.display()))?;
+    println!(
+        "  {} Loaded {} parameters via subprocess",
+        style("→").dim(),
+        params.len()
+    );
+
+    // Clean up temp file
+    let _ = std::fs::remove_file(&temp_path);
+
+    Ok(params)
+}
+
+/// Create a temporary copy of the dylib with a unique name.
+///
+/// This ensures libloading loads a fresh dylib rather than returning
+/// a cached handle from a previous load of the same path.
+fn create_temp_dylib_copy(dylib_path: &Path) -> Result<PathBuf> {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let extension = dylib_path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("dylib");
+
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis())
+        .unwrap_or(0);
+
+    let temp_name = format!("wavecraft_hotreload_{}.{}", timestamp, extension);
+    let temp_dir = std::env::temp_dir();
+    let temp_path = temp_dir.join(temp_name);
+
+    std::fs::copy(dylib_path, &temp_path).with_context(|| {
+        format!(
+            "Failed to copy dylib to temp location: {}",
+            temp_path.display()
+        )
+    })?;
+
+    Ok(temp_path)
 }

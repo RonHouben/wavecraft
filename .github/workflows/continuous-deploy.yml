@@ -26,7 +26,7 @@ jobs:
       any_sdk_changed: ${{ steps.aggregate.outputs.any_sdk_changed }}
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -42,7 +42,7 @@ jobs:
               - 'engine/crates/wavecraft-bridge/**'
               - 'engine/crates/wavecraft-metering/**'
               - 'engine/crates/wavecraft-macros/**'
-              - 'engine/crates/wavecraft-dev-server/**'
+              - 'dev-server/**'
               - 'engine/Cargo.toml'
             npm-core:
               - 'ui/packages/core/**'
@@ -65,7 +65,8 @@ jobs:
   # Job 2: Publish CLI to crates.io
   # ============================================================================
   publish-cli:
-    needs: [detect-changes, publish-engine, publish-npm-core, publish-npm-components]
+    needs:
+      [detect-changes, publish-engine, publish-npm-core, publish-npm-components]
     if: |
       !cancelled() &&
       needs.detect-changes.outputs.any_sdk_changed == 'true' &&
@@ -74,20 +75,20 @@ jobs:
       (needs.publish-npm-components.result == 'success' || needs.publish-npm-components.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
-      id-token: write  # Required for crates.io trusted publishing (OIDC)
-      contents: write  # Required for version bump commits
+      id-token: write # Required for crates.io trusted publishing (OIDC)
+      contents: write # Required for version bump commits
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0  # Full history for git tagging
-      
+          fetch-depth: 0 # Full history for git tagging
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install Linux system dependencies
         run: |
@@ -100,7 +101,7 @@ jobs:
             libjavascriptcoregtk-4.1-dev \
             libwebkit2gtk-4.1-dev \
             libasound2-dev
-      
+
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
         with:
@@ -109,7 +110,7 @@ jobs:
       - name: Validate CLI dependencies
         working-directory: engine
         run: cargo xtask validate-cli-deps --check-registry
-      
+
       - name: Determine publish version
         id: version
         run: |
@@ -155,7 +156,7 @@ jobs:
       - name: Verify publishability (dry-run)
         working-directory: cli
         run: cargo publish --dry-run
-      
+
       - name: Authenticate with crates.io (OIDC)
         id: crates-auth
         uses: rust-lang/crates-io-auth-action@v1
@@ -179,22 +180,22 @@ jobs:
     if: needs.detect-changes.outputs.engine == 'true' || needs.detect-changes.outputs.cli == 'true'
     runs-on: ubuntu-latest
     permissions:
-      id-token: write  # Required for crates.io trusted publishing (OIDC)
-      contents: write  # For version bump commits and git tags
+      id-token: write # Required for crates.io trusted publishing (OIDC)
+      contents: write # For version bump commits and git tags
     outputs:
       version: ${{ steps.final.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0  # Full history for cargo-workspaces version detection
+          fetch-depth: 0 # Full history for cargo-workspaces version detection
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install Linux system dependencies
         run: |
@@ -293,19 +294,19 @@ jobs:
       NODE_AUTH_TOKEN: ""
       NPM_TOKEN: ""
     permissions:
-      id-token: write  # Required for npm OIDC trusted publishing + provenance
-      contents: write  # Required for version bump commits
+      id-token: write # Required for npm OIDC trusted publishing + provenance
+      contents: write # Required for version bump commits
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0  # Full history for git tagging
-      
+          fetch-depth: 0 # Full history for git tagging
+
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-          scope: '@wavecraft'
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+          scope: "@wavecraft"
           always-auth: false
 
       - name: Update npm to latest
@@ -317,11 +318,11 @@ jobs:
           if [ -n "${NPM_CONFIG_USERCONFIG:-}" ]; then
             rm -f "$NPM_CONFIG_USERCONFIG"
           fi
-      
+
       - name: Install dependencies
         working-directory: ui
         run: npm ci
-      
+
       - name: Determine publish version
         id: version
         working-directory: ui/packages/core
@@ -365,15 +366,15 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}${{ steps.bump.outputs.version }}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-      
+
       - name: Build package
         working-directory: ui/packages/core
         run: npm run build:lib
-      
+
       - name: Verify publishability (dry-run)
         working-directory: ui/packages/core
         run: npm publish --access public --dry-run
-      
+
       - name: Publish to npm
         working-directory: ui/packages/core
         env:
@@ -400,19 +401,19 @@ jobs:
       NODE_AUTH_TOKEN: ""
       NPM_TOKEN: ""
     permissions:
-      id-token: write  # Required for npm OIDC trusted publishing + provenance
-      contents: write  # Required for version bump commits
+      id-token: write # Required for npm OIDC trusted publishing + provenance
+      contents: write # Required for version bump commits
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
-      
+
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-          scope: '@wavecraft'
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+          scope: "@wavecraft"
           always-auth: false
 
       - name: Update npm to latest
@@ -424,11 +425,11 @@ jobs:
           if [ -n "${NPM_CONFIG_USERCONFIG:-}" ]; then
             rm -f "$NPM_CONFIG_USERCONFIG"
           fi
-      
+
       - name: Install dependencies
         working-directory: ui
         run: npm ci
-      
+
       - name: Determine publish version
         id: version
         working-directory: ui/packages/components
@@ -472,15 +473,15 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}${{ steps.bump.outputs.version }}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-      
+
       - name: Build package
         working-directory: ui/packages/components
         run: npm run build:lib
-      
+
       - name: Verify publishability (dry-run)
         working-directory: ui/packages/components
         run: npm publish --access public --dry-run
-      
+
       - name: Publish to npm
         working-directory: ui/packages/components
         env:

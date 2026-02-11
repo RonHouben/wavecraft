@@ -1,11 +1,10 @@
-use assert_cmd::cargo::cargo_bin;
 use std::fs;
 use std::process::Command;
 use tempfile::TempDir;
 
 #[test]
 fn test_help_shows_update_command() {
-    let mut cmd = Command::new(cargo_bin!("wavecraft"));
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wavecraft"));
     cmd.arg("help");
 
     let output = cmd.output().expect("Failed to execute wavecraft binary");
@@ -17,7 +16,7 @@ fn test_help_shows_update_command() {
 
 #[test]
 fn test_update_help_shows_any_directory_info() {
-    let mut cmd = Command::new(cargo_bin!("wavecraft"));
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wavecraft"));
     cmd.args(["update", "--help"]);
 
     let output = cmd.output().expect("Failed to execute");
@@ -35,7 +34,7 @@ fn test_update_help_shows_any_directory_info() {
 fn test_update_outside_plugin_project() {
     let temp_dir = TempDir::new().expect("Failed to create temporary directory");
 
-    let mut cmd = Command::new(cargo_bin!("wavecraft"));
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wavecraft"));
     cmd.current_dir(temp_dir.path());
     cmd.arg("update");
 
@@ -70,7 +69,7 @@ fn test_update_detects_engine_directory() {
     )
     .expect("Failed to write Cargo.toml");
 
-    let mut cmd = Command::new(cargo_bin!("wavecraft"));
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wavecraft"));
     cmd.current_dir(temp_dir.path());
     cmd.arg("update");
 
@@ -103,7 +102,7 @@ fn test_update_detects_ui_directory() {
     )
     .expect("Failed to write package.json");
 
-    let mut cmd = Command::new(cargo_bin!("wavecraft"));
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wavecraft"));
     cmd.current_dir(temp_dir.path());
     cmd.arg("update");
 
@@ -135,7 +134,7 @@ fn test_update_command_output_format() {
     )
     .expect("Failed to write Cargo.toml");
 
-    let mut cmd = Command::new(cargo_bin!("wavecraft"));
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wavecraft"));
     cmd.current_dir(temp_dir.path());
     cmd.arg("update");
 

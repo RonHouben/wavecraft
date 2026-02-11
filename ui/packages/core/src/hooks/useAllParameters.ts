@@ -263,5 +263,15 @@ export function useAllParameters(): UseAllParametersResult {
     return client.onParameterChanged(handleParamChange);
   }, []);
 
+  // ─── Effect: Subscribe to hot-reload notifications ─────────────────
+  useEffect(() => {
+    const bridge = IpcBridge.getInstance();
+    const unsubscribe = bridge.on('parametersChanged', () => {
+      logger.info('Parameters changed on server (hot-reload), re-fetching...');
+      reload();
+    });
+    return unsubscribe;
+  }, [reload]);
+
   return { params, isLoading, error, reload };
 }

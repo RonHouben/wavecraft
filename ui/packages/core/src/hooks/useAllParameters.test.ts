@@ -431,6 +431,53 @@ describe('useAllParameters', () => {
     }, { timeout: 1000 });
   });
 
+  // T15b: Hot-reload parametersChanged notification
+  it('should reload parameters when parametersChanged notification arrives', async () => {
+    mockTransport.setConnected(true);
+
+    const client = ParameterClient.getInstance();
+    const getAllSpy = vi
+      .spyOn(client, 'getAllParameters')
+      .mockResolvedValueOnce(mockParams)
+      .mockResolvedValueOnce([
+        ...mockParams,
+        {
+          id: 'freq',
+          name: 'Frequency',
+          type: 'float',
+          value: 440,
+          default: 440,
+          unit: 'Hz',
+        },
+      ]);
+
+    const { result } = renderHook(() => useAllParameters());
+
+    // Wait for initial load
+    await waitFor(() => {
+      expect(result.current.params).toEqual(mockParams);
+    });
+
+    expect(getAllSpy).toHaveBeenCalledTimes(1);
+
+    // Simulate hot-reload: send parametersChanged notification
+    await act(async () => {
+      mockTransport.simulateNotification({
+        jsonrpc: '2.0',
+        method: 'parametersChanged',
+        params: {},
+      });
+    });
+
+    // Wait for reload to complete
+    await waitFor(() => {
+      expect(result.current.params.length).toBe(3);
+    }, { timeout: 1000 });
+
+    expect(getAllSpy).toHaveBeenCalledTimes(2);
+    expect(result.current.params[2].id).toBe('freq');
+  });
+
   // T16: reload() clears error state
   it('should clear error state when reload is called', async () => {
     // Use fake timers for retry testing

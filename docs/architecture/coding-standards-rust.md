@@ -14,6 +14,9 @@
 ### Module Organization
 
 Follow the existing crate structure:
+
+**Engine workspace** (`engine/crates/`):
+
 - `wavecraft-nih_plug` — nih-plug integration, WebView editor, plugin exports (`publish = false`, git-only)
 - `wavecraft-core` — Core SDK types and declarative macros (publishable, no nih_plug dependency)
 - `wavecraft-macros` — Procedural macros: `ProcessorParams` derive, `wavecraft_plugin!`
@@ -21,13 +24,17 @@ Follow the existing crate structure:
 - `wavecraft-dsp` — Pure DSP code, `Processor` trait, built-in processors
 - `wavecraft-bridge` — IPC handling
 - `wavecraft-metering` — SPSC ring buffer for audio → UI metering
-- `wavecraft-dev-server` — Development server for browser-based UI testing
+
+**Standalone crate** (`dev-server/` at repo root):
+
+- `wavecraft-dev-server` — Unified dev server with WebSocket, hot-reload, audio I/O (feature-gated), FFI processor. Features: `default = ["audio"]`. CLI uses with `default-features = false`. Not published (`publish = false`).
 
 ### Declarative Plugin DSL
 
 **Rule:** Use the declarative DSL macros for new plugin definitions. Manual `Plugin` implementations should be avoided unless necessary for advanced use cases.
 
 **Processor Wrapper Macro (built-in processors only):**
+
 ```rust
 // ✅ Use wavecraft_processor! for named wrappers around built-in processors
 wavecraft_processor!(InputGain => Gain);
@@ -41,6 +48,7 @@ wavecraft_processor!(OutputStage => Passthrough);
 > Custom processors implementing the `Processor` trait go directly in `SignalChain![]`.
 
 **Custom Processors in Signal Chain:**
+
 ```rust
 use wavecraft::prelude::*;
 
@@ -59,6 +67,7 @@ wavecraft_plugin! {
 ```
 
 **Plugin Definition Macro:**
+
 ```rust
 // ✅ Use wavecraft_plugin! for complete plugin generation
 wavecraft_plugin! {
@@ -71,6 +80,7 @@ wavecraft_plugin! {
 ```
 
 **Parameter Definition:**
+
 ```rust
 use wavecraft::prelude::*;
 // The prelude provides the ProcessorParams *trait*;
@@ -82,7 +92,7 @@ use wavecraft::ProcessorParams;
 struct GainParams {
     #[param(range = "-60.0..=24.0", default = 0.0, unit = "dB")]
     gain: f32,
-    
+
     #[param(range = "0.0..=1.0", default = 1.0, unit = "%", group = "Output")]
     mix: f32,
 }
@@ -116,6 +126,7 @@ engine/xtask/src/
 ```
 
 **Command conventions:**
+
 - Each command module exposes a `run()` function as entry point
 - Use `anyhow::Result` for error propagation
 - Use `xtask::output::*` helpers for colored terminal output
@@ -124,6 +135,7 @@ engine/xtask/src/
 - Unit tests in `#[cfg(test)] mod tests { }` at bottom of file
 
 **Adding a new command:**
+
 1. Create `commands/mycommand.rs` with `pub fn run(...) -> Result<()>`
 2. Register in `commands/mod.rs`: `pub mod mycommand;`
 3. Add CLI variant in `main.rs`: `enum Commands { MyCommand { ... } }`
@@ -131,14 +143,14 @@ engine/xtask/src/
 
 ### Naming Conventions
 
-| Type | Convention | Example |
-|------|------------|---------|
-| Structs | PascalCase | `IpcHandler`, `AppState` |
-| Traits | PascalCase | `ParameterHost` |
-| Functions | snake_case | `handle_request`, `get_parameter` |
-| Methods | snake_case | `fn set_sample_rate(&mut self)` |
-| Constants | UPPER_SNAKE_CASE | `const WINDOW_WIDTH: u32` |
-| Modules | snake_case | `mod params`, `mod handler` |
+| Type      | Convention       | Example                           |
+| --------- | ---------------- | --------------------------------- |
+| Structs   | PascalCase       | `IpcHandler`, `AppState`          |
+| Traits    | PascalCase       | `ParameterHost`                   |
+| Functions | snake_case       | `handle_request`, `get_parameter` |
+| Methods   | snake_case       | `fn set_sample_rate(&mut self)`   |
+| Constants | UPPER_SNAKE_CASE | `const WINDOW_WIDTH: u32`         |
+| Modules   | snake_case       | `mod params`, `mod handler`       |
 
 ### Platform-Specific Code
 
@@ -187,6 +199,7 @@ pub trait WebViewHandle: Any + Send {
 ```
 
 **Don't:**
+
 ```rust
 // ❌ Using #[allow(dead_code)] instead of proper platform-gating
 #[allow(dead_code)]
@@ -200,6 +213,7 @@ static UI_ASSETS: Dir = ...;  // Compiles on Linux CI but isn't used
 ```
 
 **Rationale:**
+
 - Platform-gated code should only compile on platforms where it's used
 - This catches real dead code (lint checks work correctly)
 - Linux CI doesn't need to compile macOS/Windows GUI code
@@ -208,6 +222,7 @@ static UI_ASSETS: Dir = ...;  // Compiles on Linux CI but isn't used
 ### Real-Time Safety
 
 Code running on the audio thread must:
+
 - Never allocate (`Box::new`, `Vec::push`, `String::from`)
 - Never lock (`Mutex`, `RwLock`)
 - Never make system calls that can block
@@ -226,6 +241,7 @@ When parameter values need to flow from a WebSocket/UI thread to the audio callb
 4. Audio thread reads via `AtomicF32::load(Ordering::Relaxed)`
 
 **Do:**
+
 ```rust
 use atomic_float::AtomicF32;
 use std::collections::HashMap;
@@ -259,6 +275,7 @@ impl AtomicParameterBridge {
 ```
 
 **Don't:**
+
 ```rust
 // ❌ RwLock on audio thread (blocks, can deadlock)
 let params = Arc::new(RwLock::new(HashMap::new()));
@@ -270,6 +287,7 @@ let value = params.lock().unwrap().get("gain").copied();
 ```
 
 **Rationale:**
+
 - `Relaxed` ordering is sufficient: parameter updates are not synchronization points. A one-block delay (~5-12ms) is imperceptible.
 - The `HashMap` is immutable after construction, so `get()` on the audio thread is safe (no reallocation possible).
 - `Arc<AtomicF32>` is `Send + Sync`, so the bridge is auto-derived as `Send + Sync` by the compiler — no `unsafe impl` needed.
@@ -281,6 +299,7 @@ let value = params.lock().unwrap().get("gain").copied();
 When data needs to flow from a real-time audio callback to a non-RT consumer (e.g., meter data → WebSocket broadcast), use an `rtrb::RingBuffer` instead of `tokio` channels. Tokio channels (`mpsc::UnboundedSender`) allocate a linked-list node per `send()`, violating real-time safety.
 
 **Do:**
+
 ```rust
 // Pre-allocate ring buffer before stream creation
 let (mut meter_producer, meter_consumer) =
@@ -306,6 +325,7 @@ tokio::spawn(async move {
 ```
 
 **Don't:**
+
 ```rust
 // ❌ tokio unbounded channel in audio callback (allocates per send)
 let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
@@ -326,6 +346,7 @@ nih-plug's `Buffer` API only provides immutable slices via `as_slice()`, but plu
 3. Plugin contract allows (and expects) in-place modification during `process()` callback
 
 **Do:**
+
 ```rust
 // Bounds check before unsafe block
 if let Some(channel) = buffer.as_slice().get(ch) {
@@ -363,6 +384,7 @@ if let Some(channel) = buffer.as_slice().get(ch) {
 ```
 
 **Don't:**
+
 ```rust
 // ❌ Minimal safety comment (insufficient justification)
 unsafe {
@@ -376,6 +398,7 @@ let mut temp_buffer = vec![0.0; buffer.samples()]; // VIOLATES REAL-TIME SAFETY
 ```
 
 **Rationale:**
+
 - nih-plug's immutable refs are a convenience API, not an ownership guarantee
 - The DAW host provides exclusive access during `process()` (single-threaded audio callback)
 - Alternative approaches (copying buffers) violate real-time safety (allocations on audio thread)
@@ -461,13 +484,13 @@ let symbol = unsafe { library.get(b"wavecraft_dev_create_processor\0").ok()? };
 
 **Key Invariants:**
 
-| Invariant | Enforcement |
-|-----------|-------------|
-| No panics across FFI | `catch_unwind` in every `extern "C"` function |
-| No cross-allocator frees | All alloc/dealloc inside dylib via vtable functions |
-| Library outlives processor | Struct field order (`_library` last) + caller variable order |
-| ABI compatibility | `#[repr(C)]` structs, `extern "C"` fn pointers, version field |
-| Null pointer safety | Guards in `create()` return, `drop_fn()`, and `FfiProcessor::new()` |
+| Invariant                  | Enforcement                                                         |
+| -------------------------- | ------------------------------------------------------------------- |
+| No panics across FFI       | `catch_unwind` in every `extern "C"` function                       |
+| No cross-allocator frees   | All alloc/dealloc inside dylib via vtable functions                 |
+| Library outlives processor | Struct field order (`_library` last) + caller variable order        |
+| ABI compatibility          | `#[repr(C)]` structs, `extern "C"` fn pointers, version field       |
+| Null pointer safety        | Guards in `create()` return, `drop_fn()`, and `FfiProcessor::new()` |
 
 ---
 
@@ -478,12 +501,14 @@ let symbol = unsafe { library.get(b"wavecraft_dev_create_processor\0").ok()? };
 **Rule:** When validating identifiers, keywords, or language constructs, use the language's own parser/lexer libraries instead of maintaining custom lists.
 
 **Rationale:**
+
 - **Future-proof**: Automatically stays current with language updates (new keywords, editions)
 - **Authoritative**: Uses the language's official rules as source of truth
 - **Comprehensive**: Covers all cases including strict keywords, reserved words, and edition-specific additions
 - **Maintainable**: No manual lists to keep in sync
 
 **Do (Rust keyword validation):**
+
 ```rust
 use syn;
 
@@ -492,7 +517,7 @@ use syn;
 pub fn validate_not_keyword(name: &str) -> Result<()> {
     // Convert hyphens to underscores (crate names allow hyphens)
     let ident_name = name.replace('-', "_");
-    
+
     // syn::parse_str::<syn::Ident>() fails for keywords
     if syn::parse_str::<syn::Ident>(&ident_name).is_err() {
         bail!("'{}' is a reserved Rust keyword", name);
@@ -502,6 +527,7 @@ pub fn validate_not_keyword(name: &str) -> Result<()> {
 ```
 
 **Don't (hardcoded keyword list):**
+
 ```rust
 // ❌ Hardcoded list becomes stale as language evolves
 const KEYWORDS: &[&str] = &[
@@ -518,12 +544,14 @@ fn validate_not_keyword(name: &str) -> Result<()> {
 ```
 
 **Why syn for Rust:**
+
 - `syn` is the de-facto standard Rust parser, used by proc-macros
 - `syn::Ident` parsing uses Rust's official keyword list
 - Automatically includes edition-specific keywords (e.g., `async`/`await` in 2018+)
 - Zero maintenance burden for keyword list updates
 
 **Similar patterns for other languages:**
+
 - **TypeScript**: Use TypeScript compiler API for identifier validation
 - **JavaScript**: Use `acorn` or `esprima` parser libraries
 
@@ -536,6 +564,7 @@ fn validate_not_keyword(name: &str) -> Result<()> {
 **Rule:** Avoid `unwrap()` in production code. Use `expect()` with descriptive messages or proper error handling.
 
 **Rationale:**
+
 - `unwrap()` panics without context, making debugging difficult
 - `expect()` provides a message explaining why the operation should succeed
 - Proper error handling with `?` is preferred when errors are recoverable

@@ -5,8 +5,8 @@ model:
   - Claude Sonnet 4.5 (copilot)
   - Gemini 2.5 Pro (copilot)
   - GPT-5.1 (copilot)
-tools: ["read", "search", "agent", "web"]
-agents: [po, architect, planner, coder, tester, qa, docwriter, search]
+tools: ["read", "search", "agent", "web", 'todo']
+agents: [po, architect, planner, coder, tester, qa, docwriter, search ]
 user-invokable: true
 handoffs:
   - label: Requirements Phase
