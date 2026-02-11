@@ -35,20 +35,22 @@ gh run download <run-id>
 
 **Not all agents have terminal/execution capabilities.** Before attempting to run `gh` commands, determine your execution context:
 
-| Your Capabilities | Action |
-|-------------------|--------|
-| ✅ Have execution tools (terminal) | Run `gh run ...` commands directly |
-| ✅ Can invoke subagents | Invoke `tester` or `coder` agent with run URL or `{workflow, branch, run_id}` |
-| ❌ Neither | Provide commands to user to run manually; ask them to paste output |
+| Your Capabilities                  | Action                                                                        |
+| ---------------------------------- | ----------------------------------------------------------------------------- |
+| ✅ Have execution tools (terminal) | Run `gh run ...` commands directly                                            |
+| ✅ Can invoke subagents            | Invoke `tester` or `coder` agent with run URL or `{workflow, branch, run_id}` |
+| ❌ Neither                         | Provide commands to user to run manually; ask them to paste output            |
 
 **When monitoring runs, you need:**
+
 - Run URL (e.g., `https://github.com/owner/repo/actions/runs/12345`), OR
-- Run ID + branch name, OR  
+- Run ID + branch name, OR
 - Workflow name + branch name (gets latest run)
 
 **Example handoff:**
+
 ```
-"Invoke tester agent to monitor CI status for workflow 'continuous-integration.yml' 
+"Invoke tester agent to monitor CI status for workflow 'continuous-integration.yml'
 on branch 'feature/new-feature'. Request they run:
 gh run list --workflow=continuous-integration.yml --branch=feature/new-feature --limit=1"
 ```

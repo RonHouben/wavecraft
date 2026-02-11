@@ -143,6 +143,60 @@ jobs:
         with:
           workspaces: cli
 
+      - name: Wait for published crates on crates.io
+        run: |
+          echo "Waiting for crates.io sparse index propagation..."
+          
+          wait_for_crate() {
+            local CRATE=$1
+            local VERSION=$2
+            local MAX_ATTEMPTS=30
+            local DELAY=10
+            
+            if [ -z "$VERSION" ] || [ "$VERSION" = "" ]; then
+              echo "⏩ Skipping $CRATE (no version to wait for)"
+              return 0
+            fi
+            
+            echo "Waiting for $CRATE@$VERSION..."
+            for i in $(seq 1 $MAX_ATTEMPTS); do
+              # Query the sparse index directly (bypasses CDN caching)
+              if curl -s "https://index.crates.io/${CRATE:0:2}/${CRATE:2:2}/$CRATE" \
+                | grep -q "\"vers\":\"$VERSION\""; then
+                echo "✅ $CRATE@$VERSION available on crates.io (attempt $i)"
+                return 0
+              fi
+              
+              echo "⏳ $CRATE@$VERSION not yet in index (attempt $i/$MAX_ATTEMPTS, waiting ${DELAY}s...)"
+              sleep $DELAY
+            done
+            
+            echo "❌ Timed out waiting for $CRATE@$VERSION after $((MAX_ATTEMPTS * DELAY))s"
+            return 1
+          }
+          
+          # Wait for dev-server if it was published in this workflow
+          DEV_SERVER_VERSION="${{ needs.publish-dev-server.outputs.version }}"
+          if [ -n "$DEV_SERVER_VERSION" ]; then
+            wait_for_crate "wavecraft-dev-server" "$DEV_SERVER_VERSION"
+          fi
+          
+          # Wait for engine crates if they were published in this workflow
+          ENGINE_VERSION="${{ needs.publish-engine.outputs.version }}"
+          if [ -n "$ENGINE_VERSION" ]; then
+            wait_for_crate "wavecraft-core" "$ENGINE_VERSION"
+            wait_for_crate "wavecraft-protocol" "$ENGINE_VERSION"
+            wait_for_crate "wavecraft-bridge" "$ENGINE_VERSION"
+            wait_for_crate "wavecraft-metering" "$ENGINE_VERSION"
+            wait_for_crate "wavecraft-dsp" "$ENGINE_VERSION"
+            wait_for_crate "wavecraft-macros" "$ENGINE_VERSION"
+          fi
+          
+          # Force Cargo to refresh its index cache
+          echo "Refreshing Cargo index cache..."
+          cargo search wavecraft --limit 1 > /dev/null 2>&1 || true
+          echo "✅ Index propagation complete"
+
       - name: Validate CLI dependencies
         working-directory: engine
         run: cargo xtask validate-cli-deps --check-registry
