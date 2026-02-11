@@ -146,7 +146,7 @@ jobs:
       - name: Wait for published crates on crates.io
         run: |
           echo "Waiting for crates.io sparse index propagation..."
-          
+
           wait_for_crate() {
             local CRATE=$1
             local VERSION=$2
@@ -174,13 +174,13 @@ jobs:
             echo "❌ Timed out waiting for $CRATE@$VERSION after $((MAX_ATTEMPTS * DELAY))s"
             return 1
           }
-          
+
           # Wait for dev-server if it was published in this workflow
           DEV_SERVER_VERSION="${{ needs.publish-dev-server.outputs.version }}"
           if [ -n "$DEV_SERVER_VERSION" ]; then
             wait_for_crate "wavecraft-dev-server" "$DEV_SERVER_VERSION"
           fi
-          
+
           # Wait for engine crates if they were published in this workflow
           ENGINE_VERSION="${{ needs.publish-engine.outputs.version }}"
           if [ -n "$ENGINE_VERSION" ]; then
@@ -191,7 +191,7 @@ jobs:
             wait_for_crate "wavecraft-dsp" "$ENGINE_VERSION"
             wait_for_crate "wavecraft-macros" "$ENGINE_VERSION"
           fi
-          
+
           # Force Cargo to refresh its index cache
           echo "Refreshing Cargo index cache..."
           cargo search wavecraft --limit 1 > /dev/null 2>&1 || true
@@ -251,9 +251,16 @@ jobs:
               echo "action=skip" >> $GITHUB_OUTPUT
             fi
           elif [ "$IS_FORCE_PUBLISH" = "true" ]; then
-            # Force-publish: ALWAYS bump, regardless of current vs published
-            echo "action=bump" >> $GITHUB_OUTPUT
-            echo "Force-publish requested — will auto-bump from $PUBLISHED"
+            # Force-publish: if local is already ahead, publish as-is; otherwise bump
+            if [ "$CURRENT" != "$PUBLISHED" ] && \
+               [ "$(printf '%s\n' "$PUBLISHED" "$CURRENT" | sort -V | tail -1)" = "$CURRENT" ]; then
+              echo "action=publish" >> $GITHUB_OUTPUT
+              echo "version=$CURRENT" >> $GITHUB_OUTPUT
+              echo "Force-publish requested — local version $CURRENT is ahead of published $PUBLISHED — publishing as-is"
+            else
+              echo "action=bump" >> $GITHUB_OUTPUT
+              echo "Force-publish requested — will auto-bump from $PUBLISHED"
+            fi
           elif [ "$CURRENT" != "$PUBLISHED" ] && \
                [ "$(printf '%s\n' "$PUBLISHED" "$CURRENT" | sort -V | tail -1)" = "$CURRENT" ]; then
             # Local version is ahead of published — publish as-is
@@ -427,9 +434,16 @@ jobs:
               echo "action=skip" >> $GITHUB_OUTPUT
             fi
           elif [ "$IS_FORCE_PUBLISH" = "true" ]; then
-            # Force-publish: ALWAYS bump, regardless of current vs published
-            echo "action=bump" >> $GITHUB_OUTPUT
-            echo "Force-publish requested — will auto-bump from $PUBLISHED"
+            # Force-publish: if local is already ahead, publish as-is; otherwise bump
+            if [ "$CURRENT" != "$PUBLISHED" ] && \
+               [ "$(printf '%s\n' "$PUBLISHED" "$CURRENT" | sort -V | tail -1)" = "$CURRENT" ]; then
+              echo "action=publish" >> $GITHUB_OUTPUT
+              echo "version=$CURRENT" >> $GITHUB_OUTPUT
+              echo "Force-publish requested — local version $CURRENT is ahead of published $PUBLISHED — publishing as-is"
+            else
+              echo "action=bump" >> $GITHUB_OUTPUT
+              echo "Force-publish requested — will auto-bump from $PUBLISHED"
+            fi
           elif [ "$CURRENT" != "$PUBLISHED" ] && \
                [ "$(printf '%s\n' "$PUBLISHED" "$CURRENT" | sort -V | tail -1)" = "$CURRENT" ]; then
             # Local version is ahead of published — publish as-is
@@ -693,9 +707,16 @@ jobs:
               echo "action=skip" >> $GITHUB_OUTPUT
             fi
           elif [ "$IS_FORCE_PUBLISH" = "true" ]; then
-            # Force-publish: ALWAYS bump, regardless of current vs published
-            echo "action=bump" >> $GITHUB_OUTPUT
-            echo "Force-publish requested — will auto-bump from $PUBLISHED"
+            # Force-publish: if local is already ahead, publish as-is; otherwise bump
+            if [ "$CURRENT" != "$PUBLISHED" ] && \
+               [ "$(printf '%s\n' "$PUBLISHED" "$CURRENT" | sort -V | tail -1)" = "$CURRENT" ]; then
+              echo "action=publish" >> $GITHUB_OUTPUT
+              echo "version=$CURRENT" >> $GITHUB_OUTPUT
+              echo "Force-publish requested — local version $CURRENT is ahead of published $PUBLISHED — publishing as-is"
+            else
+              echo "action=bump" >> $GITHUB_OUTPUT
+              echo "Force-publish requested — will auto-bump from $PUBLISHED"
+            fi
           elif [ "$CURRENT" != "$PUBLISHED" ] && \
                [ "$(printf '%s\n' "$PUBLISHED" "$CURRENT" | sort -V | tail -1)" = "$CURRENT" ]; then
             # Local version is ahead of published — publish as-is
