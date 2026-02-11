@@ -220,7 +220,7 @@ jobs:
         id: bump
         if: steps.version.outputs.action == 'bump'
         run: |
-          PUBLISHED=${{ steps.version.outputs.published }}
+          PUBLISHED=${{ steps.registry.outputs.published }}
           NEW=$(npx --yes semver "$PUBLISHED" -i patch)
           sed -i '/^\[package\]/,/^\[/{s/^version = ".*"/version = "'"$NEW"'"/}' cli/Cargo.toml
           echo "version=$NEW" >> $GITHUB_OUTPUT
