@@ -197,6 +197,52 @@ jobs:
           cargo search wavecraft --limit 1 > /dev/null 2>&1 || true
           echo "✅ Index propagation complete"
 
+      - name: Sync dependencies with published versions
+        run: |
+          ENGINE_VERSION="${{ needs.publish-engine.outputs.version }}"
+          DEV_SERVER_VERSION="${{ needs.publish-dev-server.outputs.version }}"
+
+          if [ -n "$ENGINE_VERSION" ]; then
+            echo "Syncing CLI engine deps to $ENGINE_VERSION"
+
+            # Update CLI dependency version specifiers
+            sed -i 's/\(wavecraft-protocol = { .*version = \)"[^"]*"/\1"'"$ENGINE_VERSION"'"/' cli/Cargo.toml
+            sed -i 's/\(wavecraft-bridge = { .*version = \)"[^"]*"/\1"'"$ENGINE_VERSION"'"/' cli/Cargo.toml
+
+            # Replay engine workspace version bump locally (needed for path dep resolution)
+            sed -i '/^\[workspace\.package\]/,/^\[/{s/^version = ".*"/version = "'"$ENGINE_VERSION"'"/}' engine/Cargo.toml
+            sed -i 's/\(wavecraft-[a-z_]* = { .*version = \)"[^"]*"/\1"'"$ENGINE_VERSION"'"/' engine/Cargo.toml
+            for crate_dir in engine/crates/wavecraft-*/; do
+              if [ -f "$crate_dir/Cargo.toml" ]; then
+                sed -i '/^\[package\]/,/^\[/{s/^version = ".*"/version = "'"$ENGINE_VERSION"'"/}' "$crate_dir/Cargo.toml"
+              fi
+            done
+          fi
+
+          if [ -n "$DEV_SERVER_VERSION" ]; then
+            echo "Syncing CLI dev-server dep to $DEV_SERVER_VERSION"
+
+            # Update CLI dependency version specifier for dev-server
+            sed -i 's/\(wavecraft-dev-server = { .*version = \)"[^"]*"/\1"'"$DEV_SERVER_VERSION"'"/' cli/Cargo.toml
+
+            # Replay dev-server version bump locally (needed for path dep resolution)
+            sed -i '/^\[package\]/,/^\[/{s/^version = ".*"/version = "'"$DEV_SERVER_VERSION"'"/}' dev-server/Cargo.toml
+
+            # Also sync dev-server's engine dep versions if engine was published
+            if [ -n "$ENGINE_VERSION" ]; then
+              sed -i 's/\(wavecraft-bridge = { .*version = \)"[^"]*"/\1"'"$ENGINE_VERSION"'"/' dev-server/Cargo.toml
+              sed -i 's/\(wavecraft-protocol = { .*version = \)"[^"]*"/\1"'"$ENGINE_VERSION"'"/' dev-server/Cargo.toml
+            fi
+          fi
+
+          # Verify
+          echo "=== cli/Cargo.toml wavecraft deps ==="
+          grep -E 'wavecraft-' cli/Cargo.toml || true
+          echo "=== dev-server version ==="
+          grep -m1 'version = "' dev-server/Cargo.toml || true
+          echo "=== engine workspace version ==="
+          sed -n '/\[workspace\.package\]/,/^\[/{/version/p}' engine/Cargo.toml || true
+
       - name: Validate CLI dependencies
         working-directory: engine
         run: cargo xtask validate-cli-deps --check-registry
