@@ -25,6 +25,9 @@ impl ProjectMarkers {
     ///
     /// Returns `Ok(ProjectMarkers)` if this is a valid Wavecraft project,
     /// or an error describing what's missing.
+    ///
+    /// This also checks if we're in the SDK repo itself (library crates only,
+    /// no plugin implementation) and returns an appropriate error.
     pub fn detect(start_dir: &Path) -> Result<Self> {
         let ui_dir = start_dir.join("ui");
         let engine_dir = start_dir.join("engine");
@@ -55,6 +58,20 @@ impl ProjectMarkers {
             bail!("Invalid project structure: missing 'engine/Cargo.toml'");
         }
 
+        // Check if we're in the SDK repo itself (workspace with library crates)
+        // SDK repo has [workspace] in engine/Cargo.toml, plugin projects have [package]
+        if is_sdk_repo(&engine_cargo_toml)? {
+            bail!(
+                "Cannot run dev server in the SDK repository.\n\n\
+                 The SDK repo contains only library crates, not a plugin implementation.\n\
+                 To test the dev server:\n\
+                 1. Create a test plugin project: `wavecraft create TestPlugin --output target/tmp/test-plugin`\n\
+                 2. Navigate to the project: `cd target/tmp/test-plugin`\n\
+                 3. Run the dev server: `wavecraft start`\n\n\
+                 Or use the test workflow: `cargo xtask ci-validate-template`"
+            );
+        }
+
         Ok(Self {
             ui_dir,
             engine_dir,
@@ -62,6 +79,12 @@ impl ProjectMarkers {
             engine_cargo_toml,
         })
     }
+}
+
+/// Check if the given Cargo.toml defines a workspace (SDK repo) vs a package (plugin project).
+fn is_sdk_repo(cargo_toml_path: &Path) -> Result<bool> {
+    let content = std::fs::read_to_string(cargo_toml_path)?;
+    Ok(content.contains("[workspace]"))
 }
 
 /// Check if UI dependencies are installed.
@@ -165,5 +188,44 @@ mod tests {
 
         let project = ProjectMarkers::detect(tmp.path()).unwrap();
         assert!(has_node_modules(&project));
+    }
+
+    #[test]
+    fn test_sdk_repo_detection() {
+        let tmp = TempDir::new().unwrap();
+
+        // Create SDK-like structure with [workspace] in Cargo.toml
+        fs::create_dir_all(tmp.path().join("ui")).unwrap();
+        fs::create_dir_all(tmp.path().join("engine")).unwrap();
+        fs::write(tmp.path().join("ui/package.json"), "{}").unwrap();
+        fs::write(
+            tmp.path().join("engine/Cargo.toml"),
+            "[workspace]\nmembers = [\"crates/*\"]",
+        )
+        .unwrap();
+
+        let result = ProjectMarkers::detect(tmp.path());
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Cannot run dev server in the SDK repository"));
+        assert!(err_msg.contains("wavecraft create"));
+    }
+
+    #[test]
+    fn test_plugin_project_detection() {
+        let tmp = TempDir::new().unwrap();
+
+        // Create plugin project structure with [package] in Cargo.toml
+        fs::create_dir_all(tmp.path().join("ui")).unwrap();
+        fs::create_dir_all(tmp.path().join("engine")).unwrap();
+        fs::write(tmp.path().join("ui/package.json"), "{}").unwrap();
+        fs::write(
+            tmp.path().join("engine/Cargo.toml"),
+            "[package]\nname = \"test_plugin\"",
+        )
+        .unwrap();
+
+        let result = ProjectMarkers::detect(tmp.path());
+        assert!(result.is_ok());
     }
 }
