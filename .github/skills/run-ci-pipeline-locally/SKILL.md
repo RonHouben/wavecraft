@@ -11,13 +11,13 @@ Use this skill to test CI workflows locally before pushing to GitHub. **Preferre
 
 **Keep an xtask mirror for every workflow file** under `.github/workflows/`. If a workflow changes (or a new one is added), update or add an xtask so local runs stay fast and consistent. Use Docker + `act` only for workflow/YAML-specific checks or Linux-only behavior.
 
-| Workflow file | Preferred local mirror | Notes |
-| --- | --- | --- |
-| `ci.yml` | `cargo xtask ci-check` | Full lint + test suite |
-| `template-validation.yml` | `cargo xtask ci-validate-template` | CLI template generation validation |
-| `release.yml` | `cargo xtask release` | Build/sign/notarize pipeline |
-| `cli-release.yml` | `cargo xtask release` | Mirror release steps where applicable; add a dedicated xtask if workflow diverges |
-| `continuous-deploy.yml` | `cargo xtask release` | Use release pipeline for parity; add a publish-focused xtask if needed |
+| Workflow file             | Preferred local mirror             | Notes                                                                             |
+| ------------------------- | ---------------------------------- | --------------------------------------------------------------------------------- |
+| `ci.yml`                  | `cargo xtask ci-check`             | Full lint + test suite                                                            |
+| `template-validation.yml` | `cargo xtask ci-validate-template` | CLI template generation validation                                                |
+| `release.yml`             | `cargo xtask release`              | Build/sign/notarize pipeline                                                      |
+| `cli-release.yml`         | `cargo xtask release`              | Mirror release steps where applicable; add a dedicated xtask if workflow diverges |
+| `continuous-deploy.yml`   | `cargo xtask release`              | Use release pipeline for parity; add a publish-focused xtask if needed            |
 
 ## Preferred: Native xtask (fast, no Docker)
 
@@ -44,6 +44,8 @@ cargo xtask test
 
 Use Docker + `act` when validating GitHub Actions workflow changes, Linux-specific behavior, or job orchestration.
 
+**⚠️ Agent Handoff:** If you don't have terminal execution tools available, delegate to an agent who does (Coder or Tester) to run the Docker/act commands below.
+
 ### Prerequisites (Docker path)
 
 - **Docker Desktop** must be installed and running
@@ -68,13 +70,13 @@ act -j check-engine -W .github/workflows/ci.yml \
 
 ### Available CI Jobs
 
-| Job | Description | Local Testing |
-|-----|-------------|---------------|
-| `check-ui` | Prettier, ESLint, TypeScript | ✅ Works |
-| `test-ui` | Vitest unit tests | ✅ Works |
-| `prepare-engine` | Build UI + compile Rust | ✅ Works |
-| `check-engine` | cargo fmt + clippy | ✅ Works |
-| `test-engine` | cargo test | ✅ Works |
+| Job              | Description                  | Local Testing |
+| ---------------- | ---------------------------- | ------------- |
+| `check-ui`       | Prettier, ESLint, TypeScript | ✅ Works      |
+| `test-ui`        | Vitest unit tests            | ✅ Works      |
+| `prepare-engine` | Build UI + compile Rust      | ✅ Works      |
+| `check-engine`   | cargo fmt + clippy           | ✅ Works      |
+| `test-engine`    | cargo test                   | ✅ Works      |
 
 ### Run Full Pipeline Locally (Docker)
 
@@ -90,6 +92,7 @@ act -W .github/workflows/ci.yml \
 ## Building the Custom Image
 
 The custom image includes:
+
 - Ubuntu 22.04
 - Node.js 20.x
 - Rust stable with rustfmt + clippy
@@ -153,14 +156,15 @@ act --secret-file .secrets
 
 ## Key Flags for Wavecraft
 
-| Flag | Purpose |
-|------|---------|
-| `--container-architecture linux/amd64` | Required on Apple Silicon Macs |
-| `-P ubuntu-latest=wavecraft-ci:latest` | Use custom image with dependencies |
-| `--pull=false` | Use local image, don't pull from Docker Hub |
-| `-W .github/workflows/ci.yml` | Specify workflow file |
-| `-j <job-name>` | Run specific job |
-| `--artifact-server-path <dir>` | Enable local artifact upload/download |
+| Flag                                   | Purpose                                     |
+| -------------------------------------- | ------------------------------------------- |
+| `--container-architecture linux/amd64` | Required on Apple Silicon Macs              |
+| `-P ubuntu-latest=wavecraft-ci:latest` | Use custom image with dependencies          |
+| `--pull=false`                         | Use local image, don't pull from Docker Hub |
+| `-W .github/workflows/ci.yml`          | Specify workflow file                       |
+| `-j <job-name>`                        | Run specific job                            |
+| `--artifact-server-path <dir>`         | Enable local artifact upload/download       |
+
 ## Limitations (Docker)
 
 ### Artifact Upload/Download
@@ -182,6 +186,7 @@ Artifacts will be stored in the specified directory and can be downloaded by sub
 ### Network Dependencies
 
 Some steps require network access:
+
 - `cargo` downloads crates
 - `npm` downloads packages
 - Git repos are cloned
@@ -204,16 +209,16 @@ docker exec -it <container-id> bash
 
 ## Common Issues
 
-| Issue | Solution |
-|-------|----------|
-| Docker not running | Start Docker Desktop |
-| `--container-architecture` errors | Ensure Docker supports linux/amd64 emulation |
-| Image pull timeout | Use `--pull=false` with local image |
-| Permission denied on files | Check Docker volume mounts |
-| Job uses `macos-latest` | Skip job or test manually |
-| Missing Linux packages | Rebuild custom image |
-| Rust compilation slow | Expected on first run; use `--reuse` for subsequent |
-| `ACTIONS_RUNTIME_TOKEN` error | Add `--artifact-server-path /tmp/act-artifacts` |
+| Issue                             | Solution                                            |
+| --------------------------------- | --------------------------------------------------- |
+| Docker not running                | Start Docker Desktop                                |
+| `--container-architecture` errors | Ensure Docker supports linux/amd64 emulation        |
+| Image pull timeout                | Use `--pull=false` with local image                 |
+| Permission denied on files        | Check Docker volume mounts                          |
+| Job uses `macos-latest`           | Skip job or test manually                           |
+| Missing Linux packages            | Rebuild custom image                                |
+| Rust compilation slow             | Expected on first run; use `--reuse` for subsequent |
+| `ACTIONS_RUNTIME_TOKEN` error     | Add `--artifact-server-path /tmp/act-artifacts`     |
 
 ## Updating the Custom Image
 
