@@ -2,9 +2,9 @@
 name: tester
 description: Manual testing specialist for guiding users through test execution and tracking test results. Creates test plans and documents findings without modifying code.
 model:
-  - Claude Sonnet 4.5 (copilot)
-  - GPT-5.1 (copilot)
-  - Gemini 2.5 Pro (copilot)
+  - GPT-5.3-Codex (copilot)
+  - Claude Opus 4.6 (copilot)
+  - GPT-5.2 (copilot)
 tools:
   [
     'read',

@@ -202,17 +202,17 @@ The **Coder** agent is responsible for creating Pull Requests using the `create-
 
 ### Models & Tools
 
-| Agent            | Model (prioritized fallback chain)                 | Tools                                                            | Can Execute? |
-| ---------------- | -------------------------------------------------- | ---------------------------------------------------------------- | ------------ |
-| **Orchestrator** | Claude Sonnet 4.5 → Gemini 2.5 Pro → GPT-5.1       | read, search, agent, web                                         | ❌           |
-| **PO**           | Claude Sonnet 4.5 → Gemini 2.5 Pro → GPT-5.2       | edit, read, search, web, agent                                   | ❌           |
-| **Architect**    | Claude Opus 4.6 → GPT-5.2-Codex → Gemini 2.5 Pro   | search, read, web, agent                                         | ❌           |
-| **Planner**      | Gemini 2.5 Pro → Claude Sonnet 4.5 → GPT-5.1-Codex | read, search, web, agent                                         | ❌           |
-| **Coder**        | Claude Sonnet 4.5 → GPT-5.2-Codex → GPT-5.1-Codex  | vscode, execute, read, edit, search, web, agent, github/\*, todo | ✅           |
-| **Tester**       | Claude Sonnet 4.5 → GPT-5.1 → Gemini 2.5 Pro       | read, search, execute, agent, playwright/_, github/_, web        | ✅           |
-| **QA**           | Claude Sonnet 4.5 → GPT-5.2 → Gemini 2.5 Pro       | agent, search, read, web                                         | ❌           |
-| **DocWriter**    | Claude Sonnet 4.5 → GPT-5.1 → Gemini 2.5 Pro       | read, search, edit, web, agent                                   | ❌           |
-| **Search**       | GPT-5.2-Codex → Gemini 2.5 Pro → Claude Sonnet 4.5 | read, search, web                                                | ❌           |
+| Agent            | Model (prioritized fallback chain)                  | Tools                                                            | Can Execute? |
+| ---------------- | --------------------------------------------------- | ---------------------------------------------------------------- | ------------ |
+| **Orchestrator** | Claude Opus 4.6 → Claude Sonnet 4.5 → GPT-5.3-Codex | read, search, agent, web                                         | ❌           |
+| **PO**           | Claude Opus 4.6 → Claude Sonnet 4.5 → GPT-5.2       | edit, read, search, web, agent                                   | ❌           |
+| **Architect**    | Claude Opus 4.6 → GPT-5.3-Codex → Gemini 2.5 Pro    | search, read, web, agent                                         | ❌           |
+| **Planner**      | Claude Opus 4.6 → Claude Sonnet 4.5 → GPT-5.3-Codex | read, search, web, agent                                         | ❌           |
+| **Coder**        | GPT-5.3-Codex → GPT-5.2-Codex → Claude Opus 4.6     | vscode, execute, read, edit, search, web, agent, github/\*, todo | ✅           |
+| **Tester**       | GPT-5.3-Codex → Claude Opus 4.6 → GPT-5.2           | read, search, execute, agent, playwright/_, github/_, web        | ✅           |
+| **QA**           | GPT-5.3-Codex → Claude Opus 4.6 → Gemini 2.5 Pro    | agent, search, read, web                                         | ❌           |
+| **DocWriter**    | Claude Opus 4.6 → Claude Sonnet 4.5 → GPT-5.2       | read, search, edit, web, agent                                   | ❌           |
+| **Search**       | GPT-5.3-Codex → GPT-5.2-Codex → Claude Opus 4.6     | read, search, web                                                | ❌           |
 
 ### Subagent Invocation
 
