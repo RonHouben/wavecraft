@@ -1,8 +1,12 @@
 name: CI
 
-# Runs on PRs only — main branch validation happens via PR quality gates.
-# Use workflow_dispatch for manual runs (e.g., after direct commits to main).
+# Runs on:
+# - PRs to main (pre-merge validation)
+# - Pushes to main (README badge status)
+# - Workflow dispatch (manual runs)
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -38,8 +42,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: ui/package-lock.json
 
       - name: Install dependencies
@@ -68,8 +72,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: ui/package-lock.json
 
       - name: Install dependencies
@@ -94,8 +98,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: ui/package-lock.json
 
       - name: Install UI dependencies
