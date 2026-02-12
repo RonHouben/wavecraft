@@ -318,9 +318,9 @@ jobs:
             echo "action=bump" >> $GITHUB_OUTPUT
             echo "Local version $CURRENT equals published — will auto-bump"
           else
-            # Local is behind published (shouldn't happen normally)
-            echo "❌ Local version $CURRENT is BEHIND published $PUBLISHED — manual intervention required"
-            exit 1
+            # Local is behind published — auto-bump from published version
+            echo "action=bump" >> $GITHUB_OUTPUT
+            echo "⚠️  Local version $CURRENT is BEHIND published $PUBLISHED — will auto-bump from published"
           fi
 
       - name: Auto-bump patch version (if needed)
@@ -501,9 +501,9 @@ jobs:
             echo "action=bump" >> $GITHUB_OUTPUT
             echo "Local version $CURRENT equals published — will auto-bump"
           else
-            # Local is behind published (shouldn't happen normally)
-            echo "❌ Local version $CURRENT is BEHIND published $PUBLISHED — manual intervention required"
-            exit 1
+            # Local is behind published — auto-bump from published version
+            echo "action=bump" >> $GITHUB_OUTPUT
+            echo "⚠️  Local version $CURRENT is BEHIND published $PUBLISHED — will auto-bump from published"
           fi
 
       - name: Auto-bump patch version (if needed)
@@ -774,9 +774,9 @@ jobs:
             echo "action=bump" >> $GITHUB_OUTPUT
             echo "Local version $CURRENT equals published — will auto-bump"
           else
-            # Local is behind published (shouldn't happen normally)
-            echo "❌ Local version $CURRENT is BEHIND published $PUBLISHED — manual intervention required"
-            exit 1
+            # Local is behind published — auto-bump from published version
+            echo "action=bump" >> $GITHUB_OUTPUT
+            echo "⚠️  Local version $CURRENT is BEHIND published $PUBLISHED — will auto-bump from published"
           fi
 
       - name: Auto-bump patch version (if needed)
