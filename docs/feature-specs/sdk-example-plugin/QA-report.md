@@ -2,7 +2,7 @@
 
 **Date**: 2026-02-12  
 **Reviewer**: QA Agent  
-**Status**: PASS (with recommendations)
+**Status**: **PASS (Final sign-off)**
 
 ## Summary
 
@@ -10,10 +10,10 @@
 | -------- | ----- |
 | Critical | 0     |
 | High     | 0     |
-| Medium   | 3     |
-| Low      | 2     |
+| Medium   | 0     |
+| Low      | 0     |
 
-**Overall**: PASS (no Critical/High findings)
+**Overall**: **PASS**
 
 ## Scope Reviewed
 
@@ -34,28 +34,31 @@ Key areas reviewed:
 - Linting: ✅ PASSED (ESLint, Prettier, cargo fmt, clippy)
 - Tests: ✅ PASSED (Engine + UI)
 
-## Findings
+## Phase 5 Re-Validation (Tester)
 
-| ID  | Severity | Category                        | Description                                                                                                                                                                                                                                                                                                           | Location                                                              | Recommendation                                                                                                                                                                                                                      |
-| --- | -------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Medium   | Robustness / Detection          | SDK repo detection uses a string search for `"[workspace]"`, which can mis-detect if the file contains that substring in a comment or if a future supported plugin project uses an engine workspace. Current error message on "workspace-but-not-SDK" cases is also slightly confusing ("missing wavecraft-example"). | `cli/src/project/detection.rs:98` (`content.contains("[workspace]")`) | Parse TOML and check for a real `workspace` table OR make detection more specific (e.g., confirm presence of `cli/Cargo.toml` at repo root and/or `engine/crates/wavecraft-core`). Consider a clearer error for non-SDK workspaces. |
-| 2   | Medium   | Error handling                  | Uses `expect()` for child stdio handles; project coding standards generally discourage panic paths in production code, even if it's "should never happen".                                                                                                                                                            | `cli/src/project/param_extract.rs:57-58`                              | Replace `expect()` with `ok_or_else(...).context(...)` and return a proper error instead of panicking.                                                                                                                              |
-| 3   | Medium   | Repo hygiene                    | A root-level `package-lock.json` (minimal/empty) was added. The repo's JS workspace appears to be under `ui/`; a root lockfile may be accidental and can confuse contributors/CI in some setups.                                                                                                                      | `package-lock.json`                                                   | Confirm whether root npm usage is intended. If accidental, remove and add guidance to avoid running npm at repo root. If intended, ensure there is a matching root `package.json` and documented workflow.                          |
-| 4   | Low      | UX / Logging                    | The log line "Watching engine/src/ for changes" is inaccurate in SDK mode (it watches `engine/crates/wavecraft-example/src`). This can mislead debugging.                                                                                                                                                             | `cli/src/commands/start.rs` (watch message)                           | Print the actual watched path (e.g., `project.engine_dir.join("src")`) or a relative path.                                                                                                                                          |
-| 5   | Low      | Documentation / Maintainability | `engine/crates/wavecraft-example/src/lib.rs` is intentionally minimal and mirrors template style, but has no crate-level comment explaining its role as "SDK integration example".                                                                                                                                    | `engine/crates/wavecraft-example/src/lib.rs`                          | Add a short module doc comment clarifying its purpose and the "template parity" expectation.                                                                                                                                        |
+Re-validation after QA fixes is documented in **Phase 5** of `test-plan.md`:
 
-## Positive Notes / What Looks Good
+- **RV-001: SDK Detection Tests** — ✅ PASS
+- **RV-002: CLI Test Suite** — ✅ PASS
+- **RV-003: Root package-lock cleanup** — ✅ PASS
+- **RV-004: Watch-path logging accuracy (SDK mode)** — ✅ PASS
+- **RV-005: Example crate documentation** — ✅ PASS
 
-- **Pathing is coherent end-to-end:** repo-root `cargo xtask dev` works via `.cargo/config.toml` alias and `engine/xtask` resolves paths relative to `engine/xtask` safely.
-- **SDK-mode implementation is low-impact:** normal plugin projects remain supported; SDK mode only activates on workspace detection and then validates the example crate exists.
-- **Dylib discovery accounts for workspace targets:** `resolve_debug_dir()` now checks crate-local, parent, and workspace-root target locations—appropriate for `engine/crates/wavecraft-example` builds.
-- **Testing is strong for a workflow change:** test-plan includes `cargo xtask ci-check`, SDK startup, hot reload, and a regression test on a generated plugin project.
+## Findings (All Resolved)
 
-## Architectural Concerns
+| ID  | Previous Severity | Area | Resolution (Verified) | Location(s) |
+| --- | ----------------- | ---- | ---------------------- | ----------- |
+| 1 | Medium | Robustness / Detection | Replaced substring workspace detection with TOML parse + SDK marker checks | `cli/src/project/detection.rs` |
+| 2 | Medium | Error handling | Removed `expect()` on child stdio; now returns structured errors | `cli/src/project/param_extract.rs` |
+| 3 | Medium | Repo hygiene | Removed root `package-lock.json` and added ignore guard | `.gitignore` (+ repo root) |
+| 4 | Low | UX / Logging | Watcher log now prints the actual watched path (relative) | `cli/src/commands/start.rs` |
+| 5 | Low | Documentation / Maintainability | Added crate-level doc comment explaining purpose + template parity | `engine/crates/wavecraft-example/src/lib.rs` |
 
-None requiring an Architect handoff. This change stays within CLI detection + dev workflow routing and doesn't violate the documented layer boundaries (DSP vs bridge vs UI).
+## Outstanding Notes (Non-Blocking)
+
+- Playwright visual testing tools were disabled during the Tester session; UI verification was performed via curl + server logs. Visual verification can be added later when tooling is available.
 
 ## Handoff Decision
 
-**Target Agent**: `coder`  
-**Reasoning**: Only Medium/Low issues remain and they are localized (robust detection, panic removal, repo lockfile cleanup, minor logging/doc polish). No architectural redesign needed.
+**Target Agent**: `architect` (optional) or `po` (when appropriate)  
+**Reasoning**: QA is complete with final PASS; no remaining findings require engineering changes.
