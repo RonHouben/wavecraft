@@ -346,11 +346,17 @@ jobs:
 
       - name: Set final version
         id: final
+        if: steps.version.outputs.action != 'skip'
         run: |
-          VERSION="${{ steps.version.outputs.version }}${{ steps.bump.outputs.version }}"
+          if [ "${{ steps.version.outputs.action }}" = "bump" ]; then
+            VERSION="${{ steps.bump.outputs.version }}"
+          else
+            VERSION="${{ steps.version.outputs.version }}"
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Verify version not already published
+        if: steps.version.outputs.action != 'skip'
         run: |
           VERSION="${{ steps.final.outputs.version }}"
           # Check if this exact version exists on crates.io
@@ -363,20 +369,24 @@ jobs:
           echo "✅ Version $VERSION is not yet on crates.io — safe to publish"
 
       - name: Verify publishability (dry-run)
+        if: steps.version.outputs.action != 'skip'
         working-directory: cli
         run: cargo publish --dry-run
 
       - name: Authenticate with crates.io (OIDC)
+        if: steps.version.outputs.action != 'skip'
         id: crates-auth
         uses: rust-lang/crates-io-auth-action@v1
 
       - name: Publish to crates.io
+        if: steps.version.outputs.action != 'skip'
         working-directory: cli
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.crates-auth.outputs.token }}
         run: cargo publish
 
       - name: Create and push git tag
+        if: steps.version.outputs.action != 'skip'
         run: |
           git tag "wavecraft-cli-v${{ steps.final.outputs.version }}"
           git push origin "wavecraft-cli-v${{ steps.final.outputs.version }}"
@@ -544,11 +554,17 @@ jobs:
 
       - name: Set final version
         id: final
+        if: steps.version.outputs.action != 'skip'
         run: |
-          VERSION="${{ steps.version.outputs.version }}${{ steps.bump.outputs.version }}"
+          if [ "${{ steps.version.outputs.action }}" = "bump" ]; then
+            VERSION="${{ steps.bump.outputs.version }}"
+          else
+            VERSION="${{ steps.version.outputs.version }}"
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Verify version not already published
+        if: steps.version.outputs.action != 'skip'
         run: |
           VERSION="${{ steps.final.outputs.version }}"
           # Check if this exact version exists on crates.io
@@ -561,6 +577,7 @@ jobs:
           echo "✅ Version $VERSION is not yet on crates.io — safe to publish"
 
       - name: Verify publishability (dry-run)
+        if: steps.version.outputs.action != 'skip'
         working-directory: engine
         run: |
           cargo ws publish \
@@ -571,10 +588,12 @@ jobs:
             --dry-run
 
       - name: Authenticate with crates.io (OIDC)
+        if: steps.version.outputs.action != 'skip'
         id: crates-auth
         uses: rust-lang/crates-io-auth-action@v1
 
       - name: Publish to crates.io
+        if: steps.version.outputs.action != 'skip'
         working-directory: engine
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.crates-auth.outputs.token }}
@@ -586,6 +605,7 @@ jobs:
             --from-git
 
       - name: Push tags only
+        if: steps.version.outputs.action != 'skip'
         run: git push origin --tags
 
   # ============================================================================
@@ -681,7 +701,7 @@ jobs:
             
             for i in $(seq 1 $MAX_ATTEMPTS); do
               # Query the sparse index directly (bypasses CDN caching)
-              LATEST=$(curl -s "https://index.crates.io/wa/ve/$CRATE" \
+              LATEST=$(curl -s "https://index.crates.io/${CRATE:0:2}/${CRATE:2:2}/$CRATE" \
                 | grep "\"vers\":\"$VERSION\"" > /dev/null 2>&1 && echo "$VERSION" || echo "not-found")
               
               if [ "$LATEST" = "$VERSION" ]; then
@@ -800,11 +820,17 @@ jobs:
 
       - name: Set final version
         id: final
+        if: steps.version.outputs.action != 'skip'
         run: |
-          VERSION="${{ steps.version.outputs.version }}${{ steps.bump.outputs.version }}"
+          if [ "${{ steps.version.outputs.action }}" = "bump" ]; then
+            VERSION="${{ steps.bump.outputs.version }}"
+          else
+            VERSION="${{ steps.version.outputs.version }}"
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Verify version not already published
+        if: steps.version.outputs.action != 'skip'
         run: |
           VERSION="${{ steps.final.outputs.version }}"
           # Check if this exact version exists on crates.io
@@ -817,14 +843,17 @@ jobs:
           echo "✅ Version $VERSION is not yet on crates.io — safe to publish"
 
       - name: Verify publishability (dry-run)
+        if: steps.version.outputs.action != 'skip'
         working-directory: dev-server
         run: cargo publish --dry-run
 
       - name: Authenticate with crates.io (OIDC)
+        if: steps.version.outputs.action != 'skip'
         id: crates-auth
         uses: rust-lang/crates-io-auth-action@v1
 
       - name: Publish to crates.io
+        if: steps.version.outputs.action != 'skip'
         working-directory: dev-server
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.crates-auth.outputs.token }}
@@ -850,6 +879,7 @@ jobs:
           exit 1
 
       - name: Create and push git tag
+        if: steps.version.outputs.action != 'skip'
         run: |
           git tag "wavecraft-dev-server-v${{ steps.final.outputs.version }}"
           git push origin "wavecraft-dev-server-v${{ steps.final.outputs.version }}"
