@@ -1,6 +1,6 @@
 # Wavecraft
 
-[![CI](https://github.com/RonHouben/wavecraft/actions/workflows/ci.yml/badge.svg)](https://github.com/RonHouben/wavecraft/actions/workflows/ci.yml)
+[![CI](https://github.com/RonHouben/wavecraft/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/RonHouben/wavecraft/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![crates.io](https://img.shields.io/crates/v/wavecraft.svg)](https://crates.io/crates/wavecraft)
 [![npm](https://img.shields.io/npm/v/@wavecraft/core.svg)](https://www.npmjs.com/package/@wavecraft/core)

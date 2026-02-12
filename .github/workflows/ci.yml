@@ -2,11 +2,8 @@ name: CI
 
 # Runs on:
 # - PRs to main (pre-merge validation)
-# - Pushes to main (README badge status)
 # - Workflow dispatch (manual runs)
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
