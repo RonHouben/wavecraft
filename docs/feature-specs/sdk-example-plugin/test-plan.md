@@ -436,3 +436,54 @@ None.
 ## Final Status
 
 ✅ **All tests passed. Implementation ready for QA.**
+
+---
+
+## Phase 5: Re-Validation After QA Fixes
+
+### RV-001: SDK Detection Tests
+**Description**: Re-validate SDK detection logic after TOML parsing + marker checks.
+**Steps**:
+1. Run `cargo test --manifest-path cli/Cargo.toml detection`
+**Expected Result**: All detection tests pass (9/9).
+**Status**: ✅ PASS
+**Actual Result**:
+```
+running 9 tests
+...
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured
+```
+
+### RV-002: CLI Test Suite
+**Description**: Ensure broader CLI tests still pass after error-handling changes.
+**Steps**:
+1. Run `cargo test --manifest-path cli/Cargo.toml`
+**Expected Result**: All CLI tests pass (53 total).
+**Status**: ✅ PASS
+
+### RV-003: Root package-lock cleanup
+**Description**: Confirm accidental root `package-lock.json` is removed and guarded.
+**Steps**:
+1. Verify `package-lock.json` is absent in repo root.
+2. Verify `.gitignore` contains `/package-lock.json`.
+**Expected Result**: File absent; ignore rule present.
+**Status**: ✅ PASS
+
+### RV-004: Watch-path logging accuracy (SDK mode)
+**Description**: Ensure watch-path log reflects actual SDK-mode path.
+**Steps**:
+1. Run `cargo xtask dev` from SDK root.
+2. Observe watcher log.
+**Expected Result**: Log shows `engine/crates/wavecraft-example/src`.
+**Status**: ✅ PASS
+**Actual Result**:
+```
+👀 Watching engine/crates/wavecraft-example/src for changes
+```
+
+### RV-005: Example crate documentation
+**Description**: Confirm module doc comment explains crate purpose and template parity.
+**Steps**:
+1. Open `engine/crates/wavecraft-example/src/lib.rs`.
+**Expected Result**: Top-of-file doc comment describing SDK dev usage and template parity.
+**Status**: ✅ PASS

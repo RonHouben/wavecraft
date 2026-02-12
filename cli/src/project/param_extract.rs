@@ -54,8 +54,14 @@ pub async fn extract_params_subprocess(
         })?;
 
     // Take ownership of stdout/stderr before consuming child
-    let mut stdout = child.stdout.take().expect("stdout not captured");
-    let mut stderr = child.stderr.take().expect("stderr not captured");
+    let mut stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| anyhow::anyhow!("Failed to capture subprocess stdout"))?;
+    let mut stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| anyhow::anyhow!("Failed to capture subprocess stderr"))?;
 
     // Wait for the subprocess with timeout (using wait() not wait_with_output())
     match tokio::time::timeout(timeout, child.wait()).await {

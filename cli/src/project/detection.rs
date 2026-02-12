@@ -93,9 +93,35 @@ impl ProjectMarkers {
 }
 
 /// Check if the given Cargo.toml defines a workspace (SDK repo) vs a package (plugin project).
+///
+/// Uses a combination of checks to robustly identify the SDK repo:
+/// 1. Parse the Cargo.toml to confirm it's a valid workspace
+/// 2. Check for SDK-specific markers (cli/Cargo.toml and engine/crates/wavecraft-core)
 fn is_sdk_repo(cargo_toml_path: &Path) -> Result<bool> {
+    // Parse TOML to check for [workspace] table
     let content = std::fs::read_to_string(cargo_toml_path)?;
-    Ok(content.contains("[workspace]"))
+    let parsed: toml::Value = toml::from_str(&content)
+        .map_err(|e| anyhow::anyhow!("Failed to parse Cargo.toml: {}", e))?;
+
+    // Must have a [workspace] table
+    if parsed.get("workspace").is_none() {
+        return Ok(false);
+    }
+
+    // Additional check: confirm this is the Wavecraft SDK by looking for marker files
+    let repo_root = cargo_toml_path
+        .parent()
+        .and_then(|p| p.parent())
+        .ok_or_else(|| anyhow::anyhow!("Invalid cargo_toml_path"))?;
+
+    let has_cli = repo_root.join("cli").join("Cargo.toml").is_file();
+    let has_core_crate = repo_root
+        .join("engine")
+        .join("crates")
+        .join("wavecraft-core")
+        .is_dir();
+
+    Ok(has_cli && has_core_crate)
 }
 
 /// Check if UI dependencies are installed.
@@ -205,15 +231,31 @@ mod tests {
     fn test_sdk_repo_detection() {
         let tmp = TempDir::new().unwrap();
 
-        // Create SDK-like structure with [workspace] in Cargo.toml
+        // Create SDK-like structure with [workspace] in Cargo.toml + marker files
         fs::create_dir_all(tmp.path().join("ui")).unwrap();
         fs::create_dir_all(tmp.path().join("engine/crates/wavecraft-example/src")).unwrap();
+        fs::create_dir_all(tmp.path().join("engine/crates/wavecraft-core/src")).unwrap();
+        fs::create_dir_all(tmp.path().join("cli")).unwrap();
+
         fs::write(tmp.path().join("ui/package.json"), "{}").unwrap();
         fs::write(
             tmp.path().join("engine/Cargo.toml"),
             "[workspace]\nmembers = [\"crates/*\"]",
         )
         .unwrap();
+
+        // Create SDK marker files
+        fs::write(
+            tmp.path().join("cli/Cargo.toml"),
+            "[package]\nname = \"wavecraft\"",
+        )
+        .unwrap();
+        fs::write(
+            tmp.path().join("engine/crates/wavecraft-core/Cargo.toml"),
+            "[package]\nname = \"wavecraft-core\"",
+        )
+        .unwrap();
+
         fs::write(
             tmp.path().join("engine/crates/wavecraft-example/Cargo.toml"),
             "[package]\nname = \"wavecraft-example\"\n\n[lib]\nname = \"wavecraft_example\"\ncrate-type = [\"cdylib\"]",
@@ -246,15 +288,31 @@ mod tests {
     fn test_sdk_mode_missing_example() {
         let tmp = TempDir::new().unwrap();
 
-        // Create SDK structure WITHOUT wavecraft-example directory
+        // Create SDK structure WITH marker files but WITHOUT wavecraft-example directory
         fs::create_dir_all(tmp.path().join("ui")).unwrap();
         fs::create_dir_all(tmp.path().join("engine")).unwrap();
+        fs::create_dir_all(tmp.path().join("engine/crates/wavecraft-core")).unwrap();
+        fs::create_dir_all(tmp.path().join("cli")).unwrap();
+
         fs::write(tmp.path().join("ui/package.json"), "{}").unwrap();
         fs::write(
             tmp.path().join("engine/Cargo.toml"),
             "[workspace]\nmembers = [\"crates/*\"]",
         )
         .unwrap();
+
+        // Create SDK marker files
+        fs::write(
+            tmp.path().join("cli/Cargo.toml"),
+            "[package]\nname = \"wavecraft\"",
+        )
+        .unwrap();
+        fs::write(
+            tmp.path().join("engine/crates/wavecraft-core/Cargo.toml"),
+            "[package]\nname = \"wavecraft-core\"",
+        )
+        .unwrap();
+
         // Note: NOT creating wavecraft-example/
 
         let result = ProjectMarkers::detect(tmp.path());

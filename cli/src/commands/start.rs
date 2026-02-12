@@ -499,7 +499,15 @@ fn run_dev_servers(
             None, // Audio handle will be added if audio starts
         )
     })?;
-    println!("{} Watching engine/src/ for changes", style("👀").cyan());
+    let watched_path = project.engine_dir.join("src");
+    let relative_path = watched_path
+        .strip_prefix(std::env::current_dir().unwrap_or_default())
+        .unwrap_or(&watched_path);
+    println!(
+        "{} Watching {} for changes",
+        style("👀").cyan(),
+        relative_path.display()
+    );
     println!();
 
     // 5. Try to start audio in-process via FFI (optional, graceful fallback)
