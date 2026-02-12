@@ -44,6 +44,8 @@ cargo xtask test
 
 Use Docker + `act` when validating GitHub Actions workflow changes, Linux-specific behavior, or job orchestration.
 
+**⚠️ Agent Handoff:** If you don't have terminal execution tools available, delegate to an agent who does (Coder or Tester) to run the Docker/act commands below.
+
 ### Prerequisites (Docker path)
 
 - **Docker Desktop** must be installed and running

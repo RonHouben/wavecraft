@@ -35,6 +35,7 @@ This is a bugfix with no associated feature documentation (using lightweight wor
 - [x] CI verification: continuous-deploy workflow logic reviewed and tested with version comparison scenarios
 
 **Verification method:**
+
 - Reviewed the workflow changes to ensure auto-bump logic correctly handles `local < published` case
 - Verified all version numbers are consistent across workspace and crates
 - Confirmed Cargo.lock files are updated
