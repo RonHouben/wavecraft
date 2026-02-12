@@ -477,12 +477,14 @@ fn run_dev_servers(
     // Create rebuild callbacks: wire CLI-specific functions into the dev-server pipeline
     let callbacks = RebuildCallbacks {
         package_name: read_engine_package_name(&project.engine_dir),
-        write_sidecar: Some(std::sync::Arc::new(|engine_dir: &Path, params: &[ParameterInfo]| {
-            write_sidecar_cache(engine_dir, params)
-        })),
+        write_sidecar: Some(std::sync::Arc::new(
+            |engine_dir: &Path, params: &[ParameterInfo]| write_sidecar_cache(engine_dir, params),
+        )),
         param_loader: std::sync::Arc::new(move |engine_dir: PathBuf| {
             Box::pin(load_parameters_from_dylib(engine_dir))
-                as std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<ParameterInfo>>> + Send>>
+                as std::pin::Pin<
+                    Box<dyn std::future::Future<Output = Result<Vec<ParameterInfo>>> + Send>,
+                >
         }),
     };
 
@@ -575,9 +577,9 @@ fn run_dev_servers(
             "UI dev server exited unexpectedly with status {}",
             status
         )),
-        ShutdownReason::UiExitedUnknown => Err(anyhow::anyhow!(
-            "UI dev server exited unexpectedly"
-        )),
+        ShutdownReason::UiExitedUnknown => {
+            Err(anyhow::anyhow!("UI dev server exited unexpectedly"))
+        }
         ShutdownReason::CtrlC | ShutdownReason::ChannelClosed => Ok(()),
     }
 }
