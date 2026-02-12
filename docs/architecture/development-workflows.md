@@ -116,6 +116,10 @@ cargo xtask dev
 wavecraft start
 ```
 
+**SDK Mode Detection:**
+
+When `cargo xtask dev` (or `wavecraft start`) is run from the SDK repository root, the CLI detects the `[workspace]` in `engine/Cargo.toml` and automatically enters "SDK mode." In this mode, the CLI redirects all engine operations (build, parameter extraction, FFI loading, file watching) to `engine/crates/wavecraft-example/` — a minimal example plugin that mirrors the template structure. This allows SDK developers to iterate on UI and engine changes without scaffolding a separate plugin project.
+
 **Dev server startup behavior (CLI `wavecraft start`):**
 
 - Performs preflight checks to ensure the WebSocket and UI ports are free before starting any servers.

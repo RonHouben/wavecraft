@@ -82,7 +82,8 @@ wavecraft/
 │   │   ├── wavecraft-protocol/    # IPC contracts
 │   │   ├── wavecraft-bridge/      # IPC handler
 │   │   ├── wavecraft-metering/    # Real-time metering
-│   │   └── wavecraft-dsp/         # DSP primitives
+│   │   ├── wavecraft-dsp/         # DSP primitives
+│   │   └── wavecraft-example/     # Example plugin for SDK development (publish = false)
 │   └── xtask/                     # Build automation
 ├── packaging/                     # AU wrapper, installers
 ├── scripts/                       # Development scripts

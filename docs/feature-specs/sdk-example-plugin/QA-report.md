@@ -46,13 +46,13 @@ Re-validation after QA fixes is documented in **Phase 5** of `test-plan.md`:
 
 ## Findings (All Resolved)
 
-| ID  | Previous Severity | Area | Resolution (Verified) | Location(s) |
-| --- | ----------------- | ---- | ---------------------- | ----------- |
-| 1 | Medium | Robustness / Detection | Replaced substring workspace detection with TOML parse + SDK marker checks | `cli/src/project/detection.rs` |
-| 2 | Medium | Error handling | Removed `expect()` on child stdio; now returns structured errors | `cli/src/project/param_extract.rs` |
-| 3 | Medium | Repo hygiene | Removed root `package-lock.json` and added ignore guard | `.gitignore` (+ repo root) |
-| 4 | Low | UX / Logging | Watcher log now prints the actual watched path (relative) | `cli/src/commands/start.rs` |
-| 5 | Low | Documentation / Maintainability | Added crate-level doc comment explaining purpose + template parity | `engine/crates/wavecraft-example/src/lib.rs` |
+| ID  | Previous Severity | Area                            | Resolution (Verified)                                                      | Location(s)                                  |
+| --- | ----------------- | ------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------- |
+| 1   | Medium            | Robustness / Detection          | Replaced substring workspace detection with TOML parse + SDK marker checks | `cli/src/project/detection.rs`               |
+| 2   | Medium            | Error handling                  | Removed `expect()` on child stdio; now returns structured errors           | `cli/src/project/param_extract.rs`           |
+| 3   | Medium            | Repo hygiene                    | Removed root `package-lock.json` and added ignore guard                    | `.gitignore` (+ repo root)                   |
+| 4   | Low               | UX / Logging                    | Watcher log now prints the actual watched path (relative)                  | `cli/src/commands/start.rs`                  |
+| 5   | Low               | Documentation / Maintainability | Added crate-level doc comment explaining purpose + template parity         | `engine/crates/wavecraft-example/src/lib.rs` |
 
 ## Outstanding Notes (Non-Blocking)
 
