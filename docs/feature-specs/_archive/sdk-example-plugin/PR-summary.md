@@ -12,11 +12,13 @@ This PR adds the `wavecraft-example` crate to enable `cargo xtask dev` directly 
 ## Changes
 
 ### **Engine/DSP** (Rust changes in `engine/crates/`)
+
 - Added `wavecraft-example` crate with example plugin implementation
   - `engine/crates/wavecraft-example/Cargo.toml` (23 lines)
   - `engine/crates/wavecraft-example/src/lib.rs` (20 lines)
 
 ### **CLI** (Detection and error handling)
+
 - Enhanced SDK mode detection with TOML parsing and workspace marker checks
   - `cli/src/project/detection.rs` (+179 lines net)
 - Improved dylib discovery and parameter extraction error handling
@@ -27,12 +29,14 @@ This PR adds the `wavecraft-example` crate to enable `cargo xtask dev` directly 
   - `cli/src/commands/start.rs` (+26 lines net)
 
 ### **Build/Config**
+
 - Updated workspace dependencies and lockfile
   - `engine/Cargo.lock` (96 lines changed)
 - Improved `.gitignore` patterns
   - `.gitignore` (+3 lines)
 
 ### **Documentation**
+
 - Archived comprehensive feature documentation
   - `docs/feature-specs/_archive/sdk-example-plugin/implementation-plan.md` (391 lines)
   - `docs/feature-specs/_archive/sdk-example-plugin/low-level-design-sdk-example-plugin.md` (349 lines)
@@ -68,12 +72,14 @@ bf15017 feat: add SDK example plugin crate for development and testing
 ## Testing
 
 ### Automated Checks (Pre-handoff)
+
 - ✅ **Build passes**: `cargo xtask ci-check` (linting, formatting, tests)
 - ✅ **Engine tests**: All Rust tests pass
 - ✅ **UI tests**: All Vitest tests pass
 - ✅ **CLI tests**: SDK detection and parameter extraction unit tests pass
 
 ### Manual Testing (7/7 PASS)
+
 1. ✅ **TC-001**: Pre-flight CI check (all automated checks)
 2. ✅ **TC-002**: SDK mode startup from repo root
 3. ✅ **TC-003**: Parameter extraction and IPC communication
@@ -83,6 +89,7 @@ bf15017 feat: add SDK example plugin crate for development and testing
 7. ✅ **TC-007**: Plugin project validation
 
 ### QA Static Analysis (PASS)
+
 - ✅ No critical, high, medium, or low severity findings
 - ✅ All 5 QA findings resolved and verified:
   1. Robust TOML-based workspace detection
@@ -108,16 +115,19 @@ bf15017 feat: add SDK example plugin crate for development and testing
 ## Impact
 
 ### Developer Experience
+
 - SDK contributors can now run `cargo xtask dev` from the repository root without manually creating plugin projects
 - Clear error messages when running dev server in incorrect context
 - Improved logging shows actual watched paths for better troubleshooting
 
 ### Code Quality
+
 - Robust SDK detection prevents runtime errors
 - Structured error handling replaces `expect()` panics
 - Comprehensive test coverage (automated + manual)
 
 ### Maintenance
+
 - Example plugin demonstrates SDK usage patterns
 - Template parity ensures consistency with `wavecraft create`
 - Archived documentation preserves implementation context
