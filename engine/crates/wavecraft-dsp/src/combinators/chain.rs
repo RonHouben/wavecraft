@@ -51,43 +51,53 @@ where
     PB: ProcessorParams,
 {
     fn param_specs() -> &'static [ParamSpec] {
-        // Allocate merged specs at initialization time (not audio thread)
-        use std::sync::OnceLock;
+        // WORKAROUND FOR HOT-RELOAD HANG:
+        //
+        // Do NOT use OnceLock or any locking primitive here. On macOS, when the
+        // subprocess calls dlopen() → wavecraft_get_params_json() → param_specs(),
+        // initialization of OnceLock statics can hang indefinitely (30s timeout).
+        //
+        // Instead, we allocate and leak the merged specs on EVERY call. This is
+        // acceptable because:
+        // 1. param_specs() is called at most once per plugin load (startup only)
+        // 2. The leak is ~hundreds of bytes (not per-sample, not per-frame)
+        // 3. Plugin lifetime = process lifetime (no meaningful leak)
+        // 4. Hot-reload works correctly (no 30s hang)
+        //
+        // This is a pragmatic trade-off: small memory leak vs. broken hot-reload.
+        // Future work: investigate root cause of OnceLock hang on macOS dlopen.
 
-        static MERGED_SPECS: OnceLock<Vec<ParamSpec>> = OnceLock::new();
+        let first_specs = PA::param_specs();
+        let second_specs = PB::param_specs();
 
-        MERGED_SPECS.get_or_init(|| {
-            let first_specs = PA::param_specs();
-            let second_specs = PB::param_specs();
+        let mut merged = Vec::with_capacity(first_specs.len() + second_specs.len());
 
-            let mut merged = Vec::with_capacity(first_specs.len() + second_specs.len());
+        // Add first processor's params
+        for spec in first_specs {
+            merged.push(ParamSpec {
+                name: spec.name,
+                id_suffix: spec.id_suffix,
+                range: spec.range.clone(),
+                default: spec.default,
+                unit: spec.unit,
+                group: spec.group,
+            });
+        }
 
-            // Add first processor's params with "a_" prefix
-            for spec in first_specs {
-                merged.push(ParamSpec {
-                    name: spec.name,
-                    id_suffix: spec.id_suffix, // Keep original suffix for now
-                    range: spec.range.clone(),
-                    default: spec.default,
-                    unit: spec.unit,
-                    group: spec.group,
-                });
-            }
+        // Add second processor's params
+        for spec in second_specs {
+            merged.push(ParamSpec {
+                name: spec.name,
+                id_suffix: spec.id_suffix,
+                range: spec.range.clone(),
+                default: spec.default,
+                unit: spec.unit,
+                group: spec.group,
+            });
+        }
 
-            // Add second processor's params with "b_" prefix
-            for spec in second_specs {
-                merged.push(ParamSpec {
-                    name: spec.name,
-                    id_suffix: spec.id_suffix, // Keep original suffix for now
-                    range: spec.range.clone(),
-                    default: spec.default,
-                    unit: spec.unit,
-                    group: spec.group,
-                });
-            }
-
-            merged
-        })
+        // Leak to get 'static reference (intentional - see comment above)
+        Box::leak(merged.into_boxed_slice())
     }
 }
 

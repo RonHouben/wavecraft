@@ -16,40 +16,41 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 
 Reported from developer testing session (2026-02-08). These are framework-level issues that can't be properly solved at the plugin level.
 
-| Item | Severity | Notes |
-|------|----------|-------|
-| AudioServer has no output stream | Critical | `AudioServer` only opens `build_input_stream()` — reads mic data for metering but never calls `processor.process()`. No `build_output_stream()` exists. Should support both input-passthrough (effects) and output-only (generators/oscillators) modes. For generators, needs a `cpal` output stream that calls `processor.process()` with empty buffers and sends the result to speakers. **Crate:** `wavecraft-dev-server` |
+| Item                                       | Severity | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AudioServer has no output stream           | Critical | `AudioServer` only opens `build_input_stream()` — reads mic data for metering but never calls `processor.process()`. No `build_output_stream()` exists. Should support both input-passthrough (effects) and output-only (generators/oscillators) modes. For generators, needs a `cpal` output stream that calls `processor.process()` with empty buffers and sends the result to speakers. **Crate:** `wavecraft-dev-server`                                                                                                                            |
 | Parameter changes don't reach audio thread | Critical | The `wavecraft_plugin!` macro's `build_processor_params()` always returns default params — nih-plug UI params are visible and automatable, but `Processor::process()` never receives updated values (documented known limitation). Need to bridge nih-plug `FloatParam` values into the `Params` struct passed to `process()` each block. For dev-server path, WebSocket `setParameter` messages should update a shared `Arc<AtomicF32>` or lock-free ring buffer that the audio callback reads. **Crates:** `wavecraft-macros`, `wavecraft-dev-server` |
-| UI race condition on parameter load | Minor | `useAllParameters()` fires once on mount before the WebSocket connects, fails silently, and never retries. Either have `WebSocketTransport` emit a "connected" event that triggers a re-fetch, or have `useAllParameters()` retry when connection state changes. **Package:** `@wavecraft/core` |
+| UI race condition on parameter load        | Minor    | `useAllParameters()` fires once on mount before the WebSocket connects, fails silently, and never retries. Either have `WebSocketTransport` emit a "connected" event that triggers a re-fetch, or have `useAllParameters()` retry when connection state changes. **Package:** `@wavecraft/core`                                                                                                                                                                                                                                                         |
 
 ---
 
 ## Developer Experience
 
-| Item | Notes |
-|------|-------|
-| Remove audio signal mocking to UI | Remove all audio signal mocking infrastructure since it's not currently needed. Reduces complexity and maintenance burden. Can be re-implemented later if real audio visualization is required. YAGNI principle — keep the codebase lean. |
-| Browser audio input via WASM | Enable testing UI with real audio input (mic, files, test tones) in browser dev mode. Tiered architecture: Mock DSP (JS) for fast HMR, optional WASM DSP for integration testing. Rust remains parameter source of truth. See [high-level design](feature-specs/audio-input-via-wasm/high-level-design.md). |
+| Item                                                                   | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Remove audio signal mocking to UI                                      | Remove all audio signal mocking infrastructure since it's not currently needed. Reduces complexity and maintenance burden. Can be re-implemented later if real audio visualization is required. YAGNI principle — keep the codebase lean.                                                                                                                                                                                                                                                       |
+| Browser audio input via WASM                                           | Enable testing UI with real audio input (mic, files, test tones) in browser dev mode. Tiered architecture: Mock DSP (JS) for fast HMR, optional WASM DSP for integration testing. Rust remains parameter source of truth. See [high-level design](feature-specs/audio-input-via-wasm/high-level-design.md).                                                                                                                                                                                     |
 | SDK dev mode: crate version mismatch in `wavecraft start` audio binary | In SDK dev mode (CLI run via `cargo run`), the main `wavecraft` dependency is patched to use local **path** deps, but `wavecraft-dev-server` and `wavecraft-dsp` still resolve via **git tag**. Cargo treats these as separate crates, making their `Processor` trait incompatible (`E0277`). Fix: CLI's auto-detection should also patch transitive dev deps to path dependencies. **Does not affect end users** (git tag deps are consistent). Only affects SDK contributors testing locally. |
 
 ---
 
 ## Performance
 
-| Item | Notes |
-|------|-------|
-| Performance profiling (low buffer sizes: 32/64 samples) | Stress test DSP at extreme settings |
-| CPU stress testing | Multi-instance load testing |
-| Memory usage optimization | Profile and reduce allocations |
+| Item                                                    | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Optimize Rust dev build times                           | Dev builds with `cargo xtask dev` or `cargo build` currently compile without optimizations, leading to slow runtime even during iterative development. **Proposal:** Add optimized dev profile to `engine/Cargo.toml`: `[profile.dev] opt-level = 1, incremental = true, debug = true` with `[profile.dev.package."*"] opt-level = 3` for dependencies. **Acceptance Criteria:** (1) Dev build runtime improves noticeably (e.g., UI hot-reload responsiveness, DSP iteration speed) while keeping rebuild times reasonable (<5s for incremental); (2) No CI regressions (CI uses release builds); (3) Debug symbols preserved for profiling/debugging. **Decision Points:** Apply only to `engine/` vs all workspaces (`cli/`, `dev-server/`); whether to recommend `~/.cargo/config.toml` linker tweaks (lld, mold) or keep changes repo-only; document in `docs/architecture/development-workflows.md` vs inline comments only. |
+| Performance profiling (low buffer sizes: 32/64 samples) | Stress test DSP at extreme settings                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| CPU stress testing                                      | Multi-instance load testing                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Memory usage optimization                               | Profile and reduce allocations                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
 ---
 
 ## Platform Support
 
-| Item | Notes |
-|------|-------|
-| WebView2 integration (Windows) | Deprioritized — macOS + Ableton is primary target |
-| Linux packaging (AppImage/Flatpak) | Deprioritized |
+| Item                               | Notes                                             |
+| ---------------------------------- | ------------------------------------------------- |
+| WebView2 integration (Windows)     | Deprioritized — macOS + Ableton is primary target |
+| Linux packaging (AppImage/Flatpak) | Deprioritized                                     |
 
 ---
 
@@ -59,14 +60,15 @@ Reported from developer testing session (2026-02-08). These are framework-level 
 
 **Strategy:** Prepare for independence, don't abandon what works.
 
-| Item | Priority | Notes |
-|------|----------|-------|
-| Abstraction Layer for Plugin Host | High | Create `wavecraft-plugin-api` trait abstraction to decouple Wavecraft from nih-plug internals. Enables future backend swapping without breaking user code. **Effort:** 2 weeks |
-| nih-plug Fork Contingency | Medium (On-Trigger) | **Trigger:** Critical bug affecting Wavecraft unresolved upstream >4 weeks. Fork to `wavecraft-org/nih-plug`, apply targeted fixes, contribute upstream. **Effort:** As needed |
-| Native VST3 Spike | Medium | Evaluate MIT-licensed VST3 SDK + bindgen approach. Build minimal PoC (audio passthrough, no GUI), test in Ableton Live. **Timeline:** Q2 2026. **Effort:** 2-4 weeks spike |
-| Monitor nih-plug Health | Low (Ongoing) | Monthly check: commit activity, issue response times, macOS/Ableton-critical issues. Update strategy if activity resumes or stops entirely. |
+| Item                              | Priority            | Notes                                                                                                                                                                          |
+| --------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Abstraction Layer for Plugin Host | High                | Create `wavecraft-plugin-api` trait abstraction to decouple Wavecraft from nih-plug internals. Enables future backend swapping without breaking user code. **Effort:** 2 weeks |
+| nih-plug Fork Contingency         | Medium (On-Trigger) | **Trigger:** Critical bug affecting Wavecraft unresolved upstream >4 weeks. Fork to `wavecraft-org/nih-plug`, apply targeted fixes, contribute upstream. **Effort:** As needed |
+| Native VST3 Spike                 | Medium              | Evaluate MIT-licensed VST3 SDK + bindgen approach. Build minimal PoC (audio passthrough, no GUI), test in Ableton Live. **Timeline:** Q2 2026. **Effort:** 2-4 weeks spike     |
+| Monitor nih-plug Health           | Low (Ongoing)       | Monthly check: commit activity, issue response times, macOS/Ableton-critical issues. Update strategy if activity resumes or stops entirely.                                    |
 
 **Known nih-plug Issues Affecting Wavecraft:**
+
 - macOS window resize bugs (unresolved)
 - Retina display issues (unresolved)
 - DAW crash reports (multiple hosts)
@@ -75,32 +77,33 @@ Reported from developer testing session (2026-02-08). These are framework-level 
 
 ## DAW Compatibility
 
-| Item | Notes |
-|------|-------|
-| Logic Pro (macOS, AU) | Secondary (nice-to-have) |
+| Item                   | Notes                    |
+| ---------------------- | ------------------------ |
+| Logic Pro (macOS, AU)  | Secondary (nice-to-have) |
 | GarageBand (macOS, AU) | Secondary (nice-to-have) |
-| Reaper (all platforms) | Deprioritized |
-| Cubase | Deprioritized |
-| FL Studio | Deprioritized |
+| Reaper (all platforms) | Deprioritized            |
+| Cubase                 | Deprioritized            |
+| FL Studio              | Deprioritized            |
 
 ---
 
 ## AU Issues (Deprioritized)
 
-| Item | Notes |
-|------|-------|
+| Item                           | Notes                                                                                                                   |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
 | Investigate AU custom UI issue | clap-wrapper shows generic view instead of React UI; root cause TBD. **Deprioritized** — focusing on VST3/CLAP for now. |
 
 ---
 
 ## Project Rename
 
-| Item | Notes |
-|------|-------|
+| Item                                | Notes                                                                                                                                                                                                                                                                                                                   |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Request GitHub `wavecraft` username | GitHub username `WaveCraft` is held by an inactive user (no activity since 2020, 1 repo about electronics). Submit request via [GitHub's Name Squatting Policy](https://docs.github.com/en/site-policy/other-site-policies/github-username-policy) after project is stable/public. Current repo: `RonHouben/wavecraft`. |
-| Register `wavecraft.dev` domain | Available at €10.89/yr on Namecheap. Optional — register when ready for public docs site. |
+| Register `wavecraft.dev` domain     | Available at €10.89/yr on Namecheap. Optional — register when ready for public docs site.                                                                                                                                                                                                                               |
 
 **Availability (Verified 2026-02-02):**
+
 - [x] **crates.io**: `wavecraft`, `wavecraft-core`, `wavecraft-dsp`, etc. — ✅ Available
 - [x] **npm**: `@wavecraft/*` namespace — ✅ Available
 - [x] **Domain**: `wavecraft.dev` — ✅ Available (€10.89/yr)
@@ -110,27 +113,28 @@ Reported from developer testing session (2026-02-08). These are framework-level 
 
 ## Changelog
 
-| Date | Update |
-|------|--------|
-| 2026-02-08 | **Items promoted to Milestone 18**: AudioServer no output stream (Critical), Parameter changes don't reach audio thread (Critical), and UI race condition on parameter load (Minor) promoted to new Milestone 18 (Audio Pipeline Fixes). Remove audio signal mocking also promoted. Target version 0.10.0. User Testing renumbered to M19, V1.0 to M20. |
-| 2026-02-08 | **Bug found**: SDK dev mode crate version mismatch — `wavecraft start` audio binary fails when CLI is run via `cargo run` due to mixed path/git dependency resolution. Added to Developer Experience section. Does not affect end users. |
-| 2026-02-08 | **Backlog addition:** SDK Audio Architecture Gaps — three issues from developer test session: no audio output in dev-server (critical), params don't reach `process()` (critical), UI param load race condition (minor). All are framework-level gaps in `wavecraft-dev-server`, `wavecraft-macros`, and `@wavecraft/core`. |
-| 2026-02-08 | **Backlog addition:** Remove audio signal mocking to UI — reduces complexity and technical debt by removing unused infrastructure. YAGNI principle applied. |
-| 2026-02-08 | **Item promoted to Milestone 15**: Comprehensive workspace cleanup (`cargo xtask clean` extension) moved from backlog to roadmap as new Milestone 15 (Developer Tooling Polish). Target version 0.8.6. User stories created at `docs/feature-specs/workspace-cleanup/user-stories.md`. |
-| 2026-02-08 | **Items promoted to Milestone 14**: CLI `-v`/`--version` flag and CLI `update` command moved from backlog to new Milestone 14 (CLI Enhancements). Target version 0.8.1. |
-| 2026-02-07 | **Backlog addition:** Add CLI `update` command to update all project dependencies and packages (Rust + npm) in a plugin workspace. |
-| 2026-02-07 | **Backlog cleanup:** Removed the SDK Publication chapter. |
-| 2026-02-07 | **Backlog cleanup:** Removed the Apple Developer Account deferred chapter. |
-| 2026-02-07 | **Backlog cleanup:** Removed completed SDK publication items (CLI scaffolding, crates.io publish). |
-| 2026-02-07 | **Backlog cleanup:** Removed completed items to keep the backlog focused on pending work. |
-| 2026-02-07 | **Backlog addition:** Add CLI `-v`/`--version` flag so users can easily verify installed version. |
-| 2026-02-06 | **nih-plug Independence Strategy added**: New epic for defensive architecture — abstraction layer (High), fork contingency (Medium, on-trigger), native VST3 spike (Medium, Q2 2026), health monitoring (Low, ongoing). Motivated by nih-plug maintenance slowdown and VST3 MIT license change. |
-| 2026-02-03 | **CI/CD Optimization complete**: Marked all three CI items as complete — cache optimization, tiered artifact retention, and new `cargo xtask check` command for fast local validation (~52s). |
-| 2026-02-03 | **Code Quality complete**: Marked Logger class (UI) and `tracing` crate (Engine) as complete — both implemented in v0.6.1. |
-| 2026-02-03 | **UI Polish complete**: Marked horizontal scroll fix as complete — implemented in v0.6.1. |
-| 2026-02-03 | **CI/CD Optimization**: Added GitHub artifacts storage alternative item — investigate solutions to avoid pipeline failures from artifact storage limits (compress, external storage, release-only uploads, cleanup workflow). |
-| 2026-02-02 | **Backlog grooming**: Added SDK Publication section (CLI scaffolding, end-to-end testing, crates.io, docs site). Deprioritized AU custom UI investigation. Updated Project Rename status to complete (M9 done, PR #17 pending). |
-| 2026-02-02 | **Project Rename updated**: Availability verified — Wavecraft available on crates.io, npm, domain. GitHub username taken by inactive user; added task to request via Name Squatting Policy. Main rename work moved to Milestone 9. |
-| 2026-02-01 | **Code Quality section added**: Logger class (UI) and `log`/`tracing` crate (Engine) to replace direct console output |
-| 2026-02-01 | **UI Polish section added**: Horizontal scroll wiggle issue — block elastic scrolling on macOS |
-| 2026-02-01 | **Backlog created**: Split from roadmap Milestone 8 to separate committed work from future ideas. Items moved: CI cache optimization, performance profiling, platform support, DAW compatibility, AU issues, Apple Developer-dependent items. |
+| Date       | Update                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-02-11 | **Backlog addition:** Optimize Rust dev build times — use optimized dev profile (`opt-level = 1` for local code, `opt-level = 3` for dependencies) to improve runtime performance during development while keeping rebuild times reasonable. Includes acceptance criteria for runtime improvement, CI stability, and debug symbol preservation. Decision points documented for workspace scope and linker configuration. |
+| 2026-02-08 | **Items promoted to Milestone 18**: AudioServer no output stream (Critical), Parameter changes don't reach audio thread (Critical), and UI race condition on parameter load (Minor) promoted to new Milestone 18 (Audio Pipeline Fixes). Remove audio signal mocking also promoted. Target version 0.10.0. User Testing renumbered to M19, V1.0 to M20.                                                                  |
+| 2026-02-08 | **Bug found**: SDK dev mode crate version mismatch — `wavecraft start` audio binary fails when CLI is run via `cargo run` due to mixed path/git dependency resolution. Added to Developer Experience section. Does not affect end users.                                                                                                                                                                                 |
+| 2026-02-08 | **Backlog addition:** SDK Audio Architecture Gaps — three issues from developer test session: no audio output in dev-server (critical), params don't reach `process()` (critical), UI param load race condition (minor). All are framework-level gaps in `wavecraft-dev-server`, `wavecraft-macros`, and `@wavecraft/core`.                                                                                              |
+| 2026-02-08 | **Backlog addition:** Remove audio signal mocking to UI — reduces complexity and technical debt by removing unused infrastructure. YAGNI principle applied.                                                                                                                                                                                                                                                              |
+| 2026-02-08 | **Item promoted to Milestone 15**: Comprehensive workspace cleanup (`cargo xtask clean` extension) moved from backlog to roadmap as new Milestone 15 (Developer Tooling Polish). Target version 0.8.6. User stories created at `docs/feature-specs/workspace-cleanup/user-stories.md`.                                                                                                                                   |
+| 2026-02-08 | **Items promoted to Milestone 14**: CLI `-v`/`--version` flag and CLI `update` command moved from backlog to new Milestone 14 (CLI Enhancements). Target version 0.8.1.                                                                                                                                                                                                                                                  |
+| 2026-02-07 | **Backlog addition:** Add CLI `update` command to update all project dependencies and packages (Rust + npm) in a plugin workspace.                                                                                                                                                                                                                                                                                       |
+| 2026-02-07 | **Backlog cleanup:** Removed the SDK Publication chapter.                                                                                                                                                                                                                                                                                                                                                                |
+| 2026-02-07 | **Backlog cleanup:** Removed the Apple Developer Account deferred chapter.                                                                                                                                                                                                                                                                                                                                               |
+| 2026-02-07 | **Backlog cleanup:** Removed completed SDK publication items (CLI scaffolding, crates.io publish).                                                                                                                                                                                                                                                                                                                       |
+| 2026-02-07 | **Backlog cleanup:** Removed completed items to keep the backlog focused on pending work.                                                                                                                                                                                                                                                                                                                                |
+| 2026-02-07 | **Backlog addition:** Add CLI `-v`/`--version` flag so users can easily verify installed version.                                                                                                                                                                                                                                                                                                                        |
+| 2026-02-06 | **nih-plug Independence Strategy added**: New epic for defensive architecture — abstraction layer (High), fork contingency (Medium, on-trigger), native VST3 spike (Medium, Q2 2026), health monitoring (Low, ongoing). Motivated by nih-plug maintenance slowdown and VST3 MIT license change.                                                                                                                          |
+| 2026-02-03 | **CI/CD Optimization complete**: Marked all three CI items as complete — cache optimization, tiered artifact retention, and new `cargo xtask check` command for fast local validation (~52s).                                                                                                                                                                                                                            |
+| 2026-02-03 | **Code Quality complete**: Marked Logger class (UI) and `tracing` crate (Engine) as complete — both implemented in v0.6.1.                                                                                                                                                                                                                                                                                               |
+| 2026-02-03 | **UI Polish complete**: Marked horizontal scroll fix as complete — implemented in v0.6.1.                                                                                                                                                                                                                                                                                                                                |
+| 2026-02-03 | **CI/CD Optimization**: Added GitHub artifacts storage alternative item — investigate solutions to avoid pipeline failures from artifact storage limits (compress, external storage, release-only uploads, cleanup workflow).                                                                                                                                                                                            |
+| 2026-02-02 | **Backlog grooming**: Added SDK Publication section (CLI scaffolding, end-to-end testing, crates.io, docs site). Deprioritized AU custom UI investigation. Updated Project Rename status to complete (M9 done, PR #17 pending).                                                                                                                                                                                          |
+| 2026-02-02 | **Project Rename updated**: Availability verified — Wavecraft available on crates.io, npm, domain. GitHub username taken by inactive user; added task to request via Name Squatting Policy. Main rename work moved to Milestone 9.                                                                                                                                                                                       |
+| 2026-02-01 | **Code Quality section added**: Logger class (UI) and `log`/`tracing` crate (Engine) to replace direct console output                                                                                                                                                                                                                                                                                                    |
+| 2026-02-01 | **UI Polish section added**: Horizontal scroll wiggle issue — block elastic scrolling on macOS                                                                                                                                                                                                                                                                                                                           |
+| 2026-02-01 | **Backlog created**: Split from roadmap Milestone 8 to separate committed work from future ideas. Items moved: CI cache optimization, performance profiling, platform support, DAW compatibility, AU issues, Apple Developer-dependent items.                                                                                                                                                                            |
