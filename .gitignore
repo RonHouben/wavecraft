@@ -13,6 +13,9 @@
 /dev-server/target
 /target/tmp
 
+# Prevent accidental root package-lock.json (all npm work is in ui/)
+/package-lock.json
+
 # Playwright
 /ui/playwright-report/
 /ui/test-results/

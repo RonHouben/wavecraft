@@ -37,8 +37,7 @@ pub async fn extract_params_subprocess(
     timeout: Duration,
 ) -> Result<Vec<ParameterInfo>> {
     // Resolve the path to the current wavecraft binary
-    let self_exe = std::env::current_exe()
-        .context("Failed to determine wavecraft binary path")?;
+    let self_exe = std::env::current_exe().context("Failed to determine wavecraft binary path")?;
 
     // Spawn the extraction subprocess
     let mut child = tokio::process::Command::new(&self_exe)
@@ -55,8 +54,14 @@ pub async fn extract_params_subprocess(
         })?;
 
     // Take ownership of stdout/stderr before consuming child
-    let mut stdout = child.stdout.take().expect("stdout not captured");
-    let mut stderr = child.stderr.take().expect("stderr not captured");
+    let mut stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| anyhow::anyhow!("Failed to capture subprocess stdout"))?;
+    let mut stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| anyhow::anyhow!("Failed to capture subprocess stderr"))?;
 
     // Wait for the subprocess with timeout (using wait() not wait_with_output())
     match tokio::time::timeout(timeout, child.wait()).await {
@@ -65,27 +70,31 @@ pub async fn extract_params_subprocess(
             // Read stdout and stderr
             let mut stdout_buf = Vec::new();
             let mut stderr_buf = Vec::new();
-            
+
             use tokio::io::AsyncReadExt;
-            stdout.read_to_end(&mut stdout_buf).await
+            stdout
+                .read_to_end(&mut stdout_buf)
+                .await
                 .context("Failed to read subprocess stdout")?;
-            stderr.read_to_end(&mut stderr_buf).await
+            stderr
+                .read_to_end(&mut stderr_buf)
+                .await
                 .context("Failed to read subprocess stderr")?;
-            
+
             if status.success() {
                 // Parse stdout as JSON
                 let stdout_str = String::from_utf8(stdout_buf)
                     .context("Subprocess stdout was not valid UTF-8")?;
-                
+
                 let params: Vec<ParameterInfo> = serde_json::from_str(stdout_str.trim())
                     .context("Failed to parse parameter JSON from subprocess")?;
-                
+
                 Ok(params)
             } else {
                 // Subprocess exited with error
                 let stderr_str = String::from_utf8_lossy(&stderr_buf);
                 let code = status.code().unwrap_or(-1);
-                
+
                 anyhow::bail!(
                     "Parameter extraction failed (exit code {}):\n{}",
                     code,
@@ -93,17 +102,17 @@ pub async fn extract_params_subprocess(
                 );
             }
         }
-        
+
         // Failed to wait for subprocess
         Ok(Err(e)) => {
             anyhow::bail!("Failed to wait for extraction subprocess: {}", e);
         }
-        
+
         // Timeout — kill the subprocess
         Err(_) => {
             // Now we can kill because child wasn't consumed
             let _ = child.kill().await;
-            
+
             anyhow::bail!(
                 "Parameter extraction timed out after {}s. \
                  This is likely caused by macOS static initializers in the plugin dylib. \

@@ -1,0 +1,23 @@
+[package]
+name = "wavecraft-example"
+description = "Example Wavecraft plugin for SDK development and testing"
+publish = false
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[lib]
+name = "wavecraft_example"
+crate-type = ["cdylib"]
+
+[dependencies]
+wavecraft = { package = "wavecraft-nih_plug", path = "../wavecraft-nih_plug" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+log = "0.4"
+
+[features]
+default = []
+_param-discovery = []

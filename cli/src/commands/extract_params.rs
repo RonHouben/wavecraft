@@ -36,14 +36,14 @@ pub fn execute(dylib_path: PathBuf) -> Result<()> {
         .extension()
         .and_then(|e| e.to_str())
         .unwrap_or("");
-    
+
     #[cfg(target_os = "macos")]
     let valid_ext = ext == "dylib";
     #[cfg(target_os = "linux")]
     let valid_ext = ext == "so";
     #[cfg(target_os = "windows")]
     let valid_ext = ext == "dll";
-    
+
     if !valid_ext {
         #[cfg(target_os = "macos")]
         let expected = ".dylib";
@@ -51,7 +51,7 @@ pub fn execute(dylib_path: PathBuf) -> Result<()> {
         let expected = ".so";
         #[cfg(target_os = "windows")]
         let expected = ".dll";
-        
+
         anyhow::bail!(
             "Invalid dylib extension: expected '{}', got '{}'",
             expected,

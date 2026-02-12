@@ -74,6 +74,11 @@ pub fn find_plugin_dylib(engine_dir: &Path) -> Result<PathBuf> {
 }
 
 /// Resolve the debug directory, checking both project-local and workspace locations.
+///
+/// For SDK mode (engine_dir = engine/crates/wavecraft-example), checks three levels:
+/// 1. engine/crates/wavecraft-example/target/debug (crate-local)
+/// 2. engine/crates/target/debug (one parent up)
+/// 3. engine/target/debug (two parents up - workspace root)
 pub fn resolve_debug_dir(engine_dir: &Path) -> Result<PathBuf> {
     let engine_debug = engine_dir.join("target").join("debug");
     if engine_debug.exists() {
@@ -82,19 +87,35 @@ pub fn resolve_debug_dir(engine_dir: &Path) -> Result<PathBuf> {
 
     let workspace_debug = engine_dir.parent().map(|p| p.join("target").join("debug"));
 
-    if let Some(debug_dir) = workspace_debug {
+    if let Some(debug_dir) = workspace_debug.as_ref() {
         if debug_dir.exists() {
-            return Ok(debug_dir);
+            return Ok(debug_dir.clone());
+        }
+    }
+
+    // For SDK mode: check one more level up (engine/crates/wavecraft-example → engine/crates → engine)
+    let workspace_root_debug = engine_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .map(|p| p.join("target").join("debug"));
+
+    if let Some(debug_dir) = workspace_root_debug.as_ref() {
+        if debug_dir.exists() {
+            return Ok(debug_dir.clone());
         }
     }
 
     anyhow::bail!(
-        "Build output directory not found. Tried:\n  - {}\n  - {}\n\
+        "Build output directory not found. Tried:\n  - {}\n  - {}\n  - {}\n\
          Run `cargo build` first.",
         engine_debug.display(),
-        engine_dir
-            .parent()
-            .map(|p| p.join("target").join("debug").display().to_string())
+        workspace_debug
+            .as_ref()
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|| "<workspace root unavailable>".to_string()),
+        workspace_root_debug
+            .as_ref()
+            .map(|p| p.display().to_string())
             .unwrap_or_else(|| "<workspace root unavailable>".to_string())
     );
 }
