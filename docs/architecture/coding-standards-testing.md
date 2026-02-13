@@ -43,20 +43,30 @@ Use the following conventions for Rust doc examples:
 This command simulates CI checks locally and runs ~26x faster than Docker-based CI:
 
 ```bash
-# Run all checks (lint + tests, ~1 minute)
+# Run standard checks (docs, UI build, lint+typecheck, tests — ~1 minute)
 cargo xtask ci-check
 
 # Run with auto-fix for linting issues
 cargo xtask ci-check --fix
 
-# Skip certain phases
-cargo xtask ci-check --skip-lint
-cargo xtask ci-check --skip-tests
+# Full validation (adds template validation + CD dry-run)
+cargo xtask ci-check --full   # or -F
+
+# Skip individual phases
+cargo xtask ci-check --skip-docs       # Skip doc link checking
+cargo xtask ci-check --skip-lint       # Skip linting + type-checking
+cargo xtask ci-check --skip-tests      # Skip automated tests
+cargo xtask ci-check -F --skip-template  # Full minus template validation
+cargo xtask ci-check -F --skip-cd        # Full minus CD dry-run
 ```
 
-**What it runs:**
-1. **Linting**: ESLint, Prettier, cargo fmt, clippy (with optional --fix)
-2. **Automated Tests**: Engine (Rust) + UI (Vitest) tests
+**What it runs (6 phases):**
+0. **Documentation** — Link validation via `scripts/check-links.sh` (skippable: `--skip-docs`)
+1. **UI Dist Build** — Rebuilds `ui/dist` to mirror CI (always runs; two-stage: `build:lib` in `ui/`, then full build in `sdk-template/ui/`, dist copied to `ui/dist/`)
+2. **Linting + Type-Checking** — ESLint, Prettier, `tsc --noEmit`, cargo fmt, clippy (skippable: `--skip-lint`; fixable: `--fix`)
+3. **Automated Tests** — Engine (Rust) + UI (Vitest) tests (skippable: `--skip-tests`)
+4. **Template Validation** — Runs `validate-template` to check CLI-generated projects compile (`--full` only; skippable: `--skip-template`)
+5. **CD Dry-Run** — Git-based change detection matching CD workflow path filters (`--full` only; skippable: `--skip-cd`)
 
 **Visual Testing:** For UI validation, use `cargo xtask dev` to start dev servers,
 then invoke the "playwright-mcp-ui-testing" skill for browser-based testing.
@@ -97,7 +107,7 @@ ui/
 │       ├── Meter.test.tsx         # Component test
 │       ├── ParameterSlider.tsx
 │       └── ParameterSlider.test.tsx
-├── src/                           # Dev app (limited tests)
+├── src/                           # (empty — app code lives in sdk-template/ui/)
 └── test/
     ├── setup.ts                   # Global test setup
     └── mocks/

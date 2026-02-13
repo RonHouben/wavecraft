@@ -13,8 +13,8 @@ fn main() {
         env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR must be set by Cargo"),
     );
     let src_root = manifest_dir.join("../sdk-template");
-    let out_root =
-        PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR must be set by Cargo")).join("sdk-template-clean");
+    let out_root = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR must be set by Cargo"))
+        .join("sdk-template-clean");
 
     if out_root.exists() {
         fs::remove_dir_all(&out_root).unwrap_or_else(|err| {

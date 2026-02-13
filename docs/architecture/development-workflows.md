@@ -264,7 +264,9 @@ Wavecraft uses a Rust-based build system (`xtask`) that provides a unified inter
 
 | Command                     | Description                                                                                                                        |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `cargo xtask ci-check`      | **Pre-push validation** — Run lint + tests locally (~52s, 26x faster than Docker CI)                                               |
+| `cargo xtask ci-check`      | **Pre-push validation** — 6-phase local CI simulation (docs, UI build, lint+typecheck, tests; add `--full` for template validation + CD dry-run) |
+| `cargo xtask ci-check -F`   | **Full validation** — All 6 phases including template validation and CD dry-run                                                                    |
+| `cargo xtask validate-template` | Validate CLI template generation (replicates CI `template-validation.yml`)                                                                     |
 | `cargo xtask dev`           | Start WebSocket + Vite dev servers for browser development                                                                         |
 | `cargo xtask bundle`        | Build and bundle VST3/CLAP plugins                                                                                                 |
 | `cargo xtask test`          | Run all tests (Engine + UI)                                                                                                        |
@@ -284,9 +286,17 @@ Wavecraft uses a Rust-based build system (`xtask`) that provides a unified inter
 
 ```bash
 # Pre-push validation (recommended before every push)
-cargo xtask ci-check            # Run lint + tests (~52s)
+cargo xtask ci-check            # 6-phase local CI: docs, UI build, lint+typecheck, tests (~1 min)
 cargo xtask ci-check --fix      # Auto-fix linting issues
+cargo xtask ci-check -F         # Full: adds template validation + CD dry-run
+cargo xtask ci-check --skip-docs    # Skip doc link checking
+cargo xtask ci-check --skip-lint    # Skip linting phase
+cargo xtask ci-check --skip-tests   # Skip test phase
+cargo xtask ci-check -F --skip-template  # Full minus template validation
+cargo xtask ci-check -F --skip-cd        # Full minus CD dry-run
+```
 
+```bash
 # Browser-based UI development (recommended for UI work)
 cargo xtask dev              # Starts WebSocket server + Vite
 cargo xtask dev --verbose    # With detailed IPC logging
@@ -402,7 +412,7 @@ Wavecraft uses GitHub Actions for continuous integration and release automation.
 
 - Triggers on PRs to `main` (not on merge/push — code already validated via PR)
 - Manual trigger available via `workflow_dispatch`
-- Validates code quality: linting (ESLint, Prettier, cargo fmt, clippy), documentation links
+- Validates code quality: linting (ESLint, Prettier, TypeScript type-check via `tsc --noEmit`, cargo fmt, clippy), documentation links
 - Runs automated tests: UI (Vitest) and Engine (cargo test)
 - Does NOT build plugin bundles — that's the Release workflow's responsibility
 

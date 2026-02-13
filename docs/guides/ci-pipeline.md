@@ -175,21 +175,27 @@ on:
 Use `cargo xtask ci-check` for fast pre-push validation that simulates CI checks locally:
 
 ```bash
-# Run all checks (~52 seconds)
+# Standard checks: docs, UI build, lint+typecheck, tests (~1 minute)
 cargo xtask ci-check
 
 # Auto-fix linting issues
 cargo xtask ci-check --fix
 
-# Skip phases
+# Full validation (adds template validation + CD dry-run)
+cargo xtask ci-check --full   # or -F
+
+# Skip individual phases
+cargo xtask ci-check --skip-docs
 cargo xtask ci-check --skip-lint
 cargo xtask ci-check --skip-tests
+cargo xtask ci-check -F --skip-template
+cargo xtask ci-check -F --skip-cd
 ```
 
 **Why use `cargo xtask ci-check`:**
 - **26x faster** than Docker-based CI testing (~52s vs ~9-12 min)
 - Runs natively on your machine (no Docker overhead)
-- Same checks as CI pipeline (lint + tests)
+- Same checks as CI pipeline (docs, UI build, lint+typecheck, tests; plus template validation and CD dry-run with `--full`)
 - Recommended before every push
 
 **Visual testing** is done separately via the `playwright-mcp-ui-testing` skill:

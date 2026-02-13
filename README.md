@@ -151,21 +151,25 @@ cargo xtask all
 
 ### Available Commands
 
-| Command                                 | Description                                    |
-| --------------------------------------- | ---------------------------------------------- |
-| `cargo xtask bundle`                    | Build and bundle VST3/CLAP plugins             |
-| `cargo xtask bundle --debug`            | Debug build (faster compile, no optimizations) |
-| `cargo xtask bundle --install`          | Build and install plugins in one step          |
-| `cargo xtask test`                      | Run all tests (engine + UI)                    |
-| `cargo xtask test --ui`                 | Run UI tests only (npm test)                   |
-| `cargo xtask test --engine`             | Run engine tests only (cargo test)             |
-| `cargo xtask test --all`                | Test all workspace crates                      |
-| `cargo xtask au`                        | Build AU wrapper (macOS only, requires CMake)  |
-| `cargo xtask install`                   | Install plugins to system directories          |
-| `cargo xtask clean`                     | Clean build artifacts                          |
-| `cargo xtask clean --installed --force` | Also remove installed plugins                  |
-| `cargo xtask all`                       | Full pipeline: test → bundle → au → install    |
-| `cargo xtask all --dry-run`             | Preview what would be done                     |
+| Command                                 | Description                                                |
+| --------------------------------------- | ---------------------------------------------------------- |
+| `cargo xtask ci-check`                  | Pre-push validation (6 phases: docs, build, lint, tests)   |
+| `cargo xtask ci-check --full`           | Full validation (adds template + CD dry-run)               |
+| `cargo xtask lint`                      | Run linters (ESLint, Prettier, tsc, cargo fmt, clippy)     |
+| `cargo xtask validate-template`         | Validate CLI template generation                           |
+| `cargo xtask bundle`                    | Build and bundle VST3/CLAP plugins                         |
+| `cargo xtask bundle --debug`            | Debug build (faster compile, no optimizations)             |
+| `cargo xtask bundle --install`          | Build and install plugins in one step                      |
+| `cargo xtask test`                      | Run all tests (engine + UI)                                |
+| `cargo xtask test --ui`                 | Run UI tests only (npm test)                               |
+| `cargo xtask test --engine`             | Run engine tests only (cargo test)                         |
+| `cargo xtask test --all`                | Test all workspace crates                                  |
+| `cargo xtask au`                        | Build AU wrapper (macOS only, requires CMake)              |
+| `cargo xtask install`                   | Install plugins to system directories                      |
+| `cargo xtask clean`                     | Clean build artifacts                                      |
+| `cargo xtask clean --installed --force` | Also remove installed plugins                              |
+| `cargo xtask all`                       | Full pipeline: test → bundle → au → install                |
+| `cargo xtask all --dry-run`             | Preview what would be done                                 |
 
 ### Feature Flags
 
