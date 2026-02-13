@@ -1,5 +1,5 @@
 import { useAllParameters, useParameterGroups, useWindowResizeSync } from '@wavecraft/core';
-import type { JSX } from 'react';
+import { type JSX } from 'react';
 import {
   Meter,
   ParameterSlider,
@@ -8,12 +8,15 @@ import {
   ConnectionStatus,
   LatencyMonitor,
 } from '@wavecraft/components';
+import { useParameter } from '@wavecraft/core';
 
 export function App(): JSX.Element {
   const { params, isLoading } = useAllParameters();
   const groups = useParameterGroups(params);
 
   useWindowResizeSync();
+
+  useParameter('input_gain_level');
 
   return (
     <div className="flex h-screen flex-col gap-4 bg-plugin-dark p-6">

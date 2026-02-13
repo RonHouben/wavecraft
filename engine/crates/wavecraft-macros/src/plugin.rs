@@ -6,9 +6,11 @@
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
-    Expr, Ident, LitStr, Path, Result, Token,
+    Expr, Ident, LitStr, Path, Result, Token, Type,
+    parse::Parser,
     parse::{Parse, ParseStream},
     parse_macro_input,
+    punctuated::Punctuated,
     spanned::Spanned,
 };
 
@@ -162,16 +164,97 @@ fn generate_vst3_id(name: &str) -> proc_macro2::TokenStream {
     quote! { [#(#bytes),*] }
 }
 
+fn to_snake_case_identifier(name: &str) -> String {
+    name.chars()
+        .enumerate()
+        .flat_map(|(i, c)| {
+            if c.is_uppercase() && i > 0 {
+                vec!['_', c.to_ascii_lowercase()]
+            } else {
+                vec![c.to_ascii_lowercase()]
+            }
+        })
+        .collect()
+}
+
+fn type_prefix(ty: &Type) -> String {
+    match ty {
+        Type::Path(type_path) => type_path
+            .path
+            .segments
+            .last()
+            .map(|segment| to_snake_case_identifier(&segment.ident.to_string()))
+            .unwrap_or_else(|| to_snake_case_identifier(&quote::quote!(#ty).to_string())),
+        _ => to_snake_case_identifier(&quote::quote!(#ty).to_string()),
+    }
+}
+
+fn parse_signal_chain_processors(signal: &Expr) -> Result<Vec<Type>> {
+    let expr_macro = match signal {
+        Expr::Macro(expr_macro) => expr_macro,
+        _ => {
+            return Err(syn::Error::new(
+                signal.span(),
+                "signal must use SignalChain![...] macro syntax",
+            ));
+        }
+    };
+
+    let is_signal_chain = expr_macro
+        .mac
+        .path
+        .segments
+        .last()
+        .map(|segment| segment.ident == "SignalChain")
+        .unwrap_or(false);
+
+    if !is_signal_chain {
+        return Err(syn::Error::new(
+            expr_macro.mac.path.span(),
+            "signal must use SignalChain![...]",
+        ));
+    }
+
+    let parser = Punctuated::<Type, Token![,]>::parse_terminated;
+    let processors = parser.parse2(expr_macro.mac.tokens.clone())?;
+
+    if processors.is_empty() {
+        return Err(syn::Error::new(
+            expr_macro.mac.tokens.span(),
+            "SignalChain! must contain at least one processor type",
+        ));
+    }
+
+    Ok(processors.into_iter().collect())
+}
+
 pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
     let plugin_def = parse_macro_input!(input as PluginDef);
 
     let name = &plugin_def.name;
     let signal_type = &plugin_def.signal;
 
+    let signal_processors = match parse_signal_chain_processors(signal_type) {
+        Ok(processors) => processors,
+        Err(err) => return TokenStream::from(err.to_compile_error()),
+    };
+
     // Default krate to ::wavecraft if not specified (should already be set by Parse)
     let krate = plugin_def
         .krate
         .unwrap_or_else(|| syn::parse_quote!(::wavecraft));
+
+    let processor_param_mappings = signal_processors.iter().map(|processor_type| {
+        let id_prefix = type_prefix(processor_type);
+        quote! {
+            {
+                let specs = <<#processor_type as #krate::Processor>::Params as #krate::ProcessorParams>::param_specs();
+                params.extend(specs
+                    .iter()
+                    .map(|spec| #krate::__internal::param_spec_to_info(spec, #id_prefix)));
+            }
+        }
+    });
 
     // Derive metadata from Cargo environment variables
     let vendor = {
@@ -571,26 +654,8 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
         /// The returned pointer must be freed with `wavecraft_free_string`.
         #[unsafe(no_mangle)]
         pub extern "C" fn wavecraft_get_params_json() -> *mut ::std::ffi::c_char {
-            let specs = <<__ProcessorType as #krate::Processor>::Params as #krate::ProcessorParams>::param_specs();
-
-            // Convert signal type name to snake_case for ID prefix
-            let signal_name = stringify!(#signal_type);
-            let id_prefix = signal_name
-                .chars()
-                .enumerate()
-                .flat_map(|(i, c)| {
-                    if c.is_uppercase() && i > 0 {
-                        vec!['_', c.to_ascii_lowercase()]
-                    } else {
-                        vec![c.to_ascii_lowercase()]
-                    }
-                })
-                .collect::<String>();
-
-            let params: ::std::vec::Vec<#krate::__internal::ParameterInfo> = specs
-                .iter()
-                .map(|spec| #krate::__internal::param_spec_to_info(spec, &id_prefix))
-                .collect();
+            let mut params: ::std::vec::Vec<#krate::__internal::ParameterInfo> = ::std::vec::Vec::new();
+            #(#processor_param_mappings)*
 
             // Serialize parameter list to JSON for FFI export
             // Fallback to "[]" on serialization error (should never happen for ParameterInfo)

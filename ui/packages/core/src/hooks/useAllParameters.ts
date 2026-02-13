@@ -10,7 +10,7 @@ import { ParameterClient } from '../ipc/ParameterClient';
 import { IpcBridge } from '../ipc/IpcBridge';
 import { useConnectionStatus } from './useConnectionStatus';
 import { logger } from '../logger/Logger';
-import type { ParameterInfo } from '../types/parameters';
+import type { ParameterId, ParameterInfo } from '../types/parameters';
 
 /** Maximum time (ms) to wait for connection before giving up */
 const CONNECTION_TIMEOUT_MS = 15_000;
@@ -72,7 +72,7 @@ async function attemptFetch(client: ParameterClient, attempt: number): Promise<F
  */
 function updateParameterValue(
   params: ParameterInfo[],
-  changedId: string,
+  changedId: ParameterId,
   value: number
 ): ParameterInfo[] {
   return params.map((p) => (p.id === changedId ? { ...p, value } : p));
@@ -253,7 +253,7 @@ export function useAllParameters(): UseAllParametersResult {
   // ─── Effect: Subscribe to parameter change notifications ────────────
   useEffect(() => {
     const client = ParameterClient.getInstance();
-    const handleParamChange = (changedId: string, value: number): void => {
+    const handleParamChange = (changedId: ParameterId, value: number): void => {
       setParams((prev) => updateParameterValue(prev, changedId, value));
     };
     return client.onParameterChanged(handleParamChange);

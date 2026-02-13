@@ -6,8 +6,38 @@
 
 export type ParameterType = 'float' | 'bool' | 'enum';
 
+/**
+ * Augmentable parameter ID registry.
+ *
+ * The generated `ui/src/generated/parameters.ts` file augments this interface
+ * with the plugin's concrete parameter IDs.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface ParameterIdMap {}
+
+/**
+ * Internal marker key added by generated module augmentation.
+ *
+ * Used to distinguish:
+ * - unaugmented projects (fallback `string` for backward compatibility)
+ * - augmented projects with zero parameters (resolves to `never`)
+ */
+export type ParameterIdMapAugmentedMarker = '__wavecraft_internal_augmented__';
+
+/**
+ * Type-safe parameter identifier.
+ *
+ * When generated augmentation is present, this resolves to a literal string
+ * union of plugin parameter IDs. If augmentation is present but no parameters
+ * exist, this resolves to `never`. Without augmentation, it falls back to
+ * `string` for backward compatibility.
+ */
+export type ParameterId = ParameterIdMapAugmentedMarker extends keyof ParameterIdMap
+  ? Exclude<Extract<keyof ParameterIdMap, string>, ParameterIdMapAugmentedMarker>
+  : string;
+
 export interface ParameterInfo {
-  id: string;
+  id: ParameterId;
   name: string;
   type: ParameterType;
   value: number;
@@ -18,17 +48,17 @@ export interface ParameterInfo {
 
 // getParameter
 export interface GetParameterParams {
-  id: string;
+  id: ParameterId;
 }
 
 export interface GetParameterResult {
-  id: string;
+  id: ParameterId;
   value: number;
 }
 
 // setParameter
 export interface SetParameterParams {
-  id: string;
+  id: ParameterId;
   value: number;
 }
 
@@ -41,7 +71,7 @@ export interface GetAllParametersResult {
 
 // Notification: parameterChanged
 export interface ParameterChangedNotification {
-  id: string;
+  id: ParameterId;
   value: number;
 }
 

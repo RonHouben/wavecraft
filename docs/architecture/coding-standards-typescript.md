@@ -17,6 +17,7 @@
 React components should use functional components with hooks, but all other TypeScript code (services, clients, utilities, state management) should use classes.
 
 **Rationale:**
+
 - Classes provide clear encapsulation of state and behavior
 - Better IDE support (autocomplete, refactoring)
 - Explicit instantiation and lifecycle management
@@ -24,6 +25,7 @@ React components should use functional components with hooks, but all other Type
 - Clear separation between static and instance members
 
 **Do:**
+
 ```typescript
 // ✅ Service classes
 class IpcBridge {
@@ -66,6 +68,7 @@ class IpcClient {
 ```
 
 **Don't:**
+
 ```typescript
 // ❌ Exported functions with module-level state
 let requestId = 0;
@@ -88,7 +91,7 @@ export function on(event: string, callback: Function): () => void {
 // ✅ Functional component with hooks
 export function ParameterSlider({ id, name, min, max }: Props) {
   const { param, setValue } = useParameter(id);
-  
+
   return (
     <input
       type="range"
@@ -118,9 +121,12 @@ export function useParameter(id: string) {
     client.getParameter(id).then(setParam);
   }, [id]);
 
-  const setValue = useCallback(async (value: number) => {
-    await client.setParameter(id, value);
-  }, [id]);
+  const setValue = useCallback(
+    async (value: number) => {
+      await client.setParameter(id, value);
+    },
+    [id]
+  );
 
   return { param, setValue };
 }
@@ -133,11 +139,13 @@ export function useParameter(id: string) {
 When hooks need different behavior based on runtime environment (e.g., browser vs WKWebView), the environment check must be evaluated once at module load time, not inside the hook body.
 
 **Rationale:**
+
 - React's Rules of Hooks require consistent hook call order across renders
 - Conditional hook behavior inside the hook body can violate this rule
 - Module-scope evaluation ensures the condition is stable
 
 **Do:**
+
 ```typescript
 // ✅ Environment detection at module scope
 import { isBrowserEnvironment } from './environment';
@@ -148,7 +156,7 @@ const IS_BROWSER = isBrowserEnvironment();
 export function useParameter(id: string) {
   // IS_BROWSER is stable - same value for all renders
   const [param, setParam] = useState(IS_BROWSER ? mockData : null);
-  
+
   useEffect(() => {
     if (IS_BROWSER) return; // Safe: IS_BROWSER never changes
     // ... fetch real data
@@ -157,12 +165,13 @@ export function useParameter(id: string) {
 ```
 
 **Don't:**
+
 ```typescript
 // ❌ Environment detection inside hook
 export function useParameter(id: string) {
   // BAD: Called on every render, could theoretically change
   if (isBrowserEnvironment()) {
-    return { param: mockData };  // Violates Rules of Hooks!
+    return { param: mockData }; // Violates Rules of Hooks!
   }
   // ... rest of hook
 }
@@ -175,44 +184,98 @@ export function useParameter(id: string) {
 Values that need to be injected at build time (e.g., version from Cargo.toml) should use Vite's `define` configuration rather than environment variables.
 
 **Configuration (`vite.config.ts`):**
+
 ```typescript
 export default defineConfig({
   define: {
     // Compile-time replacement, falls back to 'dev' for local npm run dev
-    '__APP_VERSION__': JSON.stringify(process.env.VITE_APP_VERSION || 'dev'),
-  },
+    __APP_VERSION__: JSON.stringify(process.env.VITE_APP_VERSION || 'dev')
+  }
 });
 ```
 
 **Type Declaration (`vite-env.d.ts`):**
+
 ```typescript
 declare const __APP_VERSION__: string;
 ```
 
 **Usage:**
+
 ```typescript
 // ✅ Use the constant directly - it's replaced at build time
 <span>v{__APP_VERSION__}</span>
 ```
 
 **Why `define` over `.env` files:**
+
 - Build system (xtask) can inject values via environment variables
 - `define` creates compile-time replacement (zero runtime cost)
 - No risk of `.env` files drifting from source of truth
 - Clear TypeScript typing via declaration file
 
+### Module Augmentation for Type-Safe IDs
+
+**Rule:** Use TypeScript module augmentation with conditional types when a type needs to be narrowed by generated code.
+
+The `ParameterId` type in `@wavecraft/core` uses this pattern: a base `ParameterIdMap` interface is declared empty, and build-time codegen augments it with concrete keys. A conditional type resolves the final type.
+
+**Pattern:**
+
+```typescript
+// In @wavecraft/core (library code)
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface ParameterIdMap {}
+
+export type ParameterIdMapAugmentedMarker = '__wavecraft_internal_augmented__';
+
+export type ParameterId =
+  ParameterIdMapAugmentedMarker extends keyof ParameterIdMap
+    ? Exclude<
+        Extract<keyof ParameterIdMap, string>,
+        ParameterIdMapAugmentedMarker
+      >
+    : string;
+```
+
+```typescript
+// In generated file (ui/src/generated/parameters.ts)
+declare module '@wavecraft/core' {
+  interface ParameterIdMap {
+    __wavecraft_internal_augmented__: true;
+    inputgain_gain: true;
+    outputgain_gain: true;
+  }
+}
+export {};
+```
+
+**Type resolution:**
+
+| State                                               | `ParameterId` resolves to                               |
+| --------------------------------------------------- | ------------------------------------------------------- |
+| No augmentation (library consumers without codegen) | `string` (backward compatible)                          |
+| Augmented with parameters                           | `'inputgain_gain' \| 'outputgain_gain'` (literal union) |
+| Augmented but empty (plugin has no parameters)      | `never`                                                 |
+
+**Key conventions:**
+
+- The augmentation marker (`__wavecraft_internal_augmented__`) distinguishes "not augmented" from "augmented but empty"
+- Generated files go in `ui/src/generated/` and are gitignored
+- The `export {};` at the end makes the file a module (required for `declare module` to work)
+
 ### Naming Conventions
 
-| Type | Convention | Example |
-|------|------------|---------|
-| Classes | PascalCase | `IpcBridge`, `ParameterClient` |
-| Interfaces | PascalCase | `ParameterInfo`, `IpcError` |
-| Type aliases | PascalCase | `EventCallback`, `RequestId` |
-| Methods | camelCase | `getParameter`, `setReceiveCallback` |
-| Private members | camelCase (no underscore prefix) | `private requestId` |
-| Constants | UPPER_SNAKE_CASE | `DEFAULT_TIMEOUT_MS` |
-| React components | PascalCase | `ParameterSlider` |
-| React hooks | camelCase with `use` prefix | `useParameter` |
+| Type             | Convention                       | Example                              |
+| ---------------- | -------------------------------- | ------------------------------------ |
+| Classes          | PascalCase                       | `IpcBridge`, `ParameterClient`       |
+| Interfaces       | PascalCase                       | `ParameterInfo`, `IpcError`          |
+| Type aliases     | PascalCase                       | `EventCallback`, `RequestId`         |
+| Methods          | camelCase                        | `getParameter`, `setReceiveCallback` |
+| Private members  | camelCase (no underscore prefix) | `private requestId`                  |
+| Constants        | UPPER_SNAKE_CASE                 | `DEFAULT_TIMEOUT_MS`                 |
+| React components | PascalCase                       | `ParameterSlider`                    |
+| React hooks      | camelCase with `use` prefix      | `useParameter`                       |
 
 ### File Organization
 
@@ -239,7 +302,7 @@ ui/
 │   │   │   │   └── ParameterClient.ts # High-level parameter API
 │   │   │   ├── types/             # TypeScript types (domain folder)
 │   │   │   │   ├── ipc.ts         # IPC protocol types
-│   │   │   │   ├── parameters.ts  # Parameter types
+│   │   │   │   ├── parameters.ts  # Parameter types (ParameterId, ParameterIdMap, ParameterInfo)
 │   │   │   │   └── metering.ts    # Meter types
 │   │   │   ├── utils/             # Utilities (domain folder)
 │   │   │   │   ├── environment.ts # Runtime detection
@@ -268,6 +331,7 @@ ui/
 ```
 
 **Domain folder conventions:**
+
 - **No internal barrel files** — Domain folders do not have `index.ts` barrels
 - The main `src/index.ts` imports directly from each file (e.g., `./hooks/useParameter`)
 - One file per hook/class/type domain
@@ -278,12 +342,14 @@ ui/
 **Rule:** Use barrel files only for published package entry points, not for internal folders.
 
 **Rationale:**
+
 - Internal barrels can defeat tree-shaking in application code
 - They can mask circular dependencies
 - They slow down TypeScript IDE performance
 - Published packages are pre-bundled, so the main entry barrel is acceptable
 
 **Do:**
+
 ```typescript
 // ✅ Main entry point (src/index.ts) - this IS the public API
 export { useParameter } from './hooks/useParameter';
@@ -296,12 +362,13 @@ import type { MeterFrame } from './types/metering';
 ```
 
 **Don't:**
+
 ```typescript
 // ❌ Internal barrel file (hooks/index.ts)
 export { useParameter } from './useParameter';
 export { useAllParameters } from './useAllParameters';
 // ...then importing from barrel
-import { useParameter } from './hooks';  // Avoid this pattern
+import { useParameter } from './hooks'; // Avoid this pattern
 ```
 
 ### Import Aliases
@@ -310,13 +377,14 @@ import { useParameter } from './hooks';  // Avoid this pattern
 
 The UI SDK is distributed as npm packages. User plugins and the internal dev app both import from these packages:
 
-| Package | Exports | Usage |
-|---------|---------|-------|
-| `@wavecraft/core` | IPC, hooks, Logger, types | Core SDK functionality |
-| `@wavecraft/core/meters` | `linearToDb`, `dbToLinear` | Pure audio math utilities |
-| `@wavecraft/components` | `Meter`, `ParameterSlider`, etc. | Pre-built React components |
+| Package                  | Exports                          | Usage                      |
+| ------------------------ | -------------------------------- | -------------------------- |
+| `@wavecraft/core`        | IPC, hooks, Logger, types        | Core SDK functionality     |
+| `@wavecraft/core/meters` | `linearToDb`, `dbToLinear`       | Pure audio math utilities  |
+| `@wavecraft/components`  | `Meter`, `ParameterSlider`, etc. | Pre-built React components |
 
 **Do:**
+
 ```typescript
 // ✅ Import from npm packages
 import { useParameter, useAllParameters, Logger } from '@wavecraft/core';
@@ -325,6 +393,7 @@ import { Meter, ParameterSlider } from '@wavecraft/components';
 ```
 
 **Don't:**
+
 ```typescript
 // ❌ Relative imports (no longer applicable for SDK usage)
 import { useParameter } from '../lib/wavecraft-ipc';
@@ -334,10 +403,12 @@ import { Meter } from '../../components/Meter';
 **Subpath Exports:**
 
 The `@wavecraft/core/meters` subpath provides access to pure utility functions (`linearToDb`, `dbToLinear`, `getMeterFrame`) without triggering IPC initialization side effects. Use this subpath:
+
 - In unit tests for pure functions
 - When you only need math utilities, not hooks or clients
 
 **Rationale:**
+
 - Standard npm package consumption pattern
 - Version management via package.json
 - Clear separation between SDK and user code
@@ -349,10 +420,12 @@ The `@wavecraft/core/meters` subpath provides access to pure utility functions (
 **Rule:** Use `globalThis` instead of `window` for accessing the global object.
 
 This applies to:
+
 - TypeScript/JavaScript source files
 - JavaScript strings embedded in Rust code (e.g., `evaluate_script` calls)
 
 **Do:**
+
 ```typescript
 // ✅ Use globalThis in TypeScript/JavaScript
 globalThis.wavecraft?.invoke('getParameter', { id });
@@ -371,6 +444,7 @@ webview.evaluate_script(&js);
 ```
 
 **Don't:**
+
 ```typescript
 // ❌ Using window in TypeScript/JavaScript
 window.wavecraft?.invoke('getParameter', { id });
@@ -385,6 +459,7 @@ let js = format!(
 ```
 
 **Rationale:**
+
 - `globalThis` is the standardized way to access the global object (ES2020+)
 - Works consistently across all JavaScript environments (browser, Node.js, Web Workers, etc.)
 - Plugin UI may run in different contexts where `window` is not available

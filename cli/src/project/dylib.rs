@@ -3,6 +3,21 @@
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
+fn debug_dir_candidates(engine_dir: &Path) -> Vec<PathBuf> {
+    let mut dirs = Vec::with_capacity(3);
+    dirs.push(engine_dir.join("target").join("debug"));
+
+    if let Some(parent) = engine_dir.parent() {
+        dirs.push(parent.join("target").join("debug"));
+
+        if let Some(grand_parent) = parent.parent() {
+            dirs.push(grand_parent.join("target").join("debug"));
+        }
+    }
+
+    dirs
+}
+
 /// Find the plugin dylib in the engine's target directory.
 ///
 /// This function handles:
@@ -11,8 +26,6 @@ use std::path::{Path, PathBuf};
 /// - Workspace vs project-local target directories
 /// - Multiple candidates (picks most recent)
 pub fn find_plugin_dylib(engine_dir: &Path) -> Result<PathBuf> {
-    let debug_dir = resolve_debug_dir(engine_dir)?;
-
     // Look for library files with platform-specific extensions
     #[cfg(target_os = "macos")]
     let extension = "dylib";
@@ -21,30 +34,54 @@ pub fn find_plugin_dylib(engine_dir: &Path) -> Result<PathBuf> {
     #[cfg(target_os = "windows")]
     let extension = "dll";
 
-    // Find library files (skip deps/ subdirectory)
-    let entries = std::fs::read_dir(&debug_dir).context("Failed to read debug directory")?;
-
-    let candidates: Vec<PathBuf> = entries
-        .filter_map(|e| e.ok())
-        .map(|e| e.path())
-        .filter(|p| {
-            p.extension().is_some_and(|ext| ext == extension)
-                && p.file_name().is_some_and(|n| {
-                    let name = n.to_string_lossy();
-                    if cfg!(target_os = "windows") {
-                        !name.starts_with("lib")
-                    } else {
-                        name.starts_with("lib")
-                    }
-                })
-        })
+    let debug_dirs: Vec<PathBuf> = debug_dir_candidates(engine_dir)
+        .into_iter()
+        .filter(|dir| dir.exists())
         .collect();
+
+    if debug_dirs.is_empty() {
+        anyhow::bail!(
+            "Build output directory not found. Tried:\n{}\nRun `cargo build` first.",
+            debug_dir_candidates(engine_dir)
+                .into_iter()
+                .map(|p| format!("  - {}", p.display()))
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+    }
+
+    let mut candidates: Vec<PathBuf> = Vec::new();
+    for debug_dir in &debug_dirs {
+        let entries = std::fs::read_dir(debug_dir)
+            .with_context(|| format!("Failed to read debug directory: {}", debug_dir.display()))?;
+
+        candidates.extend(
+            entries
+                .filter_map(|e| e.ok())
+                .map(|e| e.path())
+                .filter(|p| {
+                    p.extension().is_some_and(|ext| ext == extension)
+                        && p.file_name().is_some_and(|n| {
+                            let name = n.to_string_lossy();
+                            if cfg!(target_os = "windows") {
+                                !name.starts_with("lib")
+                            } else {
+                                name.starts_with("lib")
+                            }
+                        })
+                }),
+        );
+    }
 
     if candidates.is_empty() {
         anyhow::bail!(
-            "No plugin library found in {}.\n\
+            "No plugin library found in any debug directory. Checked:\n{}\n\
              Make sure the engine crate has `crate-type = [\"cdylib\"]` in Cargo.toml.",
-            debug_dir.display()
+            debug_dirs
+                .into_iter()
+                .map(|p| format!("  - {}", p.display()))
+                .collect::<Vec<_>>()
+                .join("\n")
         );
     }
 
@@ -80,43 +117,19 @@ pub fn find_plugin_dylib(engine_dir: &Path) -> Result<PathBuf> {
 /// 2. sdk-template/target/debug (one parent up)
 /// 3. target/debug (two parents up - repository root)
 pub fn resolve_debug_dir(engine_dir: &Path) -> Result<PathBuf> {
-    let engine_debug = engine_dir.join("target").join("debug");
-    if engine_debug.exists() {
-        return Ok(engine_debug);
-    }
-
-    let workspace_debug = engine_dir.parent().map(|p| p.join("target").join("debug"));
-
-    if let Some(debug_dir) = workspace_debug.as_ref() {
-        if debug_dir.exists() {
-            return Ok(debug_dir.clone());
-        }
-    }
-
-    // For SDK mode: check one more level up (sdk-template/engine → sdk-template → repo root)
-    let workspace_root_debug = engine_dir
-        .parent()
-        .and_then(|p| p.parent())
-        .map(|p| p.join("target").join("debug"));
-
-    if let Some(debug_dir) = workspace_root_debug.as_ref() {
-        if debug_dir.exists() {
-            return Ok(debug_dir.clone());
+    for candidate in debug_dir_candidates(engine_dir) {
+        if candidate.exists() {
+            return Ok(candidate);
         }
     }
 
     anyhow::bail!(
-        "Build output directory not found. Tried:\n  - {}\n  - {}\n  - {}\n\
-         Run `cargo build` first.",
-        engine_debug.display(),
-        workspace_debug
-            .as_ref()
-            .map(|p| p.display().to_string())
-            .unwrap_or_else(|| "<workspace root unavailable>".to_string()),
-        workspace_root_debug
-            .as_ref()
-            .map(|p| p.display().to_string())
-            .unwrap_or_else(|| "<workspace root unavailable>".to_string())
+        "Build output directory not found. Tried:\n{}\nRun `cargo build` first.",
+        debug_dir_candidates(engine_dir)
+            .into_iter()
+            .map(|p| format!("  - {}", p.display()))
+            .collect::<Vec<_>>()
+            .join("\n")
     );
 }
 
@@ -170,5 +183,87 @@ fn library_matches_name(path: &Path, expected_stem: &str, extension: &str) -> bo
         file_name.eq_ignore_ascii_case(&format!("{}.{}", expected_stem, extension))
     } else {
         file_name.eq_ignore_ascii_case(&format!("lib{}.{}", expected_stem, extension))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    fn platform_extension() -> &'static str {
+        #[cfg(target_os = "macos")]
+        {
+            "dylib"
+        }
+        #[cfg(target_os = "linux")]
+        {
+            "so"
+        }
+        #[cfg(target_os = "windows")]
+        {
+            "dll"
+        }
+    }
+
+    fn platform_library_name(stem: &str) -> String {
+        if cfg!(target_os = "windows") {
+            format!("{}.{}", stem, platform_extension())
+        } else {
+            format!("lib{}.{}", stem, platform_extension())
+        }
+    }
+
+    #[test]
+    fn finds_plugin_library_in_parent_target_when_engine_target_is_empty() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let sdk_template_dir = temp.path().join("sdk-template");
+        let engine_dir = sdk_template_dir.join("engine");
+
+        let engine_debug_dir = engine_dir.join("target").join("debug");
+        let sdk_debug_dir = sdk_template_dir.join("target").join("debug");
+
+        fs::create_dir_all(&engine_debug_dir).expect("create engine debug dir");
+        fs::create_dir_all(&sdk_debug_dir).expect("create sdk debug dir");
+
+        fs::write(
+            engine_dir.join("Cargo.toml"),
+            "[package]\nname = \"wavecraft-dev-template\"\n[lib]\nname = \"wavecraft_dev_template\"\n",
+        )
+        .expect("write Cargo.toml");
+
+        let dylib_path = sdk_debug_dir.join(platform_library_name("wavecraft_dev_template"));
+        fs::write(&dylib_path, b"test").expect("write dylib placeholder");
+
+        let found = find_plugin_dylib(&engine_dir).expect("should find plugin dylib");
+        assert_eq!(found, dylib_path);
+    }
+
+    #[test]
+    fn prefers_library_matching_crate_name_across_candidate_directories() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let sdk_template_dir = temp.path().join("sdk-template");
+        let engine_dir = sdk_template_dir.join("engine");
+
+        let engine_debug_dir = engine_dir.join("target").join("debug");
+        let sdk_debug_dir = sdk_template_dir.join("target").join("debug");
+
+        fs::create_dir_all(&engine_debug_dir).expect("create engine debug dir");
+        fs::create_dir_all(&sdk_debug_dir).expect("create sdk debug dir");
+
+        fs::write(
+            engine_dir.join("Cargo.toml"),
+            "[package]\nname = \"wavecraft-dev-template\"\n[lib]\nname = \"wavecraft_dev_template\"\n",
+        )
+        .expect("write Cargo.toml");
+
+        let other_lib = engine_debug_dir.join(platform_library_name("other_plugin"));
+        fs::write(&other_lib, b"test").expect("write other dylib placeholder");
+
+        let expected = sdk_debug_dir.join(platform_library_name("wavecraft_dev_template"));
+        fs::write(&expected, b"test").expect("write expected dylib placeholder");
+
+        let found = find_plugin_dylib(&engine_dir).expect("should find plugin dylib");
+        assert_eq!(found, expected);
     }
 }

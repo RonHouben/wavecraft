@@ -62,43 +62,13 @@ impl ProjectMarkers {
 
         // Check if this is the SDK workspace (has [workspace] in engine/Cargo.toml)
         if is_sdk_repo(&engine_cargo_toml)? {
-            // SDK mode: redirect to canonical sdk-template project
-            let template_dir = start_dir.join("sdk-template");
-            let template_engine = template_dir.join("engine");
-            let template_engine_cargo = template_engine.join("Cargo.toml");
-            let template_ui = template_dir.join("ui");
-            let template_ui_package_json = template_ui.join("package.json");
+            return detect_sdk_template_markers(start_dir);
+        }
 
-            if !template_dir.is_dir() {
-                bail!(
-                    "SDK mode detected but 'sdk-template/' directory is missing.\n\
-                     This is required to run the dev server from the SDK repo."
-                );
-            }
-
-            if !template_engine_cargo.is_file() {
-                bail!(
-                    "SDK mode detected but 'sdk-template/engine/Cargo.toml' not found.\n\
-                     Run the setup script first:\n\n\
-                     	./scripts/setup-dev-template.sh\n\n\
-                     This processes .template files for local development."
-                );
-            }
-
-            if !template_ui_package_json.is_file() {
-                bail!(
-                    "SDK mode detected but 'sdk-template/ui/package.json' is missing.\n\
-                     Ensure the sdk-template/ directory is complete."
-                );
-            }
-
-            return Ok(Self {
-                ui_dir: template_ui,
-                engine_dir: template_engine,
-                ui_package_json: template_ui_package_json,
-                engine_cargo_toml: template_engine_cargo,
-                sdk_mode: true,
-            });
+        // Fallback for SDK-like checkouts where marker detection is incomplete:
+        // if root engine/ has no src/ but sdk-template exists, prefer sdk-template.
+        if !engine_dir.join("src").is_dir() && start_dir.join("sdk-template").is_dir() {
+            return detect_sdk_template_markers(start_dir);
         }
 
         Ok(Self {
@@ -109,6 +79,45 @@ impl ProjectMarkers {
             sdk_mode: false,
         })
     }
+}
+
+fn detect_sdk_template_markers(start_dir: &Path) -> Result<ProjectMarkers> {
+    let template_dir = start_dir.join("sdk-template");
+    let template_engine = template_dir.join("engine");
+    let template_engine_cargo = template_engine.join("Cargo.toml");
+    let template_ui = template_dir.join("ui");
+    let template_ui_package_json = template_ui.join("package.json");
+
+    if !template_dir.is_dir() {
+        bail!(
+            "SDK mode detected but 'sdk-template/' directory is missing.\n\
+             This is required to run the dev server from the SDK repo."
+        );
+    }
+
+    if !template_engine_cargo.is_file() {
+        bail!(
+            "SDK mode detected but 'sdk-template/engine/Cargo.toml' not found.\n\
+             Run the setup script first:\n\n\
+             	./scripts/setup-dev-template.sh\n\n\
+             This processes .template files for local development."
+        );
+    }
+
+    if !template_ui_package_json.is_file() {
+        bail!(
+            "SDK mode detected but 'sdk-template/ui/package.json' is missing.\n\
+             Ensure the sdk-template/ directory is complete."
+        );
+    }
+
+    Ok(ProjectMarkers {
+        ui_dir: template_ui,
+        engine_dir: template_engine,
+        ui_package_json: template_ui_package_json,
+        engine_cargo_toml: template_engine_cargo,
+        sdk_mode: true,
+    })
 }
 
 /// Check if the given Cargo.toml defines a workspace (SDK repo) vs a package (plugin project).
@@ -359,5 +368,38 @@ mod tests {
 
         let markers = result.unwrap();
         assert!(!markers.sdk_mode);
+    }
+
+    #[test]
+    fn test_sdk_fallback_detection_when_engine_has_no_src() {
+        let tmp = TempDir::new().unwrap();
+
+        // Root looks plugin-like but engine has no src/ (workspace-like layout)
+        fs::create_dir_all(tmp.path().join("ui")).unwrap();
+        fs::create_dir_all(tmp.path().join("engine")).unwrap();
+        fs::write(tmp.path().join("ui/package.json"), "{}").unwrap();
+        fs::write(
+            tmp.path().join("engine/Cargo.toml"),
+            "[package]\nname = \"not-marked-sdk\"",
+        )
+        .unwrap();
+
+        // sdk-template exists and should be preferred by fallback
+        fs::create_dir_all(tmp.path().join("sdk-template/engine/src")).unwrap();
+        fs::create_dir_all(tmp.path().join("sdk-template/ui")).unwrap();
+        fs::write(
+            tmp.path().join("sdk-template/engine/Cargo.toml"),
+            "[package]\nname = \"wavecraft-dev-template\"",
+        )
+        .unwrap();
+        fs::write(tmp.path().join("sdk-template/ui/package.json"), "{}").unwrap();
+
+        let result = ProjectMarkers::detect(tmp.path());
+        assert!(result.is_ok());
+
+        let markers = result.unwrap();
+        assert!(markers.sdk_mode);
+        assert_eq!(markers.engine_dir, tmp.path().join("sdk-template/engine"));
+        assert_eq!(markers.ui_dir, tmp.path().join("sdk-template/ui"));
     }
 }

@@ -104,6 +104,16 @@ const SDK_CRATES: [&str; 5] = [
     "wavecraft-metering",
 ];
 
+const TSCONFIG_PATHS_MARKER: &str = r#""@wavecraft/core": ["../../ui/packages/core/src/index.ts"]"#;
+const TSCONFIG_PATHS_SNIPPET: &str = r#"    /* SDK development — resolve @wavecraft packages from monorepo source */
+        "baseUrl": ".",
+        "paths": {
+            "@wavecraft/core": ["../../ui/packages/core/src/index.ts"],
+            "@wavecraft/core/*": ["../../ui/packages/core/src/*"],
+            "@wavecraft/components": ["../../ui/packages/components/src/index.ts"],
+            "@wavecraft/components/*": ["../../ui/packages/components/src/*"]
+        }"#;
+
 /// Replaces git dependencies with local path dependencies for SDK crates.
 /// This is used when --local-dev is specified to allow testing against
 /// a local checkout of the Wavecraft SDK.
@@ -200,7 +210,161 @@ fn apply_local_dev_overrides(content: &str, vars: &TemplateVariables) -> Result<
         })
         .to_string();
 
+    // Inject TypeScript path mappings for SDK mode so TS language services
+    // resolve @wavecraft/* to local monorepo sources (matching Vite aliases).
+    result = inject_tsconfig_paths_if_needed(&result)?;
+
     Ok(result)
+}
+
+fn inject_tsconfig_paths_if_needed(content: &str) -> Result<String> {
+    // Only attempt tsconfig injection for tsconfig-like JSON content.
+    if !content.contains("\"compilerOptions\"") {
+        return Ok(content.to_string());
+    }
+
+    // Idempotent: if paths already exist, do nothing.
+    if content.contains(TSCONFIG_PATHS_MARKER) {
+        return Ok(content.to_string());
+    }
+
+    let Some((compiler_options_start, compiler_options_end)) =
+        find_object_bounds_after_key(content, "\"compilerOptions\"")
+    else {
+        return Ok(content.to_string());
+    };
+
+    let compiler_options_content = &content[compiler_options_start + 1..compiler_options_end];
+    if compiler_options_content.contains("\"paths\"") {
+        return Ok(content.to_string());
+    }
+
+    let anchor_re = Regex::new(
+        r#"\"(noFallthroughCasesInSwitch|noUnusedParameters|noUnusedLocals|strict|jsx|noEmit|moduleResolution|target)\"\s*:\s*[^\n]*"#,
+    )
+    .context("Invalid regex for tsconfig anchor detection")?;
+
+    if let Some(anchor) = anchor_re.find(compiler_options_content) {
+        let anchor_start = compiler_options_start + 1 + anchor.start();
+        let anchor_end = compiler_options_start + 1 + anchor.end();
+        let anchor_text = &content[anchor_start..anchor_end];
+        let needs_comma = !anchor_text.trim_end().ends_with(',');
+        let comma = if needs_comma { "," } else { "" };
+
+        let mut injected = String::with_capacity(content.len() + 256);
+        injected.push_str(&content[..anchor_end]);
+        injected.push_str(comma);
+        injected.push_str("\n\n");
+        injected.push_str(TSCONFIG_PATHS_SNIPPET);
+        injected.push_str(&content[anchor_end..]);
+        return Ok(injected);
+    }
+
+    let trimmed = compiler_options_content.trim_end();
+    let has_properties = trimmed.contains('"') && trimmed.contains(':');
+    let needs_comma = has_properties && !trimmed.ends_with(',');
+    let comma = if needs_comma { "," } else { "" };
+
+    let mut injected = String::with_capacity(content.len() + 256);
+    injected.push_str(&content[..compiler_options_end]);
+    injected.push_str(comma);
+    injected.push_str("\n\n");
+    injected.push_str(TSCONFIG_PATHS_SNIPPET);
+    injected.push_str("\n");
+    injected.push_str(&content[compiler_options_end..]);
+
+    Ok(injected)
+}
+
+fn find_object_bounds_after_key(content: &str, key: &str) -> Option<(usize, usize)> {
+    let key_start = content.find(key)?;
+    let bytes = content.as_bytes();
+    let mut index = key_start + key.len();
+
+    while index < bytes.len() && bytes[index].is_ascii_whitespace() {
+        index += 1;
+    }
+
+    if index >= bytes.len() || bytes[index] != b':' {
+        return None;
+    }
+    index += 1;
+
+    while index < bytes.len() && bytes[index].is_ascii_whitespace() {
+        index += 1;
+    }
+
+    while index < bytes.len() && bytes[index] != b'{' {
+        index += 1;
+    }
+
+    if index >= bytes.len() || bytes[index] != b'{' {
+        return None;
+    }
+
+    let open_index = index;
+    let mut depth = 0_u32;
+    let mut in_string = false;
+    let mut is_escaped = false;
+    let mut cursor = open_index;
+
+    while cursor < bytes.len() {
+        let ch = bytes[cursor];
+
+        if in_string {
+            if is_escaped {
+                is_escaped = false;
+            } else if ch == b'\\' {
+                is_escaped = true;
+            } else if ch == b'"' {
+                in_string = false;
+            }
+            cursor += 1;
+            continue;
+        }
+
+        if ch == b'"' {
+            in_string = true;
+            cursor += 1;
+            continue;
+        }
+
+        if ch == b'/' && cursor + 1 < bytes.len() {
+            let next = bytes[cursor + 1];
+            if next == b'/' {
+                cursor += 2;
+                while cursor < bytes.len() && bytes[cursor] != b'\n' {
+                    cursor += 1;
+                }
+                continue;
+            }
+
+            if next == b'*' {
+                cursor += 2;
+                while cursor + 1 < bytes.len() {
+                    if bytes[cursor] == b'*' && bytes[cursor + 1] == b'/' {
+                        cursor += 2;
+                        break;
+                    }
+                    cursor += 1;
+                }
+                continue;
+            }
+        }
+
+        if ch == b'{' {
+            depth += 1;
+        } else if ch == b'}' {
+            depth = depth.saturating_sub(1);
+            if depth == 0 {
+                return Some((open_index, cursor));
+            }
+        }
+
+        cursor += 1;
+    }
+
+    None
 }
 
 #[cfg(test)]
@@ -380,5 +544,208 @@ wavecraft-dev-server = { git = "https://github.com/RonHouben/wavecraft", tag = "
         // Should fail because the path doesn't exist
         let result = apply_local_dev_overrides(content, &vars);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_apply_local_dev_overrides_injects_tsconfig_paths() {
+        let content = r#"{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}"#;
+
+        let temp = tempdir().unwrap();
+        let sdk_root = temp.path();
+        let sdk_path = sdk_root.join("engine").join("crates");
+        fs::create_dir_all(&sdk_path).unwrap();
+
+        for crate_name in &SDK_CRATES {
+            fs::create_dir_all(sdk_path.join(crate_name)).unwrap();
+        }
+        fs::create_dir_all(sdk_path.join("wavecraft-nih_plug")).unwrap();
+        fs::create_dir_all(sdk_root.join("dev-server")).unwrap();
+
+        let vars = TemplateVariables::new(
+            "test-plugin".to_string(),
+            "Test Vendor".to_string(),
+            "test@example.com".to_string(),
+            "https://test.com".to_string(),
+            "v0.9.0".to_string(),
+            Some(sdk_path),
+        );
+
+        let result = apply_local_dev_overrides(content, &vars).unwrap();
+
+        assert!(
+            result.contains(r#""baseUrl": ".""#),
+            "Expected baseUrl in result:\n{}",
+            result
+        );
+        assert!(
+            result.contains(r#""@wavecraft/core": ["../../ui/packages/core/src/index.ts"]"#),
+            "Expected @wavecraft/core path mapping:\n{}",
+            result
+        );
+        assert!(
+            result.contains(
+                r#""@wavecraft/components": ["../../ui/packages/components/src/index.ts"]"#
+            ),
+            "Expected @wavecraft/components path mapping:\n{}",
+            result
+        );
+        assert!(
+            result.contains(r#""@wavecraft/core/*": ["../../ui/packages/core/src/*"]"#),
+            "Expected @wavecraft/core/* wildcard path:\n{}",
+            result
+        );
+        assert!(
+            result.contains(r#""@wavecraft/components/*": ["../../ui/packages/components/src/*"]"#),
+            "Expected @wavecraft/components/* wildcard path:\n{}",
+            result
+        );
+
+        assert!(
+            result.contains("/* Bundler mode */"),
+            "Expected JSONC comments to be preserved:\n{}",
+            result
+        );
+        assert!(
+            result.contains("/* Linting */"),
+            "Expected JSONC comments to be preserved:\n{}",
+            result
+        );
+        assert!(
+            result.contains("/* SDK development"),
+            "Expected SDK development comment:\n{}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_apply_local_dev_overrides_injects_paths_without_primary_anchor() {
+        let content = r#"{
+  "compilerOptions": {
+    "strict": true
+  },
+  "include": ["src"]
+}"#;
+
+        let temp = tempdir().unwrap();
+        let sdk_root = temp.path();
+        let sdk_path = sdk_root.join("engine").join("crates");
+        fs::create_dir_all(&sdk_path).unwrap();
+
+        for crate_name in &SDK_CRATES {
+            fs::create_dir_all(sdk_path.join(crate_name)).unwrap();
+        }
+        fs::create_dir_all(sdk_path.join("wavecraft-nih_plug")).unwrap();
+        fs::create_dir_all(sdk_root.join("dev-server")).unwrap();
+
+        let vars = TemplateVariables::new(
+            "test-plugin".to_string(),
+            "Test Vendor".to_string(),
+            "test@example.com".to_string(),
+            "https://test.com".to_string(),
+            "v0.9.0".to_string(),
+            Some(sdk_path),
+        );
+
+        let result = apply_local_dev_overrides(content, &vars).unwrap();
+
+        assert!(
+            result.contains(r#""baseUrl": ".""#),
+            "Expected baseUrl injection with fallback anchor:\n{}",
+            result
+        );
+        assert!(
+            result.contains(r#""@wavecraft/core": ["../../ui/packages/core/src/index.ts"]"#),
+            "Expected @wavecraft/core mapping with fallback anchor:\n{}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_apply_local_dev_overrides_no_tsconfig_paths_without_local_dev() {
+        let content = r#"{
+  "compilerOptions": {
+    "noFallthroughCasesInSwitch": true
+  }
+}"#;
+
+        let vars = TemplateVariables::new(
+            "test-plugin".to_string(),
+            "Test Vendor".to_string(),
+            "test@example.com".to_string(),
+            "https://test.com".to_string(),
+            "v0.9.0".to_string(),
+            None,
+        );
+
+        let result = apply_local_dev_overrides(content, &vars).unwrap();
+        assert_eq!(
+            result, content,
+            "Content should be unchanged without local_dev"
+        );
+    }
+
+    #[test]
+    fn test_apply_local_dev_overrides_ignores_non_tsconfig_files() {
+        let content = r#"[package]
+name = "test-plugin"
+version = "0.1.0"
+"#;
+
+        let temp = tempdir().unwrap();
+        let sdk_root = temp.path();
+        let sdk_path = sdk_root.join("engine").join("crates");
+        fs::create_dir_all(&sdk_path).unwrap();
+
+        for crate_name in &SDK_CRATES {
+            fs::create_dir_all(sdk_path.join(crate_name)).unwrap();
+        }
+        fs::create_dir_all(sdk_path.join("wavecraft-nih_plug")).unwrap();
+        fs::create_dir_all(sdk_root.join("dev-server")).unwrap();
+
+        let vars = TemplateVariables::new(
+            "test-plugin".to_string(),
+            "Test Vendor".to_string(),
+            "test@example.com".to_string(),
+            "https://test.com".to_string(),
+            "v0.9.0".to_string(),
+            Some(sdk_path),
+        );
+
+        let result = apply_local_dev_overrides(content, &vars).unwrap();
+
+        assert!(
+            !result.contains("baseUrl"),
+            "Non-tsconfig content should not have baseUrl injected:\n{}",
+            result
+        );
+        assert!(
+            !result.contains("\"paths\""),
+            "Non-tsconfig content should not have paths injected:\n{}",
+            result
+        );
     }
 }
