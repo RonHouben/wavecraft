@@ -203,16 +203,13 @@ fn apply_sdk_tsconfig_paths(content: &str) -> Result<TsconfigPathsInjection> {
         return Ok(TsconfigPathsInjection::Unchanged);
     }
 
-    let (compiler_options_start, compiler_options_end) = match
-        find_object_bounds_after_key(content, "\"compilerOptions\"")
-    {
-        Some(bounds) => bounds,
-        None => {
-            return Ok(TsconfigPathsInjection::Warning(
+    let (compiler_options_start, compiler_options_end) =
+        match find_object_bounds_after_key(content, "\"compilerOptions\"") {
+            Some(bounds) => bounds,
+            None => return Ok(TsconfigPathsInjection::Warning(
                 "could not inject SDK TypeScript paths: failed to locate `compilerOptions` object",
-            ))
-        }
-    };
+            )),
+        };
 
     let compiler_options_content = &content[compiler_options_start + 1..compiler_options_end];
     if compiler_options_content.contains("\"paths\"") {
@@ -232,12 +229,17 @@ fn apply_sdk_tsconfig_paths(content: &str) -> Result<TsconfigPathsInjection> {
         let anchor_text = &content[anchor_start..anchor_end];
         let needs_comma = !anchor_text.trim_end().ends_with(',');
         let comma = if needs_comma { "," } else { "" };
+        let has_following_properties =
+            has_jsonc_property_after_anchor(&content[anchor_end..compiler_options_end]);
 
         let mut updated = String::with_capacity(content.len() + 256);
         updated.push_str(&content[..anchor_end]);
         updated.push_str(comma);
         updated.push_str("\n\n");
         updated.push_str(SDK_TSCONFIG_PATHS_SNIPPET);
+        if has_following_properties {
+            updated.push(',');
+        }
         updated.push_str(&content[anchor_end..]);
 
         return Ok(TsconfigPathsInjection::Updated(updated));
@@ -257,6 +259,47 @@ fn apply_sdk_tsconfig_paths(content: &str) -> Result<TsconfigPathsInjection> {
     updated.push_str(&content[compiler_options_end..]);
 
     Ok(TsconfigPathsInjection::Updated(updated))
+}
+
+fn has_jsonc_property_after_anchor(segment: &str) -> bool {
+    let bytes = segment.as_bytes();
+    let mut index = 0;
+
+    while index < bytes.len() {
+        while index < bytes.len() && (bytes[index].is_ascii_whitespace() || bytes[index] == b',') {
+            index += 1;
+        }
+
+        if index >= bytes.len() {
+            return false;
+        }
+
+        if bytes[index] == b'/' && index + 1 < bytes.len() {
+            if bytes[index + 1] == b'/' {
+                index += 2;
+                while index < bytes.len() && bytes[index] != b'\n' {
+                    index += 1;
+                }
+                continue;
+            }
+
+            if bytes[index + 1] == b'*' {
+                index += 2;
+                while index + 1 < bytes.len() {
+                    if bytes[index] == b'*' && bytes[index + 1] == b'/' {
+                        index += 2;
+                        break;
+                    }
+                    index += 1;
+                }
+                continue;
+            }
+        }
+
+        return bytes[index] == b'"';
+    }
+
+    false
 }
 
 fn ensure_sdk_ui_paths_for_typescript(project: &ProjectMarkers, verbose: bool) -> Result<()> {
@@ -992,8 +1035,7 @@ mod tests {
     }
 }"#;
 
-        let output = apply_sdk_tsconfig_paths(input)
-            .expect("should parse");
+        let output = apply_sdk_tsconfig_paths(input).expect("should parse");
 
         let TsconfigPathsInjection::Updated(output) = output else {
             panic!("should inject");
@@ -1052,6 +1094,34 @@ mod tests {
             TsconfigPathsInjection::Warning(
                 "could not inject SDK TypeScript paths: `compilerOptions` block not found"
             )
+        );
+    }
+
+    #[test]
+    fn injects_paths_with_trailing_comma_before_following_property() {
+        let input = r#"{
+    "compilerOptions": {
+        "moduleResolution": "bundler",
+        "allowSyntheticDefaultImports": true,
+        "types": ["node"]
+    }
+}"#;
+
+        let output = apply_sdk_tsconfig_paths(input).expect("should parse");
+
+        let TsconfigPathsInjection::Updated(output) = output else {
+            panic!("should inject");
+        };
+
+        assert!(
+            output.contains("\"@wavecraft/components/*\": [\"../../ui/packages/components/src/*\"]\n    },\n        \"allowSyntheticDefaultImports\""),
+            "Expected trailing comma after injected paths block before following property:\n{}",
+            output
+        );
+        assert!(
+            !output.contains("\"@wavecraft/components/*\": [\"../../ui/packages/components/src/*\"]\n    }\n        \"allowSyntheticDefaultImports\""),
+            "Injected paths block must not be adjacent to next property without comma:\n{}",
+            output
         );
     }
 }

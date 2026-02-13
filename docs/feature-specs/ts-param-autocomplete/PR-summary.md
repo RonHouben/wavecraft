@@ -3,6 +3,7 @@
 This PR delivers TypeScript parameter ID autocompletion across the SDK workflow and includes a CI/CD hotfix for npm component sync ordering to prevent `ERESOLVE` version conflicts during release.
 
 Key outcomes:
+
 - Adds generated `ParameterId` typing in plugin UI projects for compile-time safety and IDE autocomplete.
 - Wires generation into `wavecraft start` and template setup flow.
 - Updates UI/core/components APIs and hooks to consume strongly typed parameter IDs.

@@ -250,12 +250,17 @@ fn inject_tsconfig_paths_if_needed(content: &str) -> Result<String> {
         let anchor_text = &content[anchor_start..anchor_end];
         let needs_comma = !anchor_text.trim_end().ends_with(',');
         let comma = if needs_comma { "," } else { "" };
+        let has_following_properties =
+            has_jsonc_property_after_anchor(&content[anchor_end..compiler_options_end]);
 
         let mut injected = String::with_capacity(content.len() + 256);
         injected.push_str(&content[..anchor_end]);
         injected.push_str(comma);
         injected.push_str("\n\n");
         injected.push_str(TSCONFIG_PATHS_SNIPPET);
+        if has_following_properties {
+            injected.push(',');
+        }
         injected.push_str(&content[anchor_end..]);
         return Ok(injected);
     }
@@ -274,6 +279,47 @@ fn inject_tsconfig_paths_if_needed(content: &str) -> Result<String> {
     injected.push_str(&content[compiler_options_end..]);
 
     Ok(injected)
+}
+
+fn has_jsonc_property_after_anchor(segment: &str) -> bool {
+    let bytes = segment.as_bytes();
+    let mut index = 0;
+
+    while index < bytes.len() {
+        while index < bytes.len() && (bytes[index].is_ascii_whitespace() || bytes[index] == b',') {
+            index += 1;
+        }
+
+        if index >= bytes.len() {
+            return false;
+        }
+
+        if bytes[index] == b'/' && index + 1 < bytes.len() {
+            if bytes[index + 1] == b'/' {
+                index += 2;
+                while index < bytes.len() && bytes[index] != b'\n' {
+                    index += 1;
+                }
+                continue;
+            }
+
+            if bytes[index + 1] == b'*' {
+                index += 2;
+                while index + 1 < bytes.len() {
+                    if bytes[index] == b'*' && bytes[index + 1] == b'/' {
+                        index += 2;
+                        break;
+                    }
+                    index += 1;
+                }
+                continue;
+            }
+        }
+
+        return bytes[index] == b'"';
+    }
+
+    false
 }
 
 fn find_object_bounds_after_key(content: &str, key: &str) -> Option<(usize, usize)> {
@@ -680,6 +726,50 @@ wavecraft-dev-server = { git = "https://github.com/RonHouben/wavecraft", tag = "
         assert!(
             result.contains(r#""@wavecraft/core": ["../../ui/packages/core/src/index.ts"]"#),
             "Expected @wavecraft/core mapping with fallback anchor:\n{}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_apply_local_dev_overrides_injects_paths_with_trailing_comma_before_next_property() {
+        let content = r#"{
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "types": ["node"]
+  }
+}"#;
+
+        let temp = tempdir().unwrap();
+        let sdk_root = temp.path();
+        let sdk_path = sdk_root.join("engine").join("crates");
+        fs::create_dir_all(&sdk_path).unwrap();
+
+        for crate_name in &SDK_CRATES {
+            fs::create_dir_all(sdk_path.join(crate_name)).unwrap();
+        }
+        fs::create_dir_all(sdk_path.join("wavecraft-nih_plug")).unwrap();
+        fs::create_dir_all(sdk_root.join("dev-server")).unwrap();
+
+        let vars = TemplateVariables::new(
+            "test-plugin".to_string(),
+            "Test Vendor".to_string(),
+            "test@example.com".to_string(),
+            "https://test.com".to_string(),
+            "v0.9.0".to_string(),
+            Some(sdk_path),
+        );
+
+        let result = apply_local_dev_overrides(content, &vars).unwrap();
+
+        assert!(
+            result.contains("\"@wavecraft/components/*\": [\"../../ui/packages/components/src/*\"]\n        },\n    \"allowSyntheticDefaultImports\""),
+            "Expected trailing comma after injected paths block before following property:\n{}",
+            result
+        );
+        assert!(
+            !result.contains("\"@wavecraft/components/*\": [\"../../ui/packages/components/src/*\"]\n        }\n    \"allowSyntheticDefaultImports\""),
+            "Injected paths block must not be adjacent to next property without comma:\n{}",
             result
         );
     }

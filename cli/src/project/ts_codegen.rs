@@ -16,6 +16,28 @@ fn ts_string_literal(value: &str) -> Result<String> {
     serde_json::to_string(value).context("Failed to escape TypeScript string literal")
 }
 
+fn is_ascii_typescript_identifier(value: &str) -> bool {
+    let mut chars = value.chars();
+
+    let Some(first) = chars.next() else {
+        return false;
+    };
+
+    if !(first.is_ascii_alphabetic() || first == '_' || first == '$') {
+        return false;
+    }
+
+    chars.all(|ch| ch.is_ascii_alphanumeric() || ch == '_' || ch == '$')
+}
+
+fn ts_interface_property_key(value: &str) -> Result<String> {
+    if is_ascii_typescript_identifier(value) {
+        Ok(value.to_string())
+    } else {
+        ts_string_literal(value)
+    }
+}
+
 /// Generate TypeScript parameter ID augmentation file.
 ///
 /// Output path: `{ui_dir}/src/generated/parameters.ts`
@@ -55,7 +77,7 @@ pub fn write_parameter_types(ui_dir: &Path, params: &[ParameterInfo]) -> Result<
             );
         }
 
-        let id_literal = ts_string_literal(id)?;
+        let id_literal = ts_interface_property_key(id)?;
         content.push_str("    ");
         content.push_str(&id_literal);
         content.push_str(": true;\n");
@@ -111,15 +133,11 @@ mod tests {
         let output_path = ui_dir.join("src/generated/parameters.ts");
         let output = fs::read_to_string(output_path).expect("generated file should exist");
 
-        let a_pos = output.find("\"a_id\": true;").expect("a_id present");
-        let b_pos = output.find("\"b_id\": true;").expect("b_id present");
+        let a_pos = output.find("a_id: true;").expect("a_id present");
+        let b_pos = output.find("b_id: true;").expect("b_id present");
 
         assert!(a_pos < b_pos, "IDs should be sorted");
-        assert_eq!(
-            output.matches("\"b_id\": true;").count(),
-            1,
-            "IDs deduplicated"
-        );
+        assert_eq!(output.matches("b_id: true;").count(), 1, "IDs deduplicated");
         assert!(
             output.contains("__wavecraft_internal_augmented__: true;"),
             "augmentation marker should always be present"
@@ -148,19 +166,31 @@ mod tests {
     }
 
     #[test]
-    fn escapes_parameter_keys_for_typescript() {
+    fn emits_prettier_stable_property_keys_for_typescript() {
         let temp = tempfile::tempdir().expect("temp dir");
         let ui_dir = temp.path();
 
-        let params = vec![param("gain\"quoted\\slash")];
+        let params = vec![
+            param("gain"),
+            param("gain-db"),
+            param("gain\"quoted\\slash"),
+        ];
         write_parameter_types(ui_dir, &params).expect("write should succeed");
 
         let output_path = ui_dir.join("src/generated/parameters.ts");
         let output = fs::read_to_string(output_path).expect("generated file should exist");
 
         assert!(
+            output.contains("gain: true;"),
+            "valid identifier keys should be unquoted"
+        );
+        assert!(
+            output.contains("\"gain-db\": true;"),
+            "non-identifier keys should remain quoted"
+        );
+        assert!(
             output.contains("\"gain\\\"quoted\\\\slash\": true;"),
-            "parameter ids should be escaped as valid TypeScript string literals"
+            "quoted keys should be escaped as valid TypeScript string literals"
         );
     }
 
