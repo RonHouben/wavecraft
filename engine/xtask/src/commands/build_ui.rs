@@ -10,7 +10,10 @@ use xtask::output::*;
 use xtask::paths;
 
 /// Build the React UI.
-pub fn run(verbose: bool) -> Result<()> {
+///
+/// When `strict_install` is true, dependency installation always runs to mirror
+/// CI behavior and avoid stale local `node_modules` state.
+pub fn run(verbose: bool, strict_install: bool) -> Result<()> {
     print_header("Build React UI");
 
     let ui_dir = paths::ui_dir()?;
@@ -25,12 +28,18 @@ pub fn run(verbose: bool) -> Result<()> {
     }
 
     // Step 1: Build package workspace libraries in ui/
-    ensure_npm_deps(&ui_dir, &["ci"], "npm ci", verbose)?;
+    ensure_npm_deps(&ui_dir, &["ci"], "npm ci", verbose, strict_install)?;
     run_npm(&ui_dir, &["run", "build:lib"], "npm run build:lib", verbose)?;
     print_success_item("UI packages built");
 
     // Step 2: Build template app in sdk-template/ui/
-    ensure_npm_deps(&sdk_template_ui_dir, &["install"], "npm install", verbose)?;
+    ensure_npm_deps(
+        &sdk_template_ui_dir,
+        &["install"],
+        "npm install",
+        verbose,
+        strict_install,
+    )?;
     run_npm(
         &sdk_template_ui_dir,
         &["run", "build"],
@@ -67,9 +76,10 @@ fn ensure_npm_deps(
     install_args: &[&str],
     install_cmd_name: &str,
     verbose: bool,
+    strict_install: bool,
 ) -> Result<()> {
     let node_modules = dir.join("node_modules");
-    if node_modules.exists() {
+    if !strict_install && node_modules.exists() {
         if verbose {
             println!(
                 "  node_modules exists, skipping {} in {}",
@@ -78,6 +88,14 @@ fn ensure_npm_deps(
             );
         }
         return Ok(());
+    }
+
+    if strict_install && verbose && node_modules.exists() {
+        println!(
+            "  strict install mode: running {} even though node_modules exists in {}",
+            install_cmd_name,
+            dir.display()
+        );
     }
 
     run_npm(dir, install_args, install_cmd_name, verbose)

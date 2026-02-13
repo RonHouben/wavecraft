@@ -144,7 +144,7 @@ pub fn run(config: CheckConfig) -> Result<()> {
 
 fn build_ui_dist(verbose: bool) -> Result<()> {
     print_status("Building UI dist for embedded asset tests (always rebuild)");
-    build_ui::run(verbose)
+    build_ui::run(verbose, true)
 }
 
 /// Run the documentation link check phase.

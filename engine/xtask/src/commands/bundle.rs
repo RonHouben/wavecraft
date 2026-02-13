@@ -29,7 +29,7 @@ pub fn run_with_features(
 
     // Build the React UI assets
     print_status("Building React UI assets...");
-    build_ui::run(verbose)?;
+    build_ui::run(verbose, false)?;
 
     print_success("React UI built successfully");
 

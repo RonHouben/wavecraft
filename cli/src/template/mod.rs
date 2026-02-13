@@ -61,7 +61,10 @@ fn extract_dir(dir: &Dir, target_dir: &Path, vars: &TemplateVariables) -> Result
                 // Handle .template files: rename back to original (e.g., Cargo.toml.template -> Cargo.toml)
                 // These are renamed to avoid cargo treating the template as a crate during packaging.
                 let output_name = if file_name_str.ends_with(".template") {
-                    file_name_str.strip_suffix(".template").unwrap().to_string()
+                    file_name_str
+                        .strip_suffix(".template")
+                        .expect("filename should have .template suffix after filter")
+                        .to_string()
                 } else {
                     file_name_str.to_string()
                 };

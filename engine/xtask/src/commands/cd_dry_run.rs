@@ -201,7 +201,15 @@ fn detect_changes(project_root: &Path, base_ref: &str) -> Result<(ChangeSet, boo
 }
 
 fn is_cli_change(path: &str) -> bool {
-    path.starts_with("cli/src/") || path == "cli/Cargo.toml" || path.starts_with("sdk-template/")
+    path.starts_with("cli/src/") || is_cli_root_file(path) || path.starts_with("sdk-template/")
+}
+
+fn is_cli_root_file(path: &str) -> bool {
+    let Some(relative) = path.strip_prefix("cli/") else {
+        return false;
+    };
+
+    !relative.is_empty() && !relative.contains('/')
 }
 
 fn is_engine_change(path: &str) -> bool {
@@ -623,7 +631,9 @@ mod tests {
     #[test]
     fn test_cli_path_detection() {
         assert!(is_cli_change("cli/src/main.rs"));
+        assert!(is_cli_change("cli/build.rs"));
         assert!(is_cli_change("cli/Cargo.toml"));
+        assert!(is_cli_change("cli/README.md"));
         assert!(is_cli_change("sdk-template/engine/Cargo.toml.template"));
         assert!(!is_cli_change("engine/Cargo.toml"));
     }

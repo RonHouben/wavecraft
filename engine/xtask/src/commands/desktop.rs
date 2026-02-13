@@ -18,7 +18,7 @@ pub fn run(release: bool, build_ui: bool, verbose: bool) -> Result<()> {
     // Step 1: Build React UI if requested
     if build_ui {
         print_status("Building React UI...");
-        build_ui::run(verbose)?;
+        build_ui::run(verbose, false)?;
         print_success("React UI built");
     }
 
