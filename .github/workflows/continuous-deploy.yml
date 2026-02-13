@@ -105,6 +105,10 @@ jobs:
     if: |
       !cancelled() &&
       needs.detect-changes.outputs.any_sdk_changed == 'true' &&
+      (
+        (needs.detect-changes.outputs.engine != 'true' && needs.detect-changes.outputs.cli != 'true') ||
+        needs.publish-engine.outputs.version != ''
+      ) &&
       (needs.publish-engine.result == 'success' || needs.publish-engine.result == 'skipped') &&
       (needs.publish-dev-server.result == 'success' || needs.publish-dev-server.result == 'skipped') &&
       (needs.publish-npm-core.result == 'success' || needs.publish-npm-core.result == 'skipped') &&
@@ -381,7 +385,7 @@ jobs:
       id-token: write # Required for crates.io trusted publishing (OIDC)
       contents: write # For version bump commits and git tags
     outputs:
-      version: ${{ steps.final.outputs.version }}
+      version: ${{ steps.verified.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -422,27 +426,59 @@ jobs:
       - name: Query registry version
         id: registry
         run: |
-          # Query crates.io API with explicit HTTP status check
-          HTTP_CODE=$(curl -s -o /tmp/crate-info.json -w "%{http_code}" \
-            -H "User-Agent: wavecraft-ci (https://github.com/RonHouben/wavecraft)" \
-            "https://crates.io/api/v1/crates/wavecraft-core")
+          REQUIRED_CRATES=(
+            wavecraft-core
+            wavecraft-protocol
+            wavecraft-bridge
+            wavecraft-metering
+            wavecraft-dsp
+            wavecraft-macros
+          )
 
-          if [ "$HTTP_CODE" -ne 200 ]; then
-            echo "⚠️  crates.io API returned HTTP $HTTP_CODE"
+          PUBLISHED_VERSIONS=()
+          REGISTRY_OK=true
+
+          for crate in "${REQUIRED_CRATES[@]}"; do
+            HTTP_CODE=$(curl -s -o /tmp/crate-info.json -w "%{http_code}" \
+              -H "User-Agent: wavecraft-ci (https://github.com/RonHouben/wavecraft)" \
+              "https://crates.io/api/v1/crates/$crate")
+
+            if [ "$HTTP_CODE" -ne 200 ]; then
+              echo "⚠️  crates.io API returned HTTP $HTTP_CODE for $crate"
+              REGISTRY_OK=false
+              break
+            fi
+
+            VERSION=$(jq -r '.crate.max_version // empty' /tmp/crate-info.json 2>/dev/null)
+            if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+              echo "⚠️  Failed to parse max_version from crates.io API for $crate"
+              REGISTRY_OK=false
+              break
+            fi
+
+            PUBLISHED_VERSIONS+=("$VERSION")
+            echo "- $crate latest: $VERSION"
+          done
+
+          if [ "$REGISTRY_OK" != "true" ]; then
             echo "registry_available=false" >> $GITHUB_OUTPUT
             echo "published=unknown" >> $GITHUB_OUTPUT
-          else
-            PUBLISHED=$(jq -r '.crate.max_version // empty' /tmp/crate-info.json 2>/dev/null)
-            if [ -z "$PUBLISHED" ] || [ "$PUBLISHED" = "null" ]; then
-              echo "⚠️  Failed to parse version from crates.io API"
-              echo "registry_available=false" >> $GITHUB_OUTPUT
-              echo "published=unknown" >> $GITHUB_OUTPUT
-            else
-              echo "✅ Latest on crates.io: $PUBLISHED"
-              echo "registry_available=true" >> $GITHUB_OUTPUT
-              echo "published=$PUBLISHED" >> $GITHUB_OUTPUT
-            fi
+            exit 0
           fi
+
+          # Use highest published version across required engine crates as safe baseline
+          PUBLISHED=$(printf '%s\n' "${PUBLISHED_VERSIONS[@]}" | sort -V | tail -1)
+          UNIQUE_COUNT=$(printf '%s\n' "${PUBLISHED_VERSIONS[@]}" | sort -u | wc -l | tr -d ' ')
+
+          if [ "$UNIQUE_COUNT" -gt 1 ]; then
+            echo "⚠️  Engine registry drift detected across crates (versions are not aligned)."
+            echo "⚠️  Using highest published version as bump baseline: $PUBLISHED"
+          else
+            echo "✅ Required engine crates aligned on crates.io at version: $PUBLISHED"
+          fi
+
+          echo "registry_available=true" >> $GITHUB_OUTPUT
+          echo "published=$PUBLISHED" >> $GITHUB_OUTPUT
 
       - name: Determine publish version
         id: version
@@ -590,6 +626,28 @@ jobs:
             --allow-branch main \
             --from-git
 
+      - name: Verify all required engine crates are available on crates.io
+        if: steps.version.outputs.action != 'skip'
+        id: verified
+        run: |
+          VERSION="${{ steps.final.outputs.version }}"
+          REQUIRED_CRATES=(
+            wavecraft-core
+            wavecraft-protocol
+            wavecraft-bridge
+            wavecraft-metering
+            wavecraft-dsp
+            wavecraft-macros
+          )
+
+          echo "Verifying required engine crates are available at version $VERSION..."
+          for crate in "${REQUIRED_CRATES[@]}"; do
+            bash scripts/ci/wait-for-crate.sh "$crate" "$VERSION"
+          done
+
+          echo "✅ All required engine crates are available at $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Push tags only
         if: steps.version.outputs.action != 'skip'
         run: git push origin --tags
@@ -602,6 +660,10 @@ jobs:
     if: |
       !cancelled() &&
       needs.detect-changes.outputs.dev-server == 'true' &&
+      (
+        (needs.detect-changes.outputs.engine != 'true' && needs.detect-changes.outputs.cli != 'true') ||
+        needs.publish-engine.outputs.version != ''
+      ) &&
       (needs.publish-engine.result == 'success' || needs.publish-engine.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
