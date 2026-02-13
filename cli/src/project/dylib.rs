@@ -75,10 +75,10 @@ pub fn find_plugin_dylib(engine_dir: &Path) -> Result<PathBuf> {
 
 /// Resolve the debug directory, checking both project-local and workspace locations.
 ///
-/// For SDK mode (engine_dir = engine/crates/wavecraft-example), checks three levels:
-/// 1. engine/crates/wavecraft-example/target/debug (crate-local)
-/// 2. engine/crates/target/debug (one parent up)
-/// 3. engine/target/debug (two parents up - workspace root)
+/// For SDK mode (engine_dir = sdk-template/engine), checks three levels:
+/// 1. sdk-template/engine/target/debug (crate-local)
+/// 2. sdk-template/target/debug (one parent up)
+/// 3. target/debug (two parents up - repository root)
 pub fn resolve_debug_dir(engine_dir: &Path) -> Result<PathBuf> {
     let engine_debug = engine_dir.join("target").join("debug");
     if engine_debug.exists() {
@@ -93,7 +93,7 @@ pub fn resolve_debug_dir(engine_dir: &Path) -> Result<PathBuf> {
         }
     }
 
-    // For SDK mode: check one more level up (engine/crates/wavecraft-example → engine/crates → engine)
+    // For SDK mode: check one more level up (sdk-template/engine → sdk-template → repo root)
     let workspace_root_debug = engine_dir
         .parent()
         .and_then(|p| p.parent())

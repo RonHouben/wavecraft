@@ -8,9 +8,9 @@ use std::path::Path;
 
 use crate::template::variables::TemplateVariables;
 
-// The template lives in cli/sdk-templates/new-project/react/ and is packaged directly with the CLI crate.
-// Structure: sdk-templates/new-project/<variant>/ — currently only "react" variant exists.
-static TEMPLATE_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/sdk-templates/new-project/react");
+// The canonical template lives in sdk-template/ at the repository root and is
+// embedded directly into the CLI binary.
+static TEMPLATE_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/../sdk-template");
 
 /// Extracts the embedded template to the target directory and applies variable replacement.
 pub fn extract_template(target_dir: &Path, vars: &TemplateVariables) -> Result<()> {
