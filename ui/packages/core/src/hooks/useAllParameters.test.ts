@@ -438,16 +438,23 @@ describe('useAllParameters', () => {
 
     // Simulate parameter change notification using captured callback
     expect(onParamChangedCallback).not.toBeNull();
-    if (onParamChangedCallback) {
-      await act(async () => {
-        onParamChangedCallback('gain', 0.8);
-      });
+    const callback = onParamChangedCallback;
+    if (!callback) {
+      throw new Error('Expected onParamChangedCallback to be set');
     }
+    await act(async () => {
+      callback('gain', 0.8);
+    });
 
     // Wait for the state update to complete
     await waitFor(
       () => {
-        expect(result.current.params[0].value).toBe(0.8);
+        const firstParam = result.current.params[0];
+        expect(firstParam).toBeDefined();
+        if (!firstParam) {
+          throw new Error('Expected first parameter to exist');
+        }
+        expect(firstParam.value).toBe(0.8);
       },
       { timeout: 1000 }
     );
@@ -500,7 +507,12 @@ describe('useAllParameters', () => {
     );
 
     expect(getAllSpy).toHaveBeenCalledTimes(2);
-    expect(result.current.params[2].id).toBe('freq');
+    const freqParam = result.current.params[2];
+    expect(freqParam).toBeDefined();
+    if (!freqParam) {
+      throw new Error('Expected reloaded frequency parameter to exist');
+    }
+    expect(freqParam.id).toBe('freq');
   });
 
   // T16: reload() clears error state
