@@ -3,7 +3,7 @@
 //! This command runs all the checks that would run in the CI pipeline:
 //! 0. Documentation link checking (`scripts/check-links.sh`)
 //! 1. UI dist build (always rebuild to mirror CI)
-//! 2. Linting (with optional auto-fix)
+//! 2. Linting + type-checking (with optional auto-fix for lint/format)
 //! 3. Automated tests (engine + UI)
 //! 4. Template validation (`validate-template`) [--full only]
 //! 5. CD dry-run (`cd_dry_run`) [--full only]
@@ -99,7 +99,7 @@ pub fn run(config: CheckConfig) -> Result<()> {
     // Phase 1: UI Dist Build (always rebuild to mirror CI behavior)
     run_ui_build_phase(&config)?;
 
-    // Phase 2: Linting
+    // Phase 2: Linting + type-checking
     if !config.skip_lint {
         results.lint = Some(run_lint_phase(&config));
     } else {
@@ -186,9 +186,9 @@ fn run_ui_build_phase(config: &CheckConfig) -> Result<()> {
     build_ui_dist(config.verbose)
 }
 
-/// Run the linting phase.
+/// Run the linting + type-checking phase.
 fn run_lint_phase(config: &CheckConfig) -> Result<Duration> {
-    print_phase("Phase 2: Linting");
+    print_phase("Phase 2: Linting + Type-Checking");
     let start = Instant::now();
 
     let targets = lint::LintTargets {
