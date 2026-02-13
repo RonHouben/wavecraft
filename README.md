@@ -81,8 +81,12 @@ wavecraft create my-plugin
 wavecraft/
 ├── cli/                          # Wavecraft CLI tool
 │   ├── src/                      # CLI source code
-│   └── sdk-templates/            # Project templates embedded in CLI
-│       └── new-project/react/    # React UI template (default)
+│   └── template/                 # Template extraction and variable processing
+│
+├── sdk-template/                 # Canonical project template (embedded by CLI)
+│   ├── Cargo.toml.template
+│   ├── engine/
+│   └── ui/
 │
 ├── dev-server/                   # Unified dev server (standalone crate)
 │   ├── Cargo.toml                # Not in engine workspace
@@ -102,12 +106,11 @@ wavecraft/
 │       ├── wavecraft-protocol/   # Shared contracts (param IDs, JSON-RPC types)
 │       └── wavecraft-metering/   # SPSC ring buffer for real-time meters
 │
-├── ui/                           # React SPA (Vite + TypeScript)
+├── ui/                           # React package workspace (npm)
 │   ├── packages/
 │   │   ├── core/                 # @wavecraft/core package source
 │   │   └── components/           # @wavecraft/components package source
-│   ├── src/                      # Dev app for testing packages
-│   └── dist/                     # Build output (embedded in plugin)
+│   └── test/                     # Shared test utilities
 │
 ├── docs/                         # Architecture & specs
 └── packaging/                    # Platform installers

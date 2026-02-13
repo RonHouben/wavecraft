@@ -56,12 +56,10 @@ wavecraft/
 │   │   └── template/              # Template extraction & variables
 │   │       ├── mod.rs
 │   │       └── variables.rs
-│   └── sdk-templates/             # Embedded project templates
-│       └── new-project/           # `wavecraft create` templates
-│           └── react/             # React UI variant (default)
-│               ├── Cargo.toml.template
-│               ├── engine/        # Rust audio engine template
-│               └── ui/            # React UI template
+├── sdk-template/                  # Canonical plugin scaffold for CLI + SDK dev mode
+│   ├── Cargo.toml.template
+│   ├── engine/                    # Rust audio engine template
+│   └── ui/                        # React UI template
 ├── dev-server/                    # Unified dev server (standalone crate)
 │   ├── Cargo.toml                 # Not in engine workspace
 │   └── src/                       # Dev server source
@@ -83,16 +81,15 @@ wavecraft/
 │   │   ├── wavecraft-bridge/      # IPC handler
 │   │   ├── wavecraft-metering/    # Real-time metering
 │   │   ├── wavecraft-dsp/         # DSP primitives
-│   │   └── wavecraft-example/     # Example plugin for SDK development (publish = false)
+│   │   └── ...                    # Additional SDK crates
 │   └── xtask/                     # Build automation
 ├── packaging/                     # AU wrapper, installers
 ├── scripts/                       # Development scripts
-├── ui/                            # React UI (npm workspace)
+├── ui/                            # React UI package workspace
 │   ├── packages/                  # Published npm packages
 │   │   ├── core/                  # @wavecraft/core — IPC, hooks, utilities
 │   │   └── components/            # @wavecraft/components — React components
-│   ├── src/                       # Development app (internal testing)
-│   └── test/                      # Test utilities and mocks
+│   └── test/                      # Shared test utilities and mocks
 ```
 
 ### Monorepo Benefits

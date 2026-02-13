@@ -56,7 +56,7 @@ jobs:
             cli:
               - 'cli/src/**'
               - 'cli/Cargo.toml'
-              - 'cli/sdk-templates/**'
+              - 'sdk-template/**'
             engine:
               - 'engine/crates/wavecraft-core/**'
               - 'engine/crates/wavecraft-dsp/**'

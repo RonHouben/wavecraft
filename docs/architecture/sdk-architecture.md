@@ -26,8 +26,8 @@ Wavecraft distributes its SDK through two channels:
 │                                                                                 │
 │   ┌───────────────────────┐       ┌───────────────────────┐                     │
 │   │  EMBEDDED TEMPLATE    │       │    GIT-ONLY           │                     │
-│   │  cli/sdk-templates/   │       │                       │                     │
-│   │  new-project/react/   │       │  wavecraft-nih_plug   │  ← User depends     │
+│   │  sdk-template/        │       │                       │                     │
+│   │                       │       │  wavecraft-nih_plug   │  ← User depends     │
 │   │  ├── engine/          │──────▶│  (Cargo rename:       │    (git tag)        │
 │   │  │   └── Cargo.toml   │       │   wavecraft = {...})  │                     │
 │   │  │   wavecraft = {    │       │                       │                     │
@@ -80,7 +80,7 @@ All SDK crates use the `wavecraft-*` naming convention for clear identification:
 | `wavecraft-metering`   | Real-time safe SPSC ring buffer for audio → UI metering                                                                                                                                                                                                                                       | ✅ crates.io                    | Uses `MeterProducer` in DSP                                                                              |
 | `wavecraft-dsp`        | DSP primitives, `Processor` trait, built-in processors                                                                                                                                                                                                                                        | ✅ crates.io                    | Implements `Processor` trait                                                                             |
 | `wavecraft-dev-server` | Unified dev server at `dev-server/` (repo root): WebSocket server, `DevAudioProcessor` trait, `FfiProcessor` wrapper, `AudioServer` (full-duplex), `AtomicParameterBridge`, hot-reload, file watching. Feature-gated audio (`default = ["audio"]`). CLI uses with `default-features = false`. | ❌ Standalone (publish = false) | CLI uses for dev mode                                                                                    |
-| `wavecraft-example`    | Minimal example plugin for SDK development; enables `cargo xtask dev` from SDK root. Mirrors the template structure produced by `wavecraft create`.                                                                                                                                           | ❌ Dev only (`publish = false`) | Not used by end users; SDK contributors only                                                             |
+| `sdk-template`         | Canonical plugin scaffold at repository root. Used both for CLI template embedding and SDK-mode development (`cargo xtask dev` after running `scripts/setup-dev-template.sh`).                                                                                                                             | ❌ Internal scaffold            | Source of truth for generated projects and SDK contributor workflow                                       |
 
 > **Why the split?** The `nih_plug` crate cannot be published to crates.io (it has unpublished dependencies). By isolating nih_plug integration in `wavecraft-nih_plug` (git-only), all other crates become publishable. User projects depend on `wavecraft-nih_plug` via git tag, while the ecosystem gains crates.io discoverability for the rest of the SDK. The `wavecraft-dev-server` crate lives at the repository root (`dev-server/`) because it bridges CLI and engine concerns and is never distributed to end users — it's an internal development tool.
 
