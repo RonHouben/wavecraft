@@ -351,6 +351,21 @@ jobs:
           fi
           echo "✅ Version $VERSION is not yet on crates.io — safe to publish"
 
+      - name: Stage SDK template for CLI packaging
+        if: steps.version.outputs.action != 'skip'
+        run: |
+          rm -rf cli/sdk-template
+          mkdir -p cli/sdk-template
+
+          rsync -a --delete \
+            --exclude target \
+            --exclude node_modules \
+            --exclude dist \
+            sdk-template/ cli/sdk-template/
+
+          # Ensure cargo package picks up the staged files from git metadata mode.
+          git add -f cli/sdk-template
+
       - name: Verify publishability (dry-run)
         if: steps.version.outputs.action != 'skip'
         working-directory: cli

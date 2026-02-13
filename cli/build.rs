@@ -8,11 +8,12 @@ const EXCLUDED_DIRS: &[&str] = &["target", "node_modules", "dist"];
 
 fn main() {
     println!("cargo:rerun-if-changed=../sdk-template");
+    println!("cargo:rerun-if-changed=sdk-template");
 
     let manifest_dir = PathBuf::from(
         env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR must be set by Cargo"),
     );
-    let src_root = manifest_dir.join("../sdk-template");
+    let src_root = resolve_template_source(&manifest_dir);
     let out_root = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR must be set by Cargo"))
         .join("sdk-template-clean");
 
@@ -39,6 +40,24 @@ fn main() {
             out_root.display()
         )
     });
+}
+
+fn resolve_template_source(manifest_dir: &Path) -> PathBuf {
+    let monorepo_template = manifest_dir.join("../sdk-template");
+    if monorepo_template.is_dir() {
+        return monorepo_template;
+    }
+
+    let packaged_template = manifest_dir.join("sdk-template");
+    if packaged_template.is_dir() {
+        return packaged_template;
+    }
+
+    panic!(
+        "Template source directory not found. Tried monorepo path {} and packaged path {}",
+        monorepo_template.display(),
+        packaged_template.display()
+    );
 }
 
 fn copy_filtered(src: &Path, dst: &Path) -> io::Result<()> {
