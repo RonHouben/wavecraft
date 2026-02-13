@@ -361,6 +361,9 @@ jobs:
             --exclude target \
             --exclude node_modules \
             --exclude dist \
+            --exclude Cargo.toml \
+            --exclude engine/Cargo.toml \
+            --exclude engine/xtask/Cargo.toml \
             sdk-template/ cli/sdk-template/
 
           # Ensure cargo package picks up the staged files from git metadata mode.
