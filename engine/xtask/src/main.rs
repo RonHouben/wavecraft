@@ -214,6 +214,10 @@ enum Commands {
         #[arg(long)]
         fix: bool,
 
+        /// Include full validation: template validation + CD dry-run
+        #[arg(short = 'F', long)]
+        full: bool,
+
         /// Skip documentation checks
         #[arg(long)]
         skip_docs: bool,
@@ -225,6 +229,14 @@ enum Commands {
         /// Skip automated tests
         #[arg(long)]
         skip_tests: bool,
+
+        /// Skip template validation phase (only applies with --full)
+        #[arg(long)]
+        skip_template: bool,
+
+        /// Skip CD dry-run phase (only applies with --full)
+        #[arg(long)]
+        skip_cd: bool,
     },
 
     /// Validate CLI wavecraft-* dependency versions and publishability
@@ -378,15 +390,21 @@ fn main() -> Result<()> {
         Some(Commands::Dev { port }) => commands::dev::run(port, cli.verbose),
         Some(Commands::Check {
             fix,
+            full,
             skip_docs,
             skip_lint,
             skip_tests,
+            skip_template,
+            skip_cd,
         }) => {
             let config = commands::check::CheckConfig {
                 fix,
                 skip_docs,
                 skip_lint,
                 skip_tests,
+                full,
+                skip_template,
+                skip_cd,
                 verbose: cli.verbose,
             };
             commands::check::run(config)

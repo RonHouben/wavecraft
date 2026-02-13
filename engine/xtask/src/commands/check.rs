@@ -5,6 +5,8 @@
 //! 1. UI dist build (always rebuild to mirror CI)
 //! 2. Linting (with optional auto-fix)
 //! 3. Automated tests (engine + UI)
+//! 4. Template validation (`ci-validate-template`) [--full only]
+//! 5. CD dry-run (`cd_dry_run`) [--full only]
 //!
 //! This is much faster than running the full CI pipeline via Docker/act
 //! because it runs natively on the local machine.
@@ -17,7 +19,7 @@ use anyhow::Result;
 use std::process::Command;
 use std::time::{Duration, Instant};
 
-use super::{build_ui, lint, test};
+use super::{build_ui, cd_dry_run, lint, test, validate_template};
 use xtask::output::*;
 use xtask::paths;
 
@@ -32,6 +34,12 @@ pub struct CheckConfig {
     pub skip_lint: bool,
     /// Skip automated tests
     pub skip_tests: bool,
+    /// Enable extended checks (template validation + CD dry-run)
+    pub full: bool,
+    /// Skip template validation phase (only applicable with --full)
+    pub skip_template: bool,
+    /// Skip CD dry-run phase (only applicable with --full)
+    pub skip_cd: bool,
     /// Show verbose output
     pub verbose: bool,
 }
@@ -41,6 +49,8 @@ struct CheckResults {
     docs: Option<Result<Duration>>,
     lint: Option<Result<Duration>>,
     test: Option<Result<Duration>>,
+    template: Option<Result<Duration>>,
+    cd_dry_run: Option<Result<Duration>>,
 }
 
 impl CheckResults {
@@ -49,6 +59,8 @@ impl CheckResults {
             docs: None,
             lint: None,
             test: None,
+            template: None,
+            cd_dry_run: None,
         }
     }
 
@@ -56,7 +68,9 @@ impl CheckResults {
         let docs_ok = self.docs.as_ref().is_none_or(|r| r.is_ok());
         let lint_ok = self.lint.as_ref().is_none_or(|r| r.is_ok());
         let test_ok = self.test.as_ref().is_none_or(|r| r.is_ok());
-        docs_ok && lint_ok && test_ok
+        let template_ok = self.template.as_ref().is_none_or(|r| r.is_ok());
+        let cd_ok = self.cd_dry_run.as_ref().is_none_or(|r| r.is_ok());
+        docs_ok && lint_ok && test_ok && template_ok && cd_ok
     }
 }
 
@@ -101,9 +115,25 @@ pub fn run(config: CheckConfig) -> Result<()> {
         println!();
     }
 
+    // Phase 4: Template Validation (--full only)
+    if config.full && !config.skip_template {
+        results.template = Some(run_template_phase(&config));
+    } else if config.full && config.skip_template {
+        print_skip("Skipping template validation (--skip-template)");
+        println!();
+    }
+
+    // Phase 5: CD Dry-Run (--full only)
+    if config.full && !config.skip_cd {
+        results.cd_dry_run = Some(run_cd_dry_run_phase(&config));
+    } else if config.full && config.skip_cd {
+        print_skip("Skipping CD dry-run (--skip-cd)");
+        println!();
+    }
+
     // Print summary
     let total_duration = total_start.elapsed();
-    print_summary(&results, total_duration);
+    print_summary(&results, total_duration, config.full);
 
     if results.all_passed() {
         Ok(())
@@ -182,6 +212,34 @@ fn run_test_phase(config: &CheckConfig) -> Result<Duration> {
     Ok(start.elapsed())
 }
 
+/// Run the template validation phase.
+fn run_template_phase(config: &CheckConfig) -> Result<Duration> {
+    println!();
+    print_phase("Phase 4: Template Validation");
+    let start = Instant::now();
+
+    validate_template::run(validate_template::ValidateTemplateConfig {
+        verbose: config.verbose,
+        keep: false,
+    })?;
+
+    Ok(start.elapsed())
+}
+
+/// Run the CD dry-run phase.
+fn run_cd_dry_run_phase(config: &CheckConfig) -> Result<Duration> {
+    println!();
+    print_phase("Phase 5: CD Dry-Run");
+    let start = Instant::now();
+
+    cd_dry_run::run(cd_dry_run::CdDryRunConfig {
+        verbose: config.verbose,
+        base_ref: "main".to_string(),
+    })?;
+
+    Ok(start.elapsed())
+}
+
 /// Print a phase header.
 fn print_phase(name: &str) {
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -189,7 +247,7 @@ fn print_phase(name: &str) {
 }
 
 /// Print the final summary.
-fn print_summary(results: &CheckResults, total_duration: Duration) {
+fn print_summary(results: &CheckResults, total_duration: Duration, full: bool) {
     println!();
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     print_status("Summary");
@@ -243,10 +301,46 @@ fn print_summary(results: &CheckResults, total_duration: Duration) {
         println!("  ⊘ Automated Tests: SKIPPED");
     }
 
+    // Template validation result
+    if let Some(ref result) = results.template {
+        match result {
+            Ok(duration) => {
+                print_success_item(&format!(
+                    "Template Validation: PASSED ({:.1}s)",
+                    duration.as_secs_f64()
+                ));
+            }
+            Err(e) => {
+                print_error(&format!("  ✗ Template Validation: FAILED - {}", e));
+            }
+        }
+    } else if full {
+        println!("  ⊘ Template Validation: SKIPPED");
+    }
+
+    // CD dry-run result
+    if let Some(ref result) = results.cd_dry_run {
+        match result {
+            Ok(duration) => {
+                print_success_item(&format!(
+                    "CD Dry-Run: PASSED ({:.1}s)",
+                    duration.as_secs_f64()
+                ));
+            }
+            Err(e) => {
+                print_error(&format!("  ✗ CD Dry-Run: FAILED - {}", e));
+            }
+        }
+    } else if full {
+        println!("  ⊘ CD Dry-Run: SKIPPED");
+    }
+
     println!();
     println!("Total time: {:.1}s", total_duration.as_secs_f64());
     println!();
-    println!("💡 For template/CLI changes, also run 'cargo xtask ci-validate-template'.");
+    if !full {
+        println!("💡 Run with --full to include template validation and CD dry-run.");
+    }
     println!("💡 For visual testing, run 'cargo xtask dev' and use the");
     println!("   'playwright-mcp-ui-testing' skill for browser-based validation.");
 
@@ -286,5 +380,8 @@ mod tests {
         assert!(!config.skip_docs);
         assert!(!config.skip_lint);
         assert!(!config.skip_tests);
+        assert!(!config.full);
+        assert!(!config.skip_template);
+        assert!(!config.skip_cd);
     }
 }
