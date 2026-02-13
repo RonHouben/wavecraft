@@ -25,7 +25,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -87,7 +87,7 @@ jobs:
           test -f /tmp/test-plugin/ui/src/App.tsx || exit 1
           test -f /tmp/test-plugin/README.md || exit 1
           echo "✅ All expected files present"
-          
+
           # Verify local dev dependencies were applied
           echo "Checking SDK dependencies use local paths..."
           grep -q "path = " /tmp/test-plugin/engine/Cargo.toml && echo "✅ Path dependencies found" || (echo "❌ Path dependencies not found" && exit 1)

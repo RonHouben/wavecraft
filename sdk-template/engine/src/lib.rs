@@ -31,6 +31,6 @@ wavecraft_plugin! {
     // Default: gain-only chain (silent — requires external audio input).
     // Uncomment the line below to hear the oscillator example instead.
     //
-    // signal: SignalChain![InputGain, Oscillator, OutputGain],
-    signal: SignalChain![InputGain, OutputGain],
+    signal: SignalChain![InputGain, OutputGain, Oscillator],
+    // signal: SignalChain![InputGain, OutputGain],
 }
