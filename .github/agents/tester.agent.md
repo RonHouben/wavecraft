@@ -85,7 +85,7 @@ You have access to the **Search agent** — a dedicated research specialist with
 
 **Example:** Before writing tests for metering, invoke Search:
 
-> "Search for all metering-related test files and assertions across engine/crates/wavecraft-metering/tests/, ui/packages/core/src/\*_/_.test.\*, and ui/src/test/. Synthesize: what metering behaviors are tested, what patterns the tests use, and what edge cases are missing."
+> "Search for all metering-related test files and assertions across engine/crates/wavecraft-metering/tests/, ui/packages/core/src/\*_/_.test.\*, and ui/test/. Synthesize: what metering behaviors are tested, what patterns the tests use, and what edge cases are missing."
 
 ### When to Use Own Tools (EXCEPTION)
 

@@ -66,13 +66,13 @@ Specify three things in your delegation:
 
 - **Coder:** "Search for how existing IPC message types are defined and handled across engine/crates/wavecraft-protocol/src/, engine/crates/wavecraft-bridge/src/, and ui/packages/core/src/. Synthesize: the pattern for adding a new message type end-to-end (Rust struct, handler, TypeScript type, client method)."
 
-- **Tester:** "Search for all metering-related test files and assertions across engine/crates/wavecraft-metering/tests/, ui/packages/core/src/**/*.test.*, and ui/src/test/. Synthesize: what metering behaviors are tested, what patterns the tests use, and what edge cases are missing."
+- **Tester:** "Search for all metering-related test files and assertions across engine/crates/wavecraft-metering/tests/, ui/packages/core/src/**/*.test.*, and ui/test/. Synthesize: what metering behaviors are tested, what patterns the tests use, and what edge cases are missing."
 
 - **QA:** "Search for all error handling patterns across engine/crates/ (excluding test files). Synthesize: which crates use Result vs panic, where unwrap()/expect() appears in production paths, and any inconsistencies with the coding standards."
 
 - **DocWriter:** "Search for all documentation files that reference the old parameter system in docs/ and README files. Synthesize: list of files that need updates with current content context."
 
-- **PO:** "Search for all user-facing feature implementations in ui/src/components/ and engine/crates/wavecraft-nih_plug/. Synthesize: what user-visible features exist and how they're exposed in the UI and plugin interface."
+- **PO:** "Search for all user-facing feature implementations in ui/packages/components/src/ and engine/crates/wavecraft-nih_plug/. Synthesize: what user-visible features exist and how they're exposed in the UI and plugin interface."
 
 ### When to Use Your Own Tools (EXCEPTION)
 

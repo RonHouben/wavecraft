@@ -106,7 +106,7 @@ ui/
 
 ### Mocking IPC for Tests
 
-The `ui/src/test/mocks/ipc.ts` module provides mock implementations of IPC hooks that allow testing components without the Rust engine.
+The `ui/test/mocks/ipc.ts` module provides mock implementations of IPC hooks that allow testing components without the Rust engine.
 
 **Do:**
 ```typescript
@@ -134,7 +134,7 @@ beforeEach(() => {
 **Vitest Configuration** (`ui/vitest.config.ts`):
 - Environment: `happy-dom` (faster than jsdom)
 - Globals: enabled (`describe`, `it`, `expect` without imports)
-- Setup: `src/test/setup.ts` runs before each test file
+- Setup: `test/setup.ts` runs before each test file
 
 **TypeScript Support:**
 - Types: `vitest/globals`, `@testing-library/jest-dom`
