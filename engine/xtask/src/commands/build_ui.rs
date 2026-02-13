@@ -5,7 +5,7 @@
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::Path;
-use std::process::Command;
+use xtask::npm_command;
 use xtask::output::*;
 use xtask::paths;
 
@@ -108,7 +108,7 @@ fn run_npm(dir: &Path, args: &[&str], command_name: &str, verbose: bool) -> Resu
         println!("  Running: npm {} (in {})", args.join(" "), dir.display());
     }
 
-    let status = Command::new("npm")
+    let status = npm_command()
         .args(args)
         .current_dir(dir)
         .status()

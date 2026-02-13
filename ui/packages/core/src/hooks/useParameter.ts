@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { ParameterClient } from '../ipc/ParameterClient';
-import type { ParameterInfo } from '../types/parameters';
+import type { ParameterId, ParameterInfo } from '../types/parameters';
 
 export interface UseParameterResult {
   param: ParameterInfo | null;
@@ -13,7 +13,7 @@ export interface UseParameterResult {
   error: Error | null;
 }
 
-export function useParameter(id: string): UseParameterResult {
+export function useParameter(id: ParameterId): UseParameterResult {
   const [param, setParam] = useState<ParameterInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);

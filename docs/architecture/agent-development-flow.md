@@ -4,17 +4,18 @@ This project uses specialized agents with distinct responsibilities that hand of
 
 ## Agent Roles
 
-| Agent                  | Role                                                        | Key Outputs                                           |
-| ---------------------- | ----------------------------------------------------------- | ----------------------------------------------------- |
-| **Orchestrator**       | Workflow coordinator, routes work between agents            | Phase tracking, handoff decisions                     |
-| **PO** (Product Owner) | Owns product vision, roadmap, feature prioritization        | User stories, `docs/roadmap.md`                       |
-| **Architect**          | Designs system architecture, enforces technical constraints | Low-level designs in `docs/feature-specs/{feature}/`  |
-| **Planner**            | Creates detailed implementation plans                       | `docs/feature-specs/{feature}/implementation-plan.md` |
-| **Coder**              | Implements features, writes production code                 | Code changes, PRs                                     |
-| **Tester**             | Runs local CI pipeline, executes manual tests               | `docs/feature-specs/{feature}/test-plan.md`           |
-| **QA**                 | Static analysis, code quality verification                  | QA reports                                            |
-| **DocWriter**          | Creates and updates all documentation                       | All markdown files in `docs/`                         |
-| **Search**             | Deep codebase research and analysis                         | Search results, code explanations                     |
+| Agent                  | Role                                                                                  | Key Outputs                                           |
+| ---------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| **Orchestrator**       | Workflow coordinator, routes work between agents                                      | Phase tracking, handoff decisions                     |
+| **PO** (Product Owner) | Owns product vision, roadmap, feature prioritization                                  | User stories, `docs/roadmap.md`                       |
+| **Architect**          | Designs system architecture, enforces technical constraints                           | Low-level designs in `docs/feature-specs/{feature}/`  |
+| **Planner**            | Creates detailed implementation plans                                                 | `docs/feature-specs/{feature}/implementation-plan.md` |
+| **Coder**              | Implements features, writes production code                                           | Code changes, PRs                                     |
+| **Tester**             | Runs local CI pipeline, executes manual tests                                         | `docs/feature-specs/{feature}/test-plan.md`           |
+| **QA**                 | Static analysis, code quality verification                                            | QA reports                                            |
+| **DocWriter**          | Creates and updates all documentation                                                 | All markdown files in `docs/`                         |
+| **Search**             | Deep codebase research and analysis                                                   | Search results, code explanations                     |
+| **Cleaner**            | Investigates and cleans up code/doc noise, dead code, duplicates, missed abstractions | Clean code changes, cleanup reports                   |
 
 ## Standard Feature Development Flow
 
@@ -199,6 +200,7 @@ The **Coder** agent is responsible for creating Pull Requests using the `create-
 | QA | ❌ | ❌ | ❌ | ❌ |
 | DocWriter | ❌ | ✅ (only `.md` in `docs/`) | ❌ | ❌ |
 | Search | ❌ | ❌ | ❌ | ❌ |
+| Cleaner | ✅ | ✅ | ❌ | ❌ |
 
 ### Models & Tools
 
@@ -213,22 +215,24 @@ The **Coder** agent is responsible for creating Pull Requests using the `create-
 | **QA**           | GPT-5.3-Codex → Claude Opus 4.6 → Gemini 2.5 Pro    | agent, search, read, web                                         | ❌           |
 | **DocWriter**    | Claude Opus 4.6 → Claude Sonnet 4.5 → GPT-5.2       | read, search, edit, web, agent                                   | ❌           |
 | **Search**       | GPT-5.3-Codex → GPT-5.2-Codex → Claude Opus 4.6     | read, search, web                                                | ❌           |
+| **Cleaner**      | GPT-5.3-Codex → Claude Opus 4.6 → Gemini 2.5 Pro    | read, search, edit, execute, agent, todo, web, memory            | ✅           |
 
 ### Subagent Invocation
 
 Each agent can only invoke specific subagents:
 
-| Agent            | Can Invoke                                                   |
-| ---------------- | ------------------------------------------------------------ |
-| **Orchestrator** | PO, Architect, Planner, Coder, Tester, QA, DocWriter, Search |
-| **PO**           | Orchestrator, Architect, DocWriter, Search                   |
-| **Architect**    | Orchestrator, Planner, PO, DocWriter, Search                 |
-| **Planner**      | Orchestrator, DocWriter, Search                              |
-| **Coder**        | Orchestrator, Tester, DocWriter, Search                      |
-| **Tester**       | Orchestrator, Coder, QA, DocWriter, Search                   |
-| **QA**           | Orchestrator, Coder, Architect, DocWriter, Search            |
-| **DocWriter**    | Orchestrator, Search                                         |
-| **Search**       | — (none)                                                     |
+| Agent            | Can Invoke                                                            |
+| ---------------- | --------------------------------------------------------------------- |
+| **Orchestrator** | PO, Architect, Planner, Coder, Tester, QA, DocWriter, Search, Cleaner |
+| **PO**           | Orchestrator, Architect, DocWriter, Search                            |
+| **Architect**    | Orchestrator, Planner, PO, DocWriter, Search                          |
+| **Planner**      | Orchestrator, DocWriter, Search                                       |
+| **Coder**        | Orchestrator, Tester, DocWriter, Search                               |
+| **Tester**       | Orchestrator, Coder, QA, DocWriter, Search                            |
+| **QA**           | Orchestrator, Coder, Architect, DocWriter, Search                     |
+| **DocWriter**    | Orchestrator, Search                                                  |
+| **Search**       | — (none)                                                              |
+| **Cleaner**      | Orchestrator, Search, Architect, Tester, DocWriter                    |
 
 **Notes:**
 
@@ -237,6 +241,7 @@ Each agent can only invoke specific subagents:
 - Search is read-only for codebase research. Its 272K context window enables analysis across many files simultaneously.
 - Only Coder and Tester have terminal execution access.
 - PO can only edit `docs/roadmap.md` and `docs/backlog.md`.
+- Cleaner can edit code and docs for cleanup/refactoring only. It cannot add features or change behavior. It has terminal execution access for running `cargo xtask ci-check`.
 
 ### Search Delegation Pattern
 
@@ -275,6 +280,7 @@ Four agents (Architect, Planner, Tester, QA) don't have `edit` tools but are res
 - **Use QA** when: Code review needed, static analysis, quality verification
 - **Use DocWriter** when: Documentation needs creating or updating (invoked as subagent by other agents)
 - **Use Search** when: Deep codebase research needed, finding patterns across files (invoked as subagent)
+- **Use Cleaner** when: Codebase needs cleanup — dead code removal, AI slop cleaning, duplicate consolidation, missed abstraction usage, documentation noise reduction
 
 ## Testing Workflow
 

@@ -115,7 +115,9 @@ describe('useAllParameters', () => {
     expect(result.current.error).toBeNull();
 
     // Connect (no need for fake timers - just trigger connection event)
-    mockTransport.setConnected(true);
+    await act(async () => {
+      mockTransport.setConnected(true);
+    });
 
     // Wait for parameters to load
     await waitFor(() => {

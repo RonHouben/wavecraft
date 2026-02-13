@@ -72,12 +72,11 @@ wavecraft_plugin! {
 // ✅ Use wavecraft_plugin! for complete plugin generation
 wavecraft_plugin! {
     name: "My Plugin",
-    vendor: "My Company",
-    url: "https://example.com",      // optional
-    email: "info@example.com",       // optional
-    signal: InputGain,
+    signal: SignalChain![InputGain],
 }
 ```
+
+> **Note:** `vendor`, `url`, and `email` are derived from `Cargo.toml` metadata and no longer appear in the macro invocation. The `signal` field requires `SignalChain![]` wrapper.
 
 **Parameter Definition:**
 

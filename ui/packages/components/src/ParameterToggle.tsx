@@ -4,9 +4,10 @@
 
 import React from 'react';
 import { useParameter, logger } from '@wavecraft/core';
+import type { ParameterId } from '@wavecraft/core';
 
 interface ParameterToggleProps {
-  readonly id: string;
+  readonly id: ParameterId;
 }
 
 export function ParameterToggle({ id }: ParameterToggleProps): React.JSX.Element {

@@ -6,6 +6,7 @@
 
 import { IpcBridge } from './IpcBridge';
 import type {
+  ParameterId,
   ParameterInfo,
   GetParameterResult,
   SetParameterResult,
@@ -19,7 +20,7 @@ import {
   NOTIFICATION_PARAMETER_CHANGED,
 } from '../types/parameters';
 
-type ParameterChangeCallback = (id: string, value: number) => void;
+type ParameterChangeCallback = (id: ParameterId, value: number) => void;
 
 export class ParameterClient {
   private static instance: ParameterClient | null = null;
@@ -40,7 +41,7 @@ export class ParameterClient {
   /**
    * Get a single parameter's current value and metadata
    */
-  public async getParameter(id: string): Promise<GetParameterResult> {
+  public async getParameter(id: ParameterId): Promise<GetParameterResult> {
     return this.bridge.invoke<GetParameterResult>(METHOD_GET_PARAMETER, { id });
   }
 
@@ -49,7 +50,7 @@ export class ParameterClient {
    * @param id Parameter ID
    * @param value Normalized value [0.0, 1.0]
    */
-  public async setParameter(id: string, value: number): Promise<void> {
+  public async setParameter(id: ParameterId, value: number): Promise<void> {
     await this.bridge.invoke<SetParameterResult>(METHOD_SET_PARAMETER, {
       id,
       value,

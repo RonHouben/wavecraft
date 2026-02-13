@@ -29,11 +29,13 @@ cargo install wavecraft
 > Or run directly: `~/.cargo/bin/wavecraft create my-plugin`
 
 To verify installation:
+
 ```bash
 wavecraft --help
 ```
 
 To check the installed version:
+
 ```bash
 wavecraft --version
 # or
@@ -56,6 +58,7 @@ cd my-plugin
 ```
 
 The CLI creates a complete project with:
+
 - Rust engine configured with Wavecraft dependencies
 - React UI with TypeScript and Tailwind CSS
 - xtask build system
@@ -151,6 +154,7 @@ This command runs in two phases:
    - Updates npm dependencies if `ui/package.json` exists (runs `npm update` in `ui/`)
 
 **Key behaviors:**
+
 - Works from **any directory** — outside a project, only the CLI is updated
 - CLI self-update failures are non-fatal — project dependency updates still proceed
 - Reports success/failure for each phase independently
@@ -159,13 +163,13 @@ This command runs in two phases:
 
 ### CLI Options
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--vendor, -v` | Company or developer name | `"Your Company"` |
-| `--email, -e` | Contact email (optional) | — |
-| `--url, -u` | Website URL (optional) | — |
-| `--output, -o` | Output directory | `./<plugin-name>` |
-| `--no-git` | Skip git initialization | false |
+| Option         | Description               | Default           |
+| -------------- | ------------------------- | ----------------- |
+| `--vendor, -v` | Company or developer name | `"Your Company"`  |
+| `--email, -e`  | Contact email (optional)  | —                 |
+| `--url, -u`    | Website URL (optional)    | —                 |
+| `--output, -o` | Output directory          | `./<plugin-name>` |
+| `--no-git`     | Skip git initialization   | false             |
 
 ---
 
@@ -184,7 +188,9 @@ my-plugin/
 ├── ui/                      # React UI (TypeScript + Tailwind)
 │   ├── package.json         # Dependencies: @wavecraft/core + @wavecraft/components
 │   └── src/
-│       └── App.tsx          # Your UI layout
+│       ├── App.tsx          # Your UI layout
+│       └── generated/       # Build artifacts (gitignored, created by `wavecraft start`)
+│           └── parameters.ts # Type-safe parameter IDs (auto-generated)
 │
 └── xtask/                   # Build automation
     └── src/main.rs          # xtask commands (bundle, dev, install, etc.)
@@ -192,14 +198,15 @@ my-plugin/
 
 **Key files:**
 
-| File | Purpose |
-|------|---------|
-| `engine/src/lib.rs` | Plugin assembly — signal chain + `wavecraft_plugin!` DSL |
-| `engine/src/processors/` | Folder for your custom `Processor` implementations |
-| `engine/src/processors/oscillator.rs` | Example oscillator (sine wave, frequency + level) |
-| `ui/src/App.tsx` | User interface layout with parameter controls |
+| File                                  | Purpose                                                  |
+| ------------------------------------- | -------------------------------------------------------- |
+| `engine/src/lib.rs`                   | Plugin assembly — signal chain + `wavecraft_plugin!` DSL |
+| `engine/src/processors/`              | Folder for your custom `Processor` implementations       |
+| `engine/src/processors/oscillator.rs` | Example oscillator (sine wave, frequency + level)        |
+| `ui/src/App.tsx`                      | User interface layout with parameter controls            |
 
 **Note:** The generated project references:
+
 - **Rust crates** via git tags (e.g., `git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.0"`)
 - **npm packages** from the `@wavecraft` organization (`@wavecraft/core`, `@wavecraft/components`)
 
@@ -330,6 +337,7 @@ The UI automatically discovers new parameters — no React changes needed.
 ### Real-Time Safety Rules
 
 The `process()` method runs on the audio thread. You **must not**:
+
 - Allocate memory (`Box::new`, `Vec::push`, `String::from`)
 - Lock mutexes or use blocking operations
 - Make system calls (file I/O, network)
@@ -359,13 +367,13 @@ struct MyParams {
 
 ### `#[param]` Attribute Options
 
-| Attribute | Required | Description | Example |
-|-----------|----------|-------------|---------|
-| `range` | Yes | Value range as `"MIN..=MAX"` | `range = "0.0..=1.0"` |
-| `default` | No | Default value (midpoint if omitted) | `default = 0.0` |
-| `unit` | No | Unit string for display | `unit = "dB"` |
-| `factor` | No | Skew factor (>1 = log, <1 = exp) | `factor = 2.5` |
-| `group` | No | UI grouping name | `group = "Input"` |
+| Attribute | Required | Description                         | Example               |
+| --------- | -------- | ----------------------------------- | --------------------- |
+| `range`   | Yes      | Value range as `"MIN..=MAX"`        | `range = "0.0..=1.0"` |
+| `default` | No       | Default value (midpoint if omitted) | `default = 0.0`       |
+| `unit`    | No       | Unit string for display             | `unit = "dB"`         |
+| `factor`  | No       | Skew factor (>1 = log, <1 = exp)    | `factor = 2.5`        |
+| `group`   | No       | UI grouping name                    | `group = "Input"`     |
 
 ---
 
@@ -387,18 +395,18 @@ import { useAllParameters, useParameterGroups } from '@wavecraft/core';
 function App() {
   const { params, isLoading } = useAllParameters();
   const groups = useParameterGroups(params);
-  
+
   return (
     <div className="plugin-ui">
       {/* Stereo level meter */}
       <Meter />
-      
+
       {/* Automatic parameter discovery */}
-      {groups.length > 0 ? (
-        groups.map(group => <ParameterGroup key={group.name} group={group} />)
-      ) : (
-        params?.map(p => <ParameterSlider key={p.id} id={p.id} />)
-      )}
+      {groups.length > 0
+        ? groups.map((group) => (
+            <ParameterGroup key={group.name} group={group} />
+          ))
+        : params?.map((p) => <ParameterSlider key={p.id} id={p.id} />)}
     </div>
   );
 }
@@ -408,21 +416,24 @@ function App() {
 
 ```tsx
 import { useParameter } from '@wavecraft/core';
+import type { ParameterId } from '@wavecraft/core';
 
-function MyKnob({ id }: { id: string }) {
+function MyKnob({ id }: { id: ParameterId }) {
   const { value, setValue, info } = useParameter(id);
-  
+
   return (
     <div className="knob">
       <label>{info?.name}</label>
-      <input 
+      <input
         type="range"
         min={info?.min}
         max={info?.max}
         value={value ?? info?.default}
         onChange={(e) => setValue(parseFloat(e.target.value))}
       />
-      <span>{value?.toFixed(2)} {info?.unit}</span>
+      <span>
+        {value?.toFixed(2)} {info?.unit}
+      </span>
     </div>
   );
 }
@@ -432,13 +443,13 @@ function MyKnob({ id }: { id: string }) {
 
 All hooks are exported from `@wavecraft/core`:
 
-| Hook | Purpose |
-|------|---------|
-| `useParameter(id)` | Read/write a single parameter |
-| `useAllParameters()` | Fetch all plugin parameters (automatic discovery) |
-| `useParameterGroups(params)` | Group parameters by their `group` attribute |
-| `useMeterFrame()` | Access real-time meter data |
-| `useConnectionStatus()` | WebSocket connection status (dev mode) |
+| Hook                         | Purpose                                                                     |
+| ---------------------------- | --------------------------------------------------------------------------- |
+| `useParameter(id)`           | Read/write a single parameter (type-safe `ParameterId` with autocompletion) |
+| `useAllParameters()`         | Fetch all plugin parameters (automatic discovery)                           |
+| `useParameterGroups(params)` | Group parameters by their `group` attribute                                 |
+| `useMeterFrame()`            | Access real-time meter data                                                 |
+| `useConnectionStatus()`      | WebSocket connection status (dev mode)                                      |
 
 ---
 
@@ -453,10 +464,13 @@ cargo xtask dev
 ```
 
 This starts:
+
 - **Rust WebSocket server** — Real parameter sync and metering
 - **Vite dev server** — Hot module reload for React
 
 Open `http://localhost:5173` in your browser.
+
+> **TypeScript autocompletion:** `wavecraft start` (and `cargo xtask dev` in SDK mode) automatically generates type-safe parameter IDs. After the dev server starts, your IDE will autocomplete parameter IDs in `useParameter()` calls and flag invalid IDs as type errors.
 
 ### Building for Production
 
@@ -498,7 +512,7 @@ pub struct MyProcessor {
 impl Processor for MyProcessor {
     fn process(&mut self, _transport: &Transport, buffer: &mut Buffer) {
         // Your processing code...
-        
+
         // Send meter data (non-blocking)
         if let Some(ref mut meter) = self.meter_producer {
             let (peak_l, rms_l, peak_r, rms_r) = calculate_stereo_meters(buffer);
@@ -526,16 +540,16 @@ vendor = "Your Company"
 
 ## Build Commands Reference
 
-| Command | Description |
-|---------|-------------|
-| `cargo xtask dev` | Start dev servers (WebSocket + Vite) |
-| `cargo xtask bundle` | Build VST3/CLAP bundles |
-| `cargo xtask bundle --release` | Build optimized release |
-| `cargo xtask test` | Run all tests |
-| `cargo xtask lint` | Run linters |
-| `cargo xtask install` | Install plugins to system directories |
-| `cargo xtask sign` | Sign plugins for macOS |
-| `cargo xtask clean` | Clean build artifacts |
+| Command                        | Description                           |
+| ------------------------------ | ------------------------------------- |
+| `cargo xtask dev`              | Start dev servers (WebSocket + Vite)  |
+| `cargo xtask bundle`           | Build VST3/CLAP bundles               |
+| `cargo xtask bundle --release` | Build optimized release               |
+| `cargo xtask test`             | Run all tests                         |
+| `cargo xtask lint`             | Run linters                           |
+| `cargo xtask install`          | Install plugins to system directories |
+| `cargo xtask sign`             | Sign plugins for macOS                |
+| `cargo xtask clean`            | Clean build artifacts                 |
 
 ---
 
@@ -569,10 +583,12 @@ cargo run -p wavecraft -- create TestPlugin --output target/tmp/test-plugin
 **What this does:** Instead of generating `Cargo.toml` dependencies that reference a git tag (which may not exist yet for unreleased versions), the CLI generates **local path dependencies** pointing to the SDK crates in your checkout. This means `wavecraft start` works immediately without needing a published release.
 
 **When does it trigger?**
+
 - The running binary is inside a cargo `target/` directory (i.e., built via `cargo run`)
 - The wavecraft monorepo marker (`engine/crates/wavecraft-nih_plug/Cargo.toml`) is found by walking up from the binary location
 
 **When does it NOT trigger?**
+
 - Binaries installed via `cargo install wavecraft` (located in `~/.cargo/bin/`)
 - The explicit `--local-sdk` hidden flag still works as a manual override
 

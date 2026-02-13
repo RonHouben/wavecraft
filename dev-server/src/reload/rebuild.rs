@@ -39,6 +39,9 @@ pub type ParamLoaderFn = Arc<
 /// Callback type for writing parameter cache to a sidecar file.
 pub type SidecarWriterFn = Arc<dyn Fn(&Path, &[ParameterInfo]) -> Result<()> + Send + Sync>;
 
+/// Callback type for writing generated TypeScript parameter ID types.
+pub type TsTypesWriterFn = Arc<dyn Fn(&[ParameterInfo]) -> Result<()> + Send + Sync>;
+
 /// Callbacks for CLI-specific operations.
 ///
 /// The rebuild pipeline needs to perform operations that depend on CLI
@@ -51,6 +54,8 @@ pub struct RebuildCallbacks {
     pub package_name: Option<String>,
     /// Optional sidecar cache writer (writes params to JSON file).
     pub write_sidecar: Option<SidecarWriterFn>,
+    /// Optional TypeScript types writer (writes generated parameter ID typings).
+    pub write_ts_types: Option<TsTypesWriterFn>,
     /// Loads parameters from the rebuilt dylib (async).
     /// Receives the engine directory and returns parsed parameters.
     pub param_loader: ParamLoaderFn,
@@ -124,11 +129,27 @@ impl RebuildPipeline {
             match result {
                 Ok((params, param_count_change)) => {
                     let mut reload_ok = true;
+                    let mut ts_types_ok = true;
 
                     if let Some(ref writer) = self.callbacks.write_sidecar
                         && let Err(e) = writer(&self.engine_dir, &params)
                     {
                         println!("  Warning: failed to update param cache: {}", e);
+                    }
+
+                    if let Some(ref writer) = self.callbacks.write_ts_types
+                        && let Err(e) = writer(&params)
+                    {
+                        ts_types_ok = false;
+                        println!(
+                            "  {} Failed to regenerate TypeScript parameter types: {}",
+                            style("⚠").yellow(),
+                            e
+                        );
+                        println!(
+                            "  {} Save a Rust source file to retry, or restart the dev server",
+                            style("  ↳").dim(),
+                        );
                     }
 
                     println!("  {} Updating parameter host...", style("→").dim());
@@ -200,10 +221,15 @@ impl RebuildPipeline {
                         };
 
                         println!(
-                            "  {} Hot-reload complete — {} parameters{}",
+                            "  {} Hot-reload complete — {} parameters{}{}",
                             style("✓").green(),
                             params.len(),
-                            change_info
+                            change_info,
+                            if ts_types_ok {
+                                ""
+                            } else {
+                                " (⚠ TypeScript types stale)"
+                            }
                         );
 
                         // Trigger audio reload if audio is enabled

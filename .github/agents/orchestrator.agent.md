@@ -2,9 +2,9 @@
 name: orchestrator
 description: Workflow coordinator for Wavecraft feature development. Routes work between specialized agents (PO, Architect, Planner, Coder, Tester, QA, DocWriter, Search). Does not make product, architectural, or implementation decisions—only coordinates handoffs.
 model:
+  - GPT-5.3-Codex (copilot)
   - Claude Opus 4.6 (copilot)
   - Claude Sonnet 4.5 (copilot)
-  - GPT-5.3-Codex (copilot)
 tools: ['read', 'search', 'agent', 'web', 'todo', 'memory']
 agents: [po, architect, planner, coder, tester, qa, docwriter, search]
 user-invokable: true

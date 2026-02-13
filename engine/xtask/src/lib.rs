@@ -273,6 +273,23 @@ pub fn cargo_command() -> Command {
     cmd
 }
 
+/// Create a new npm Command with sanitized inherited npm config environment.
+///
+/// Some environments export `npm_config_NODE_OPTIONS` (or uppercase variant),
+/// which npm treats as an unknown user config key and warns on every invocation.
+/// Remove those inherited keys to keep xtask output clean and future-proof.
+pub fn npm_command() -> Command {
+    let mut cmd = Command::new("npm");
+    cmd.env_remove("npm_config_NODE_OPTIONS");
+    cmd.env_remove("NPM_CONFIG_NODE_OPTIONS");
+    cmd.env("NPM_CONFIG_USERCONFIG", npm_null_user_config_path());
+    cmd
+}
+
+fn npm_null_user_config_path() -> &'static str {
+    if cfg!(windows) { "NUL" } else { "/dev/null" }
+}
+
 /// Run a command and return its exit status.
 ///
 /// This streams output to stdout/stderr in real-time.

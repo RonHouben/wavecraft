@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { useConnectionStatus } from './useConnectionStatus';
 import { IpcBridge } from '../ipc/IpcBridge';
 import { MockTransport } from '../transports/MockTransport';
@@ -60,7 +60,9 @@ describe('useConnectionStatus', () => {
     });
 
     // Simulate disconnect
-    mockTransport.setConnected(false);
+    await act(async () => {
+      mockTransport.setConnected(false);
+    });
 
     await waitFor(() => {
       expect(result.current).toEqual({
@@ -106,9 +108,11 @@ describe('useConnectionStatus', () => {
     const { result } = renderHook(() => useConnectionStatus());
 
     // Rapidly toggle connection
-    mockTransport.setConnected(true);
-    mockTransport.setConnected(false);
-    mockTransport.setConnected(true);
+    await act(async () => {
+      mockTransport.setConnected(true);
+      mockTransport.setConnected(false);
+      mockTransport.setConnected(true);
+    });
 
     await waitFor(() => {
       expect(result.current.connected).toBe(true);

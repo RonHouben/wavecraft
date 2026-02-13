@@ -4,9 +4,10 @@
 
 import React from 'react';
 import { useParameter, logger } from '@wavecraft/core';
+import type { ParameterId } from '@wavecraft/core';
 
 interface ParameterSliderProps {
-  readonly id: string;
+  readonly id: ParameterId;
 }
 
 export function ParameterSlider({ id }: ParameterSliderProps): React.JSX.Element {

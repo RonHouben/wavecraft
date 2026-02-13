@@ -128,10 +128,26 @@ Before first SDK-mode use, run:
 
 This materializes `.template` manifests into concrete files, applies development defaults, rewrites Wavecraft git dependencies to local path dependencies, and installs `sdk-template/ui` dependencies.
 
+**TypeScript Path Resolution in SDK Mode:**
+
+In SDK mode, `wavecraft start` also injects `tsconfig.json` path overrides so that `@wavecraft/core` and `@wavecraft/components` resolve to the local monorepo source (`ui/packages/*/src/`) rather than published npm packages. This uses `baseUrl: "."` and `paths` entries, enabling SDK contributors to iterate on both the npm packages and generated types simultaneously without publishing.
+
 **Dev server startup behavior (CLI `wavecraft start`):**
 
 - Performs preflight checks to ensure the WebSocket and UI ports are free before starting any servers.
 - Starts the UI dev server with strict port binding (no auto-switching). If the UI port is in use, startup fails fast with a clear error and no servers are left running.
+
+### TypeScript Parameter Codegen
+
+When `wavecraft start` launches, it:
+
+1. **Extracts parameter IDs** from the compiled Rust engine via FFI (same as existing parameter discovery)
+2. **Generates `ui/src/generated/parameters.ts`** — a module augmentation file that narrows `@wavecraft/core`'s `ParameterId` type to a literal union of the plugin's actual parameter IDs
+3. **Regenerates on hot-reload** — When Rust source files change, the rebuild pipeline re-extracts parameters and regenerates the TypeScript types via the `TsTypesWriterFn` callback in `RebuildCallbacks`
+
+This enables IDE autocompletion and compile-time type safety for `useParameter('inputgain_gain')` calls without any developer configuration.
+
+The generated file is a build artifact (gitignored) and should not be checked into source control. If type generation fails during hot-reload, the dev server continues running with stale types and prints a warning.
 
 ### Why Module-Level Detection?
 

@@ -1,9 +1,9 @@
 //! Test command - Run unit tests for specified crates.
 
 use anyhow::{Context, Result};
-use std::process::Command;
 
 use xtask::cargo_command;
+use xtask::npm_command;
 use xtask::output::*;
 use xtask::paths;
 
@@ -103,7 +103,7 @@ fn run_ui_tests(verbose: bool) -> Result<()> {
         println!("Running: npm test (in {:?})", ui_dir);
     }
 
-    let mut cmd = Command::new("npm");
+    let mut cmd = npm_command();
     cmd.current_dir(&ui_dir);
     cmd.arg("test");
 

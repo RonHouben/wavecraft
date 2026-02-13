@@ -229,7 +229,7 @@ Key: the audio path never blocks on UI; the UI never directly runs audio code.
     	- IPC: `IpcBridge`, `ParameterClient`, `MeterClient`
     	- Hooks: `useParameter`, `useAllParameters`, `useConnectionStatus`, `useMeterFrame`
     	- Logging: `logger`, `Logger`, `LogLevel` — structured logging with severity levels
-    	- Types: `ParameterInfo`, `MeterFrame`, `IpcError`
+    	- Types: `ParameterInfo`, `ParameterId`, `ParameterIdMap`, `MeterFrame`, `IpcError`
     	- Subpath `/meters`: Pure audio math utilities (`linearToDb`, `dbToLinear`)
     •	JSON-RPC 2.0 message format with request/response correlation. Expose a minimal API:
     	- `setParameter(id, value)`
@@ -246,6 +246,7 @@ Key: the audio path never blocks on UI; the UI never directly runs audio code.
     7.	Build & Packaging
     •	Rust build (Cargo) for core; CMake or a small shim for packaging VST3 (SDK). Bundle the React build output as plugin resources (embed as bytes or serve them via an in-process file server).
     •	**Two-Stage UI Build:** The npm packages (`@wavecraft/core`, `@wavecraft/components`) are built first via `npm run build:lib` in `ui/`. Then the full app is built in `sdk-template/ui/` (which imports those packages). The resulting `sdk-template/ui/dist/` is copied to `ui/dist/` for engine embedding via `include_dir!`.
+    •	**TypeScript Codegen:** `wavecraft start` extracts parameter IDs from the compiled Rust engine via FFI and generates `ui/src/generated/parameters.ts` — a module augmentation file that types the `ParameterId` union in `@wavecraft/core`. This file is regenerated automatically on Rust source changes during development. It is a build artifact (gitignored), not checked into source control.
     •	AU builds require macOS; produce `.component` bundles for `/Library/Audio/Plug-Ins/Components/`.
 
 • Code signing and notarization for macOS via `cargo xtask sign` and `cargo xtask notarize`. The `xtask sign` flow accepts a `SigningConfig` (constructed from env in production via `SigningConfig::from_env()` or built directly for tests via `SigningConfig::new()`).

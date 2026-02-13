@@ -75,7 +75,25 @@ for required_entry in "${required_path_entries[@]}"; do
   fi
 done
 
-# 4) Install UI dependencies for sdk-template project
+# 4) Inject tsconfig paths for SDK development mode
+TSCONFIG="$TEMPLATE_DIR/ui/tsconfig.json"
+if [ -f "$TSCONFIG" ]; then
+  if ! grep -Fq '"@wavecraft/core": ["../../ui/packages/core/src/index.ts"]' "$TSCONFIG"; then
+    echo "🔧 Injecting tsconfig paths for SDK development mode..."
+    sed -i.bak \
+      's/"noFallthroughCasesInSwitch": true/"noFallthroughCasesInSwitch": true,\n\n    \/* SDK development — resolve @wavecraft packages from monorepo source *\/\n    "baseUrl": ".",\n    "paths": {\n      "@wavecraft\/core": ["..\/..\/ui\/packages\/core\/src\/index.ts"],\n      "@wavecraft\/core\/*": ["..\/..\/ui\/packages\/core\/src\/*"],\n      "@wavecraft\/components": ["..\/..\/ui\/packages\/components\/src\/index.ts"],\n      "@wavecraft\/components\/*": ["..\/..\/ui\/packages\/components\/src\/*"]\n    }/' \
+      "$TSCONFIG"
+    rm -f "$TSCONFIG.bak"
+  fi
+
+  if ! grep -Fq '"@wavecraft/core": ["../../ui/packages/core/src/index.ts"]' "$TSCONFIG"; then
+    echo "❌ Failed to inject tsconfig paths for SDK development mode"
+    echo "   Missing expected @wavecraft/core paths entry in sdk-template/ui/tsconfig.json"
+    exit 1
+  fi
+fi
+
+# 5) Install UI dependencies for sdk-template project
 if [ -d "$TEMPLATE_DIR/ui" ]; then
   echo "📦 Installing sdk-template UI dependencies..."
   (

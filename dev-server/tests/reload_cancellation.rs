@@ -43,6 +43,7 @@ async fn test_param_extraction_cancelled_on_new_change() {
     let callbacks = RebuildCallbacks {
         package_name: None,
         write_sidecar: None,
+        write_ts_types: None,
         param_loader: slow_loader,
     };
 
@@ -124,6 +125,7 @@ async fn test_param_extraction_completes_normally() {
     let callbacks = RebuildCallbacks {
         package_name: None,
         write_sidecar: None,
+        write_ts_types: None,
         param_loader: fast_loader,
     };
 
