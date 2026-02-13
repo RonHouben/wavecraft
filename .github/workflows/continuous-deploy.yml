@@ -1002,27 +1002,6 @@ jobs:
         working-directory: ui
         run: npm ci
 
-      - name: Sync @wavecraft/core dependency version
-        if: needs.publish-npm-core.outputs.version != ''
-        working-directory: ui/packages/components
-        run: |
-          CORE_VERSION="${{ needs.publish-npm-core.outputs.version }}"
-          echo "Syncing @wavecraft/core dependency to ^$CORE_VERSION"
-          # Update package.json dependency to match published core version
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-            if (pkg.dependencies && pkg.dependencies['@wavecraft/core']) {
-              pkg.dependencies['@wavecraft/core'] = '^$CORE_VERSION';
-            }
-            if (pkg.peerDependencies && pkg.peerDependencies['@wavecraft/core']) {
-              pkg.peerDependencies['@wavecraft/core'] = '^$CORE_VERSION';
-            }
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-          "
-          echo "Updated @wavecraft/core dependency:"
-          grep '@wavecraft/core' package.json || true
-
       - name: Determine publish version
         id: version
         working-directory: ui/packages/components
@@ -1050,6 +1029,27 @@ jobs:
           echo "version=$NEW" >> $GITHUB_OUTPUT
           echo "bumped=true" >> $GITHUB_OUTPUT
           echo "Auto-bumped @wavecraft/components to $NEW"
+
+      - name: Sync @wavecraft/core dependency version
+        if: needs.publish-npm-core.outputs.version != ''
+        working-directory: ui/packages/components
+        run: |
+          CORE_VERSION="${{ needs.publish-npm-core.outputs.version }}"
+          echo "Syncing @wavecraft/core dependency to ^$CORE_VERSION"
+          # Update package.json dependency to match published core version
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            if (pkg.dependencies && pkg.dependencies['@wavecraft/core']) {
+              pkg.dependencies['@wavecraft/core'] = '^$CORE_VERSION';
+            }
+            if (pkg.peerDependencies && pkg.peerDependencies['@wavecraft/core']) {
+              pkg.peerDependencies['@wavecraft/core'] = '^$CORE_VERSION';
+            }
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+          echo "Updated @wavecraft/core dependency:"
+          grep '@wavecraft/core' package.json || true
 
       - name: Commit auto-bump locally
         if: steps.bump.outputs.bumped == 'true'
