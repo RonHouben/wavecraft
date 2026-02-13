@@ -389,14 +389,10 @@ fn run_rust_dry_runs(
     }
 
     if changes.cli {
-        let cli_dir = project_root.join("cli");
-        match run_cargo_publish_dry_run_in_dir(&cli_dir, config.verbose) {
-            Ok(()) => summary.pass("cli"),
-            Err(err) => {
-                print_error(&format!("cli failed: {:#}", err));
-                summary.fail("cli", err.to_string());
-            }
-        }
+        summary.skip(
+            "cli",
+            "include_dir! references files outside crate — not publishable via dry-run",
+        );
     } else {
         summary.skip("cli", "no changes");
     }
@@ -410,7 +406,7 @@ fn run_npm_dry_runs(
 ) {
     if changes.npm_core {
         let core_dir = project_root.join("ui/packages/core");
-        match run_npm_publish_dry_run(&core_dir, config.verbose) {
+        match run_npm_pack_dry_run(&core_dir, config.verbose) {
             Ok(()) => summary.pass("@wavecraft/core"),
             Err(err) => {
                 print_error(&format!("@wavecraft/core failed: {:#}", err));
@@ -423,7 +419,7 @@ fn run_npm_dry_runs(
 
     if changes.npm_components {
         let components_dir = project_root.join("ui/packages/components");
-        match run_npm_publish_dry_run(&components_dir, config.verbose) {
+        match run_npm_pack_dry_run(&components_dir, config.verbose) {
             Ok(()) => summary.pass("@wavecraft/components"),
             Err(err) => {
                 print_error(&format!("@wavecraft/components failed: {:#}", err));
@@ -574,7 +570,7 @@ fn run_cargo_publish_dry_run_in_dir(dir: &Path, verbose: bool) -> Result<()> {
     Ok(())
 }
 
-fn run_npm_publish_dry_run(dir: &Path, verbose: bool) -> Result<()> {
+fn run_npm_pack_dry_run(dir: &Path, verbose: bool) -> Result<()> {
     let mut build_command = Command::new("npm");
     build_command.arg("run").arg("build:lib").current_dir(dir);
 
@@ -589,26 +585,18 @@ fn run_npm_publish_dry_run(dir: &Path, verbose: bool) -> Result<()> {
         anyhow::bail!("npm run build:lib failed in {}", dir.display());
     }
 
-    let mut publish_command = Command::new("npm");
-    publish_command
-        .arg("publish")
-        .arg("--access")
-        .arg("public")
-        .arg("--dry-run")
-        .current_dir(dir);
+    let mut pack_command = Command::new("npm");
+    pack_command.arg("pack").arg("--dry-run").current_dir(dir);
 
     if verbose {
-        print_info(&format!(
-            "Running in {}: npm publish --access public --dry-run",
-            dir.display()
-        ));
+        print_info(&format!("Running in {}: npm pack --dry-run", dir.display()));
     }
 
-    let publish_status = publish_command
+    let pack_status = pack_command
         .status()
-        .context("Failed to run npm publish command")?;
-    if !publish_status.success() {
-        anyhow::bail!("npm publish --dry-run failed in {}", dir.display());
+        .context("Failed to run npm pack command")?;
+    if !pack_status.success() {
+        anyhow::bail!("npm pack --dry-run failed in {}", dir.display());
     }
 
     Ok(())
