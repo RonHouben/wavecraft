@@ -38,24 +38,25 @@ The CI pipeline runs on all pull requests to `main` (not on merge/push). It cons
 
 ### UI Pipeline
 
-| Job | Runner | Duration | Description |
-|-----|--------|----------|-------------|
-| **check-ui** | ubuntu-latest | ~20s | Prettier → ESLint → TypeScript type-check |
-| **test-ui** | ubuntu-latest | ~15s | Vitest unit tests |
+| Job          | Runner        | Duration | Description                               |
+| ------------ | ------------- | -------- | ----------------------------------------- |
+| **check-ui** | ubuntu-latest | ~20s     | Prettier → ESLint → TypeScript type-check |
+| **test-ui**  | ubuntu-latest | ~15s     | Vitest unit tests                         |
 
 ### Engine Pipeline
 
-| Job | Runner | Duration | Description |
-|-----|--------|----------|-------------|
-| **prepare-engine** | ubuntu-latest | ~4min | Build UI dist + compile with clippy |
-| **check-engine** | ubuntu-latest | ~30s | `cargo fmt --check` → `cargo clippy -D warnings` |
-| **test-engine** | ubuntu-latest | ~1min | `cargo test --workspace` |
+| Job                | Runner        | Duration | Description                                      |
+| ------------------ | ------------- | -------- | ------------------------------------------------ |
+| **prepare-engine** | ubuntu-latest | ~4min    | Build UI dist + compile with clippy              |
+| **check-engine**   | ubuntu-latest | ~30s     | `cargo fmt --check` → `cargo clippy -D warnings` |
+| **test-engine**    | ubuntu-latest | ~1min    | `cargo test --workspace`                         |
 
 ## Design Principles
 
 ### 1. Parallel Pipelines
 
 UI and Engine pipelines run **completely independently**. This means:
+
 - UI checks don't block Engine compilation
 - Fast feedback on UI issues (~35s total)
 - Engine issues don't delay UI feedback
@@ -78,6 +79,7 @@ The `prepare-engine` job uses `cargo clippy --all-targets --no-deps` instead of 
 ### 4. Artifact Sharing
 
 The `prepare-engine` job uploads:
+
 1. **ui-dist** — Built UI files for embedding in the plugin
 2. **engine-target** — Compiled Rust artifacts (deps, build, fingerprint, incremental)
 
@@ -85,20 +87,20 @@ Downstream jobs (`check-engine`, `test-engine`) download these artifacts to avoi
 
 ### 5. Caching Strategy
 
-| Cache | Scope | What's Cached |
-|-------|-------|---------------|
-| npm cache | Cross-run | Downloaded packages from npm registry |
-| apt cache | Cross-run | Linux system dependencies (GTK, WebKit) |
-| Cargo cache | Cross-run | Crates.io registry + compiled dependencies |
-| Artifacts | Within-run | `ui/dist` + `engine/target/debug` |
+| Cache       | Scope      | What's Cached                              |
+| ----------- | ---------- | ------------------------------------------ |
+| npm cache   | Cross-run  | Downloaded packages from npm registry      |
+| apt cache   | Cross-run  | Linux system dependencies (GTK, WebKit)    |
+| Cargo cache | Cross-run  | Crates.io registry + compiled dependencies |
+| Artifacts   | Within-run | `ui/dist` + `engine/target/debug`          |
 
 ## Artifacts
 
 ### Within-Run Artifacts (1 day retention)
 
-| Artifact | Source | Used By |
-|----------|--------|---------|
-| `ui-dist` | prepare-engine | check-engine, test-engine |
+| Artifact        | Source         | Used By                   |
+| --------------- | -------------- | ------------------------- |
+| `ui-dist`       | prepare-engine | check-engine, test-engine |
 | `engine-target` | prepare-engine | check-engine, test-engine |
 
 ## Concurrency
@@ -110,6 +112,7 @@ concurrency:
 ```
 
 When a new commit is pushed to a branch:
+
 - In-progress runs for the same branch are **cancelled**
 - Only the latest commit is built
 - Saves CI minutes on rapid iterations
@@ -134,10 +137,10 @@ These are cached using `awalsh128/cache-apt-pkgs-action`.
 
 ## Runners
 
-| Platform | Usage | Cost |
-|----------|-------|------|
-| `ubuntu-latest` | All checks and tests | Cheapest |
-| `macos-latest` | Final plugin build only | More expensive |
+| Platform        | Usage                   | Cost           |
+| --------------- | ----------------------- | -------------- |
+| `ubuntu-latest` | All checks and tests    | Cheapest       |
+| `macos-latest`  | Final plugin build only | More expensive |
 
 Using Ubuntu for most jobs significantly reduces CI costs while macOS is only used for the final build (which requires native toolchain for proper signing).
 
@@ -149,7 +152,7 @@ Using Ubuntu for most jobs significantly reduces CI costs while macOS is only us
 on:
   pull_request:
     branches: [main]
-  workflow_dispatch:  # Manual trigger for emergencies
+  workflow_dispatch: # Manual trigger for emergencies
 ```
 
 - **Pull Requests:** Full validation (CI + Template Validation)
@@ -193,12 +196,14 @@ cargo xtask ci-check -F --skip-cd
 ```
 
 **Why use `cargo xtask ci-check`:**
+
 - **26x faster** than Docker-based CI testing (~52s vs ~9-12 min)
 - Runs natively on your machine (no Docker overhead)
 - Same checks as CI pipeline (docs, UI build, lint+typecheck, tests; plus template validation and CD dry-run with `--full`)
 - Recommended before every push
 
 **Visual testing** is done separately via the `playwright-mcp-ui-testing` skill:
+
 ```bash
 cargo xtask dev  # Start dev servers
 # Then use Playwright MCP for browser-based testing
@@ -207,6 +212,7 @@ cargo xtask dev  # Start dev servers
 ### Docker-Based Testing (For CI Workflow Debugging)
 
 The CI pipeline can also be tested locally using `act` and a custom Docker image. This is slower but useful for:
+
 - Debugging GitHub Actions workflow YAML changes
 - Testing artifact upload/download between jobs
 - Validating container-specific issues
@@ -228,13 +234,13 @@ act -j check-engine -W .github/workflows/ci.yml \
 
 ### What Can Be Tested Locally
 
-| Job | Local Testing |
-|-----|---------------|
-| check-ui | ✅ Works |
-| test-ui | ✅ Works |
-| prepare-engine | ✅ Works |
-| check-engine | ✅ Works |
-| test-engine | ✅ Works |
+| Job            | Local Testing |
+| -------------- | ------------- |
+| check-ui       | ✅ Works      |
+| test-ui        | ✅ Works      |
+| prepare-engine | ✅ Works      |
+| check-engine   | ✅ Works      |
+| test-engine    | ✅ Works      |
 
 For detailed local testing instructions, see the [Run CI Pipeline Locally skill](/.github/skills/run-ci-pipeline-locally/SKILL.md).
 
@@ -350,12 +356,12 @@ Wavecraft uses automatic continuous deployment for all publishable packages. Whe
 
 **Trigger:** Push to `main` branch (i.e., PR merge)
 
-| Job | Trigger Condition | Publishes To |
-|-----|-------------------|--------------|
-| `publish-engine` | `engine` or `cli` changed | crates.io (6 crates) |
-| `publish-npm-core` | `npm-core` changed | npm (`@wavecraft/core`) |
-| `publish-npm-components` | `npm-components` changed | npm (`@wavecraft/components`) |
-| `publish-cli` | **Any** SDK component changed (`any_sdk_changed`) | crates.io (`wavecraft`) |
+| Job                      | Trigger Condition                                 | Publishes To                  |
+| ------------------------ | ------------------------------------------------- | ----------------------------- |
+| `publish-engine`         | `engine` or `cli` changed                         | crates.io (6 crates)          |
+| `publish-npm-core`       | `npm-core` changed                                | npm (`@wavecraft/core`)       |
+| `publish-npm-components` | `npm-components` changed                          | npm (`@wavecraft/components`) |
+| `publish-cli`            | **Any** SDK component changed (`any_sdk_changed`) | crates.io (`wavecraft`)       |
 
 **Key difference:** `publish-cli` is a cascade job — it triggers whenever _any_ SDK package (engine, npm-core, npm-components, or CLI itself) changes. This ensures the CLI git tag always points to the latest SDK state, since scaffolded projects depend on that tag.
 
@@ -379,31 +385,31 @@ cd engine && cargo xtask validate-cli-deps --verbose # per-dependency details
 
 #### npm Packages
 
-| Package | Description |
-|---------|-------------|
-| `@wavecraft/core` | IPC bridge, hooks, types, utilities |
-| `@wavecraft/components` | Pre-built React components |
+| Package                 | Description                         |
+| ----------------------- | ----------------------------------- |
+| `@wavecraft/core`       | IPC bridge, hooks, types, utilities |
+| `@wavecraft/components` | Pre-built React components          |
 
 #### Rust Crates (crates.io)
 
-| Crate | Description |
-|-------|-------------|
-| `wavecraft` | CLI tool for scaffolding plugins |
-| `wavecraft-protocol` | Shared parameter definitions |
-| `wavecraft-macros` | Procedural macros |
-| `wavecraft-metering` | SPSC ring buffer for audio → UI |
-| `wavecraft-dsp` | Pure DSP algorithms |
-| `wavecraft-bridge` | IPC handling |
-| `wavecraft-core` | Core SDK types and macros |
+| Crate                | Description                      |
+| -------------------- | -------------------------------- |
+| `wavecraft`          | CLI tool for scaffolding plugins |
+| `wavecraft-protocol` | Shared parameter definitions     |
+| `wavecraft-macros`   | Procedural macros                |
+| `wavecraft-metering` | SPSC ring buffer for audio → UI  |
+| `wavecraft-dsp`      | Pure DSP algorithms              |
+| `wavecraft-bridge`   | IPC handling                     |
+| `wavecraft-core`     | Core SDK types and macros        |
 
 ### Two Version Domains
 
 The CD pipeline operates with two distinct version domains:
 
-| Domain | Packages | Ownership | Bumped By |
-|--------|----------|-----------|-----------|
-| **Product Version** | `engine/Cargo.toml` workspace version | PO decides, Coder implements | Manual — during feature development |
-| **Distribution Version** | CLI, `@wavecraft/core`, `@wavecraft/components` | CI | Automatic — patch bump on any SDK change |
+| Domain                   | Packages                                        | Ownership                    | Bumped By                                |
+| ------------------------ | ----------------------------------------------- | ---------------------------- | ---------------------------------------- |
+| **Product Version**      | `engine/Cargo.toml` workspace version           | PO decides, Coder implements | Manual — during feature development      |
+| **Distribution Version** | CLI, `@wavecraft/core`, `@wavecraft/components` | CI                           | Automatic — patch bump on any SDK change |
 
 ### Auto-Bump Pattern
 
@@ -448,8 +454,8 @@ Since no commits are pushed to `main`, parallel job conflicts for version bumps 
 
 ### Secrets Required
 
-| Secret | Purpose |
-|--------|---------|
+| Secret         | Purpose                                    |
+| -------------- | ------------------------------------------ |
 | `GITHUB_TOKEN` | Commit version bumps + git push (built-in) |
 
 **Note:** crates.io publishing uses OIDC trusted publishing (no `CARGO_REGISTRY_TOKEN` required).

@@ -23,18 +23,20 @@ Use the following conventions for Rust doc examples:
 - **Avoid `ignore`** unless there's a hard external dependency that can't be represented.
 
 **Do:**
-```rust
+
+````rust
 /// ```rust,no_run
 /// use wavecraft_core::prelude::*;
 /// ```
-```
+````
 
 **Do (non-compiling illustration):**
-```text
+
+````text
 /// ```text
 /// use wavecraft::prelude::*; // via Cargo rename in downstream crate
 /// ```
-```
+````
 
 ### Pre-Push Validation
 
@@ -60,8 +62,8 @@ cargo xtask ci-check -F --skip-template  # Full minus template validation
 cargo xtask ci-check -F --skip-cd        # Full minus CD dry-run
 ```
 
-**What it runs (6 phases):**
-0. **Documentation** — Link validation via `scripts/check-links.sh` (skippable: `--skip-docs`)
+**What it runs (6 phases):** 0. **Documentation** — Link validation via `scripts/check-links.sh` (skippable: `--skip-docs`)
+
 1. **UI Dist Build** — Rebuilds `ui/dist` to mirror CI (always runs; two-stage: `build:lib` in `ui/`, then full build in `sdk-template/ui/`, dist copied to `ui/dist/`)
 2. **Linting + Type-Checking** — ESLint, Prettier, `tsc --noEmit`, cargo fmt, clippy (skippable: `--skip-lint`; fixable: `--fix`)
 3. **Automated Tests** — Engine (Rust) + UI (Vitest) tests (skippable: `--skip-tests`)
@@ -119,6 +121,7 @@ ui/
 The `ui/test/mocks/ipc.ts` module provides mock implementations of IPC hooks that allow testing components without the Rust engine.
 
 **Do:**
+
 ```typescript
 // ✅ Use mock utilities to set up test state
 import { setMockParameter, resetMocks } from '../test/mocks/ipc';
@@ -132,21 +135,23 @@ beforeEach(() => {
 
 **Mock API:**
 
-| Function | Purpose |
-|----------|----------|
-| `setMockParameter(id, info)` | Set parameter state for a test |
-| `setMockMeterFrame(frame)` | Set meter data for a test |
-| `getMockParameter(id)` | Get current mock parameter value |
-| `resetMocks()` | Clear all mock state (call in `beforeEach`) |
+| Function                     | Purpose                                     |
+| ---------------------------- | ------------------------------------------- |
+| `setMockParameter(id, info)` | Set parameter state for a test              |
+| `setMockMeterFrame(frame)`   | Set meter data for a test                   |
+| `getMockParameter(id)`       | Get current mock parameter value            |
+| `resetMocks()`               | Clear all mock state (call in `beforeEach`) |
 
 ### Test Configuration
 
 **Vitest Configuration** (`ui/vitest.config.ts`):
+
 - Environment: `happy-dom` (faster than jsdom)
 - Globals: enabled (`describe`, `it`, `expect` without imports)
 - Setup: `test/setup.ts` runs before each test file
 
 **TypeScript Support:**
+
 - Types: `vitest/globals`, `@testing-library/jest-dom`
 - npm packages: `@wavecraft/core`, `@wavecraft/components` available via workspace
 
@@ -169,6 +174,7 @@ cargo run --manifest-path /path/to/wavecraft/cli/Cargo.toml -- start --install
 ```
 
 **Why use `--output`:**
+
 - Test artifacts live in `target/tmp/` (gitignored)
 - Easy cleanup: `rm -rf target/tmp/test-plugin`
 - Auto-detection uses path dependencies, so local changes are tested without publishing
@@ -207,20 +213,24 @@ cargo xtask lint --engine
 ### UI Linting (TypeScript/React)
 
 **Tools:**
+
 - **ESLint 9** — Static analysis with strict TypeScript and React rules
 - **Prettier** — Code formatting
 
 **Key Rules:**
+
 - `@typescript-eslint/no-explicit-any: error` — No `any` types
 - `@typescript-eslint/explicit-function-return-type: warn` — Explicit return types preferred
 - `react-hooks/rules-of-hooks: error` — Enforce hooks rules
 - `react-hooks/exhaustive-deps: error` — Complete dependency arrays
 
 **Configuration:**
+
 - ESLint: `ui/eslint.config.js` (flat config format)
 - Prettier: `ui/.prettierrc`
 
 **NPM Scripts:**
+
 ```bash
 npm run lint        # ESLint check
 npm run lint:fix    # ESLint auto-fix
@@ -231,14 +241,17 @@ npm run format:check # Prettier check
 ### Engine Linting (Rust)
 
 **Tools:**
+
 - **cargo fmt** — Code formatting
 - **cargo clippy** — Lint analysis with `-D warnings` (warnings as errors)
 
 **Rules:**
+
 - All Clippy warnings are treated as errors
 - Standard Rust formatting via rustfmt
 
 **Manual Commands:**
+
 ```bash
 cargo fmt --check   # Check formatting
 cargo fmt           # Auto-format
@@ -248,6 +261,7 @@ cargo clippy --workspace -- -D warnings
 ### CI Integration
 
 Linting runs automatically on all PRs via `.github/workflows/lint.yml`:
+
 - Engine linting runs on `macos-latest`
 - UI linting runs on `ubuntu-latest`
 
@@ -277,12 +291,12 @@ console.error('Failed:', error);
 
 ### Log Levels
 
-| Level | Usage | Production |
-|-------|-------|------------|
-| `DEBUG` | Verbose tracing, request/response details | Hidden |
-| `INFO` | Significant events (connection, init) | Visible |
-| `WARN` | Recoverable issues, degraded operation | Visible |
-| `ERROR` | Failures requiring attention | Visible |
+| Level   | Usage                                     | Production |
+| ------- | ----------------------------------------- | ---------- |
+| `DEBUG` | Verbose tracing, request/response details | Hidden     |
+| `INFO`  | Significant events (connection, init)     | Visible    |
+| `WARN`  | Recoverable issues, degraded operation    | Visible    |
+| `ERROR` | Failures requiring attention              | Visible    |
 
 ### Structured Context
 
@@ -290,10 +304,10 @@ Always pass structured context objects instead of string interpolation:
 
 ```typescript
 // ✅ Structured context
-logger.error('Parameter update failed', { 
-  parameterId: 'gain', 
-  value: 0.5, 
-  error 
+logger.error('Parameter update failed', {
+  parameterId: 'gain',
+  value: 0.5,
+  error
 });
 
 // ❌ String interpolation
@@ -324,6 +338,7 @@ eprintln!("Error: {}", err);
 - Benchmark/test output — `println!` is acceptable for test diagnostics
 
 **Rationale:**
+
 - Structured logging enables filtering, searching, and analysis
 - Consistent log format across UI and Engine
 - Production builds can adjust log levels without code changes

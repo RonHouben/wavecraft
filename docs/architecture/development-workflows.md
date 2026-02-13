@@ -262,25 +262,25 @@ Wavecraft uses a Rust-based build system (`xtask`) that provides a unified inter
 
 ### Available Commands
 
-| Command                     | Description                                                                                                                        |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `cargo xtask ci-check`      | **Pre-push validation** — 6-phase local CI simulation (docs, UI build, lint+typecheck, tests; add `--full` for template validation + CD dry-run) |
-| `cargo xtask ci-check -F`   | **Full validation** — All 6 phases including template validation and CD dry-run                                                                    |
-| `cargo xtask validate-template` | Validate CLI template generation (replicates CI `template-validation.yml`)                                                                     |
-| `cargo xtask dev`           | Start WebSocket + Vite dev servers for browser development                                                                         |
-| `cargo xtask bundle`        | Build and bundle VST3/CLAP plugins                                                                                                 |
-| `cargo xtask test`          | Run all tests (Engine + UI)                                                                                                        |
-| `cargo xtask test --ui`     | Run UI tests only (Vitest)                                                                                                         |
-| `cargo xtask test --engine` | Run Engine tests only (cargo test)                                                                                                 |
-| `cargo xtask lint`          | Run linters for UI and/or engine code                                                                                              |
-| `cargo xtask desktop`       | Build and run the desktop POC                                                                                                      |
-| `cargo xtask au`            | Build AU wrapper (macOS only)                                                                                                      |
-| `cargo xtask install`       | Install plugins to system directories                                                                                              |
-| `cargo xtask clean`         | Clean all build artifacts across workspace (engine/target, cli/target, ui/dist, ui/coverage, target/tmp) with disk space reporting |
-| `cargo xtask all`           | Run full build pipeline (test → bundle → au → install)                                                                             |
-| `cargo xtask sign`          | Sign plugin bundles for macOS distribution                                                                                         |
-| `cargo xtask notarize`      | Notarize plugin bundles with Apple                                                                                                 |
-| `cargo xtask release`       | Complete release workflow (build → sign → notarize)                                                                                |
+| Command                         | Description                                                                                                                                      |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `cargo xtask ci-check`          | **Pre-push validation** — 6-phase local CI simulation (docs, UI build, lint+typecheck, tests; add `--full` for template validation + CD dry-run) |
+| `cargo xtask ci-check -F`       | **Full validation** — All 6 phases including template validation and CD dry-run                                                                  |
+| `cargo xtask validate-template` | Validate CLI template generation (replicates CI `template-validation.yml`)                                                                       |
+| `cargo xtask dev`               | Start WebSocket + Vite dev servers for browser development                                                                                       |
+| `cargo xtask bundle`            | Build and bundle VST3/CLAP plugins                                                                                                               |
+| `cargo xtask test`              | Run all tests (Engine + UI)                                                                                                                      |
+| `cargo xtask test --ui`         | Run UI tests only (Vitest)                                                                                                                       |
+| `cargo xtask test --engine`     | Run Engine tests only (cargo test)                                                                                                               |
+| `cargo xtask lint`              | Run linters for UI and/or engine code                                                                                                            |
+| `cargo xtask desktop`           | Build and run the desktop POC                                                                                                                    |
+| `cargo xtask au`                | Build AU wrapper (macOS only)                                                                                                                    |
+| `cargo xtask install`           | Install plugins to system directories                                                                                                            |
+| `cargo xtask clean`             | Clean all build artifacts across workspace (engine/target, cli/target, ui/dist, ui/coverage, target/tmp) with disk space reporting               |
+| `cargo xtask all`               | Run full build pipeline (test → bundle → au → install)                                                                                           |
+| `cargo xtask sign`              | Sign plugin bundles for macOS distribution                                                                                                       |
+| `cargo xtask notarize`          | Notarize plugin bundles with Apple                                                                                                               |
+| `cargo xtask release`           | Complete release workflow (build → sign → notarize)                                                                                              |
 
 ### Development Workflow
 
