@@ -144,7 +144,7 @@ fn run_engine_lint(fix: bool, verbose: bool) -> Result<()> {
     Ok(())
 }
 
-/// Run UI linting (ESLint + Prettier).
+/// Run UI linting (ESLint + Prettier + TypeScript type-check).
 fn run_ui_lint(fix: bool, verbose: bool) -> Result<()> {
     let ui_dir = paths::ui_dir()?;
 
@@ -211,6 +211,27 @@ fn run_ui_lint(fix: bool, verbose: bool) -> Result<()> {
         }
     }
     print_success_item("Prettier OK");
+
+    // Step 3: TypeScript type-check
+    print_status("Running TypeScript type-check...");
+
+    let mut typecheck_cmd = Command::new("npm");
+    typecheck_cmd.current_dir(&ui_dir);
+    typecheck_cmd.args(["run", "typecheck"]);
+
+    if verbose {
+        println!("Running: npm run typecheck");
+    }
+
+    let typecheck_status = typecheck_cmd
+        .status()
+        .context("Failed to run TypeScript type-check")?;
+    if !typecheck_status.success() {
+        anyhow::bail!(
+            "TypeScript type-check failed. Run 'npm run typecheck' in ui/ to inspect errors."
+        );
+    }
+    print_success_item("TypeScript type-check OK");
 
     Ok(())
 }

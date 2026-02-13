@@ -116,13 +116,22 @@ engine/xtask/src/
 ├── lib.rs           # Shared utilities (paths, platform, output)
 ├── main.rs          # CLI definition (clap)
 └── commands/
-    ├── mod.rs       # Command exports and run_all()
-    ├── bundle.rs    # Build VST3/CLAP bundles
-    ├── lint.rs      # Unified linting (UI + Engine)
-    ├── sign.rs      # macOS code signing
-    ├── notarize.rs  # Apple notarization
-    ├── release.rs   # Complete release workflow
-    └── ...
+    ├── mod.rs              # Command exports and run_all()
+    ├── build_ui.rs         # Two-stage UI dist build
+    ├── bundle.rs           # Build VST3/CLAP bundles
+    ├── cd_dry_run.rs       # CD dry-run change detection (used by ci-check --full)
+    ├── check.rs            # ci-check: 6-phase pre-push validation
+    ├── clean.rs            # Clean build artifacts
+    ├── desktop.rs          # Desktop POC
+    ├── dev.rs              # Dev servers (WebSocket + Vite)
+    ├── install.rs          # Install plugins to system directories
+    ├── lint.rs             # Unified linting (UI + Engine, incl. tsc --noEmit)
+    ├── notarize.rs         # Apple notarization
+    ├── release.rs          # Complete release workflow
+    ├── sign.rs             # macOS code signing
+    ├── test.rs             # Run tests (engine + UI)
+    ├── validate_cli_deps.rs # Validate CLI dependency versions
+    └── validate_template.rs # Validate CLI template generation
 ```
 
 **Command conventions:**

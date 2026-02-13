@@ -283,21 +283,31 @@ The Tester agent uses the following workflow for feature validation:
 ### Primary Testing Method: `cargo xtask ci-check`
 
 ```bash
-# Run all checks locally (fast, ~1 minute)
+# Run standard checks (docs, UI build, lint+typecheck, tests — ~1 minute)
 cargo xtask ci-check
 
 # Run with auto-fix for linting issues
 cargo xtask ci-check --fix
 
-# Skip certain phases
+# Full validation (adds template validation + CD dry-run)
+cargo xtask ci-check --full   # or -F
+
+# Skip individual phases
+cargo xtask ci-check --skip-docs
 cargo xtask ci-check --skip-lint
 cargo xtask ci-check --skip-tests
+cargo xtask ci-check -F --skip-template
+cargo xtask ci-check -F --skip-cd
 ```
 
-This command runs:
+This command runs 6 phases:
 
-1. **Linting** (with optional --fix): ESLint, Prettier, cargo fmt, clippy
-2. **Automated Tests**: Engine (Rust) and UI (Vitest) tests
+0. **Documentation**: Link validation (`scripts/check-links.sh`)
+1. **UI Dist Build**: Rebuilds `ui/dist` (two-stage: packages in `ui/`, app in `sdk-template/ui/`)
+2. **Linting + Type-Checking** (with optional --fix): ESLint, Prettier, `tsc --noEmit`, cargo fmt, clippy
+3. **Automated Tests**: Engine (Rust) and UI (Vitest) tests
+4. **Template Validation** (`--full` only): Validates CLI-generated projects compile
+5. **CD Dry-Run** (`--full` only): Git-based change detection matching CD workflow path filters
 
 ### Visual Testing with Playwright MCP
 

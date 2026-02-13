@@ -379,7 +379,7 @@ cargo test --manifest-path cli/Cargo.toml
 **3. Template validation (when changing templates or CLI template logic):**
 
 ```bash
-cargo xtask ci-validate-template
+cargo xtask validate-template
 ```
 
 **⚠️ CRITICAL**: If ANY check fails, you MUST fix the issue before handoff. No exceptions.

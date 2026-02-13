@@ -543,6 +543,20 @@ vendor = "Your Company"
 
 If you're working on the Wavecraft SDK itself (not building a plugin), the CLI **automatically detects** when it's running from the monorepo source checkout:
 
+1. Prepare the canonical SDK template once:
+
+```bash
+./scripts/setup-dev-template.sh
+```
+
+2. Run the browser/dev workflow against `sdk-template/`:
+
+```bash
+cargo xtask dev
+```
+
+3. Optionally scaffold separate throwaway plugins for CLI validation:
+
 ```bash
 # From the wavecraft repo root:
 cargo run -p wavecraft -- create TestPlugin --output target/tmp/test-plugin

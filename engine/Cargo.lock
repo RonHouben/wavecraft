@@ -3405,16 +3405,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "wavecraft-example"
-version = "0.12.6"
-dependencies = [
- "log",
- "serde",
- "serde_json",
- "wavecraft-nih_plug",
-]
-
-[[package]]
 name = "wavecraft-macros"
 version = "0.12.6"
 dependencies = [

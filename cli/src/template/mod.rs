@@ -8,9 +8,10 @@ use std::path::Path;
 
 use crate::template::variables::TemplateVariables;
 
-// The template lives in cli/sdk-templates/new-project/react/ and is packaged directly with the CLI crate.
-// Structure: sdk-templates/new-project/<variant>/ — currently only "react" variant exists.
-static TEMPLATE_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/sdk-templates/new-project/react");
+// The canonical template lives in sdk-template/ at the repository root and is
+// staged via build.rs so build artifacts (target/, node_modules/, dist/) are
+// excluded before being embedded into the CLI binary.
+static TEMPLATE_DIR: Dir = include_dir!("$OUT_DIR/sdk-template-clean");
 
 /// Extracts the embedded template to the target directory and applies variable replacement.
 pub fn extract_template(target_dir: &Path, vars: &TemplateVariables) -> Result<()> {
@@ -60,7 +61,10 @@ fn extract_dir(dir: &Dir, target_dir: &Path, vars: &TemplateVariables) -> Result
                 // Handle .template files: rename back to original (e.g., Cargo.toml.template -> Cargo.toml)
                 // These are renamed to avoid cargo treating the template as a crate during packaging.
                 let output_name = if file_name_str.ends_with(".template") {
-                    file_name_str.strip_suffix(".template").unwrap().to_string()
+                    file_name_str
+                        .strip_suffix(".template")
+                        .expect("filename should have .template suffix after filter")
+                        .to_string()
                 } else {
                     file_name_str.to_string()
                 };
@@ -220,6 +224,26 @@ mod tests {
         // This test will only pass once we copy the template files
         // For now, it's a placeholder to verify the logic compiles
         let _ = extract_template(temp.path(), &vars);
+    }
+
+    #[test]
+    fn test_embedded_template_excludes_build_artifact_directories() {
+        assert!(
+            TEMPLATE_DIR.get_dir("target").is_none(),
+            "target should not be embedded"
+        );
+        assert!(
+            TEMPLATE_DIR.get_dir("engine/target").is_none(),
+            "engine/target should not be embedded"
+        );
+        assert!(
+            TEMPLATE_DIR.get_dir("ui/node_modules").is_none(),
+            "ui/node_modules should not be embedded"
+        );
+        assert!(
+            TEMPLATE_DIR.get_dir("ui/dist").is_none(),
+            "ui/dist should not be embedded"
+        );
     }
 
     #[test]

@@ -184,13 +184,19 @@ describe('useAllParameters', () => {
     });
 
     // Wait for refetch to complete
-    await waitFor(() => {
-      expect(getAllSpy).toHaveBeenCalledTimes(2);
-    }, { timeout: 1000 });
+    await waitFor(
+      () => {
+        expect(getAllSpy).toHaveBeenCalledTimes(2);
+      },
+      { timeout: 1000 }
+    );
 
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    }, { timeout: 1000 });
+    await waitFor(
+      () => {
+        expect(result.current.isLoading).toBe(false);
+      },
+      { timeout: 1000 }
+    );
   });
 
   // T5: Duplicate fetch prevention
@@ -199,12 +205,13 @@ describe('useAllParameters', () => {
 
     const client = ParameterClient.getInstance();
     // Use a delayed Promise without setTimeout (avoids timer conflicts)
-    const getAllSpy = vi
-      .spyOn(client, 'getAllParameters')
-      .mockImplementation(() => new Promise((resolve) => {
-        // Resolve after a microtask delay
-        queueMicrotask(() => resolve(mockParams));
-      }));
+    const getAllSpy = vi.spyOn(client, 'getAllParameters').mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          // Resolve after a microtask delay
+          queueMicrotask(() => resolve(mockParams));
+        })
+    );
 
     const { result } = renderHook(() => useAllParameters());
 
@@ -217,9 +224,12 @@ describe('useAllParameters', () => {
     });
 
     // Wait for loading to complete
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    }, { timeout: 1000 });
+    await waitFor(
+      () => {
+        expect(result.current.isLoading).toBe(false);
+      },
+      { timeout: 1000 }
+    );
 
     // Should have called at most 2 times (initial + one refetch)
     expect(getAllSpy.mock.calls.length).toBeLessThanOrEqual(2);
@@ -268,7 +278,9 @@ describe('useAllParameters', () => {
       mockTransport.setConnected(true);
 
       const client = ParameterClient.getInstance();
-      const getAllSpy = vi.spyOn(client, 'getAllParameters').mockRejectedValue(new Error('Server error'));
+      const getAllSpy = vi
+        .spyOn(client, 'getAllParameters')
+        .mockRejectedValue(new Error('Server error'));
 
       const { result } = renderHook(() => useAllParameters());
 
@@ -294,22 +306,23 @@ describe('useAllParameters', () => {
     mockTransport.setConnected(true);
 
     const client = ParameterClient.getInstance();
-    vi.spyOn(client, 'getAllParameters').mockImplementation(
-      async () => {
-        // Disconnect mid-fetch
-        await act(async () => {
-          mockTransport.setConnected(false);
-        });
-        throw new Error('Connection lost');
-      }
-    );
+    vi.spyOn(client, 'getAllParameters').mockImplementation(async () => {
+      // Disconnect mid-fetch
+      await act(async () => {
+        mockTransport.setConnected(false);
+      });
+      throw new Error('Connection lost');
+    });
 
     const { result } = renderHook(() => useAllParameters());
 
     // Wait for the disconnect to be processed
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(true);
-    }, { timeout: 1000 });
+    await waitFor(
+      () => {
+        expect(result.current.isLoading).toBe(true);
+      },
+      { timeout: 1000 }
+    );
 
     // Should not show error - stays loading
     expect(result.current.error).toBeNull();
@@ -326,13 +339,19 @@ describe('useAllParameters', () => {
     const { result } = renderHook(() => useAllParameters());
 
     // Should fetch immediately
-    await waitFor(() => {
-      expect(getAllSpy).toHaveBeenCalled();
-    }, { timeout: 1000 });
+    await waitFor(
+      () => {
+        expect(getAllSpy).toHaveBeenCalled();
+      },
+      { timeout: 1000 }
+    );
 
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    }, { timeout: 1000 });
+    await waitFor(
+      () => {
+        expect(result.current.isLoading).toBe(false);
+      },
+      { timeout: 1000 }
+    );
 
     expect(result.current.params).toEqual(mockParams);
   });
@@ -419,16 +438,26 @@ describe('useAllParameters', () => {
 
     // Simulate parameter change notification using captured callback
     expect(onParamChangedCallback).not.toBeNull();
-    if (onParamChangedCallback) {
-      await act(async () => {
-        onParamChangedCallback('gain', 0.8);
-      });
+    const callback = onParamChangedCallback;
+    if (!callback) {
+      throw new Error('Expected onParamChangedCallback to be set');
     }
+    await act(async () => {
+      callback('gain', 0.8);
+    });
 
     // Wait for the state update to complete
-    await waitFor(() => {
-      expect(result.current.params[0].value).toBe(0.8);
-    }, { timeout: 1000 });
+    await waitFor(
+      () => {
+        const firstParam = result.current.params[0];
+        expect(firstParam).toBeDefined();
+        if (!firstParam) {
+          throw new Error('Expected first parameter to exist');
+        }
+        expect(firstParam.value).toBe(0.8);
+      },
+      { timeout: 1000 }
+    );
   });
 
   // T15b: Hot-reload parametersChanged notification
@@ -470,12 +499,20 @@ describe('useAllParameters', () => {
     });
 
     // Wait for reload to complete
-    await waitFor(() => {
-      expect(result.current.params.length).toBe(3);
-    }, { timeout: 1000 });
+    await waitFor(
+      () => {
+        expect(result.current.params.length).toBe(3);
+      },
+      { timeout: 1000 }
+    );
 
     expect(getAllSpy).toHaveBeenCalledTimes(2);
-    expect(result.current.params[2].id).toBe('freq');
+    const freqParam = result.current.params[2];
+    expect(freqParam).toBeDefined();
+    if (!freqParam) {
+      throw new Error('Expected reloaded frequency parameter to exist');
+    }
+    expect(freqParam.id).toBe('freq');
   });
 
   // T16: reload() clears error state

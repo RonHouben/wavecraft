@@ -154,6 +154,11 @@ pub mod paths {
         Ok(project_root()?.join("ui"))
     }
 
+    /// Returns the SDK template UI application directory.
+    pub fn sdk_template_ui_dir() -> Result<PathBuf> {
+        Ok(project_root()?.join("sdk-template").join("ui"))
+    }
+
     /// Returns the target/bundled directory where built plugins are placed.
     pub fn bundled_dir() -> Result<PathBuf> {
         Ok(engine_dir()?.join("target").join("bundled"))

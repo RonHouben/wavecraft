@@ -56,7 +56,7 @@ jobs:
             cli:
               - 'cli/src/**'
               - 'cli/Cargo.toml'
-              - 'cli/sdk-templates/**'
+              - 'sdk-template/**'
             engine:
               - 'engine/crates/wavecraft-core/**'
               - 'engine/crates/wavecraft-dsp/**'
@@ -145,51 +145,23 @@ jobs:
 
       - name: Wait for published crates on crates.io
         run: |
-          echo "Waiting for crates.io sparse index propagation..."
-
-          wait_for_crate() {
-            local CRATE=$1
-            local VERSION=$2
-            local MAX_ATTEMPTS=30
-            local DELAY=10
-            
-            if [ -z "$VERSION" ] || [ "$VERSION" = "" ]; then
-              echo "⏩ Skipping $CRATE (no version to wait for)"
-              return 0
-            fi
-            
-            echo "Waiting for $CRATE@$VERSION..."
-            for i in $(seq 1 $MAX_ATTEMPTS); do
-              # Query the sparse index directly (bypasses CDN caching)
-              if curl -s "https://index.crates.io/${CRATE:0:2}/${CRATE:2:2}/$CRATE" \
-                | grep -q "\"vers\":\"$VERSION\""; then
-                echo "✅ $CRATE@$VERSION available on crates.io (attempt $i)"
-                return 0
-              fi
-              
-              echo "⏳ $CRATE@$VERSION not yet in index (attempt $i/$MAX_ATTEMPTS, waiting ${DELAY}s...)"
-              sleep $DELAY
-            done
-            
-            echo "❌ Timed out waiting for $CRATE@$VERSION after $((MAX_ATTEMPTS * DELAY))s"
-            return 1
-          }
+          echo "Waiting for crates.io propagation..."
 
           # Wait for dev-server if it was published in this workflow
           DEV_SERVER_VERSION="${{ needs.publish-dev-server.outputs.version }}"
           if [ -n "$DEV_SERVER_VERSION" ]; then
-            wait_for_crate "wavecraft-dev-server" "$DEV_SERVER_VERSION"
+            bash scripts/ci/wait-for-crate.sh "wavecraft-dev-server" "$DEV_SERVER_VERSION"
           fi
 
           # Wait for engine crates if they were published in this workflow
           ENGINE_VERSION="${{ needs.publish-engine.outputs.version }}"
           if [ -n "$ENGINE_VERSION" ]; then
-            wait_for_crate "wavecraft-core" "$ENGINE_VERSION"
-            wait_for_crate "wavecraft-protocol" "$ENGINE_VERSION"
-            wait_for_crate "wavecraft-bridge" "$ENGINE_VERSION"
-            wait_for_crate "wavecraft-metering" "$ENGINE_VERSION"
-            wait_for_crate "wavecraft-dsp" "$ENGINE_VERSION"
-            wait_for_crate "wavecraft-macros" "$ENGINE_VERSION"
+            bash scripts/ci/wait-for-crate.sh "wavecraft-core" "$ENGINE_VERSION"
+            bash scripts/ci/wait-for-crate.sh "wavecraft-protocol" "$ENGINE_VERSION"
+            bash scripts/ci/wait-for-crate.sh "wavecraft-bridge" "$ENGINE_VERSION"
+            bash scripts/ci/wait-for-crate.sh "wavecraft-metering" "$ENGINE_VERSION"
+            bash scripts/ci/wait-for-crate.sh "wavecraft-dsp" "$ENGINE_VERSION"
+            bash scripts/ci/wait-for-crate.sh "wavecraft-macros" "$ENGINE_VERSION"
           fi
 
           # Force Cargo to refresh its index cache
@@ -250,18 +222,19 @@ jobs:
       - name: Query registry version
         id: registry
         run: |
-          # Query with explicit HTTP status check
-          HTTP_CODE=$(curl -s -o /tmp/crate-index.txt -w "%{http_code}" \
-            "https://index.crates.io/wa/ve/wavecraft")
+          # Query crates.io API with explicit HTTP status check
+          HTTP_CODE=$(curl -s -o /tmp/crate-info.json -w "%{http_code}" \
+            -H "User-Agent: wavecraft-ci (https://github.com/RonHouben/wavecraft)" \
+            "https://crates.io/api/v1/crates/wavecraft")
 
           if [ "$HTTP_CODE" -ne 200 ]; then
-            echo "⚠️  crates.io index returned HTTP $HTTP_CODE"
+            echo "⚠️  crates.io API returned HTTP $HTTP_CODE"
             echo "registry_available=false" >> $GITHUB_OUTPUT
             echo "published=unknown" >> $GITHUB_OUTPUT
           else
-            PUBLISHED=$(tail -1 /tmp/crate-index.txt | jq -r '.vers' 2>/dev/null)
+            PUBLISHED=$(jq -r '.crate.max_version // empty' /tmp/crate-info.json 2>/dev/null)
             if [ -z "$PUBLISHED" ] || [ "$PUBLISHED" = "null" ]; then
-              echo "⚠️  Failed to parse version from crates.io index"
+              echo "⚠️  Failed to parse version from crates.io API"
               echo "registry_available=false" >> $GITHUB_OUTPUT
               echo "published=unknown" >> $GITHUB_OUTPUT
             else
@@ -360,10 +333,16 @@ jobs:
         run: |
           VERSION="${{ steps.final.outputs.version }}"
           # Check if this exact version exists on crates.io
-          if curl -s "https://index.crates.io/wa/ve/wavecraft" \
-            | grep -q "\"vers\":\"$VERSION\""; then
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "User-Agent: wavecraft-ci (https://github.com/RonHouben/wavecraft)" \
+            "https://crates.io/api/v1/crates/wavecraft/$VERSION")
+
+          if [ "$HTTP_CODE" = "200" ]; then
             echo "❌ Version $VERSION already exists on crates.io!"
             echo "This means the auto-bump logic failed to produce a new version."
+            exit 1
+          elif [ "$HTTP_CODE" != "404" ]; then
+            echo "❌ Could not verify published version state (HTTP $HTTP_CODE)"
             exit 1
           fi
           echo "✅ Version $VERSION is not yet on crates.io — safe to publish"
@@ -443,18 +422,19 @@ jobs:
       - name: Query registry version
         id: registry
         run: |
-          # Query with explicit HTTP status check
-          HTTP_CODE=$(curl -s -o /tmp/crate-index.txt -w "%{http_code}" \
-            "https://index.crates.io/wa/ve/wavecraft-core")
+          # Query crates.io API with explicit HTTP status check
+          HTTP_CODE=$(curl -s -o /tmp/crate-info.json -w "%{http_code}" \
+            -H "User-Agent: wavecraft-ci (https://github.com/RonHouben/wavecraft)" \
+            "https://crates.io/api/v1/crates/wavecraft-core")
 
           if [ "$HTTP_CODE" -ne 200 ]; then
-            echo "⚠️  crates.io index returned HTTP $HTTP_CODE"
+            echo "⚠️  crates.io API returned HTTP $HTTP_CODE"
             echo "registry_available=false" >> $GITHUB_OUTPUT
             echo "published=unknown" >> $GITHUB_OUTPUT
           else
-            PUBLISHED=$(tail -1 /tmp/crate-index.txt | jq -r '.vers' 2>/dev/null)
+            PUBLISHED=$(jq -r '.crate.max_version // empty' /tmp/crate-info.json 2>/dev/null)
             if [ -z "$PUBLISHED" ] || [ "$PUBLISHED" = "null" ]; then
-              echo "⚠️  Failed to parse version from crates.io index"
+              echo "⚠️  Failed to parse version from crates.io API"
               echo "registry_available=false" >> $GITHUB_OUTPUT
               echo "published=unknown" >> $GITHUB_OUTPUT
             else
@@ -568,10 +548,16 @@ jobs:
         run: |
           VERSION="${{ steps.final.outputs.version }}"
           # Check if this exact version exists on crates.io
-          if curl -s "https://index.crates.io/wa/ve/wavecraft-core" \
-            | grep -q "\"vers\":\"$VERSION\""; then
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "User-Agent: wavecraft-ci (https://github.com/RonHouben/wavecraft)" \
+            "https://crates.io/api/v1/crates/wavecraft-core/$VERSION")
+
+          if [ "$HTTP_CODE" = "200" ]; then
             echo "❌ Version $VERSION already exists on crates.io!"
             echo "This means the auto-bump logic failed to produce a new version."
+            exit 1
+          elif [ "$HTTP_CODE" != "404" ]; then
+            echo "❌ Could not verify published version state (HTTP $HTTP_CODE)"
             exit 1
           fi
           echo "✅ Version $VERSION is not yet on crates.io — safe to publish"
@@ -693,32 +679,8 @@ jobs:
           TARGET="${{ needs.publish-engine.outputs.version }}"
           echo "Waiting for wavecraft-bridge $TARGET and wavecraft-protocol $TARGET on crates.io..."
 
-          wait_for_crate() {
-            local CRATE=$1
-            local VERSION=$2
-            local MAX_ATTEMPTS=30
-            local DELAY=10
-            
-            for i in $(seq 1 $MAX_ATTEMPTS); do
-              # Query the sparse index directly (bypasses CDN caching)
-              LATEST=$(curl -s "https://index.crates.io/${CRATE:0:2}/${CRATE:2:2}/$CRATE" \
-                | grep "\"vers\":\"$VERSION\"" > /dev/null 2>&1 && echo "$VERSION" || echo "not-found")
-              
-              if [ "$LATEST" = "$VERSION" ]; then
-                echo "✅ $CRATE $VERSION available on crates.io (attempt $i)"
-                return 0
-              fi
-              
-              echo "⏳ $CRATE $VERSION not yet in index (attempt $i/$MAX_ATTEMPTS, waiting ${DELAY}s...)"
-              sleep $DELAY
-            done
-            
-            echo "❌ Timed out waiting for $CRATE $VERSION after $((MAX_ATTEMPTS * DELAY))s"
-            return 1
-          }
-
-          wait_for_crate "wavecraft-protocol" "$TARGET"
-          wait_for_crate "wavecraft-bridge" "$TARGET"
+          bash scripts/ci/wait-for-crate.sh "wavecraft-protocol" "$TARGET"
+          bash scripts/ci/wait-for-crate.sh "wavecraft-bridge" "$TARGET"
 
           # Force Cargo to refresh its index cache
           cargo search wavecraft-bridge --limit 1 > /dev/null 2>&1 || true
@@ -726,18 +688,19 @@ jobs:
       - name: Query registry version
         id: registry
         run: |
-          # Query with explicit HTTP status check
-          HTTP_CODE=$(curl -s -o /tmp/crate-index.txt -w "%{http_code}" \
-            "https://index.crates.io/wa/ve/wavecraft-dev-server")
+          # Query crates.io API with explicit HTTP status check
+          HTTP_CODE=$(curl -s -o /tmp/crate-info.json -w "%{http_code}" \
+            -H "User-Agent: wavecraft-ci (https://github.com/RonHouben/wavecraft)" \
+            "https://crates.io/api/v1/crates/wavecraft-dev-server")
 
           if [ "$HTTP_CODE" -ne 200 ]; then
-            echo "⚠️  crates.io index returned HTTP $HTTP_CODE"
+            echo "⚠️  crates.io API returned HTTP $HTTP_CODE"
             echo "registry_available=false" >> $GITHUB_OUTPUT
             echo "published=unknown" >> $GITHUB_OUTPUT
           else
-            PUBLISHED=$(tail -1 /tmp/crate-index.txt | jq -r '.vers' 2>/dev/null)
+            PUBLISHED=$(jq -r '.crate.max_version // empty' /tmp/crate-info.json 2>/dev/null)
             if [ -z "$PUBLISHED" ] || [ "$PUBLISHED" = "null" ]; then
-              echo "⚠️  Failed to parse version from crates.io index"
+              echo "⚠️  Failed to parse version from crates.io API"
               echo "registry_available=false" >> $GITHUB_OUTPUT
               echo "published=unknown" >> $GITHUB_OUTPUT
             else
@@ -834,10 +797,16 @@ jobs:
         run: |
           VERSION="${{ steps.final.outputs.version }}"
           # Check if this exact version exists on crates.io
-          if curl -s "https://index.crates.io/wa/ve/wavecraft-dev-server" \
-            | grep -q "\"vers\":\"$VERSION\""; then
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "User-Agent: wavecraft-ci (https://github.com/RonHouben/wavecraft)" \
+            "https://crates.io/api/v1/crates/wavecraft-dev-server/$VERSION")
+
+          if [ "$HTTP_CODE" = "200" ]; then
             echo "❌ Version $VERSION already exists on crates.io!"
             echo "This means the auto-bump logic failed to produce a new version."
+            exit 1
+          elif [ "$HTTP_CODE" != "404" ]; then
+            echo "❌ Could not verify published version state (HTTP $HTTP_CODE)"
             exit 1
           fi
           echo "✅ Version $VERSION is not yet on crates.io — safe to publish"

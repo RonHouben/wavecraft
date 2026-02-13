@@ -34,10 +34,7 @@ interface FetchAttemptResult {
 /**
  * Attempt to fetch parameters (helper to reduce complexity)
  */
-async function attemptFetch(
-  client: ParameterClient,
-  attempt: number
-): Promise<FetchAttemptResult> {
+async function attemptFetch(client: ParameterClient, attempt: number): Promise<FetchAttemptResult> {
   try {
     if (attempt > 0) {
       logger.debug('useAllParameters: retry attempt', {
@@ -243,8 +240,7 @@ export function useAllParameters(): UseAllParametersResult {
       if (!bridge.isConnected()) {
         setError(
           new Error(
-            'Could not connect to dev server within 15 seconds. ' +
-              'Is `wavecraft start` running?'
+            'Could not connect to dev server within 15 seconds. ' + 'Is `wavecraft start` running?'
           )
         );
         setIsLoading(false);

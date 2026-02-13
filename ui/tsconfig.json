@@ -27,10 +27,11 @@
     /* Path aliases */
     "paths": {
       "*": ["./*"],
+      "@test/*": ["./test/*"],
       "@wavecraft/core": ["./packages/core/src"],
       "@wavecraft/core/meters": ["./packages/core/src/meters"],
       "@wavecraft/components": ["./packages/components/src"]
     }
   },
-  "include": ["src"]
+  "include": ["packages", "test", "vite.config.ts", "vitest.config.ts"]
 }

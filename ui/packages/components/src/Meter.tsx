@@ -5,12 +5,7 @@
  */
 
 import React, { useEffect, useState, useRef } from 'react';
-import {
-  getMeterFrame,
-  linearToDb,
-  useConnectionStatus,
-  type MeterFrame,
-} from '@wavecraft/core';
+import { getMeterFrame, linearToDb, useConnectionStatus, type MeterFrame } from '@wavecraft/core';
 
 const METER_UPDATE_HZ = 30;
 const METER_FLOOR_DB = -60;

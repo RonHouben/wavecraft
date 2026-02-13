@@ -214,6 +214,14 @@ enum Commands {
         #[arg(long)]
         fix: bool,
 
+        /// Include full validation: template validation + CD dry-run
+        #[arg(short = 'F', long)]
+        full: bool,
+
+        /// Skip documentation checks
+        #[arg(long)]
+        skip_docs: bool,
+
         /// Skip linting
         #[arg(long)]
         skip_lint: bool,
@@ -221,6 +229,14 @@ enum Commands {
         /// Skip automated tests
         #[arg(long)]
         skip_tests: bool,
+
+        /// Skip template validation phase (only applies with --full)
+        #[arg(long)]
+        skip_template: bool,
+
+        /// Skip CD dry-run phase (only applies with --full)
+        #[arg(long)]
+        skip_cd: bool,
     },
 
     /// Validate CLI wavecraft-* dependency versions and publishability
@@ -237,7 +253,7 @@ enum Commands {
     /// Validate CLI template generation
     #[command(
         about = "Validate CLI template generation (replicates CI workflow)",
-        name = "ci-validate-template"
+        name = "validate-template"
     )]
     ValidateTemplate {
         /// Keep the generated test project (don't clean up)
@@ -295,7 +311,7 @@ fn main() -> Result<()> {
         Some(Commands::Desktop { build_ui }) => {
             commands::desktop::run(!cli.debug, build_ui, cli.verbose)
         }
-        Some(Commands::BuildUi) => commands::build_ui::run(cli.verbose),
+        Some(Commands::BuildUi) => commands::build_ui::run(cli.verbose, false),
         Some(Commands::Au) => commands::au::run(cli.dry_run, cli.verbose),
         Some(Commands::Install) => commands::install::run(cli.dry_run, cli.verbose),
         Some(Commands::Clean { installed, force }) => {
@@ -374,13 +390,21 @@ fn main() -> Result<()> {
         Some(Commands::Dev { port }) => commands::dev::run(port, cli.verbose),
         Some(Commands::Check {
             fix,
+            full,
+            skip_docs,
             skip_lint,
             skip_tests,
+            skip_template,
+            skip_cd,
         }) => {
             let config = commands::check::CheckConfig {
                 fix,
+                skip_docs,
                 skip_lint,
                 skip_tests,
+                full,
+                skip_template,
+                skip_cd,
                 verbose: cli.verbose,
             };
             commands::check::run(config)

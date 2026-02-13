@@ -19,7 +19,7 @@ export default defineConfig({
         meters: resolve(__dirname, 'src/meters.ts'),
       },
       formats: ['es'],
-      fileName: (format, entryName) => `${entryName}.js`,
+      fileName: (_format, entryName) => `${entryName}.js`,
     },
     rollupOptions: {
       external: ['react', 'react/jsx-runtime'],

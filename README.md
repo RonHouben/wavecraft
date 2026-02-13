@@ -81,8 +81,12 @@ wavecraft create my-plugin
 wavecraft/
 ├── cli/                          # Wavecraft CLI tool
 │   ├── src/                      # CLI source code
-│   └── sdk-templates/            # Project templates embedded in CLI
-│       └── new-project/react/    # React UI template (default)
+│   └── template/                 # Template extraction and variable processing
+│
+├── sdk-template/                 # Canonical project template (embedded by CLI)
+│   ├── Cargo.toml.template
+│   ├── engine/
+│   └── ui/
 │
 ├── dev-server/                   # Unified dev server (standalone crate)
 │   ├── Cargo.toml                # Not in engine workspace
@@ -102,12 +106,11 @@ wavecraft/
 │       ├── wavecraft-protocol/   # Shared contracts (param IDs, JSON-RPC types)
 │       └── wavecraft-metering/   # SPSC ring buffer for real-time meters
 │
-├── ui/                           # React SPA (Vite + TypeScript)
+├── ui/                           # React package workspace (npm)
 │   ├── packages/
 │   │   ├── core/                 # @wavecraft/core package source
 │   │   └── components/           # @wavecraft/components package source
-│   ├── src/                      # Dev app for testing packages
-│   └── dist/                     # Build output (embedded in plugin)
+│   └── test/                     # Shared test utilities
 │
 ├── docs/                         # Architecture & specs
 └── packaging/                    # Platform installers
@@ -148,21 +151,25 @@ cargo xtask all
 
 ### Available Commands
 
-| Command                                 | Description                                    |
-| --------------------------------------- | ---------------------------------------------- |
-| `cargo xtask bundle`                    | Build and bundle VST3/CLAP plugins             |
-| `cargo xtask bundle --debug`            | Debug build (faster compile, no optimizations) |
-| `cargo xtask bundle --install`          | Build and install plugins in one step          |
-| `cargo xtask test`                      | Run all tests (engine + UI)                    |
-| `cargo xtask test --ui`                 | Run UI tests only (npm test)                   |
-| `cargo xtask test --engine`             | Run engine tests only (cargo test)             |
-| `cargo xtask test --all`                | Test all workspace crates                      |
-| `cargo xtask au`                        | Build AU wrapper (macOS only, requires CMake)  |
-| `cargo xtask install`                   | Install plugins to system directories          |
-| `cargo xtask clean`                     | Clean build artifacts                          |
-| `cargo xtask clean --installed --force` | Also remove installed plugins                  |
-| `cargo xtask all`                       | Full pipeline: test → bundle → au → install    |
-| `cargo xtask all --dry-run`             | Preview what would be done                     |
+| Command                                 | Description                                              |
+| --------------------------------------- | -------------------------------------------------------- |
+| `cargo xtask ci-check`                  | Pre-push validation (6 phases: docs, build, lint, tests) |
+| `cargo xtask ci-check --full`           | Full validation (adds template + CD dry-run)             |
+| `cargo xtask lint`                      | Run linters (ESLint, Prettier, tsc, cargo fmt, clippy)   |
+| `cargo xtask validate-template`         | Validate CLI template generation                         |
+| `cargo xtask bundle`                    | Build and bundle VST3/CLAP plugins                       |
+| `cargo xtask bundle --debug`            | Debug build (faster compile, no optimizations)           |
+| `cargo xtask bundle --install`          | Build and install plugins in one step                    |
+| `cargo xtask test`                      | Run all tests (engine + UI)                              |
+| `cargo xtask test --ui`                 | Run UI tests only (npm test)                             |
+| `cargo xtask test --engine`             | Run engine tests only (cargo test)                       |
+| `cargo xtask test --all`                | Test all workspace crates                                |
+| `cargo xtask au`                        | Build AU wrapper (macOS only, requires CMake)            |
+| `cargo xtask install`                   | Install plugins to system directories                    |
+| `cargo xtask clean`                     | Clean build artifacts                                    |
+| `cargo xtask clean --installed --force` | Also remove installed plugins                            |
+| `cargo xtask all`                       | Full pipeline: test → bundle → au → install              |
+| `cargo xtask all --dry-run`             | Preview what would be done                               |
 
 ### Feature Flags
 

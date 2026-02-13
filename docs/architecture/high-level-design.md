@@ -44,6 +44,7 @@ Wavecraft is organized as a **monorepo** containing all components of the SDK ec
 ```
 wavecraft/
 ├── cli/                           # CLI tool (cargo install wavecraft)
+│   ├── build.rs                   # Build-time staging: filters sdk-template/ for include_dir!
 │   ├── src/                       # CLI source code
 │   │   ├── main.rs                # Entry point, clap CLI
 │   │   ├── validation.rs          # Crate name validation (syn-based)
@@ -56,12 +57,10 @@ wavecraft/
 │   │   └── template/              # Template extraction & variables
 │   │       ├── mod.rs
 │   │       └── variables.rs
-│   └── sdk-templates/             # Embedded project templates
-│       └── new-project/           # `wavecraft create` templates
-│           └── react/             # React UI variant (default)
-│               ├── Cargo.toml.template
-│               ├── engine/        # Rust audio engine template
-│               └── ui/            # React UI template
+├── sdk-template/                  # Single source of truth for plugin scaffold (embedded by CLI at build time)
+│   ├── Cargo.toml.template
+│   ├── engine/                    # Rust audio engine template
+│   └── ui/                        # React UI template
 ├── dev-server/                    # Unified dev server (standalone crate)
 │   ├── Cargo.toml                 # Not in engine workspace
 │   └── src/                       # Dev server source
@@ -83,16 +82,15 @@ wavecraft/
 │   │   ├── wavecraft-bridge/      # IPC handler
 │   │   ├── wavecraft-metering/    # Real-time metering
 │   │   ├── wavecraft-dsp/         # DSP primitives
-│   │   └── wavecraft-example/     # Example plugin for SDK development (publish = false)
+│   │   └── ...                    # Additional SDK crates
 │   └── xtask/                     # Build automation
 ├── packaging/                     # AU wrapper, installers
 ├── scripts/                       # Development scripts
-├── ui/                            # React UI (npm workspace)
+├── ui/                            # React UI package workspace (npm packages only — no app code)
 │   ├── packages/                  # Published npm packages
 │   │   ├── core/                  # @wavecraft/core — IPC, hooks, utilities
 │   │   └── components/            # @wavecraft/components — React components
-│   ├── src/                       # Development app (internal testing)
-│   └── test/                      # Test utilities and mocks
+│   └── test/                      # Shared test utilities and mocks
 ```
 
 ### Monorepo Benefits
@@ -101,7 +99,7 @@ wavecraft/
 
 2. **Simplified Development** — Contributors can work on any component without managing multiple repositories.
 
-3. **Template Embedding** — The CLI embeds the plugin template at compile time via `include_dir!`, ensuring the template is always in sync with the CLI version.
+3. **Template Embedding** — The CLI embeds the plugin template at compile time via `include_dir!`. A build-time staging step (`cli/build.rs`) copies `sdk-template/` to a clean directory, excluding `target/`, `node_modules/`, and `dist/`, ensuring the embedded template is always in sync and free of build artifacts.
 
 4. **Coordinated Releases** — Version bumps and releases are coordinated across all components.
 
@@ -247,6 +245,7 @@ Key: the audio path never blocks on UI; the UI never directly runs audio code.
     •	Use a single-producer single-consumer lock-free ring buffer (SPSC) or atomic double buffer for data from audio → UI (metering, waveform snapshots). Use crates such as rtrb or other proven SPSC ring buffer crates to avoid allocations and locks on the audio thread.  ￼
     7.	Build & Packaging
     •	Rust build (Cargo) for core; CMake or a small shim for packaging VST3 (SDK). Bundle the React build output as plugin resources (embed as bytes or serve them via an in-process file server).
+    •	**Two-Stage UI Build:** The npm packages (`@wavecraft/core`, `@wavecraft/components`) are built first via `npm run build:lib` in `ui/`. Then the full app is built in `sdk-template/ui/` (which imports those packages). The resulting `sdk-template/ui/dist/` is copied to `ui/dist/` for engine embedding via `include_dir!`.
     •	AU builds require macOS; produce `.component` bundles for `/Library/Audio/Plug-Ins/Components/`.
 
 • Code signing and notarization for macOS via `cargo xtask sign` and `cargo xtask notarize`. The `xtask sign` flow accepts a `SigningConfig` (constructed from env in production via `SigningConfig::from_env()` or built directly for tests via `SigningConfig::new()`).

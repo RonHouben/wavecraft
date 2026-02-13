@@ -3,6 +3,7 @@
 pub mod au;
 pub mod build_ui;
 pub mod bundle;
+pub mod cd_dry_run;
 pub mod check;
 pub mod clean;
 pub mod desktop;

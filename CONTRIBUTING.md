@@ -33,6 +33,15 @@ Thank you for your interest in contributing to Wavecraft! This document provides
 
 For detailed setup instructions, see the [SDK Getting Started Guide](docs/guides/sdk-getting-started.md).
 
+### SDK Contributor Dev Mode (canonical template)
+
+When working in the Wavecraft monorepo, development runs against `sdk-template/`.
+
+```bash
+./scripts/setup-dev-template.sh   # materialize .template files + install sdk-template/ui deps
+cargo xtask dev                   # runs dev servers against sdk-template/engine + sdk-template/ui
+```
+
 ## Coding Standards
 
 Wavecraft follows strict coding standards to maintain code quality and consistency. Please read [docs/architecture/coding-standards.md](docs/architecture/coding-standards.md) before contributing.
@@ -102,8 +111,7 @@ When making changes to the SDK that affect generated plugins (templates, CLI, or
 ```bash
 # Generate a test plugin into your local SDK checkout's build directory
 cargo run --manifest-path cli/Cargo.toml -- create TestPlugin \
-  --output target/tmp/test-plugin \
-  --local-sdk
+   --output target/tmp/test-plugin
 
 # Build and test the generated plugin
 cd target/tmp/test-plugin
