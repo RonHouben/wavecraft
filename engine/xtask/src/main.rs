@@ -214,6 +214,10 @@ enum Commands {
         #[arg(long)]
         fix: bool,
 
+        /// Skip documentation checks
+        #[arg(long)]
+        skip_docs: bool,
+
         /// Skip linting
         #[arg(long)]
         skip_lint: bool,
@@ -374,11 +378,13 @@ fn main() -> Result<()> {
         Some(Commands::Dev { port }) => commands::dev::run(port, cli.verbose),
         Some(Commands::Check {
             fix,
+            skip_docs,
             skip_lint,
             skip_tests,
         }) => {
             let config = commands::check::CheckConfig {
                 fix,
+                skip_docs,
                 skip_lint,
                 skip_tests,
                 verbose: cli.verbose,

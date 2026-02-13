@@ -1,8 +1,10 @@
 //! Check command - Pre-push validation script that simulates CI pipeline locally.
 //!
 //! This command runs all the checks that would run in the CI pipeline:
-//! 1. Linting (with optional auto-fix)
-//! 2. Automated tests (engine + UI)
+//! 0. Documentation link checking (`scripts/check-links.sh`)
+//! 1. UI dist build (always rebuild to mirror CI)
+//! 2. Linting (with optional auto-fix)
+//! 3. Automated tests (engine + UI)
 //!
 //! This is much faster than running the full CI pipeline via Docker/act
 //! because it runs natively on the local machine.
@@ -12,6 +14,7 @@
 //! then invoke the "playwright-mcp-ui-testing" skill for visual validation.
 
 use anyhow::Result;
+use std::process::Command;
 use std::time::{Duration, Instant};
 
 use super::{build_ui, lint, test};
@@ -23,6 +26,8 @@ use xtask::paths;
 pub struct CheckConfig {
     /// Auto-fix linting issues where possible
     pub fix: bool,
+    /// Skip documentation checks
+    pub skip_docs: bool,
     /// Skip linting
     pub skip_lint: bool,
     /// Skip automated tests
@@ -33,6 +38,7 @@ pub struct CheckConfig {
 
 /// Result tracking for each check phase.
 struct CheckResults {
+    docs: Option<Result<Duration>>,
     lint: Option<Result<Duration>>,
     test: Option<Result<Duration>>,
 }
@@ -40,15 +46,17 @@ struct CheckResults {
 impl CheckResults {
     fn new() -> Self {
         Self {
+            docs: None,
             lint: None,
             test: None,
         }
     }
 
     fn all_passed(&self) -> bool {
+        let docs_ok = self.docs.as_ref().is_none_or(|r| r.is_ok());
         let lint_ok = self.lint.as_ref().is_none_or(|r| r.is_ok());
         let test_ok = self.test.as_ref().is_none_or(|r| r.is_ok());
-        lint_ok && test_ok
+        docs_ok && lint_ok && test_ok
     }
 }
 
@@ -63,12 +71,21 @@ pub fn run(config: CheckConfig) -> Result<()> {
     println!("Running local CI checks (faster than Docker-based CI)");
     println!();
 
-    ensure_ui_dist(config.verbose)?;
-
     let mut results = CheckResults::new();
     let total_start = Instant::now();
 
-    // Phase 1: Linting
+    // Phase 0: Documentation
+    if !config.skip_docs {
+        results.docs = Some(run_docs_phase(&config));
+    } else {
+        print_skip("Skipping documentation checks (--skip-docs)");
+        println!();
+    }
+
+    // Phase 1: UI Dist Build (always rebuild to mirror CI behavior)
+    run_ui_build_phase(&config)?;
+
+    // Phase 2: Linting
     if !config.skip_lint {
         results.lint = Some(run_lint_phase(&config));
     } else {
@@ -76,7 +93,7 @@ pub fn run(config: CheckConfig) -> Result<()> {
         println!();
     }
 
-    // Phase 2: Automated Tests
+    // Phase 3: Automated Tests
     if !config.skip_tests {
         results.test = Some(run_test_phase(&config));
     } else {
@@ -95,24 +112,53 @@ pub fn run(config: CheckConfig) -> Result<()> {
     }
 }
 
-fn ensure_ui_dist(verbose: bool) -> Result<()> {
-    let ui_dir = paths::ui_dir()?;
-    let dist_dir = ui_dir.join("dist");
+fn build_ui_dist(verbose: bool) -> Result<()> {
+    print_status("Building UI dist for embedded asset tests (always rebuild)");
+    build_ui::run(verbose)
+}
 
-    if dist_dir.exists() {
-        if verbose {
-            print_status("UI dist already present - skipping build");
-        }
-        return Ok(());
+/// Run the documentation link check phase.
+fn run_docs_phase(config: &CheckConfig) -> Result<Duration> {
+    print_phase("Phase 0: Documentation");
+    let start = Instant::now();
+
+    let project_root = paths::project_root()?;
+    let check_links_script = project_root.join("scripts/check-links.sh");
+
+    if !check_links_script.exists() {
+        anyhow::bail!(
+            "Documentation check script not found at {}",
+            check_links_script.display()
+        );
     }
 
-    print_status("UI dist missing - building UI for embedded asset tests");
-    build_ui::run(verbose)
+    if config.verbose {
+        println!("  Running: bash {}", check_links_script.display());
+    }
+
+    let status = Command::new("bash")
+        .arg(&check_links_script)
+        .current_dir(project_root)
+        .status()
+        .map_err(|e| anyhow::anyhow!("Failed to run check-links.sh: {}", e))?;
+
+    if !status.success() {
+        anyhow::bail!("Documentation link check failed");
+    }
+
+    Ok(start.elapsed())
+}
+
+/// Run the UI dist build phase.
+fn run_ui_build_phase(config: &CheckConfig) -> Result<()> {
+    println!();
+    print_phase("Phase 1: UI Dist Build");
+    build_ui_dist(config.verbose)
 }
 
 /// Run the linting phase.
 fn run_lint_phase(config: &CheckConfig) -> Result<Duration> {
-    print_phase("Phase 1: Linting");
+    print_phase("Phase 2: Linting");
     let start = Instant::now();
 
     let targets = lint::LintTargets {
@@ -128,7 +174,7 @@ fn run_lint_phase(config: &CheckConfig) -> Result<Duration> {
 /// Run the automated test phase.
 fn run_test_phase(config: &CheckConfig) -> Result<Duration> {
     println!();
-    print_phase("Phase 2: Automated Tests");
+    print_phase("Phase 3: Automated Tests");
     let start = Instant::now();
 
     // Run both engine and UI tests
@@ -148,6 +194,23 @@ fn print_summary(results: &CheckResults, total_duration: Duration) {
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     print_status("Summary");
     println!();
+
+    // Documentation result
+    if let Some(ref result) = results.docs {
+        match result {
+            Ok(duration) => {
+                print_success_item(&format!(
+                    "Documentation: PASSED ({:.1}s)",
+                    duration.as_secs_f64()
+                ));
+            }
+            Err(e) => {
+                print_error(&format!("  ✗ Documentation: FAILED - {}", e));
+            }
+        }
+    } else {
+        println!("  ⊘ Documentation: SKIPPED");
+    }
 
     // Lint result
     if let Some(ref result) = results.lint {
@@ -183,6 +246,7 @@ fn print_summary(results: &CheckResults, total_duration: Duration) {
     println!();
     println!("Total time: {:.1}s", total_duration.as_secs_f64());
     println!();
+    println!("💡 For template/CLI changes, also run 'cargo xtask ci-validate-template'.");
     println!("💡 For visual testing, run 'cargo xtask dev' and use the");
     println!("   'playwright-mcp-ui-testing' skill for browser-based validation.");
 
@@ -219,6 +283,7 @@ mod tests {
     fn test_default_config() {
         let config = CheckConfig::default();
         assert!(!config.fix);
+        assert!(!config.skip_docs);
         assert!(!config.skip_lint);
         assert!(!config.skip_tests);
     }
