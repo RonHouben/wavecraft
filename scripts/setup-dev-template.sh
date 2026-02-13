@@ -59,6 +59,22 @@ sed -i.bak \
   "$ENGINE_CARGO"
 rm -f "$ENGINE_CARGO.bak"
 
+required_path_entries=(
+  'wavecraft = { package = "wavecraft-nih_plug", path = "../../engine/crates/wavecraft-nih_plug" }'
+  'wavecraft-dsp = { path = "../../engine/crates/wavecraft-dsp", optional = true }'
+  'wavecraft-dev-server = { package = "wavecraft-dev-server", path = "../../dev-server", features = ["audio"], optional = true }'
+)
+
+for required_entry in "${required_path_entries[@]}"; do
+  if ! grep -Fq "$required_entry" "$ENGINE_CARGO"; then
+    echo "❌ Failed to rewrite SDK git dependency to path dependency in sdk-template/engine/Cargo.toml"
+    echo "   Missing expected entry: $required_entry"
+    echo "   This likely means sdk-template/engine/Cargo.toml.template format drifted from setup script expectations."
+    echo "   Update scripts/setup-dev-template.sh rewrite patterns to match current template formatting."
+    exit 1
+  fi
+done
+
 # 4) Install UI dependencies for sdk-template project
 if [ -d "$TEMPLATE_DIR/ui" ]; then
   echo "📦 Installing sdk-template UI dependencies..."
