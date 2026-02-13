@@ -19,12 +19,7 @@ export default defineConfig({
       fileName: () => 'index.js',
     },
     rollupOptions: {
-      external: [
-        'react',
-        'react-dom',
-        'react/jsx-runtime',
-        '@wavecraft/core',
-      ],
+      external: ['react', 'react-dom', 'react/jsx-runtime', '@wavecraft/core'],
       output: {
         preserveModules: false,
         exports: 'named',

@@ -10,21 +10,20 @@ export default defineConfig({
   test: {
     environment: 'happy-dom',
     globals: true,
-    setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.test.{ts,tsx}', 'packages/*/src/**/*.test.{ts,tsx}'],
+    setupFiles: ['./test/setup.ts'],
+    include: ['packages/*/src/**/*.test.{ts,tsx}'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
-      exclude: ['src/test/**', '**/*.test.{ts,tsx}', '**/*.d.ts'],
+      exclude: ['test/**', '**/*.test.{ts,tsx}', '**/*.d.ts'],
     },
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
       '@wavecraft/core': path.resolve(__dirname, './packages/core/src'),
       '@wavecraft/core/meters': path.resolve(__dirname, './packages/core/src/meters'),
       '@wavecraft/components': path.resolve(__dirname, './packages/components/src'),
-      '@test': path.resolve(__dirname, './src/test'),
+      '@test': path.resolve(__dirname, './test'),
     },
   },
 });

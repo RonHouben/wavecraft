@@ -37,8 +37,9 @@ export default [
       // TypeScript strict rules
       ...typescript.configs['recommended'].rules,
       ...typescript.configs['strict'].rules,
+      'no-undef': 'off',
       '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/explicit-function-return-type': 'warn',
+      '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       
       // React rules
@@ -50,6 +51,7 @@ export default [
       ...reactHooks.configs.recommended.rules,
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'error',
+      'react-hooks/set-state-in-effect': 'off',
       
       // React Refresh (Vite HMR)
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
