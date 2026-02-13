@@ -301,7 +301,13 @@ fn validate_xtask(project_dir: &Path, verbose: bool) -> Result<()> {
 
 /// Run a command and check for success.
 fn run_command(cmd: &str, args: &[&str], cwd: &Path) -> Result<()> {
-    let status = Command::new(cmd)
+    let mut command = if cmd == "npm" {
+        xtask::npm_command()
+    } else {
+        Command::new(cmd)
+    };
+
+    let status = command
         .args(args)
         .current_dir(cwd)
         .status()

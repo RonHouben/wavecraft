@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use super::validate_cli_deps::{self, ValidateCliDepsConfig};
+use xtask::npm_command;
 use xtask::output::*;
 use xtask::paths;
 
@@ -348,6 +349,10 @@ fn run_rust_dry_runs(
     summary: &mut PhaseSummary,
 ) {
     if changes.engine {
+        print_info(
+            "Note: crates.io 'already exists' and 'aborting upload due to dry run' warnings are expected in this phase.",
+        );
+
         if !cargo_workspaces_installed(project_root) {
             print_warning(
                 "cargo-workspaces not found; using per-crate cargo publish --dry-run for engine crates.",
@@ -399,7 +404,7 @@ fn run_rust_dry_runs(
     if changes.cli {
         summary.skip(
             "cli",
-            "include_dir! references files outside crate — not publishable via dry-run",
+            "expected: include_dir! references files outside crate — not publishable via dry-run",
         );
     } else {
         summary.skip("cli", "no changes");
@@ -579,7 +584,7 @@ fn run_cargo_publish_dry_run_in_dir(dir: &Path, verbose: bool) -> Result<()> {
 }
 
 fn run_npm_pack_dry_run(dir: &Path, verbose: bool) -> Result<()> {
-    let mut build_command = Command::new("npm");
+    let mut build_command = npm_command();
     build_command.arg("run").arg("build:lib").current_dir(dir);
 
     if verbose {
@@ -593,7 +598,7 @@ fn run_npm_pack_dry_run(dir: &Path, verbose: bool) -> Result<()> {
         anyhow::bail!("npm run build:lib failed in {}", dir.display());
     }
 
-    let mut pack_command = Command::new("npm");
+    let mut pack_command = npm_command();
     pack_command.arg("pack").arg("--dry-run").current_dir(dir);
 
     if verbose {

@@ -1,9 +1,9 @@
 //! Lint command - Run linters for UI and/or engine code.
 
 use anyhow::{Context, Result};
-use std::process::Command;
 
 use xtask::cargo_command;
+use xtask::npm_command;
 use xtask::output::*;
 use xtask::paths;
 
@@ -159,7 +159,7 @@ fn run_ui_lint(fix: bool, verbose: bool) -> Result<()> {
     print_status("Running ESLint...");
 
     // Step 1: ESLint
-    let mut eslint_cmd = Command::new("npm");
+    let mut eslint_cmd = npm_command();
     eslint_cmd.current_dir(&ui_dir);
 
     if fix {
@@ -185,7 +185,7 @@ fn run_ui_lint(fix: bool, verbose: bool) -> Result<()> {
     // Step 2: Prettier
     print_status("Checking Prettier formatting...");
 
-    let mut prettier_cmd = Command::new("npm");
+    let mut prettier_cmd = npm_command();
     prettier_cmd.current_dir(&ui_dir);
 
     if fix {
@@ -215,7 +215,7 @@ fn run_ui_lint(fix: bool, verbose: bool) -> Result<()> {
     // Step 3: TypeScript type-check
     print_status("Running TypeScript type-check...");
 
-    let mut typecheck_cmd = Command::new("npm");
+    let mut typecheck_cmd = npm_command();
     typecheck_cmd.current_dir(&ui_dir);
     typecheck_cmd.args(["run", "typecheck"]);
 
