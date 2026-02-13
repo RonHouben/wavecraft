@@ -103,9 +103,22 @@ jobs:
         run: npm ci
         working-directory: ui
 
-      - name: Build UI dist
-        run: npm run build
+      - name: Build UI packages
+        run: npm run build:lib
         working-directory: ui
+
+      - name: Install SDK template UI dependencies
+        run: npm install
+        working-directory: sdk-template/ui
+
+      - name: Build SDK template UI dist
+        run: npm run build
+        working-directory: sdk-template/ui
+
+      - name: Copy UI dist for engine embedding
+        run: |
+          mkdir -p ui/dist
+          cp -r sdk-template/ui/dist/* ui/dist/
 
       # Build Engine
       - name: Install Linux dependencies (cached)

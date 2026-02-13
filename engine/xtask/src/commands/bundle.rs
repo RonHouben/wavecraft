@@ -1,8 +1,8 @@
 //! Bundle command - Build and bundle VST3/CLAP plugins using nih_plug_xtask.
 
 use anyhow::{Context, Result};
-use std::process::Command;
 
+use super::build_ui;
 use xtask::BuildMode;
 use xtask::PLUGIN_NAME;
 use xtask::PLUGIN_PACKAGE;
@@ -29,32 +29,7 @@ pub fn run_with_features(
 
     // Build the React UI assets
     print_status("Building React UI assets...");
-    let ui_dir = engine_dir
-        .parent()
-        .ok_or_else(|| anyhow::anyhow!("Could not find workspace root"))?
-        .join("ui");
-
-    if !ui_dir.exists() {
-        anyhow::bail!("UI directory not found: {}", ui_dir.display());
-    }
-
-    // Read version from workspace Cargo.toml
-    let version = xtask::read_workspace_version().context("Failed to read workspace version")?;
-
-    if verbose {
-        println!("  Plugin version: {}", version);
-    }
-
-    let npm_build = Command::new("npm")
-        .current_dir(&ui_dir)
-        .env("VITE_APP_VERSION", &version)
-        .args(["run", "build"])
-        .status()
-        .context("Failed to run npm build")?;
-
-    if !npm_build.success() {
-        anyhow::bail!("UI build failed");
-    }
+    build_ui::run(verbose)?;
 
     print_success("React UI built successfully");
 

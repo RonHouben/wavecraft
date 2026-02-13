@@ -3,6 +3,8 @@
 //! Builds the React UI using npm.
 
 use anyhow::{Context, Result};
+use std::fs;
+use std::path::Path;
 use std::process::Command;
 use xtask::output::*;
 use xtask::paths;
@@ -12,60 +14,161 @@ pub fn run(verbose: bool) -> Result<()> {
     print_header("Build React UI");
 
     let ui_dir = paths::ui_dir()?;
+    let sdk_template_ui_dir = paths::sdk_template_ui_dir()?;
 
     if verbose {
-        println!("  UI directory: {}", ui_dir.display());
+        println!("  UI workspace directory: {}", ui_dir.display());
+        println!(
+            "  SDK template UI directory: {}",
+            sdk_template_ui_dir.display()
+        );
     }
 
-    // Check if node_modules exists
-    let node_modules = ui_dir.join("node_modules");
-    if !node_modules.exists() {
-        print_status("Installing npm dependencies...");
+    // Step 1: Build package workspace libraries in ui/
+    ensure_npm_deps(&ui_dir, &["ci"], "npm ci", verbose)?;
+    run_npm(&ui_dir, &["run", "build:lib"], "npm run build:lib", verbose)?;
+    print_success_item("UI packages built");
 
-        let status = Command::new("npm")
-            .arg("ci")
-            .current_dir(&ui_dir)
-            .status()
-            .context("Failed to run npm ci")?;
+    // Step 2: Build template app in sdk-template/ui/
+    ensure_npm_deps(&sdk_template_ui_dir, &["install"], "npm install", verbose)?;
+    run_npm(
+        &sdk_template_ui_dir,
+        &["run", "build"],
+        "npm run build",
+        verbose,
+    )?;
 
-        if !status.success() {
-            anyhow::bail!("npm ci failed");
-        }
-        print_success_item("Dependencies installed");
-    }
-
-    // Run npm build
-    print_status("Building UI...");
-
-    if verbose {
-        println!("  Running: npm run build (in ui/)");
-    }
-
-    let status = Command::new("npm")
-        .arg("run")
-        .arg("build")
-        .current_dir(&ui_dir)
-        .status()
-        .context("Failed to run npm build")?;
-
-    if !status.success() {
-        anyhow::bail!("npm build failed");
-    }
-
-    // Verify dist directory was created
-    let dist_dir = ui_dir.join("dist");
-    if !dist_dir.exists() {
+    // Step 3: Copy sdk-template/ui/dist to ui/dist for engine embedding
+    let template_dist_dir = sdk_template_ui_dir.join("dist");
+    if !template_dist_dir.exists() {
         anyhow::bail!(
-            "npm build succeeded but dist directory not found at {}",
+            "Template UI build succeeded but dist directory not found at {}",
+            template_dist_dir.display()
+        );
+    }
+
+    let dist_dir = ui_dir.join("dist");
+    copy_dist_dir(&template_dist_dir, &dist_dir)?;
+
+    if verbose {
+        println!(
+            "  Dist directory populated for engine embedding: {}",
             dist_dir.display()
         );
     }
 
-    if verbose {
-        println!("  Dist directory created: {}", dist_dir.display());
+    print_success("UI built successfully");
+
+    Ok(())
+}
+
+fn ensure_npm_deps(
+    dir: &Path,
+    install_args: &[&str],
+    install_cmd_name: &str,
+    verbose: bool,
+) -> Result<()> {
+    let node_modules = dir.join("node_modules");
+    if node_modules.exists() {
+        if verbose {
+            println!(
+                "  node_modules exists, skipping {} in {}",
+                install_cmd_name,
+                dir.display()
+            );
+        }
+        return Ok(());
     }
 
-    print_success("UI built successfully");
+    run_npm(dir, install_args, install_cmd_name, verbose)
+}
+
+fn run_npm(dir: &Path, args: &[&str], command_name: &str, verbose: bool) -> Result<()> {
+    print_status(&format!("Running {}...", command_name));
+
+    if verbose {
+        println!("  Running: npm {} (in {})", args.join(" "), dir.display());
+    }
+
+    let status = Command::new("npm")
+        .args(args)
+        .current_dir(dir)
+        .status()
+        .with_context(|| format!("Failed to run {}", command_name))?;
+
+    if !status.success() {
+        anyhow::bail!("{} failed", command_name);
+    }
+
+    Ok(())
+}
+
+fn copy_dist_dir(source_dist: &Path, target_dist: &Path) -> Result<()> {
+    if target_dist.exists() {
+        fs::remove_dir_all(target_dist).with_context(|| {
+            format!(
+                "Failed to remove existing dist directory {}",
+                target_dist.display()
+            )
+        })?;
+    }
+
+    fs::create_dir_all(target_dist).with_context(|| {
+        format!(
+            "Failed to create target dist directory {}",
+            target_dist.display()
+        )
+    })?;
+
+    for entry in fs::read_dir(source_dist).with_context(|| {
+        format!(
+            "Failed to read source dist directory {}",
+            source_dist.display()
+        )
+    })? {
+        let entry = entry?;
+        let source_path = entry.path();
+        let target_path = target_dist.join(entry.file_name());
+
+        if source_path.is_dir() {
+            copy_dir_recursive(&source_path, &target_path)?;
+        } else {
+            fs::copy(&source_path, &target_path).with_context(|| {
+                format!(
+                    "Failed to copy file from {} to {}",
+                    source_path.display(),
+                    target_path.display()
+                )
+            })?;
+        }
+    }
+
+    Ok(())
+}
+
+fn copy_dir_recursive(source: &Path, target: &Path) -> Result<()> {
+    fs::create_dir_all(target)
+        .with_context(|| format!("Failed to create target directory {}", target.display()))?;
+
+    for entry in fs::read_dir(source)
+        .with_context(|| format!("Failed to read source directory {}", source.display()))?
+    {
+        let entry = entry?;
+        let source_path = entry.path();
+        let target_path = target.join(entry.file_name());
+
+        if source_path.is_dir() {
+            copy_dir_recursive(&source_path, &target_path)?;
+        } else {
+            fs::copy(&source_path, &target_path).with_context(|| {
+                format!(
+                    "Failed to copy file from {} to {}",
+                    source_path.display(),
+                    target_path.display()
+                )
+            })?;
+        }
+    }
 
     Ok(())
 }
