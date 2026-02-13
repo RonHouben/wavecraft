@@ -30,4 +30,16 @@ for i in $(seq 1 "$MAX_ATTEMPTS"); do
 done
 
 echo "❌ Timed out waiting for $CRATE@$VERSION after $((MAX_ATTEMPTS * DELAY))s"
+LATEST_HTTP_CODE=$(curl -s -o /tmp/wavecraft-crate-latest.json -w "%{http_code}" \
+  -H "User-Agent: wavecraft-ci (https://github.com/RonHouben/wavecraft)" \
+  "https://crates.io/api/v1/crates/$CRATE")
+
+if [ "$LATEST_HTTP_CODE" = "200" ]; then
+  LATEST_VERSION=$(jq -r '.crate.max_version // "unknown"' /tmp/wavecraft-crate-latest.json 2>/dev/null)
+  echo "ℹ️  Latest crates.io version for $CRATE is: $LATEST_VERSION"
+else
+  echo "ℹ️  Could not query latest version for $CRATE (HTTP $LATEST_HTTP_CODE)"
+fi
+
+echo "ℹ️  Checked URL: https://crates.io/api/v1/crates/$CRATE/$VERSION"
 exit 1
