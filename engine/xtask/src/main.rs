@@ -253,7 +253,7 @@ enum Commands {
     /// Validate CLI template generation
     #[command(
         about = "Validate CLI template generation (replicates CI workflow)",
-        name = "ci-validate-template"
+        name = "validate-template"
     )]
     ValidateTemplate {
         /// Keep the generated test project (don't clean up)

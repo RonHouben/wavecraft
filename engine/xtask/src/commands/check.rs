@@ -5,7 +5,7 @@
 //! 1. UI dist build (always rebuild to mirror CI)
 //! 2. Linting (with optional auto-fix)
 //! 3. Automated tests (engine + UI)
-//! 4. Template validation (`ci-validate-template`) [--full only]
+//! 4. Template validation (`validate-template`) [--full only]
 //! 5. CD dry-run (`cd_dry_run`) [--full only]
 //!
 //! This is much faster than running the full CI pipeline via Docker/act

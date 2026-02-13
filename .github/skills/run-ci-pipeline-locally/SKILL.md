@@ -14,7 +14,7 @@ Use this skill to test CI workflows locally before pushing to GitHub. **Preferre
 | Workflow file             | Preferred local mirror             | Notes                                                                             |
 | ------------------------- | ---------------------------------- | --------------------------------------------------------------------------------- |
 | `ci.yml`                  | `cargo xtask ci-check`             | Full lint + test suite                                                            |
-| `template-validation.yml` | `cargo xtask ci-validate-template` | CLI template generation validation                                                |
+| `template-validation.yml` | `cargo xtask validate-template`    | CLI template generation validation                                                |
 | `release.yml`             | `cargo xtask release`              | Build/sign/notarize pipeline                                                      |
 | `cli-release.yml`         | `cargo xtask release`              | Mirror release steps where applicable; add a dedicated xtask if workflow diverges |
 | `continuous-deploy.yml`   | `cargo xtask release`              | Use release pipeline for parity; add a publish-focused xtask if needed            |
@@ -28,7 +28,7 @@ These commands mirror CI checks without container overhead and are the recommend
 cargo xtask ci-check
 
 # Template validation (mirrors template-validation.yml)
-cargo xtask ci-validate-template
+cargo xtask validate-template
 
 # Optional targeted runs
 cargo xtask lint
