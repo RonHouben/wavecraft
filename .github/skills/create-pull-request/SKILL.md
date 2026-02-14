@@ -14,16 +14,32 @@ This skill creates a GitHub Pull Request using the `gh` CLI tool. To avoid issue
 - GitHub CLI (`gh`) must be installed and authenticated
 - Current branch must be pushed to the remote
 - There must be commits to create a PR from
+- The executing agent must have terminal execution tools (see [Terminal Handoff](#terminal-handoff) if you don't)
+
+### Terminal Handoff
+
+If you don't have terminal execution tools, hand off to the **Coder** agent with the following scope constraint:
+
+> **Scope constraint:** Execute ONLY the git and gh CLI commands provided below. Do NOT edit code, fix warnings, refactor, or take any action beyond running these commands and reporting their output. If a command fails, report the error — do not attempt autonomous fixes.
+
+Include in your handoff:
+
+1. The exact commands to run (from Steps 2 and 6)
+2. The PR title (from Step 4)
+3. The path to the PR summary file (from Step 5)
+4. This scope constraint verbatim
 
 ## Workflow
 
 ### Step 1: Determine Feature Name and Base Branch
 
 Extract the feature name from the current branch name:
+
 - `feature/my-feature` → `my-feature`
 - `bugfix/fix-description` → `fix-description`
 
 Determine the base branch by checking which remote branches exist:
+
 - Default to `main` if it exists
 - Fall back to `develop` or `master` if `main` doesn't exist
 
@@ -52,6 +68,7 @@ git diff --name-only ${MERGE_BASE}
 ### Step 3: Check Existing Documentation
 
 Look for existing feature documentation:
+
 1. `/docs/feature-specs/${featureName}/implementation-plan.md` - for planned changes
 2. `/docs/feature-specs/${featureName}/implementation-progress.md` - for completed work
 3. `/docs/feature-specs/${featureName}/low-level-design-*.md` - for design context
@@ -60,6 +77,7 @@ Look for existing feature documentation:
 ### Step 4: Generate PR Title
 
 Auto-generate the PR title based on:
+
 1. If single commit: Use the commit message subject
 2. If multiple commits: Summarize the overall change based on:
    - The feature name from the branch
@@ -67,6 +85,7 @@ Auto-generate the PR title based on:
    - Commit message patterns (e.g., "fix:", "feat:", "refactor:")
 
 Examples:
+
 - Branch `feature/meter-improvements` with perf commits → "Improve meter performance and accuracy"
 - Branch `bugfix/slider-crash` → "Fix slider crash on invalid input"
 - Branch `cs-1234-add-reverb` → "CS-1234: Add reverb effect"
@@ -78,11 +97,13 @@ Examples:
 Create the file at `/docs/feature-specs/${featureName}/PR-summary.md` using the template from [assets/PR-summary-template.md](assets/PR-summary-template.md).
 
 **Tool usage:**
+
 - Use the `edit` tool or equivalent file creation capability
 - Never use `echo`, `cat`, or other terminal commands for file creation
 - The file editor ensures proper formatting and allows immediate editing if needed
 
 Fill in the auto-generated content for each section:
+
 - **Summary**: Based on commit messages and changed files
 - **Changes**: Grouped by area (Engine/DSP, UI, Build/Config, Documentation)
 - **Commits**: List from `git log --oneline`
@@ -108,6 +129,7 @@ gh pr create \
 ### Step 7: Confirm Success
 
 After successful PR creation:
+
 1. Display the PR URL to the user
 2. Optionally open the PR in the browser with `gh pr view --web`
 
@@ -123,6 +145,7 @@ After successful PR creation:
 **User says:** "Create a PR for my changes"
 
 **Agent workflow:**
+
 1. Determine feature name from branch: `feature/meter-improvements` → `meter-improvements`
 2. Analyze commits: 3 commits about performance improvements
 3. Check changed files: `ui/src/components/Meter.tsx`, `ui/src/lib/audio-math.ts`
