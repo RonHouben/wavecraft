@@ -97,7 +97,11 @@ enum Commands {
         and npm packages if run from a plugin project directory.\n\n\
         Can be run from any directory. When outside a project, only the CLI is updated."
     )]
-    Update,
+    Update {
+        /// Skip CLI self-update (used internally after re-exec).
+        #[arg(long, hide = true, default_value_t = false)]
+        skip_self: bool,
+    },
 
     /// Extract parameters from a plugin dylib (hidden — internal use only)
     #[command(hide = true)]
@@ -150,8 +154,8 @@ fn main() -> Result<()> {
             cmd.execute()?;
         }
 
-        Commands::Update => {
-            commands::update::run()?;
+        Commands::Update { skip_self } => {
+            commands::update::run(skip_self)?;
         }
 
         Commands::ExtractParams { dylib_path } => {

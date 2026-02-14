@@ -1,13 +1,7 @@
 use anyhow::{bail, Context, Result};
-use std::io::{self, Write};
+use std::io::{BufRead, BufReader};
 use std::path::Path;
-use std::process::Command;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
-use std::thread;
-use std::time::Duration;
+use std::process::{Command, Stdio};
 
 /// Current CLI version, known at compile time.
 const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -38,22 +32,37 @@ enum ProjectUpdateResult {
 #[cfg_attr(test, derive(Debug, PartialEq))]
 enum SummaryOutcome {
     /// Both phases completed successfully.
-    AllComplete { show_rerun_hint: bool },
+    AllComplete,
     /// CLI failed but project deps succeeded.
     ProjectOnlyComplete,
     /// Project dependency updates failed.
-    ProjectErrors {
-        errors: Vec<String>,
-        show_rerun_hint: bool,
-    },
+    ProjectErrors { errors: Vec<String> },
     /// CLI failed and not in a project — messages already shown inline.
     NoAction,
 }
 
+/// Progress phases during `cargo install`.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum InstallPhase {
+    Checking,
+    Downloading,
+    Compiling,
+}
+
 /// Update the CLI and (if in a project) project dependencies.
-pub fn run() -> Result<()> {
-    // Phase 1: CLI self-update (always runs)
-    let self_update_result = update_cli();
+pub fn run(skip_self: bool) -> Result<()> {
+    // Phase 1: CLI self-update (always runs unless re-exec'd)
+    let self_update_result = if skip_self {
+        println!("✅ CLI updated to {}", CURRENT_VERSION);
+        SelfUpdateResult::AlreadyUpToDate
+    } else {
+        update_cli()
+    };
+
+    // If CLI was updated, re-exec the new binary for phase 2
+    if matches!(self_update_result, SelfUpdateResult::Updated) {
+        return reexec_with_new_binary();
+    }
 
     // Phase 2: Project dependency update (context-dependent)
     let project_result = update_project_deps();
@@ -75,18 +84,13 @@ pub fn run() -> Result<()> {
 fn update_cli() -> SelfUpdateResult {
     println!("🔄 Checking for CLI updates...");
 
-    let update_done = Arc::new(AtomicBool::new(false));
-    let progress_handle = start_cli_update_progress(update_done.clone());
-
-    let output_result = Command::new("cargo")
+    let mut child = match Command::new("cargo")
         .args(["install", "wavecraft"])
-        .output();
-
-    update_done.store(true, Ordering::Relaxed);
-    let _ = progress_handle.join();
-
-    let output = match output_result {
-        Ok(output) => output,
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+    {
+        Ok(child) => child,
         Err(e) => {
             eprintln!(
                 "⚠️  CLI self-update failed: Failed to run 'cargo install'. \
@@ -98,19 +102,32 @@ fn update_cli() -> SelfUpdateResult {
         }
     };
 
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
+    // Stream stderr in real time for progress feedback and capture full content
+    let stderr_pipe = child
+        .stderr
+        .take()
+        .expect("child stderr should be piped for progress parsing");
+    let stderr_content = stream_install_progress(stderr_pipe);
+
+    let status = match child.wait() {
+        Ok(status) => status,
+        Err(e) => {
+            eprintln!("⚠️  CLI self-update failed: {}", e);
+            return SelfUpdateResult::Failed;
+        }
+    };
+
+    if !status.success() {
         eprintln!(
             "⚠️  CLI self-update failed: cargo install failed: {}",
-            stderr.trim()
+            stderr_content.trim()
         );
         eprintln!("   Run 'cargo install wavecraft' manually to update the CLI.");
         return SelfUpdateResult::Failed;
     }
 
     // Detect whether a new version was installed vs already up-to-date
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    if is_already_up_to_date(&stderr) {
+    if is_already_up_to_date(&stderr_content) {
         println!("✅ CLI is up to date ({})", CURRENT_VERSION);
         return SelfUpdateResult::AlreadyUpToDate;
     }
@@ -132,25 +149,91 @@ fn update_cli() -> SelfUpdateResult {
     }
 }
 
-fn start_cli_update_progress(done: Arc<AtomicBool>) -> thread::JoinHandle<()> {
-    thread::spawn(move || {
-        let delay = Duration::from_secs(3);
-        let mut slept = Duration::from_millis(0);
+/// Stream stderr from `cargo install`, showing phase-appropriate progress messages.
+///
+/// Returns the full stderr content for later analysis.
+fn stream_install_progress(stderr: impl std::io::Read) -> String {
+    let reader = BufReader::new(stderr);
+    let mut all_output = String::new();
+    let mut current_phase = InstallPhase::Checking;
 
-        while slept < delay {
-            if done.load(Ordering::Relaxed) {
-                return;
+    for line in reader.lines() {
+        let line = match line {
+            Ok(l) => l,
+            Err(_) => break,
+        };
+
+        all_output.push_str(&line);
+        all_output.push('\n');
+
+        if let Some(phase) = detect_phase(&line)
+            && phase != current_phase
+        {
+            match phase {
+                InstallPhase::Downloading => {
+                    println!("📥 Downloading...");
+                }
+                InstallPhase::Compiling => {
+                    println!("🔨 Compiling... this may take a minute.");
+                }
+                InstallPhase::Checking => {}
             }
-            let step = Duration::from_millis(200);
-            thread::sleep(step);
-            slept += step;
+            current_phase = phase;
         }
+    }
 
-        if !done.load(Ordering::Relaxed) {
-            println!("📦 Downloading and installing... this may take a minute on slow networks.");
-            let _ = io::stdout().flush();
-        }
-    })
+    all_output
+}
+
+/// Detect the install phase from a cargo stderr line.
+fn detect_phase(line: &str) -> Option<InstallPhase> {
+    let trimmed = line.trim();
+
+    if trimmed.starts_with("Downloading") || trimmed.starts_with("Downloaded") {
+        Some(InstallPhase::Downloading)
+    } else if trimmed.starts_with("Compiling") {
+        Some(InstallPhase::Compiling)
+    } else {
+        None
+    }
+}
+
+/// Re-execute the newly installed CLI binary to continue with project deps.
+///
+/// Uses `exec()` on Unix to replace the process image. The new binary
+/// runs `wavecraft update --skip-self`, which skips phase 1 and runs
+/// phase 2 using the updated code.
+fn reexec_with_new_binary() -> Result<()> {
+    println!();
+    println!("🔄 Continuing with updated CLI...");
+
+    let binary = which_wavecraft()?;
+
+    let mut cmd = Command::new(&binary);
+    cmd.args(["update", "--skip-self"]);
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+
+        let err = cmd.exec();
+        // exec() only returns on error
+        bail!("Failed to re-exec CLI: {}", err);
+    }
+
+    #[cfg(not(unix))]
+    {
+        let status = cmd.status().context("Failed to re-exec CLI")?;
+        std::process::exit(status.code().unwrap_or(1));
+    }
+}
+
+/// Find the wavecraft binary path.
+fn which_wavecraft() -> Result<std::path::PathBuf> {
+    which::which("wavecraft").context(
+        "Could not find 'wavecraft' binary after update. \
+         Re-run 'wavecraft update' manually.",
+    )
 }
 
 /// Detect if `cargo install` output indicates the package is already at the latest version.
@@ -252,7 +335,6 @@ fn determine_summary(
     self_update: &SelfUpdateResult,
     project: &ProjectUpdateResult,
 ) -> SummaryOutcome {
-    let cli_updated = matches!(self_update, SelfUpdateResult::Updated);
     let cli_failed = matches!(self_update, SelfUpdateResult::Failed);
     let in_project = matches!(project, ProjectUpdateResult::Updated { .. });
 
@@ -261,12 +343,9 @@ fn determine_summary(
         ProjectUpdateResult::NotInProject => &[],
     };
 
-    let show_rerun_hint = cli_updated && in_project;
-
     if !project_errors.is_empty() {
         return SummaryOutcome::ProjectErrors {
             errors: project_errors.to_vec(),
-            show_rerun_hint,
         };
     }
 
@@ -278,7 +357,7 @@ fn determine_summary(
         return SummaryOutcome::NoAction;
     }
 
-    SummaryOutcome::AllComplete { show_rerun_hint }
+    SummaryOutcome::AllComplete
 }
 
 /// Print a summary of both update phases and determine the exit code.
@@ -286,10 +365,7 @@ fn print_summary(self_update: &SelfUpdateResult, project: &ProjectUpdateResult) 
     let outcome = determine_summary(self_update, project);
 
     match outcome {
-        SummaryOutcome::AllComplete { show_rerun_hint } => {
-            if show_rerun_hint {
-                print_rerun_hint();
-            }
+        SummaryOutcome::AllComplete => {
             println!();
             println!("✨ All updates complete");
         }
@@ -297,13 +373,7 @@ fn print_summary(self_update: &SelfUpdateResult, project: &ProjectUpdateResult) 
             println!();
             println!("✨ Project dependencies updated (CLI self-update skipped)");
         }
-        SummaryOutcome::ProjectErrors {
-            errors,
-            show_rerun_hint,
-        } => {
-            if show_rerun_hint {
-                print_rerun_hint();
-            }
+        SummaryOutcome::ProjectErrors { errors } => {
             bail!(
                 "Failed to update some dependencies:\n  {}",
                 errors.join("\n  ")
@@ -313,13 +383,6 @@ fn print_summary(self_update: &SelfUpdateResult, project: &ProjectUpdateResult) 
     }
 
     Ok(())
-}
-
-/// Print the re-run hint for when CLI was updated but project deps ran with old binary.
-fn print_rerun_hint() {
-    println!();
-    println!("💡 Note: Project dependencies were updated using the previous CLI version.");
-    println!("   Re-run `wavecraft update` to use the new CLI for dependency updates.");
 }
 
 fn update_rust_deps() -> Result<()> {
@@ -355,6 +418,71 @@ mod tests {
     use super::*;
     use std::fs;
     use tempfile::TempDir;
+
+    // --- InstallPhase detection tests ---
+
+    #[test]
+    fn test_detect_phase_downloading() {
+        assert_eq!(
+            detect_phase("  Downloading crates ..."),
+            Some(InstallPhase::Downloading)
+        );
+    }
+
+    #[test]
+    fn test_detect_phase_downloaded() {
+        assert_eq!(
+            detect_phase("  Downloaded wavecraft v0.9.2"),
+            Some(InstallPhase::Downloading)
+        );
+    }
+
+    #[test]
+    fn test_detect_phase_compiling() {
+        assert_eq!(
+            detect_phase("   Compiling wavecraft v0.9.2"),
+            Some(InstallPhase::Compiling)
+        );
+    }
+
+    #[test]
+    fn test_detect_phase_updating_index() {
+        assert_eq!(detect_phase("   Updating crates.io index"), None);
+    }
+
+    #[test]
+    fn test_detect_phase_installing() {
+        assert_eq!(detect_phase("  Installing /path/to/bin"), None);
+    }
+
+    #[test]
+    fn test_detect_phase_empty_line() {
+        assert_eq!(detect_phase(""), None);
+    }
+
+    // --- stream_install_progress tests ---
+
+    #[test]
+    fn test_stream_collects_all_output() {
+        let input = "  Downloading crates ...\n   Compiling wavecraft v0.9.2\n";
+        let output = stream_install_progress(std::io::Cursor::new(input));
+        assert!(output.contains("Downloading"));
+        assert!(output.contains("Compiling"));
+    }
+
+    #[test]
+    fn test_stream_handles_already_installed() {
+        let input =
+            "  Ignored package `wavecraft v0.9.1` is already installed, use --force to override\n";
+        let output = stream_install_progress(std::io::Cursor::new(input));
+        assert!(output.contains("is already installed"));
+    }
+
+    #[test]
+    fn test_stream_empty_input() {
+        let output = stream_install_progress(std::io::Cursor::new(""));
+        assert!(output.is_empty());
+    }
 
     // --- is_already_up_to_date tests ---
 
@@ -468,12 +596,7 @@ mod tests {
             &SelfUpdateResult::AlreadyUpToDate,
             &ProjectUpdateResult::NotInProject,
         );
-        assert_eq!(
-            outcome,
-            SummaryOutcome::AllComplete {
-                show_rerun_hint: false
-            }
-        );
+        assert_eq!(outcome, SummaryOutcome::AllComplete);
     }
 
     #[test]
@@ -482,26 +605,16 @@ mod tests {
             &SelfUpdateResult::AlreadyUpToDate,
             &ProjectUpdateResult::Updated { errors: vec![] },
         );
-        assert_eq!(
-            outcome,
-            SummaryOutcome::AllComplete {
-                show_rerun_hint: false
-            }
-        );
+        assert_eq!(outcome, SummaryOutcome::AllComplete);
     }
 
     #[test]
-    fn test_summary_updated_with_project_shows_rerun_hint() {
+    fn test_summary_updated_with_project() {
         let outcome = determine_summary(
             &SelfUpdateResult::Updated,
             &ProjectUpdateResult::Updated { errors: vec![] },
         );
-        assert_eq!(
-            outcome,
-            SummaryOutcome::AllComplete {
-                show_rerun_hint: true
-            }
-        );
+        assert_eq!(outcome, SummaryOutcome::AllComplete);
     }
 
     #[test]
@@ -534,13 +647,12 @@ mod tests {
             outcome,
             SummaryOutcome::ProjectErrors {
                 errors: vec!["Rust: compile failed".to_string()],
-                show_rerun_hint: false,
             }
         );
     }
 
     #[test]
-    fn test_summary_updated_with_project_errors_shows_rerun_hint() {
+    fn test_summary_updated_with_project_errors() {
         let outcome = determine_summary(
             &SelfUpdateResult::Updated,
             &ProjectUpdateResult::Updated {
@@ -551,7 +663,6 @@ mod tests {
             outcome,
             SummaryOutcome::ProjectErrors {
                 errors: vec!["npm: fetch failed".to_string()],
-                show_rerun_hint: true,
             }
         );
     }

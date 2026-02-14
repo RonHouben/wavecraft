@@ -143,7 +143,25 @@ fn test_update_command_output_format() {
 
     // Check for emoji indicators (even if command fails, should see these)
     assert!(
-        stdout.contains("📦") || stdout.contains("✅") || stdout.contains("❌"),
+        stdout.contains("📦")
+            || stdout.contains("✅")
+            || stdout.contains("❌")
+            || stdout.contains("📥")
+            || stdout.contains("🔨"),
         "Output should contain emoji indicators"
+    );
+}
+
+#[test]
+fn test_update_skip_self_flag_hidden_from_help() {
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wavecraft"));
+    cmd.args(["update", "--help"]);
+
+    let output = cmd.output().expect("Failed to execute");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        !stdout.contains("skip-self"),
+        "--skip-self should be hidden from help output"
     );
 }
