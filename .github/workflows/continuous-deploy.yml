@@ -611,6 +611,23 @@ jobs:
         if: steps.version.outputs.action != 'skip'
         run: |
           VERSION="${{ steps.final.outputs.version }}"
+          WORKSPACE_VERSION=$(awk '
+            /^\[workspace\.package\]/ { in_section=1; next }
+            /^\[/ { in_section=0 }
+            in_section && /^version = "/ {
+              line=$0
+              sub(/^.*"/, "", line)
+              sub(/".*$/, "", line)
+              print line
+              exit
+            }
+          ' engine/Cargo.toml)
+
+          if [ -z "$WORKSPACE_VERSION" ]; then
+            echo "❌ Could not determine workspace version from engine/Cargo.toml"
+            exit 1
+          fi
+
           REQUIRED_CRATES=(
             wavecraft-core
             wavecraft-protocol
@@ -628,7 +645,17 @@ jobs:
               exit 1
             fi
 
-            CRATE_VERSION=$(grep -m1 '^version = "' "$MANIFEST" | sed 's/.*"\(.*\)".*/\1/')
+            if grep -q '^version\.workspace = true' "$MANIFEST"; then
+              CRATE_VERSION="$WORKSPACE_VERSION"
+            else
+              CRATE_VERSION=$(grep -m1 '^version = "' "$MANIFEST" | sed 's/.*"\(.*\)".*/\1/')
+            fi
+
+            if [ -z "$CRATE_VERSION" ]; then
+              echo "❌ Could not determine crate version for $crate from $MANIFEST"
+              exit 1
+            fi
+
             if [ "$CRATE_VERSION" != "$VERSION" ]; then
               echo "❌ Version mismatch: $crate has $CRATE_VERSION, expected $VERSION"
               exit 1
