@@ -76,7 +76,7 @@ wavecraft_plugin! {
 }
 ```
 
-> **Note:** `vendor`, `url`, and `email` are derived from `Cargo.toml` metadata and no longer appear in the macro invocation. The `signal` field requires `SignalChain![]` wrapper.
+> **Note:** `vendor` and `url` are derived from `Cargo.toml` metadata. `email` is not exposed as a macro property and defaults internally to an empty string. The `signal` field requires `SignalChain![]` wrapper.
 
 **Parameter Definition:**
 

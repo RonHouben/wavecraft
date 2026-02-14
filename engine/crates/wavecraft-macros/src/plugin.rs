@@ -1,7 +1,8 @@
 //! Procedural macro for generating complete plugin implementations from DSL.
 //!
 //! Simplified API (0.9.0): Only requires `name` and `signal` properties.
-//! Metadata (vendor, URL, email) is automatically derived from Cargo.toml.
+//! Vendor and URL metadata are automatically derived from Cargo.toml.
+//! Plugin email is not exposed in the DSL and defaults to an empty string.
 
 use proc_macro::TokenStream;
 use quote::quote;
@@ -271,24 +272,6 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
         }
     };
 
-    let email = {
-        let authors = env!("CARGO_PKG_AUTHORS");
-        // Parse email from "Name <email@example.com>" format
-        // Returns empty string if format doesn't match (acceptable for VST3/CLAP)
-        authors
-            .split(',')
-            .next()
-            .map(|author| {
-                // Extract email from "Name <email@example.com>" format
-                author
-                    .split('<')
-                    .nth(1)
-                    .and_then(|s| s.split('>').next())
-                    .unwrap_or("")
-            })
-            .unwrap_or("")
-    };
-
     let vst3_id = generate_vst3_id(&name.value());
 
     // CLAP ID now uses package name for consistency
@@ -307,7 +290,8 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
     //
     // 0.9.0 Updates:
     // - Simplified API (name + signal only) ✓
-    // - Metadata derived from Cargo.toml ✓
+    // - Vendor/URL derived from Cargo.toml ✓
+    // - Email is internal default (not exposed in DSL) ✓
     // - VST3/CLAP IDs use package name ✓
     // - Signal validation (requires SignalChain!) ✓
 
@@ -440,7 +424,7 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
             const NAME: &'static str = #name;
             const VENDOR: &'static str = #vendor;
             const URL: &'static str = #url;
-            const EMAIL: &'static str = #email;
+            const EMAIL: &'static str = "";
             const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
             const AUDIO_IO_LAYOUTS: &'static [#krate::__nih::AudioIOLayout] = &[

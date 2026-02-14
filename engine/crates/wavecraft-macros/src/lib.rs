@@ -34,8 +34,8 @@ pub fn derive_processor_params(input: TokenStream) -> TokenStream {
 /// Procedural macro for generating complete plugin implementations.
 ///
 /// This macro parses a minimal DSL and generates all the boilerplate code for
-/// a working VST3/CLAP plugin. Plugin metadata is automatically derived from
-/// your `Cargo.toml`.
+/// a working VST3/CLAP plugin. Vendor/URL metadata is derived from
+/// your `Cargo.toml`. Plugin email is not part of the DSL and defaults to an empty string.
 ///
 /// # Syntax (0.9.0+)
 ///
@@ -54,11 +54,11 @@ pub fn derive_processor_params(input: TokenStream) -> TokenStream {
 ///
 /// # Metadata Derivation
 ///
-/// The macro automatically derives plugin metadata from `Cargo.toml`:
+/// The macro derives vendor/URL metadata from `Cargo.toml`:
 /// - **Vendor**: First author in `authors` field (or "Unknown")
 /// - **URL**: `homepage` field (or `repository` if homepage empty)
-/// - **Email**: Extracted from first author's email in `authors` field
 /// - **Version**: `version` field (via `CARGO_PKG_VERSION`)
+/// - **Email**: Internal plugin metadata constant defaults to empty string
 ///
 /// Add metadata to your `Cargo.toml`:
 ///
@@ -89,10 +89,11 @@ pub fn derive_processor_params(input: TokenStream) -> TokenStream {
 ///
 /// # Breaking Changes (0.9.0)
 ///
-/// - Removed `vendor`, `url`, `email` properties (now auto-derived)
+/// - Removed `vendor` and `url` properties (now auto-derived)
 /// - Bare processors no longer accepted: use `SignalChain![...]` wrapper
 /// - VST3 Class IDs now use package name instead of vendor (plugins get new IDs)
 /// - Default `crate` path changed from `::wavecraft_nih_plug` to `::wavecraft`
+/// - `email` is no longer accepted as macro input
 ///
 /// See `docs/MIGRATION-0.9.md` for migration guide.
 ///

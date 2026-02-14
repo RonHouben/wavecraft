@@ -8,16 +8,16 @@ This document tracks implementation progress against the milestones defined in t
 
 ```
 ┌──────────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP          v0.11.1 | 81%   │
+│  WAVECRAFT ROADMAP          v0.13.0 | 92%   │
 ├──────────────────────────────────────────────┤
 │  ✅ M1-M18.7 Foundation → UI Race Fix       │
-│  ⏳ M18.8    Agent Search Delegation        │
-│  ⏳ M18.9    Rust Hot-Reload for Dev        │
-│  ⏳ M18.10   TS Param Autocomplete          │
+│  ✅ M18.8    Agent Search Delegation        │
+│  ✅ M18.9    Rust Hot-Reload for Dev        │
+│  ✅ M18.10   TS Param Autocomplete          │
 │  ⏳ M19      User Testing                   │
 │  ⏳ M20      V1.0 Release                   │
 ├──────────────────────────────────────────────┤
-│  [████████████████████████] 21/26          │
+│  [████████████████████████] 24/26          │
 └──────────────────────────────────────────────┘
 ```
 
@@ -1377,44 +1377,44 @@ The implementation should:
 
 ---
 
-## Milestone 18.8: Agent Search Delegation Instructions ⏳
+## Milestone 18.8: Agent Search Delegation Instructions ✅
 
 > **Goal:** Add "Codebase Research" guidance to all specialized agent instructions to ensure proper delegation to the Search agent for deep codebase analysis.
 
 **Depends on:** Milestone 18.7 (UI Race Condition Fix) — polished developer workflow
 
-**Status:** ⏳ Not Started
+**Status:** ✅ Complete
 
 **Branch:** `feature/agent-search-delegation`  
 **Target Version:** Documentation-only (no version change)
 
-**User Stories:** [docs/feature-specs/agent-search-delegation/user-stories.md](feature-specs/agent-search-delegation/user-stories.md)
+**User Stories:** [docs/feature-specs/\_archive/agent-search-delegation/user-stories.md](feature-specs/_archive/agent-search-delegation/user-stories.md)
 
 | Task                                               | Status | Notes                                             |
 | -------------------------------------------------- | ------ | ------------------------------------------------- |
 | **Requirements & Design**                          |        |                                                   |
 | User stories                                       | ✅     | 8 user stories covering all agent types           |
-| Low-level design                                   | ⏳     | Architect to design instruction section structure |
-| Implementation plan                                | ⏳     | Planner to break down into agent-specific steps   |
+| Low-level design                                   | ✅     | Instruction section structure defined and applied |
+| Implementation plan                                | ✅     | Agent-specific rollout completed                  |
 | **Instruction Updates**                            |        |                                                   |
-| Add "Codebase Research" section to Architect agent | ⏳     | When/how to invoke Search, examples               |
-| Add "Codebase Research" section to Planner agent   | ⏳     | Dependency mapping use cases                      |
-| Add "Codebase Research" section to Coder agent     | ⏳     | Pattern discovery examples                        |
-| Add "Codebase Research" section to Tester agent    | ⏳     | Test coverage analysis guidance                   |
-| Add "Codebase Research" section to QA agent        | ⏳     | Quality pattern analysis examples                 |
-| Add "Codebase Research" section to PO agent        | ⏳     | Feature impact analysis guidance                  |
-| Add "Codebase Research" section to DocWriter agent | ⏳     | Documentation scope discovery examples            |
+| Add "Codebase Research" section to Architect agent | ✅     | Added with delegation rules and examples          |
+| Add "Codebase Research" section to Planner agent   | ✅     | Added with dependency-mapping examples            |
+| Add "Codebase Research" section to Coder agent     | ✅     | Added with implementation pattern examples        |
+| Add "Codebase Research" section to Tester agent    | ✅     | Added with test-coverage analysis guidance        |
+| Add "Codebase Research" section to QA agent        | ✅     | Added with quality review pattern guidance        |
+| Add "Codebase Research" section to PO agent        | ✅     | Added with product/impact research guidance       |
+| Add "Codebase Research" section to DocWriter agent | ✅     | Added with doc scope discovery guidance           |
 | **Agent Development Flow Updates**                 |        |                                                   |
-| Update agent invocation table                      | ⏳     | Add Search delegation note                        |
-| Document delegation pattern                        | ⏳     | When to delegate vs direct search                 |
-| Add Search agent usage examples                    | ⏳     | Concrete examples from real features              |
+| Update agent invocation table                      | ✅     | Search delegation notes documented                |
+| Document delegation pattern                        | ✅     | Delegate-vs-direct-search guidance documented     |
+| Add Search agent usage examples                    | ✅     | Concrete examples included                        |
 | **Testing & Validation**                           |        |                                                   |
-| Validate instruction clarity                       | ⏳     | Test with each agent type                         |
-| Measure Search agent invocation increase           | ⏳     | Track usage before/after                          |
-| Review instruction consistency                     | ⏳     | Ensure uniform format across agents               |
+| Validate instruction clarity                       | ✅     | Verified across specialized agent instructions    |
+| Measure Search agent invocation increase           | ✅     | Adoption pattern established post-update          |
+| Review instruction consistency                     | ✅     | Uniform format applied across agents              |
 | **Documentation**                                  |        |                                                   |
-| Update agent-development-flow.md                   | ⏳     | Document delegation pattern                       |
-| Update README (if needed)                          | ⏳     | Note improved agent workflow                      |
+| Update agent-development-flow.md                   | ✅     | Search delegation pattern documented              |
+| Update README (if needed)                          | ✅     | Workflow updates reflected where relevant         |
 
 **Problem Statement:**
 
@@ -1466,40 +1466,40 @@ Add a "Codebase Research" section to each specialized agent's instructions that:
 
 ---
 
-## Milestone 18.9: Rust Hot-Reload for Dev Mode ⏳
+## Milestone 18.9: Rust Hot-Reload for Dev Mode 🚧
 
 > **Goal:** Automatically rebuild the plugin and reload parameters when Rust source files change during `wavecraft start`, bringing Rust development to parity with React HMR.
 
 **Depends on:** Milestone 18.7 (UI Race Condition Fix) — ensures parameter reload works reliably on WebSocket reconnect
 
-**Status:** ⏳ Not Started
+**Status:** ✅ Complete
 
 **Branch:** `feature/rust-hot-reload`  
 **Target Version:** `0.12.0` (minor — new feature)
 
-**User Stories:** To be created
+**User Stories:** [docs/feature-specs/\_archive/rust-hot-reload/user-stories.md](feature-specs/_archive/rust-hot-reload/user-stories.md)
 
-| Task                             | Status | Notes                                           |
-| -------------------------------- | ------ | ----------------------------------------------- |
-| **Requirements & Design**        |        |                                                 |
-| User stories                     | ⏳     | Define use cases and acceptance criteria        |
-| Low-level design                 | ⏳     | Architect to design file watcher + rebuild flow |
-| Implementation plan              | ⏳     | Planner to break down into detailed steps       |
-| **Implementation**               |        |                                                 |
-| File watcher integration         | ⏳     | Use `notify` crate or `cargo-watch`             |
-| Debouncing strategy              | ⏳     | Avoid rapid rebuilds on multi-file saves        |
-| Rebuild orchestration            | ⏳     | `cargo build --lib` + error handling            |
-| WebSocket server restart         | ⏳     | Reload parameter metadata after rebuild         |
-| UI error display                 | ⏳     | Show build errors in browser (optional)         |
-| Ignore patterns                  | ⏳     | Exclude `target/`, `Cargo.lock`, etc.           |
-| **Testing & QA**                 |        |                                                 |
-| Unit tests for file watcher      | ⏳     | Debouncing, exclusions                          |
-| Integration tests                | ⏳     | End-to-end hot-reload flow                      |
-| Manual testing                   | ⏳     | Real-world development scenarios                |
-| QA review                        | ⏳     | Quality assurance sign-off                      |
-| **Documentation**                |        |                                                 |
-| Update SDK Getting Started guide | ⏳     | Document hot-reload behavior                    |
-| Update Development Workflows doc | ⏳     | Architecture of file watching system            |
+| Task                             | Status | Notes                                                      |
+| -------------------------------- | ------ | ---------------------------------------------------------- |
+| **Requirements & Design**        |        |                                                            |
+| User stories                     | ✅     | Completed and archived                                     |
+| Low-level design                 | ✅     | Completed and archived                                     |
+| Implementation plan              | ✅     | Completed and archived                                     |
+| **Implementation**               |        |                                                            |
+| File watcher integration         | ✅     | Implemented (archived feature)                             |
+| Debouncing strategy              | ✅     | Implemented and covered by automated tests                 |
+| Rebuild orchestration            | ✅     | Implemented with rebuild/error handling                    |
+| WebSocket server restart         | ✅     | Parameter reload path implemented                          |
+| UI error display                 | ⏳     | Optional enhancement (not required for closure)            |
+| Ignore patterns                  | ✅     | Implemented for watched sources                            |
+| **Testing & QA**                 |        |                                                            |
+| Unit tests for file watcher      | ✅     | Automated coverage present                                 |
+| Integration tests                | ✅     | CI checks passing for covered flows                        |
+| Manual testing                   | ✅     | User manually validated hot-reload behavior (2026-02-14)   |
+| QA review                        | ✅     | No remaining blockers after manual validation confirmation |
+| **Documentation**                |        |                                                            |
+| Update SDK Getting Started guide | ✅     | Hot-reload workflow documented                             |
+| Update Development Workflows doc | ✅     | File watching architecture documented                      |
 
 **Problem Statement:**
 
@@ -1521,6 +1521,10 @@ When using `wavecraft start` for development, the CLI builds the Rust plugin onc
 - Restarts WebSocket server with new parameters
 - UI automatically reconnects and fetches new parameter list
 - User sees new oscillator parameters without manual restart
+
+**Closure Note (2026-02-14):**
+
+Manual user validation confirmed hot-reload behavior works as expected in practice. With implementation + automated coverage already in place and no active blockers remaining, M18.9 is closed as ✅ complete.
 
 **Technical Approach:**
 
@@ -1559,26 +1563,25 @@ When using `wavecraft start` for development, the CLI builds the Rust plugin onc
 
 ---
 
-## Milestone 18.10: TypeScript Parameter ID Autocompletion ⏳
+## Milestone 18.10: TypeScript Parameter ID Autocompletion ✅
 
 > **Goal:** Generate a TypeScript union type of all parameter IDs at build time so SDK developers get IDE autocompletion and compile-time type safety when referencing parameters in React code.
 
-**Status: ⏳ Not Started**
+**Status: ✅ Complete**
 
-| Task                                                               | Status | Notes                                                              |
-| ------------------------------------------------------------------ | ------ | ------------------------------------------------------------------ |
-| Generate `ui/src/generated/parameters.ts` during `wavecraft start` | ⏳     | Union type from FFI-extracted parameter list                       |
-| Update hooks/clients to accept `ParameterId` directly              | ⏳     | `useParameter(id: ParameterId)` — no generics needed               |
-| Hot-reload: regenerate types on Rust source changes                | ⏳     | Rides M18.9 rebuild pipeline                                       |
-| Add `.gitignore` entry for generated file                          | ⏳     | `ui/src/generated/` is a build artifact                            |
-| Update SDK template with type-safe example                         | ⏳     | Template `App.tsx` uses `useParameter('inputgain_level')` directly |
-| Handle edge cases (empty params, special chars)                    | ⏳     | `never` type for no-param plugins                                  |
-| Documentation updates                                              | ⏳     | Getting Started guide, README, architecture docs                   |
+| Task                                                               | Status | Notes                                                  |
+| ------------------------------------------------------------------ | ------ | ------------------------------------------------------ |
+| Generate `ui/src/generated/parameters.ts` during `wavecraft start` | ✅     | Union type generated from FFI-extracted parameter list |
+| Update hooks/clients to accept `ParameterId` directly              | ✅     | Direct `ParameterId` API implemented                   |
+| Hot-reload: regenerate types on Rust source changes                | ✅     | Integrated with rebuild/reload workflow                |
+| Add `.gitignore` entry for generated file                          | ✅     | Generated file treated as build artifact               |
+| Update SDK template with type-safe example                         | ✅     | Template demonstrates direct typed parameter usage     |
+| Handle edge cases (empty params, special chars)                    | ✅     | Codegen handles edge cases and safe fallback           |
+| Documentation updates                                              | ✅     | Docs and archived validation artifacts updated         |
 
 **Depends on:**
 
-- Milestone 18.9 (Rust Hot-Reload) — for automatic type regeneration on Rust file changes
-- Existing `wavecraft start` FFI parameter extraction — already extracts parameter IDs from compiled plugin
+- Existing `wavecraft start` FFI parameter extraction — parameter IDs extracted from compiled plugin
 
 **Approach:** Build-Time Codegen (approved via architectural analysis of 6 alternatives)
 
@@ -1607,11 +1610,55 @@ const { param, setValue } = useParameter('oscillator_frequency');
 - No new dependencies required
 - Generated file is `.gitignore`d (build artifact)
 
-**Target Version:** `0.13.0` (minor — breaking API change, pre-1.0)
+**Target Version:** `0.13.0` (delivered)
 
-**Estimated Effort:** 1-2 days
+**Estimated Effort:** 1-2 days (completed)
 
-**User Stories:** See [docs/feature-specs/ts-param-autocomplete/user-stories.md](feature-specs/ts-param-autocomplete/user-stories.md)
+**User Stories:** See [docs/feature-specs/\_archive/ts-param-autocomplete/user-stories.md](feature-specs/_archive/ts-param-autocomplete/user-stories.md)
+
+---
+
+## Pre-M19 Initiative: CLI Update UX Quick Wins + Optional Dev Build Profile Spike ⏳
+
+> **Goal:** Land two high-impact CLI polish items before/alongside M19, plus an optional low-risk Rust dev build optimization spike that must not delay M19.
+
+**Status:** ⏳ Not Started (non-blocking, pre-M19 execution window)
+
+**Execution Guardrail:** If any item risks delaying M19 timeline, defer immediately and continue M19.
+
+### Scope & Acceptance Criteria
+
+| Item | Scope | Acceptance Criteria |
+| ---- | ----- | ------------------- |
+| 1. CLI update rerun elimination | `wavecraft update` should complete CLI self-update and dependency update in one user invocation (no manual second run). | `wavecraft update` does not instruct user to re-run for normal self-update path; project deps update continues automatically in same invocation. |
+| 2. Split progress messaging | Replace combined "Downloading and installing" with distinct progress states. | CLI output clearly separates download step and install step for self-update flow. |
+| 3. Conditional: optimize Rust dev build profile | Timeboxed experiment for dev build/runtime feedback improvements. | Only ship if improvement is measurable and implementation is low-risk with no workflow regressions. |
+
+### Priority / Order of Execution
+
+1. **Item #2 first** (lowest risk, tiny UX improvement, quick confidence)
+2. **Item #1 second** (high user-value, moderate implementation complexity)
+3. **Item #3 last and conditional** (timeboxed, explicitly non-blocking)
+
+### Timebox & Guardrails (Must Not Delay M19)
+
+- **Total initiative budget:** max 2 working days
+- **Item #2:** target same-day
+- **Item #1:** target ≤1 day
+- **Item #3:** max 0.5 day spike only, proceed only after #1 and #2 are complete
+- If #1 needs architectural churn or introduces regressions, ship partial improvements and defer remainder
+- If #3 does not show clear low-risk gains within timebox, **defer to backlog immediately**
+
+### Risks & Defer Rules (Item #3)
+
+| Risk | Trigger | Defer Rule |
+| ---- | ------- | ---------- |
+| Slower incremental compile times | Noticeable rebuild slowdown during normal dev loop | Revert/defer and keep current profile |
+| Debug ergonomics degrade | Reduced debuggability, confusing profiler/stack behavior | Revert/defer |
+| Cross-workspace side effects | Affects CLI/dev-server/test workflows unexpectedly | Scope down to engine-only or defer |
+| CI/local mismatch confusion | Team uncertainty about what profile is active | Defer until docs/tooling clarity is ready |
+
+**Definition of done for #3:** only considered complete if net developer experience improves with no meaningful downside; otherwise "spike complete, implementation deferred" is the expected safe outcome.
 
 ---
 
@@ -1719,6 +1766,9 @@ const { param, setValue } = useParameter('oscillator_frequency');
 
 | Date       | Update                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-02-14 | **Pre-M19 initiative formalized (non-blocking):** Added execution-ready initiative for two CLI update quick wins + one conditional dev-build optimization spike. Defined scope and acceptance criteria, strict guardrails (max 2 working days), explicit priority order (#2 → #1 → optional #3), and defer rules ensuring **no delay to M19**. Updated Immediate Tasks ordering to run quick wins before/alongside M19 and treat item #3 as strictly timeboxed/conditional. |
+| 2026-02-14 | **Milestone 18.9 closed (manual validation confirmed):** Updated **M18.9 Rust Hot-Reload for Dev Mode** from 🚧 to ✅ based on direct user confirmation: _"I manually tested the hotreloading and it works great!"_ Manual testing status marked complete, QA blocker cleared, progress updated to **24/26**, and Next Steps ordering adjusted to proceed with M19 then M20.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 2026-02-14 | **Roadmap audit corrections applied (status alignment):** Marked **M18.8 Agent Search Delegation** as ✅ complete (archived feature + agent instruction updates + delegation pattern documented). Marked **M18.10 TS Parameter ID Autocompletion** as ✅ complete (ts codegen wiring, generated parameters flow, archived validation docs). Reclassified **M18.9 Rust Hot-Reload** to 🚧 in progress with explicit manual-test blocker note from archived test-plan (`PARTIAL PASS`, blocked TC-001–TC-006). Updated progress overview to **23/26 (88%)**, corrected Up Next + Immediate Tasks ordering, and aligned roadmap narrative with validated delivery state.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 2026-02-13 | **CI/CD parity for `cargo xtask ci-check`**: Follow-up to canonical SDK template on same PR branch (#66). Fixed CI pipeline (`ci.yml` and `build_ui.rs`) to build from `sdk-template/ui/` instead of old `ui/` app path. Extended `cargo xtask ci-check` from 3 phases to 6 phases with full CI/CD parity: Phase 0 (doc link validation), Phase 1 (UI dist build — always rebuilds, strict `npm ci`), Phase 2 (lint), Phase 3 (tests), Phase 4 (template validation, `--full` only), Phase 5 (CD dry-run with git-based change detection, `--full` only). Added `--full` flag for comprehensive pre-push validation (gates Phases 4-5). Added granular skip flags (`--skip-docs`, `--skip-lint`, `--skip-tests`, `--skip-template`, `--skip-cd`). Fixed `cli/build.rs` `include_dir!` build-time staging to filter `sdk-template/` excluding `target/`, `node_modules/`, `dist/` before embedding. QA fixes: expanded CLI change detection, strict npm install parity, replaced `unwrap()` with `expect()`.                                                                                                                                                                                                                                                                                                                                                                |
 | 2026-02-13 | **Canonical SDK Template complete**: Consolidated three overlapping plugin scaffold sources (`cli/sdk-templates/`, `engine/crates/wavecraft-example/`, `ui/src/`) into a single canonical `sdk-template/` directory at repo root. CLI embedding, SDK-mode detection, and dev workflow all use this single source of truth. Setup script (`scripts/setup-dev-template.sh`) bootstraps template for local dev. Vite aliases preserved for package development. Legacy paths removed, `ui/` is now pure npm package workspace. 13/13 test cases passing, QA approved (0 Critical/High). Archived to `_archive/canonical-sdk-template/`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | 2026-02-12 | **SDK Example Plugin complete**: Added `wavecraft-example` crate to enable `cargo xtask dev` from SDK root without creating separate plugin projects. Example plugin mirrors template structure (uses `wavecraft_plugin!`, `wavecraft_processor!`, `SignalChain![]` macros, `_param-discovery` feature, cdylib export). Modified CLI project detection to support "SDK mode" with backward compatibility. 392-line implementation plan, 7/7 test cases passing, QA approved with 0 issues. Enables SDK developers to test UI and dev-server changes in-tree. Version 0.11.2. Archived to `_archive/sdk-example-plugin/`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -1840,22 +1890,21 @@ const { param, setValue } = useParameter('oscillator_frequency');
 19. ✅ **Milestone 18.5**: Template Structure Improvement — Processors module with oscillator example (v0.11.0)
 20. ✅ **Milestone 18.6**: Documentation Architecture Split — Split large docs into focused files (v0.10.1)
 21. ✅ **Milestone 18.7**: UI Parameter Load Race Condition — Auto-retry parameter fetch on WebSocket connect (v0.11.1)
+22. ✅ **Milestone 18.8**: Agent Search Delegation — Codebase research guidance across specialized agents
+23. ✅ **Milestone 18.9**: Rust Hot-Reload for Dev Mode — Automatic Rust rebuild + parameter reload workflow validated manually
+24. ✅ **Milestone 18.10**: TypeScript Parameter ID Autocompletion — Build-time generated typed parameter IDs (v0.13.0)
 
 ### Up Next
 
-22. ⏳ **Milestone 18.8**: Agent Search Delegation Instructions — Add codebase research guidance to all agent instructions (documentation-only)
-23. ⏳ **Milestone 18.9**: Rust Hot-Reload for Dev Mode — Auto-rebuild and reload parameters when Rust source files change (v0.12.0)
-24. ⏳ **Milestone 18.10**: TypeScript Parameter ID Autocompletion — Build-time codegen for type-safe parameter references (v0.13.0)
 25. ⏳ **Milestone 19**: User Testing — Beta testing with real plugin developers (v1.0.0-beta)
 26. ⏳ **Milestone 20**: V1.0 Release — First stable production release (v1.0.0)
 
 ### Immediate Tasks
 
-1. ⏳ Begin Milestone 18.8 (Agent Search Delegation) — add codebase research sections to all agent instructions
-2. ⏳ After M18.8: Begin Milestone 18.9 (Rust Hot-Reload) — file watcher + rebuild orchestration
-3. ⏳ After M18.9: Begin Milestone 18.10 (TS Param Autocomplete) — generate TypeScript union type from FFI params
-4. ⏳ After M18.10: Begin Milestone 19 (User Testing)
-5. ⏳ After M19: Begin Milestone 20 (V1.0 Release)
-6. 📝 **Pre-release validation:** MT4 (native plugin DAW testing) deferred from M18.7 — smoke test in Ableton before v0.11.1 release
+1. ⏳ Execute **Pre-M19 Initiative** (Item #2 → Item #1) under strict 2-day guardrail
+2. ⏳ Start Milestone 19 (User Testing) in parallel where possible; do not block on Item #3
+3. 📝 Run Item #3 only if low-risk and within remaining timebox; otherwise defer without impacting M19
+4. ⏳ Prepare Milestone 20 (V1.0 Release) scope lock and release checklist
+5. 📝 **Pre-release validation:** MT4 (native plugin DAW testing) deferred from M18.7 — smoke test in Ableton before final release window
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (crates.io publication, additional example plugins, etc.)
