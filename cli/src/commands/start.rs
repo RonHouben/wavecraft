@@ -255,7 +255,7 @@ fn apply_sdk_tsconfig_paths(content: &str) -> Result<TsconfigPathsInjection> {
     updated.push_str(comma);
     updated.push_str("\n\n");
     updated.push_str(SDK_TSCONFIG_PATHS_SNIPPET);
-    updated.push_str("\n");
+    updated.push('\n');
     updated.push_str(&content[compiler_options_end..]);
 
     Ok(TsconfigPathsInjection::Updated(updated))

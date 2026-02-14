@@ -573,27 +573,4 @@ version = "0.1.0"
         );
         assert!(!config.verbose, "verbose should default to false");
     }
-
-    /// Integration test that hits the real crates.io API.
-    /// Marked as #[ignore] by default - run with `cargo test -- --ignored`
-    #[test]
-    #[ignore]
-    fn test_check_registry_availability_real_crate() {
-        // Test with a well-known published crate
-        let dep = CliDependency {
-            name: "serde".to_string(),
-            has_version: true,
-            version: Some("1.0.0".to_string()),
-            path: None, // External crate, no path
-        };
-
-        let result = check_registry_availability(&dep);
-        assert!(
-            result.is_ok(),
-            "Should successfully query crates.io for serde"
-        );
-
-        let errors = result.unwrap();
-        assert!(errors.is_empty(), "serde should be available on crates.io");
-    }
 }

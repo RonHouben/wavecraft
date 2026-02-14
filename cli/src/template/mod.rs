@@ -275,7 +275,7 @@ fn inject_tsconfig_paths_if_needed(content: &str) -> Result<String> {
     injected.push_str(comma);
     injected.push_str("\n\n");
     injected.push_str(TSCONFIG_PATHS_SNIPPET);
-    injected.push_str("\n");
+    injected.push('\n');
     injected.push_str(&content[compiler_options_end..]);
 
     Ok(injected)

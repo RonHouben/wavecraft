@@ -573,14 +573,10 @@ jobs:
           NEW=$(npx --yes semver "$PUBLISHED" -i patch)
           echo "Bumping engine workspace from ${{ steps.version.outputs.current }} to $NEW"
 
-          # Add --force only for manual workflow_dispatch triggers
-          FORCE_ARGS=()
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            FORCE_ARGS=(--force "*")
-            echo "Manual trigger detected — using --force *"
-          fi
-
-          cargo ws version custom "$NEW" --yes --no-git-commit --all "${FORCE_ARGS[@]}"
+          # Always force all publishable workspace crates to the same engine version.
+          # This keeps engine crate versions aligned and avoids partial-version publishes
+          # that break downstream verification/dependency syncing.
+          cargo ws version custom "$NEW" --yes --no-git-commit --all --force "*"
 
           # Verify the bump actually changed files
           if git diff --quiet; then
@@ -610,6 +606,36 @@ jobs:
             VERSION="${{ steps.version.outputs.version }}"
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Verify engine workspace version alignment
+        if: steps.version.outputs.action != 'skip'
+        run: |
+          VERSION="${{ steps.final.outputs.version }}"
+          REQUIRED_CRATES=(
+            wavecraft-core
+            wavecraft-protocol
+            wavecraft-bridge
+            wavecraft-metering
+            wavecraft-dsp
+            wavecraft-macros
+          )
+
+          echo "Verifying engine crate versions are aligned to $VERSION..."
+          for crate in "${REQUIRED_CRATES[@]}"; do
+            MANIFEST="engine/crates/$crate/Cargo.toml"
+            if [ ! -f "$MANIFEST" ]; then
+              echo "❌ Missing manifest: $MANIFEST"
+              exit 1
+            fi
+
+            CRATE_VERSION=$(grep -m1 '^version = "' "$MANIFEST" | sed 's/.*"\(.*\)".*/\1/')
+            if [ "$CRATE_VERSION" != "$VERSION" ]; then
+              echo "❌ Version mismatch: $crate has $CRATE_VERSION, expected $VERSION"
+              exit 1
+            fi
+          done
+
+          echo "✅ All required engine crates aligned to $VERSION"
 
       - name: Verify version not already published
         if: steps.version.outputs.action != 'skip'
@@ -657,6 +683,66 @@ jobs:
             --no-git-push \
             --allow-branch main \
             --from-git
+
+      - name: Verify publish results (post-publish audit)
+        if: steps.version.outputs.action != 'skip'
+        run: |
+          VERSION="${{ steps.final.outputs.version }}"
+          REQUIRED_CRATES=(
+            wavecraft-core
+            wavecraft-protocol
+            wavecraft-bridge
+            wavecraft-metering
+            wavecraft-dsp
+            wavecraft-macros
+          )
+
+          echo "╔══════════════════════════════════════════════════════════╗"
+          echo "║  Post-Publish Audit — expected version: $VERSION       ║"
+          echo "╚══════════════════════════════════════════════════════════╝"
+
+          PUBLISHED_COUNT=0
+          SKIPPED_COUNT=0
+          MISSING=()
+
+          for crate in "${REQUIRED_CRATES[@]}"; do
+            HTTP_CODE=$(curl -s -o /tmp/crate-ver.json -w "%{http_code}" \
+              -H "User-Agent: wavecraft-ci (https://github.com/RonHouben/wavecraft)" \
+              "https://crates.io/api/v1/crates/$crate/$VERSION")
+
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "  ✅ $crate@$VERSION — published"
+              PUBLISHED_COUNT=$((PUBLISHED_COUNT + 1))
+            elif [ "$HTTP_CODE" = "404" ]; then
+              # Check what version IS actually latest
+              LATEST=$(curl -s \
+                -H "User-Agent: wavecraft-ci (https://github.com/RonHouben/wavecraft)" \
+                "https://crates.io/api/v1/crates/$crate" \
+                | jq -r '.crate.max_version // "unknown"' 2>/dev/null)
+              echo "  ❌ $crate@$VERSION — NOT FOUND (latest: $LATEST)"
+              MISSING+=("$crate (latest: $LATEST)")
+            else
+              echo "  ⚠️  $crate — HTTP $HTTP_CODE (registry issue)"
+              SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
+            fi
+          done
+
+          echo ""
+          echo "Published: $PUBLISHED_COUNT / ${#REQUIRED_CRATES[@]}"
+
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo ""
+            echo "❌ The following required crates were NOT published at $VERSION:"
+            for m in "${MISSING[@]}"; do
+              echo "   - $m"
+            done
+            echo ""
+            echo "This means cargo ws publish only published a subset of engine crates."
+            echo "Root cause: version bump did not apply to all required crates."
+            exit 1
+          fi
+
+          echo "✅ Post-publish audit passed"
 
       - name: Verify all required engine crates are available on crates.io
         if: steps.version.outputs.action != 'skip'
