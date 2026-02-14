@@ -8,16 +8,16 @@ This document tracks implementation progress against the milestones defined in t
 
 ```
 ┌──────────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP          v0.13.0 | 88%   │
+│  WAVECRAFT ROADMAP          v0.13.0 | 92%   │
 ├──────────────────────────────────────────────┤
 │  ✅ M1-M18.7 Foundation → UI Race Fix       │
 │  ✅ M18.8    Agent Search Delegation        │
-│  🚧 M18.9    Rust Hot-Reload for Dev        │
+│  ✅ M18.9    Rust Hot-Reload for Dev        │
 │  ✅ M18.10   TS Param Autocomplete          │
 │  ⏳ M19      User Testing                   │
 │  ⏳ M20      V1.0 Release                   │
 ├──────────────────────────────────────────────┤
-│  [████████████████████████] 23/26          │
+│  [████████████████████████] 24/26          │
 └──────────────────────────────────────────────┘
 ```
 
@@ -1472,34 +1472,34 @@ Add a "Codebase Research" section to each specialized agent's instructions that:
 
 **Depends on:** Milestone 18.7 (UI Race Condition Fix) — ensures parameter reload works reliably on WebSocket reconnect
 
-**Status:** 🚧 In Progress
+**Status:** ✅ Complete
 
 **Branch:** `feature/rust-hot-reload`  
 **Target Version:** `0.12.0` (minor — new feature)
 
 **User Stories:** [docs/feature-specs/\_archive/rust-hot-reload/user-stories.md](feature-specs/_archive/rust-hot-reload/user-stories.md)
 
-| Task                             | Status | Notes                                           |
-| -------------------------------- | ------ | ----------------------------------------------- |
-| **Requirements & Design**        |        |                                                 |
-| User stories                     | ✅     | Completed and archived                          |
-| Low-level design                 | ✅     | Completed and archived                          |
-| Implementation plan              | ✅     | Completed and archived                          |
-| **Implementation**               |        |                                                 |
-| File watcher integration         | ✅     | Implemented (archived feature)                  |
-| Debouncing strategy              | ✅     | Implemented and covered by automated tests      |
-| Rebuild orchestration            | ✅     | Implemented with rebuild/error handling         |
-| WebSocket server restart         | ✅     | Parameter reload path implemented               |
-| UI error display                 | ⏳     | Optional enhancement (not required for closure) |
-| Ignore patterns                  | ✅     | Implemented for watched sources                 |
-| **Testing & QA**                 |        |                                                 |
-| Unit tests for file watcher      | ✅     | Automated coverage present                      |
-| Integration tests                | ✅     | CI checks passing for covered flows             |
-| Manual testing                   | ⚠️     | Blocked in archived test-plan (TC-001–TC-006)   |
-| QA review                        | ⏳     | Pending after manual test completion            |
-| **Documentation**                |        |                                                 |
-| Update SDK Getting Started guide | ✅     | Hot-reload workflow documented                  |
-| Update Development Workflows doc | ✅     | File watching architecture documented           |
+| Task                             | Status | Notes                                                      |
+| -------------------------------- | ------ | ---------------------------------------------------------- |
+| **Requirements & Design**        |        |                                                            |
+| User stories                     | ✅     | Completed and archived                                     |
+| Low-level design                 | ✅     | Completed and archived                                     |
+| Implementation plan              | ✅     | Completed and archived                                     |
+| **Implementation**               |        |                                                            |
+| File watcher integration         | ✅     | Implemented (archived feature)                             |
+| Debouncing strategy              | ✅     | Implemented and covered by automated tests                 |
+| Rebuild orchestration            | ✅     | Implemented with rebuild/error handling                    |
+| WebSocket server restart         | ✅     | Parameter reload path implemented                          |
+| UI error display                 | ⏳     | Optional enhancement (not required for closure)            |
+| Ignore patterns                  | ✅     | Implemented for watched sources                            |
+| **Testing & QA**                 |        |                                                            |
+| Unit tests for file watcher      | ✅     | Automated coverage present                                 |
+| Integration tests                | ✅     | CI checks passing for covered flows                        |
+| Manual testing                   | ✅     | User manually validated hot-reload behavior (2026-02-14)   |
+| QA review                        | ✅     | No remaining blockers after manual validation confirmation |
+| **Documentation**                |        |                                                            |
+| Update SDK Getting Started guide | ✅     | Hot-reload workflow documented                             |
+| Update Development Workflows doc | ✅     | File watching architecture documented                      |
 
 **Problem Statement:**
 
@@ -1522,9 +1522,9 @@ When using `wavecraft start` for development, the CLI builds the Rust plugin onc
 - UI automatically reconnects and fetches new parameter list
 - User sees new oscillator parameters without manual restart
 
-**Audit Note (2026-02-14):**
+**Closure Note (2026-02-14):**
 
-Archived implementation and automated tests indicate substantial completion, but archived manual validation is explicitly blocked (`PARTIAL PASS`: 1 pass, 5 blocked). Milestone remains 🚧 until manual tests and QA sign-off are completed.
+Manual user validation confirmed hot-reload behavior works as expected in practice. With implementation + automated coverage already in place and no active blockers remaining, M18.9 is closed as ✅ complete.
 
 **Technical Approach:**
 
@@ -1722,6 +1722,7 @@ const { param, setValue } = useParameter('oscillator_frequency');
 
 | Date       | Update                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-02-14 | **Milestone 18.9 closed (manual validation confirmed):** Updated **M18.9 Rust Hot-Reload for Dev Mode** from 🚧 to ✅ based on direct user confirmation: _"I manually tested the hotreloading and it works great!"_ Manual testing status marked complete, QA blocker cleared, progress updated to **24/26**, and Next Steps ordering adjusted to proceed with M19 then M20.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | 2026-02-14 | **Roadmap audit corrections applied (status alignment):** Marked **M18.8 Agent Search Delegation** as ✅ complete (archived feature + agent instruction updates + delegation pattern documented). Marked **M18.10 TS Parameter ID Autocompletion** as ✅ complete (ts codegen wiring, generated parameters flow, archived validation docs). Reclassified **M18.9 Rust Hot-Reload** to 🚧 in progress with explicit manual-test blocker note from archived test-plan (`PARTIAL PASS`, blocked TC-001–TC-006). Updated progress overview to **23/26 (88%)**, corrected Up Next + Immediate Tasks ordering, and aligned roadmap narrative with validated delivery state.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 2026-02-13 | **CI/CD parity for `cargo xtask ci-check`**: Follow-up to canonical SDK template on same PR branch (#66). Fixed CI pipeline (`ci.yml` and `build_ui.rs`) to build from `sdk-template/ui/` instead of old `ui/` app path. Extended `cargo xtask ci-check` from 3 phases to 6 phases with full CI/CD parity: Phase 0 (doc link validation), Phase 1 (UI dist build — always rebuilds, strict `npm ci`), Phase 2 (lint), Phase 3 (tests), Phase 4 (template validation, `--full` only), Phase 5 (CD dry-run with git-based change detection, `--full` only). Added `--full` flag for comprehensive pre-push validation (gates Phases 4-5). Added granular skip flags (`--skip-docs`, `--skip-lint`, `--skip-tests`, `--skip-template`, `--skip-cd`). Fixed `cli/build.rs` `include_dir!` build-time staging to filter `sdk-template/` excluding `target/`, `node_modules/`, `dist/` before embedding. QA fixes: expanded CLI change detection, strict npm install parity, replaced `unwrap()` with `expect()`.                                                                                                                                                                                                                                                                                                                                                                |
 | 2026-02-13 | **Canonical SDK Template complete**: Consolidated three overlapping plugin scaffold sources (`cli/sdk-templates/`, `engine/crates/wavecraft-example/`, `ui/src/`) into a single canonical `sdk-template/` directory at repo root. CLI embedding, SDK-mode detection, and dev workflow all use this single source of truth. Setup script (`scripts/setup-dev-template.sh`) bootstraps template for local dev. Vite aliases preserved for package development. Legacy paths removed, `ui/` is now pure npm package workspace. 13/13 test cases passing, QA approved (0 Critical/High). Archived to `_archive/canonical-sdk-template/`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
@@ -1845,19 +1846,18 @@ const { param, setValue } = useParameter('oscillator_frequency');
 20. ✅ **Milestone 18.6**: Documentation Architecture Split — Split large docs into focused files (v0.10.1)
 21. ✅ **Milestone 18.7**: UI Parameter Load Race Condition — Auto-retry parameter fetch on WebSocket connect (v0.11.1)
 22. ✅ **Milestone 18.8**: Agent Search Delegation — Codebase research guidance across specialized agents
-23. ✅ **Milestone 18.10**: TypeScript Parameter ID Autocompletion — Build-time generated typed parameter IDs (v0.13.0)
+23. ✅ **Milestone 18.9**: Rust Hot-Reload for Dev Mode — Automatic Rust rebuild + parameter reload workflow validated manually
+24. ✅ **Milestone 18.10**: TypeScript Parameter ID Autocompletion — Build-time generated typed parameter IDs (v0.13.0)
 
 ### Up Next
 
-24. 🚧 **Milestone 18.9**: Rust Hot-Reload for Dev Mode — Substantial implementation complete; manual validation + QA sign-off pending
 25. ⏳ **Milestone 19**: User Testing — Beta testing with real plugin developers (v1.0.0-beta)
 26. ⏳ **Milestone 20**: V1.0 Release — First stable production release (v1.0.0)
 
 ### Immediate Tasks
 
-1. 🚧 Complete Milestone 18.9 manual validation (TC-001–TC-006) and capture final QA sign-off
-2. ⏳ Start Milestone 19 (User Testing) immediately after M18.9 closure
-3. ⏳ Prepare Milestone 20 (V1.0 Release) scope lock and release checklist
-4. 📝 **Pre-release validation:** MT4 (native plugin DAW testing) deferred from M18.7 — smoke test in Ableton before final release window
+1. ⏳ Start Milestone 19 (User Testing) with tester recruitment + protocol finalization
+2. ⏳ Prepare Milestone 20 (V1.0 Release) scope lock and release checklist
+3. 📝 **Pre-release validation:** MT4 (native plugin DAW testing) deferred from M18.7 — smoke test in Ableton before final release window
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (crates.io publication, additional example plugins, etc.)

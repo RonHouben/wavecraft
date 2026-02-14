@@ -59,7 +59,7 @@ The DSL uses a two-layer macro system:
    }
    ```
 
-    > **Note:** `vendor` and `url` are derived from `Cargo.toml` metadata. `email` is not exposed as a macro property and defaults internally to an empty string. The `signal` field requires `SignalChain![]` wrapper — bare processor names are not accepted.
+   > **Note:** `vendor` and `url` are derived from `Cargo.toml` metadata. `email` is not exposed as a macro property and defaults internally to an empty string. The `signal` field requires `SignalChain![]` wrapper — bare processor names are not accepted.
 
    In addition to the nih-plug `Plugin` implementation, this macro also generates:
    - `nih_export_vst3!()` and `nih_export_clap!()` — Conditionally compiled with `#[cfg(not(feature = "_param-discovery"))]`. This allows `wavecraft start` to load the dylib for parameter discovery without triggering nih-plug's static initializers (which cause macOS `AudioComponentRegistrar` hangs during `dlopen`).
