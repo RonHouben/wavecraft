@@ -8,11 +8,12 @@ const EXCLUDED_DIRS: &[&str] = &["target", "node_modules", "dist"];
 
 fn main() {
     println!("cargo:rerun-if-changed=../sdk-template");
+    println!("cargo:rerun-if-changed=sdk-template");
 
     let manifest_dir = PathBuf::from(
         env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR must be set by Cargo"),
     );
-    let src_root = manifest_dir.join("../sdk-template");
+    let src_root = resolve_template_source(&manifest_dir);
     let out_root = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR must be set by Cargo"))
         .join("sdk-template-clean");
 
@@ -39,6 +40,26 @@ fn main() {
             out_root.display()
         )
     });
+}
+
+fn resolve_template_source(manifest_dir: &Path) -> PathBuf {
+    // Workspace/dev layout: cli/ with sibling ../sdk-template
+    let workspace_path = manifest_dir.join("../sdk-template");
+    if workspace_path.is_dir() {
+        return workspace_path;
+    }
+
+    // Packaged/publish layout: sdk-template is inside the crate root.
+    let packaged_path = manifest_dir.join("sdk-template");
+    if packaged_path.is_dir() {
+        return packaged_path;
+    }
+
+    panic!(
+        "Could not locate sdk-template. Tried {} and {}",
+        workspace_path.display(),
+        packaged_path.display()
+    );
 }
 
 fn copy_filtered(src: &Path, dst: &Path) -> io::Result<()> {
