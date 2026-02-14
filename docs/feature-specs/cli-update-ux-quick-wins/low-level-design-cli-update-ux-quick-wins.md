@@ -1,9 +1,9 @@
 # Low-Level Design: CLI Update UX Quick Wins
 
 **Feature:** Pre-M19 Initiative — CLI Update UX Quick Wins  
-**Status:** Draft  
+**Status:** Implemented (Items #1 and #2; Item #3 deferred)  
 **Author:** Architect Agent  
-**Timebox:** Max 2 working days  
+**Timebox:** Max 2 working days
 
 ---
 
@@ -20,11 +20,11 @@
 
 This initiative contains three scoped improvements to the `wavecraft update` CLI command UX, ordered by risk (lowest first):
 
-| Item | Description | Priority | Risk |
-|------|-------------|----------|------|
-| **#2** | Split progress messaging | First | Low |
-| **#1** | CLI update rerun elimination | Second | Medium |
-| **#3** | Dev build profile optimization | Last (conditional) | Low |
+| Item   | Description                    | Priority           | Risk   |
+| ------ | ------------------------------ | ------------------ | ------ |
+| **#2** | Split progress messaging       | First              | Low    |
+| **#1** | CLI update rerun elimination   | Second             | Medium |
+| **#3** | Dev build profile optimization | Last (conditional) | Low    |
 
 All changes are confined to `cli/src/commands/update.rs`, `cli/src/main.rs`, and their test files.
 
@@ -81,12 +81,12 @@ The `start_cli_update_progress()` function spawns a thread that sleeps 3 seconds
 
 `cargo install` writes progress to stderr. Key line patterns:
 
-| Phase | Pattern | Example |
-|-------|---------|---------|
-| Download | `Downloading` | `Downloading crates ...` |
-| Download | `Downloaded` | `Downloaded wavecraft v0.9.2` |
-| Compile | `Compiling` | `Compiling wavecraft v0.9.2` |
-| Install | `Installing` | `Installing /Users/.../.cargo/bin/wavecraft` |
+| Phase      | Pattern                | Example                                           |
+| ---------- | ---------------------- | ------------------------------------------------- |
+| Download   | `Downloading`          | `Downloading crates ...`                          |
+| Download   | `Downloaded`           | `Downloaded wavecraft v0.9.2`                     |
+| Compile    | `Compiling`            | `Compiling wavecraft v0.9.2`                      |
+| Install    | `Installing`           | `Installing /Users/.../.cargo/bin/wavecraft`      |
 | Up-to-date | `is already installed` | `package 'wavecraft v0.9.2' is already installed` |
 
 #### New progress state machine
@@ -220,8 +220,8 @@ fn detect_phase(line: &str) -> Option<InstallPhase> {
 
 #### New user-facing messages
 
-| Old | New |
-|-----|-----|
+| Old                                                                           | New                                                                    |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | `"📦 Downloading and installing... this may take a minute on slow networks."` | `"📥 Downloading..."` then `"🔨 Compiling... this may take a minute."` |
 
 If `cargo install` determines the package is already up-to-date, neither message is shown (cargo emits the "is already installed" line without download/compile phases).
@@ -403,6 +403,7 @@ enum SummaryOutcome {
 #### Updated UX flow
 
 **Before (current):**
+
 ```
 🔄 Checking for CLI updates...
 📦 Downloading and installing... this may take a minute on slow networks.
@@ -419,6 +420,7 @@ enum SummaryOutcome {
 ```
 
 **After (new):**
+
 ```
 🔄 Checking for CLI updates...
 📥 Downloading...
@@ -438,6 +440,7 @@ enum SummaryOutcome {
 #### Failure mode: exec fails
 
 If `reexec_with_new_binary()` fails (binary not found, permissions, etc.):
+
 - Return `Err` which causes the process to exit with error
 - User sees: `"Failed to re-exec CLI: ..."` plus `"Re-run 'wavecraft update' manually."`
 - This is acceptable — exec failure is rare and the user has a clear recovery path
@@ -538,6 +541,18 @@ If deferred: document findings in a comment on the roadmap task.
 
 ---
 
+## Implementation Notes
+
+The following deviations from this design were made during implementation:
+
+1. **`stdout(Stdio::null())` instead of `Stdio::piped()`** — `cargo install` produces no useful stdout, so the implementation nulls it rather than piping. This avoids an unnecessary pipe allocation.
+
+2. **`SelfUpdateResult` uses unit variants** — The LLD implied data-carrying variants. The implementation uses unit variants and prints version information inline in `update_cli()`, which simplifies the control flow without losing functionality.
+
+3. **Item #3 (Dev Build Profile)** — Not implemented. Items #1 and #2 consumed the allocated timebox. Item #3 remains in the backlog as a future optimization.
+
+---
+
 ## Implementation Order
 
 ```
@@ -551,25 +566,25 @@ Item #2 (Split progress)  ──►  Item #1 (Rerun elimination)  ──►  Ite
 
 ## Files Changed
 
-| File | Item | Change |
-|------|------|--------|
-| `cli/src/commands/update.rs` | #2 | Replace `start_cli_update_progress()` with streaming; add `InstallPhase`, `detect_phase()`, `stream_install_progress()` |
-| `cli/src/commands/update.rs` | #1 | Add `reexec_with_new_binary()`, `which_wavecraft()`; modify `run()` to accept `skip_self`; delete `print_rerun_hint()`; simplify `SummaryOutcome` |
-| `cli/src/main.rs` | #1 | Add `skip_self` field to `Commands::Update`; pass to `run()` |
-| `cli/Cargo.toml` | #1 | Add `which = "7"` dependency |
-| `cli/tests/update_command.rs` | #1, #2 | Add `--skip-self` hidden flag test; update any assertions about old messages |
-| `sdk-template/engine/Cargo.toml.template` | #3 | Add dev profile settings (conditional) |
+| File                                      | Item   | Change                                                                                                                                            |
+| ----------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cli/src/commands/update.rs`              | #2     | Replace `start_cli_update_progress()` with streaming; add `InstallPhase`, `detect_phase()`, `stream_install_progress()`                           |
+| `cli/src/commands/update.rs`              | #1     | Add `reexec_with_new_binary()`, `which_wavecraft()`; modify `run()` to accept `skip_self`; delete `print_rerun_hint()`; simplify `SummaryOutcome` |
+| `cli/src/main.rs`                         | #1     | Add `skip_self` field to `Commands::Update`; pass to `run()`                                                                                      |
+| `cli/Cargo.toml`                          | #1     | Add `which = "7"` dependency                                                                                                                      |
+| `cli/tests/update_command.rs`             | #1, #2 | Add `--skip-self` hidden flag test; update any assertions about old messages                                                                      |
+| `sdk-template/engine/Cargo.toml.template` | #3     | Add dev profile settings (conditional)                                                                                                            |
 
 ---
 
 ## Risks and Mitigations
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Cargo stderr format changes between versions | Progress phase detection breaks silently | Detect nothing → no phase messages shown (graceful degradation). `is_already_up_to_date()` is unchanged. |
-| `exec()` fails on obscure system configs | User stuck after CLI update | Return error with clear message; user can re-run manually. Failure is non-destructive. |
-| `which` crate resolves wrong binary | Exec runs unexpected binary | Verify version after exec via `CURRENT_VERSION` check in `--skip-self` path. Extremely unlikely in practice. |
-| Item #3 regresses build times for some configs | Slower dev experience | Timeboxed; measure before committing; easy revert (template-only change). |
+| Risk                                           | Impact                                   | Mitigation                                                                                                   |
+| ---------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Cargo stderr format changes between versions   | Progress phase detection breaks silently | Detect nothing → no phase messages shown (graceful degradation). `is_already_up_to_date()` is unchanged.     |
+| `exec()` fails on obscure system configs       | User stuck after CLI update              | Return error with clear message; user can re-run manually. Failure is non-destructive.                       |
+| `which` crate resolves wrong binary            | Exec runs unexpected binary              | Verify version after exec via `CURRENT_VERSION` check in `--skip-self` path. Extremely unlikely in practice. |
+| Item #3 regresses build times for some configs | Slower dev experience                    | Timeboxed; measure before committing; easy revert (template-only change).                                    |
 
 ---
 

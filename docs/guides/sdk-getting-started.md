@@ -148,15 +148,19 @@ wavecraft update
 
 This command runs in two phases:
 
-1. **CLI self-update** — Runs `cargo install wavecraft` to ensure you have the latest CLI version. Shows version change (e.g., "updated to 0.9.1, was 0.9.0") or confirms you're up to date.
+1. **CLI self-update** — Runs `cargo install wavecraft` with streaming progress (shows separate _Downloading_ and _Compiling_ phases). Reports version change (e.g., "updated to 0.9.3, was 0.9.2") or confirms you're up to date.
 2. **Project dependency update** — If run from inside a Wavecraft plugin project:
    - Updates Rust dependencies if `engine/Cargo.toml` exists (runs `cargo update` in `engine/`)
    - Updates npm dependencies if `ui/package.json` exists (runs `npm update` in `ui/`)
+
+When the CLI is updated, it automatically re-executes the new binary to run Phase 2 — no manual re-run is needed.
 
 **Key behaviors:**
 
 - Works from **any directory** — outside a project, only the CLI is updated
 - CLI self-update failures are non-fatal — project dependency updates still proceed
+- Streaming progress shows download and compilation phases separately
+- After a CLI update, the new binary continues automatically with project dependency updates
 - Reports success/failure for each phase independently
 
 **Use case:** Run `wavecraft update` regularly to keep both the CLI tool and your project dependencies current.
