@@ -166,19 +166,19 @@ fn stream_install_progress(stderr: impl std::io::Read) -> String {
         all_output.push_str(&line);
         all_output.push('\n');
 
-        if let Some(phase) = detect_phase(&line)
-            && phase != current_phase
-        {
-            match phase {
-                InstallPhase::Downloading => {
-                    println!("📥 Downloading...");
+        if let Some(phase) = detect_phase(&line) {
+            if phase != current_phase {
+                match phase {
+                    InstallPhase::Downloading => {
+                        println!("📥 Downloading...");
+                    }
+                    InstallPhase::Compiling => {
+                        println!("🔨 Compiling... this may take a minute.");
+                    }
+                    InstallPhase::Checking => {}
                 }
-                InstallPhase::Compiling => {
-                    println!("🔨 Compiling... this may take a minute.");
-                }
-                InstallPhase::Checking => {}
+                current_phase = phase;
             }
-            current_phase = phase;
         }
     }
 
