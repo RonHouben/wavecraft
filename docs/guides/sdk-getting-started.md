@@ -229,10 +229,12 @@ wavecraft_processor!(OutputGain => Gain);
 // Custom processors (like Oscillator) are used directly — they already
 // implement the Processor trait with their own parameters.
 
-// Plugin metadata (vendor, URL, email) is derived from Cargo.toml
+// Vendor/URL metadata is derived from Cargo.toml.
+// Email is set explicitly in the macro (optional).
 wavecraft_plugin! {
     name: "My Plugin",
     signal: SignalChain![InputGain, OutputGain],
+  email: "info@example.com",
     // Enable the oscillator by switching to:
     // signal: SignalChain![InputGain, Oscillator, OutputGain],
 }

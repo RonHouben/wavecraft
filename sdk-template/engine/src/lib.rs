@@ -23,14 +23,8 @@ wavecraft_processor!(OutputGain => Gain);
 // Plugin definition
 // ---------------------------------------------------------------------------
 // `SignalChain![]` processes audio through each processor in order.
-// Plugin metadata (vendor, URL, email) is automatically derived from Cargo.toml.
-
+// Vendor/URL metadata comes from Cargo.toml.
 wavecraft_plugin! {
-    name: "{{plugin_name_title}}",
-
-    // Default: gain-only chain (silent — requires external audio input).
-    // Uncomment the line below to hear the oscillator example instead.
-    //
-    // signal: SignalChain![InputGain, OutputGain, Oscillator],
-    signal: SignalChain![InputGain, OutputGain],
+    name: "My First Plugin",
+    signal: SignalChain![Oscillator, InputGain, OutputGain],
 }

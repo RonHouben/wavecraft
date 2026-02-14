@@ -5,7 +5,7 @@ model:
   - GPT-5.3-Codex (copilot)
   - Claude Opus 4.6 (copilot)
   - Claude Sonnet 4.5 (copilot)
-tools: ['read', 'search', 'agent', 'web', 'todo', 'memory']
+tools: ['read', 'search', 'agent', 'web', 'todo', 'memory', 'excalidraw/*']
 agents: [po, architect, planner, coder, tester, qa, docwriter, search]
 user-invokable: true
 handoffs:
