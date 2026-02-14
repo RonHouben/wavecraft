@@ -8,16 +8,15 @@ This document tracks implementation progress against the milestones defined in t
 
 ```
 ┌──────────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP          v0.13.0 | 92%   │
+│  WAVECRAFT ROADMAP          v0.13.0 | 100%  │
 ├──────────────────────────────────────────────┤
 │  ✅ M1-M18.7 Foundation → UI Race Fix       │
 │  ✅ M18.8    Agent Search Delegation        │
 │  ✅ M18.9    Rust Hot-Reload for Dev        │
 │  ✅ M18.10   TS Param Autocomplete          │
-│  ⏳ M19      User Testing                   │
-│  ⏳ M20      V1.0 Release                   │
+│  ✅ M1-M18.10 Foundation → TS Autocomplete │
 ├──────────────────────────────────────────────┤
-│  [████████████████████████] 24/26          │
+│  [████████████████████████] 24/24          │
 └──────────────────────────────────────────────┘
 ```
 
@@ -1662,106 +1661,6 @@ const { param, setValue } = useParameter('oscillator_frequency');
 
 ---
 
-## Milestone 19: User Testing ⏳
-
-> **Goal:** Validate Wavecraft with real plugin developers before V1 release. Gather feedback on SDK usability, documentation quality, and overall developer experience.
-
-**Depends on:**
-
-- Milestone 18.8 (Agent Search Delegation) — polished agent workflow, optimized research capabilities
-- Milestone 18.9 (Rust Hot-Reload) — smooth development experience without manual restarts
-- Milestone 18.10 (TS Param Autocomplete) — type-safe parameter references for beta testers
-
-**Target Version:** `1.0.0-beta` (breaking changes from user feedback)
-
-| Task                               | Status | Notes                                    |
-| ---------------------------------- | ------ | ---------------------------------------- |
-| **Recruitment & Planning**         |        |                                          |
-| Define target user profiles        | ⏳     | Rust devs, audio plugin devs, React devs |
-| Recruit 3-5 beta testers           | ⏳     | Personal network, audio dev communities  |
-| Create testing guide               | ⏳     | Step-by-step instructions for testers    |
-| Set up feedback collection         | ⏳     | GitHub Discussions or form               |
-| **Testing Protocol**               |        |                                          |
-| Tester builds plugin from template | ⏳     | "Getting Started" guide test             |
-| Tester modifies parameters         | ⏳     | DSL usability test                       |
-| Tester customizes UI               | ⏳     | React + TailwindCSS workflow test        |
-| Tester bundles for DAW             | ⏳     | `cargo xtask bundle` workflow test       |
-| Tester loads in DAW                | ⏳     | End-to-end validation                    |
-| **Feedback Analysis**              |        |                                          |
-| Collect feedback from all testers  | ⏳     | Structured questionnaire + open feedback |
-| Categorize issues (bugs, UX, docs) | ⏳     | Prioritize by severity and frequency     |
-| Create action items                | ⏳     | Triage into fix-now vs V1.1              |
-| **Iteration**                      |        |                                          |
-| Address critical feedback          | ⏳     | Bugs, breaking issues, doc gaps          |
-| Update documentation               | ⏳     | Based on common questions                |
-| Final tester validation            | ⏳     | Confirm fixes address concerns           |
-
-**Success Criteria:**
-
-- [ ] At least 3 testers successfully build a plugin from template
-- [ ] At least 3 testers successfully load their plugin in a DAW
-- [ ] No critical/blocking issues remain unresolved
-- [ ] Documentation rated "clear" by majority of testers
-- [ ] SDK usability rated "good" or "excellent" by majority
-
-**Estimated Effort:** 2-3 weeks (including tester recruitment and iteration time)
-
----
-
-## Milestone 20: V1.0 Release 🎯
-
-> **Goal:** Ship Wavecraft 1.0 — the first stable, production-ready release of the Rust + React audio plugin framework.
-
-**Depends on:** Milestone 19 (User Testing) — all critical feedback addressed.
-
-**Target Version:** `1.0.0` (major — first stable release)
-
-| Task                            | Status | Notes                                 |
-| ------------------------------- | ------ | ------------------------------------- |
-| **Release Prep**                |        |                                       |
-| Final code review               | ⏳     | Full codebase review for V1 quality   |
-| Version bump to 1.0.0           | ⏳     | Cargo.toml, package.json              |
-| Update all version references   | ⏳     | README badges, docs, UI               |
-| **Documentation Polish**        |        |                                       |
-| README final review             | ⏳     | Hero section, quick start, badges     |
-| Architecture docs final review  | ⏳     | High-level design, coding standards   |
-| Guides final review             | ⏳     | Getting started, signing, CI pipeline |
-| **Release Artifacts**           |        |                                       |
-| Create GitHub Release           | ⏳     | Tag v1.0.0 with changelog             |
-| Build release bundles           | ⏳     | VST3/CLAP for macOS                   |
-| Publish to crates.io (optional) | ⏳     | If ready for public consumption       |
-| **Announcement**                |        |                                       |
-| Write announcement blog post    | ⏳     | Features, getting started, roadmap    |
-| Social media posts              | ⏳     | Twitter/X, LinkedIn, Reddit           |
-| Audio dev community posts       | ⏳     | KVR, JUCE forum, Rust Audio Discord   |
-| **Post-Release**                |        |                                       |
-| Monitor issues                  | ⏳     | First 48 hours critical response      |
-| Plan V1.1 roadmap               | ⏳     | Based on user feedback and backlog    |
-
-**V1.0 Feature Set:**
-
-- ✅ Cross-platform audio plugin framework (macOS primary, Windows theoretical)
-- ✅ VST3 and CLAP format support
-- ✅ React-based UI with TailwindCSS
-- ✅ <1ms IPC latency (native) / WebSocket bridge (dev)
-- ✅ Declarative DSL with 95% code reduction
-- ✅ Real-time metering (peak/RMS)
-- ✅ Code signing and notarization infrastructure
-- ✅ Comprehensive documentation and SDK
-- ✅ User-tested and validated
-
-**Success Criteria:**
-
-- [ ] Clean build with no warnings
-- [ ] All tests passing (engine + UI)
-- [ ] All documentation up-to-date
-- [ ] GitHub Release published with artifacts
-- [ ] At least one external user successfully uses V1.0
-
-**Estimated Effort:** 1 week
-
----
-
 ## Changelog
 
 | Date       | Update                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
@@ -1866,7 +1765,7 @@ const { param, setValue } = useParameter('oscillator_frequency');
 
 ## Next Steps
 
-> 🚀 **Road to V1** — Internal testing, user testing, then stable release.
+> 🚀 **Roadmap status** — Core milestones are complete; future work continues via roadmap additions and backlog promotion.
 
 ### Completed Milestones
 
@@ -1897,14 +1796,11 @@ const { param, setValue } = useParameter('oscillator_frequency');
 
 ### Up Next
 
-25. ⏳ **Milestone 19**: User Testing — Beta testing with real plugin developers (v1.0.0-beta)
-26. ⏳ **Milestone 20**: V1.0 Release — First stable production release (v1.0.0)
+- ✅ No active upcoming milestones currently listed
 
 ### Immediate Tasks
 
 1. ✅ ~~Execute **Pre-M19 Initiative** (Item #2 → Item #1) under strict 2-day guardrail~~ — Completed 2026-02-14
-2. ⏳ Start Milestone 19 (User Testing)
-3. ⏳ Prepare Milestone 20 (V1.0 Release) scope lock and release checklist
-4. 📝 **Pre-release validation:** MT4 (native plugin DAW testing) deferred from M18.7 — smoke test in Ableton before final release window
+2. 📝 **Pre-release validation:** MT4 (native plugin DAW testing) deferred from M18.7 — smoke test in Ableton before final release window
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (crates.io publication, additional example plugins, etc.)
