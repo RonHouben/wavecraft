@@ -1618,6 +1618,50 @@ const { param, setValue } = useParameter('oscillator_frequency');
 
 ---
 
+## Pre-M19 Initiative: CLI Update UX Quick Wins + Optional Dev Build Profile Spike ⏳
+
+> **Goal:** Land two high-impact CLI polish items before/alongside M19, plus an optional low-risk Rust dev build optimization spike that must not delay M19.
+
+**Status:** ⏳ Not Started (non-blocking, pre-M19 execution window)
+
+**Execution Guardrail:** If any item risks delaying M19 timeline, defer immediately and continue M19.
+
+### Scope & Acceptance Criteria
+
+| Item | Scope | Acceptance Criteria |
+| ---- | ----- | ------------------- |
+| 1. CLI update rerun elimination | `wavecraft update` should complete CLI self-update and dependency update in one user invocation (no manual second run). | `wavecraft update` does not instruct user to re-run for normal self-update path; project deps update continues automatically in same invocation. |
+| 2. Split progress messaging | Replace combined "Downloading and installing" with distinct progress states. | CLI output clearly separates download step and install step for self-update flow. |
+| 3. Conditional: optimize Rust dev build profile | Timeboxed experiment for dev build/runtime feedback improvements. | Only ship if improvement is measurable and implementation is low-risk with no workflow regressions. |
+
+### Priority / Order of Execution
+
+1. **Item #2 first** (lowest risk, tiny UX improvement, quick confidence)
+2. **Item #1 second** (high user-value, moderate implementation complexity)
+3. **Item #3 last and conditional** (timeboxed, explicitly non-blocking)
+
+### Timebox & Guardrails (Must Not Delay M19)
+
+- **Total initiative budget:** max 2 working days
+- **Item #2:** target same-day
+- **Item #1:** target ≤1 day
+- **Item #3:** max 0.5 day spike only, proceed only after #1 and #2 are complete
+- If #1 needs architectural churn or introduces regressions, ship partial improvements and defer remainder
+- If #3 does not show clear low-risk gains within timebox, **defer to backlog immediately**
+
+### Risks & Defer Rules (Item #3)
+
+| Risk | Trigger | Defer Rule |
+| ---- | ------- | ---------- |
+| Slower incremental compile times | Noticeable rebuild slowdown during normal dev loop | Revert/defer and keep current profile |
+| Debug ergonomics degrade | Reduced debuggability, confusing profiler/stack behavior | Revert/defer |
+| Cross-workspace side effects | Affects CLI/dev-server/test workflows unexpectedly | Scope down to engine-only or defer |
+| CI/local mismatch confusion | Team uncertainty about what profile is active | Defer until docs/tooling clarity is ready |
+
+**Definition of done for #3:** only considered complete if net developer experience improves with no meaningful downside; otherwise "spike complete, implementation deferred" is the expected safe outcome.
+
+---
+
 ## Milestone 19: User Testing ⏳
 
 > **Goal:** Validate Wavecraft with real plugin developers before V1 release. Gather feedback on SDK usability, documentation quality, and overall developer experience.
@@ -1722,6 +1766,7 @@ const { param, setValue } = useParameter('oscillator_frequency');
 
 | Date       | Update                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-02-14 | **Pre-M19 initiative formalized (non-blocking):** Added execution-ready initiative for two CLI update quick wins + one conditional dev-build optimization spike. Defined scope and acceptance criteria, strict guardrails (max 2 working days), explicit priority order (#2 → #1 → optional #3), and defer rules ensuring **no delay to M19**. Updated Immediate Tasks ordering to run quick wins before/alongside M19 and treat item #3 as strictly timeboxed/conditional. |
 | 2026-02-14 | **Milestone 18.9 closed (manual validation confirmed):** Updated **M18.9 Rust Hot-Reload for Dev Mode** from 🚧 to ✅ based on direct user confirmation: _"I manually tested the hotreloading and it works great!"_ Manual testing status marked complete, QA blocker cleared, progress updated to **24/26**, and Next Steps ordering adjusted to proceed with M19 then M20.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | 2026-02-14 | **Roadmap audit corrections applied (status alignment):** Marked **M18.8 Agent Search Delegation** as ✅ complete (archived feature + agent instruction updates + delegation pattern documented). Marked **M18.10 TS Parameter ID Autocompletion** as ✅ complete (ts codegen wiring, generated parameters flow, archived validation docs). Reclassified **M18.9 Rust Hot-Reload** to 🚧 in progress with explicit manual-test blocker note from archived test-plan (`PARTIAL PASS`, blocked TC-001–TC-006). Updated progress overview to **23/26 (88%)**, corrected Up Next + Immediate Tasks ordering, and aligned roadmap narrative with validated delivery state.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 2026-02-13 | **CI/CD parity for `cargo xtask ci-check`**: Follow-up to canonical SDK template on same PR branch (#66). Fixed CI pipeline (`ci.yml` and `build_ui.rs`) to build from `sdk-template/ui/` instead of old `ui/` app path. Extended `cargo xtask ci-check` from 3 phases to 6 phases with full CI/CD parity: Phase 0 (doc link validation), Phase 1 (UI dist build — always rebuilds, strict `npm ci`), Phase 2 (lint), Phase 3 (tests), Phase 4 (template validation, `--full` only), Phase 5 (CD dry-run with git-based change detection, `--full` only). Added `--full` flag for comprehensive pre-push validation (gates Phases 4-5). Added granular skip flags (`--skip-docs`, `--skip-lint`, `--skip-tests`, `--skip-template`, `--skip-cd`). Fixed `cli/build.rs` `include_dir!` build-time staging to filter `sdk-template/` excluding `target/`, `node_modules/`, `dist/` before embedding. QA fixes: expanded CLI change detection, strict npm install parity, replaced `unwrap()` with `expect()`.                                                                                                                                                                                                                                                                                                                                                                |
@@ -1856,8 +1901,10 @@ const { param, setValue } = useParameter('oscillator_frequency');
 
 ### Immediate Tasks
 
-1. ⏳ Start Milestone 19 (User Testing) with tester recruitment + protocol finalization
-2. ⏳ Prepare Milestone 20 (V1.0 Release) scope lock and release checklist
-3. 📝 **Pre-release validation:** MT4 (native plugin DAW testing) deferred from M18.7 — smoke test in Ableton before final release window
+1. ⏳ Execute **Pre-M19 Initiative** (Item #2 → Item #1) under strict 2-day guardrail
+2. ⏳ Start Milestone 19 (User Testing) in parallel where possible; do not block on Item #3
+3. 📝 Run Item #3 only if low-risk and within remaining timebox; otherwise defer without impacting M19
+4. ⏳ Prepare Milestone 20 (V1.0 Release) scope lock and release checklist
+5. 📝 **Pre-release validation:** MT4 (native plugin DAW testing) deferred from M18.7 — smoke test in Ableton before final release window
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (crates.io publication, additional example plugins, etc.)
