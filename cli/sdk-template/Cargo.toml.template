@@ -1,0 +1,16 @@
+[workspace]
+members = ["engine", "engine/xtask"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+
+[profile.release]
+lto = "thin"
+strip = "debuginfo"
+
+[profile.profiling]
+inherits = "release"
+strip = "none"
+debug = true
