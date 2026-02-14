@@ -14,7 +14,6 @@ This skill creates a GitHub Pull Request using the `gh` CLI tool. To avoid issue
 - GitHub CLI (`gh`) must be installed and authenticated
 - Current branch must be pushed to the remote
 - There must be commits to create a PR from
-<<<<<<< HEAD
 - The executing agent must have terminal execution tools (see [Terminal Handoff](#terminal-handoff) if you don't)
 
 ### Terminal Handoff
@@ -29,9 +28,6 @@ Include in your handoff:
 2. The PR title (from Step 4)
 3. The path to the PR summary file (from Step 5)
 4. This scope constraint verbatim
-=======
-- The executing agent must have terminal execution #tool:execute and file editing #tool:edit; if not, hand off this task to an agent that does
->>>>>>> refs/remotes/origin/main
 
 ## Workflow
 
