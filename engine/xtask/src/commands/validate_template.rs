@@ -60,34 +60,33 @@ pub fn run(config: ValidateTemplateConfig) -> Result<()> {
     // Step 2: Generate test project
     print_phase("Step 2: Generate Test Plugin");
     let cli_binary = cli_dir.join("target/release/wavecraft");
-    let parent_dir = env::temp_dir();
-    generate_test_plugin(&cli_binary, &parent_dir, config.verbose)?;
-    // The CLI creates the project in a subdirectory
-    let test_project_dir = parent_dir.join("test-plugin");
+    generate_test_plugin(
+        &cli_binary,
+        &workspace_root,
+        &test_project_dir,
+        config.verbose,
+    )?;
     verify_generated_files(&test_project_dir)?;
+
+    normalize_generated_ui_dependencies(&test_project_dir, &workspace_root)?;
+
     print_success("Test plugin generated successfully");
     println!();
 
-    // Step 3: Add path overrides for local workspace
-    print_phase("Step 3: Configure Local Dependencies");
-    add_workspace_overrides(&test_project_dir, &workspace_root)?;
-    print_success("Local workspace dependencies configured");
-    println!();
-
-    // Step 4: Validate Engine
-    print_phase("Step 4: Validate Engine Code");
+    // Step 3: Validate Engine
+    print_phase("Step 3: Validate Engine Code");
     validate_engine(&test_project_dir, config.verbose)?;
     print_success("Engine validation passed");
     println!();
 
-    // Step 5: Validate UI
-    print_phase("Step 5: Validate UI Code");
+    // Step 4: Validate UI
+    print_phase("Step 4: Validate UI Code");
     validate_ui(&test_project_dir, config.verbose)?;
     print_success("UI validation passed");
     println!();
 
-    // Step 6: Validate xtask
-    print_phase("Step 6: Validate xtask Commands");
+    // Step 5: Validate xtask
+    print_phase("Step 5: Validate xtask Commands");
     validate_xtask(&test_project_dir, config.verbose)?;
     print_success("xtask validation passed");
     println!();
@@ -130,24 +129,21 @@ fn build_cli(cli_dir: &Path, verbose: bool) -> Result<()> {
 }
 
 /// Generate a test plugin project using the CLI.
-fn generate_test_plugin(cli_binary: &Path, parent_dir: &Path, verbose: bool) -> Result<()> {
+fn generate_test_plugin(
+    cli_binary: &Path,
+    workspace_root: &Path,
+    output_dir: &Path,
+    verbose: bool,
+) -> Result<()> {
     if verbose {
-        println!("Generating test plugin in: {}", parent_dir.display());
+        println!("Generating test plugin in: {}", output_dir.display());
     }
 
+    let output_dir_arg = output_dir.display().to_string();
+
     let status = Command::new(cli_binary)
-        .args([
-            "create",
-            "test-plugin",
-            "--vendor",
-            "Test Vendor",
-            "--email",
-            "test@example.com",
-            "--url",
-            "https://example.com",
-            "--no-git",
-        ])
-        .current_dir(parent_dir)
+        .args(create_test_plugin_args(&output_dir_arg))
+        .current_dir(workspace_root)
         .status()
         .context("Failed to run wavecraft create")?;
 
@@ -156,6 +152,22 @@ fn generate_test_plugin(cli_binary: &Path, parent_dir: &Path, verbose: bool) -> 
     }
 
     Ok(())
+}
+
+fn create_test_plugin_args(output_dir: &str) -> Vec<&str> {
+    vec![
+        "create",
+        "test-plugin",
+        "--vendor",
+        "Test Vendor",
+        "--email",
+        "test@example.com",
+        "--url",
+        "https://example.com",
+        "--no-git",
+        "--output",
+        output_dir,
+    ]
 }
 
 /// Verify that all expected files were generated.
@@ -178,61 +190,42 @@ fn verify_generated_files(project_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Add Cargo path overrides to use local workspace dependencies.
-fn add_workspace_overrides(project_dir: &Path, workspace_root: &Path) -> Result<()> {
-    let engine_cargo_toml = project_dir.join("engine/Cargo.toml");
-    let ui_package_json = project_dir.join("ui/package.json");
-    let engine_crates = workspace_root.join("engine/crates");
-    let ui_packages = workspace_root.join("ui/packages");
+/// Normalize generated UI dependencies to local workspace package paths.
+///
+/// In SDK development mode, `wavecraft create` may emit local file dependencies
+/// for Rust crates only while keeping npm package versions. For local template
+/// validation we validate against current workspace UI packages to avoid stale
+/// published npm package drift.
+fn normalize_generated_ui_dependencies(project_dir: &Path, workspace_root: &Path) -> Result<()> {
+    let generated_ui_package_json = project_dir.join("ui/package.json");
+    let core_package_dir = workspace_root.join("ui/packages/core");
+    let components_package_dir = workspace_root.join("ui/packages/components");
 
-    // Read the current Cargo.toml
-    let content =
-        fs::read_to_string(&engine_cargo_toml).context("Failed to read engine/Cargo.toml")?;
+    let generated_content = fs::read_to_string(&generated_ui_package_json)
+        .context("Failed to read generated ui/package.json")?;
+    let mut generated: serde_json::Value = serde_json::from_str(&generated_content)
+        .context("Failed to parse generated ui/package.json")?;
 
-    let mut updated_lines = Vec::new();
-    for line in content.lines() {
-        if line
-            .trim_start()
-            .starts_with("wavecraft = { package = \"wavecraft-nih_plug\"")
-        {
-            updated_lines.push(format!(
-                "wavecraft = {{ package = \"wavecraft-nih_plug\", path = \"{}/wavecraft-nih_plug\" }}",
-                engine_crates.display()
-            ));
-            continue;
-        }
-
-        updated_lines.push(line.to_string());
-    }
-
-    fs::write(&engine_cargo_toml, updated_lines.join("\n"))
-        .context("Failed to write engine/Cargo.toml")?;
-
-    let ui_package_content =
-        fs::read_to_string(&ui_package_json).context("Failed to read ui/package.json")?;
-    let mut ui_package: serde_json::Value =
-        serde_json::from_str(&ui_package_content).context("Failed to parse ui/package.json")?;
-
-    let Some(dependencies) = ui_package
+    let Some(deps) = generated
         .get_mut("dependencies")
         .and_then(serde_json::Value::as_object_mut)
     else {
-        bail!("Missing dependencies object in ui/package.json");
+        bail!("Generated ui/package.json missing dependencies object");
     };
 
-    dependencies.insert(
+    deps.insert(
         "@wavecraft/core".to_string(),
-        serde_json::Value::String(format!("file:{}", ui_packages.join("core").display())),
+        serde_json::Value::String(format!("file:{}", core_package_dir.display())),
     );
-    dependencies.insert(
+    deps.insert(
         "@wavecraft/components".to_string(),
-        serde_json::Value::String(format!("file:{}", ui_packages.join("components").display())),
+        serde_json::Value::String(format!("file:{}", components_package_dir.display())),
     );
 
-    let serialized_ui_package = serde_json::to_string_pretty(&ui_package)
-        .context("Failed to serialize updated ui/package.json")?;
-    fs::write(&ui_package_json, format!("{}\n", serialized_ui_package))
-        .context("Failed to write ui/package.json")?;
+    let serialized = serde_json::to_string_pretty(&generated)
+        .context("Failed to serialize generated package")?;
+    fs::write(&generated_ui_package_json, format!("{}\n", serialized))
+        .context("Failed to write normalized generated ui/package.json")?;
 
     Ok(())
 }
@@ -399,5 +392,18 @@ mod tests {
         let config = ValidateTemplateConfig::default();
         assert!(!config.verbose);
         assert!(!config.keep);
+    }
+
+    #[test]
+    fn test_create_test_plugin_args_include_output_mode() {
+        let args = create_test_plugin_args("/tmp/test-plugin");
+
+        assert!(args.contains(&"--output"));
+
+        let output_idx = args
+            .iter()
+            .position(|arg| *arg == "--output")
+            .expect("--output flag missing");
+        assert_eq!(args.get(output_idx + 1), Some(&"/tmp/test-plugin"));
     }
 }

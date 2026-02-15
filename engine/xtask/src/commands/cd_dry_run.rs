@@ -72,6 +72,7 @@ struct PhaseSummary {
     passed: Vec<String>,
     failed: Vec<String>,
     skipped: Vec<String>,
+    skipped_labels: Vec<String>,
 }
 
 impl PhaseSummary {
@@ -85,8 +86,9 @@ impl PhaseSummary {
     }
 
     fn skip(&mut self, label: impl Into<String>, reason: impl Into<String>) {
-        self.skipped
-            .push(format!("{} ({})", label.into(), reason.into()));
+        let label = label.into();
+        self.skipped.push(format!("{} ({})", label, reason.into()));
+        self.skipped_labels.push(label);
     }
 
     fn has_failures(&self) -> bool {
@@ -98,15 +100,16 @@ impl PhaseSummary {
 pub fn run(config: CdDryRunConfig) -> Result<()> {
     let project_root = paths::project_root()?;
 
-    let (changes, used_fallback) =
-        detect_changes(&project_root, &config.base_ref).unwrap_or_else(|err| {
-            print_warning(&format!(
-                "⚠️ Change detection failed against '{}': {}",
-                config.base_ref, err
-            ));
-            print_warning("⚠️ Falling back to running dry-runs for all publish targets.");
-            (ChangeSet::all(), true)
-        });
+    let (changes, used_fallback, fallback_error) =
+        resolve_changes(&project_root, &config.base_ref, detect_changes);
+
+    if let Some(err) = fallback_error {
+        print_warning(&format!(
+            "⚠️ Change detection failed against '{}': {}",
+            config.base_ref, err
+        ));
+        print_warning("⚠️ Falling back to running dry-runs for all publish targets.");
+    }
 
     print_status("Phase 5a: Change Detection");
     print_change_set(changes, used_fallback);
@@ -144,13 +147,27 @@ pub fn run(config: CdDryRunConfig) -> Result<()> {
     println!();
 
     print_status("Phase 5f: Summary");
-    print_phase_summary(&summary);
+    print_phase_summary(&summary, used_fallback);
 
     if summary.has_failures() {
         anyhow::bail!("CD dry-run failed");
     }
 
     Ok(())
+}
+
+fn resolve_changes<F>(
+    project_root: &Path,
+    base_ref: &str,
+    detect_fn: F,
+) -> (ChangeSet, bool, Option<String>)
+where
+    F: FnOnce(&Path, &str) -> Result<(ChangeSet, bool)>,
+{
+    match detect_fn(project_root, base_ref) {
+        Ok((changes, used_fallback)) => (changes, used_fallback, None),
+        Err(err) => (ChangeSet::all(), true, Some(err.to_string())),
+    }
 }
 
 fn detect_changes(project_root: &Path, base_ref: &str) -> Result<(ChangeSet, bool)> {
@@ -397,11 +414,8 @@ fn run_rust_dry_runs(
     }
 
     if changes.dev_server {
-        if changes.engine {
-            summary.skip(
-                "dev-server",
-                "engine changes detected; local dry-run cannot replay CI version sync + crates.io propagation",
-            );
+        if let Some(reason) = dev_server_skip_reason(changes) {
+            summary.skip("dev-server", reason);
         } else {
             let dev_server_dir = project_root.join("dev-server");
             match run_cargo_publish_dry_run_in_dir(&dev_server_dir, config.verbose) {
@@ -423,6 +437,16 @@ fn run_rust_dry_runs(
         );
     } else {
         summary.skip("cli", "no changes");
+    }
+}
+
+fn dev_server_skip_reason(changes: ChangeSet) -> Option<&'static str> {
+    if changes.dev_server && changes.engine {
+        Some(
+            "engine changes detected; local dry-run cannot replay CI version sync + crates.io propagation",
+        )
+    } else {
+        None
     }
 }
 
@@ -665,7 +689,7 @@ fn run_npm_pack_dry_run(dir: &Path, verbose: bool) -> Result<()> {
     Ok(())
 }
 
-fn print_phase_summary(summary: &PhaseSummary) {
+fn print_phase_summary(summary: &PhaseSummary, used_fallback: bool) {
     for item in &summary.passed {
         print_success_item(&format!("{}: PASSED", item));
     }
@@ -677,6 +701,38 @@ fn print_phase_summary(summary: &PhaseSummary) {
     for item in &summary.failed {
         print_error(&format!("  ✗ {}: FAILED", item));
     }
+
+    for note in confidence_boundary_notes(summary, used_fallback) {
+        print_warning(&note);
+    }
+}
+
+fn confidence_boundary_notes(summary: &PhaseSummary, used_fallback: bool) -> Vec<String> {
+    let mut notes = Vec::new();
+
+    if used_fallback {
+        notes.push(
+            "Confidence boundary: change detection fell back to all targets; local pass is conservative and not a full CI-equivalent signal.".to_string(),
+        );
+    }
+
+    if summary.skipped_labels.iter().any(|label| label == "cli") {
+        notes.push(
+            "Confidence boundary: CLI publish dry-run is intentionally skipped locally; rely on CI + release workflow checks for full CLI publish confidence.".to_string(),
+        );
+    }
+
+    if summary
+        .skipped_labels
+        .iter()
+        .any(|label| label == "dev-server")
+    {
+        notes.push(
+            "Confidence boundary: dev-server publish dry-run may be skipped when engine changed; local pass does not cover full cross-job CI publish sequencing.".to_string(),
+        );
+    }
+
+    notes
 }
 
 #[cfg(test)]
@@ -726,5 +782,62 @@ mod tests {
         let config = CdDryRunConfig::default();
         assert!(!config.verbose);
         assert_eq!(config.base_ref, "main");
+    }
+
+    #[test]
+    fn test_dev_server_skip_reason_when_engine_and_dev_server_changed() {
+        let changes = ChangeSet {
+            engine: true,
+            dev_server: true,
+            ..Default::default()
+        };
+
+        assert!(dev_server_skip_reason(changes).is_some());
+    }
+
+    #[test]
+    fn test_dev_server_skip_reason_none_when_only_dev_server_changed() {
+        let changes = ChangeSet {
+            engine: false,
+            dev_server: true,
+            ..Default::default()
+        };
+
+        assert!(dev_server_skip_reason(changes).is_none());
+    }
+
+    #[test]
+    fn test_resolve_changes_falls_back_on_detection_error() {
+        let root = Path::new(".");
+        let (changes, used_fallback, fallback_error) =
+            resolve_changes(root, "main", |_project_root, _base_ref| {
+                anyhow::bail!("simulated git diff failure")
+            });
+
+        assert!(used_fallback);
+        assert!(fallback_error.is_some());
+        assert!(changes.cli);
+        assert!(changes.engine);
+        assert!(changes.dev_server);
+        assert!(changes.npm_core);
+        assert!(changes.npm_components);
+    }
+
+    #[test]
+    fn test_confidence_boundary_notes_include_fallback_and_skips() {
+        let mut summary = PhaseSummary::default();
+        summary.skip("cli", "intentionally skipped");
+        summary.skip("dev-server", "engine changed");
+
+        let notes = confidence_boundary_notes(&summary, true);
+
+        assert_eq!(notes.len(), 3);
+        assert!(notes.iter().any(|n| n.contains("fell back to all targets")));
+        assert!(notes.iter().any(|n| n.contains("CLI publish dry-run")));
+        assert!(
+            notes
+                .iter()
+                .any(|n| n.contains("dev-server publish dry-run"))
+        );
     }
 }
