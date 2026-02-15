@@ -8,7 +8,7 @@ Cargo.lock
 # UI
 ui/node_modules/
 ui/dist/
-ui/src/generated/*
+ui/src/generated/
 
 # macOS
 .DS_Store

@@ -22,9 +22,6 @@
       "@wavecraft/core/*": ["../core/src/*"]
     }
   },
-  "include": [
-    "src",
-    "../../../sdk-template/ui/src/generated/processors.ts"
-  ],
+  "include": ["src", "../../../sdk-template/ui/src/generated/processors.ts"],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }
