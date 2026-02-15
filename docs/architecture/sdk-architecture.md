@@ -90,7 +90,7 @@ The UI SDK is distributed as npm packages, enabling standard JavaScript/TypeScri
 
 | Package                 | Purpose                                   | Exports                                                                                                                                                 |
 | ----------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@wavecraft/core`       | IPC bridge, React hooks, utilities, types | `useParameter`, `useAllParameters`, `useMeterFrame`, `IpcBridge`, `Logger`, `ParameterId`, `ParameterIdMap`, types                                      |
+| `@wavecraft/core`       | IPC bridge, React hooks, utilities, types | `useParameter`, `useAllParameters`, `useMeterFrame`, `useAudioStatus`, `IpcBridge`, `Logger`, `ParameterId`, `ParameterIdMap`, `AudioRuntimeStatus`, `AudioRuntimePhase`, `AudioDiagnostic`, types |
 | `@wavecraft/components` | Pre-built React components                | `Meter`, `ParameterSlider`, `ParameterGroup`, `ParameterToggle`, `VersionBadge`, `ConnectionStatus`, `LatencyMonitor`, `ResizeHandle`, `ResizeControls` |
 
 **Subpath Exports:**
@@ -129,6 +129,13 @@ function MyPluginUI() {
   );
 }
 ```
+
+**Runtime Status Contracts (by design):**
+
+- Transport/runtime connectivity (for reconnect UX) is exposed separately from audio runtime readiness.
+- `useConnectionStatus()` answers: _"Is the transport connected?"_
+- `useAudioStatus()` answers: _"Is audio runtime initialized/running, and if not, why?"_
+- Pre-1.0, this contract is strict current-version required: incompatible/missing runtime status expectations fail fast with actionable diagnostics instead of silent compatibility fallbacks.
 
 ## Public API Surface (Rust)
 

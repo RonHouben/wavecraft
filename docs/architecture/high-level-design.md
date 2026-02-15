@@ -237,7 +237,10 @@ Key: the audio path never blocks on UI; the UI never directly runs audio code.
     	- `setParameter(id, value)`
     	- `getParameter(id)`
     	- `getMeterFrame()`
+    -	`getAudioStatus()`
     	- `ping()`
+    •	Audio runtime status uses a dedicated contract (`getAudioStatus` + `audioStatusChanged`) and is intentionally separate from transport connection status.
+    •	In browser-dev mode, audio startup is deterministic and decoupled from parameter sidecar cache hit/miss paths.
     •	**Connection Management**:
     	- Automatic reconnection with exponential backoff (WebSocket mode)
     	- Rate-limited disconnect warnings (max 1 per 5s)
@@ -377,10 +380,25 @@ Define JSON messages exchanged over the webview bridge. Keep it small and versio
 { "type": "setParameter", "paramId": "gain", "value": 0.73 }
 ```
 
+```json
+{ "jsonrpc": "2.0", "id": 7, "method": "getAudioStatus", "params": {} }
+```
+
     •	From Host → UI
 
 ```json
 { "type": "paramUpdate", "paramId": "gain", "value": 0.73 }
+```
+
+```json
+{
+    "jsonrpc": "2.0",
+    "method": "audioStatusChanged",
+    "params": {
+        "phase": "failed",
+        "diagnostic": { "code": "noOutputDevice", "message": "No usable default output device" }
+    }
+}
 ```
 
     •	Meter frame (audio → UI, via ring buffer snapshot)
@@ -389,7 +407,7 @@ Define JSON messages exchanged over the webview bridge. Keep it small and versio
 { "type": "meterFrame", "meters": [{ "id":"outL", "peak":0.7, "rms":0.12 }, ...], "ts": 1680000000 }
 ```
 
-Version each message payload so contract mismatches can be detected immediately and surfaced as actionable errors.
+Version each message payload so contract mismatches can be detected immediately and surfaced as actionable errors. Pre-1.0, incompatible or unusable runtime contracts fail fast by default (including browser-dev audio startup failures such as `noOutputDevice`).
 
 ⸻
 

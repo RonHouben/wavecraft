@@ -456,6 +456,7 @@ All hooks are exported from `@wavecraft/core`:
 | `useParameterGroups(params)` | Group parameters by their `group` attribute                                 |
 | `useMeterFrame()`            | Access real-time meter data                                                 |
 | `useConnectionStatus()`      | WebSocket connection status (dev mode)                                      |
+| `useAudioStatus()`           | Audio runtime phase + diagnostics (`running`, `failed`, etc.)               |
 
 ---
 
@@ -614,6 +615,23 @@ cargo run -p wavecraft -- create TestPlugin --output target/tmp/test-plugin
 1. Ensure parameter ID in UI matches Rust definition
 2. Check browser console for IPC errors
 3. Verify WebSocket connection in dev mode
+
+### UI shows connected, but audio is not running
+
+Transport status and audio readiness are separate by design:
+
+- `useConnectionStatus()` means the UI transport is connected
+- `useAudioStatus()` reports actual audio runtime state and diagnostics
+
+If the UI is connected but audio is not running, inspect `useAudioStatus()` and the startup diagnostics.
+
+Expected pre-1.0 fail-fast behavior: if no usable default output device is found, startup transitions to `failed` with diagnostic code `noOutputDevice`.
+
+Remediation:
+
+1. Connect/enable a valid output device in macOS Audio MIDI Setup
+2. Ensure the device is not exclusively locked by another app/host
+3. Restart `wavecraft start` after device availability is restored
 
 ### UI dev server port already in use
 

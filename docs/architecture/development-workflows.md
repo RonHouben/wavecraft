@@ -273,6 +273,21 @@ The `AtomicParameterBridge` enables lock-free parameter flow from the browser UI
 
 The FFI vtable v1 `process()` does not accept parameters directly. The bridge infrastructure is in place for future vtable v2 which will add a `set_parameter` function pointer. Currently, parameter values are available to the audio callback but not injected into the processor (documented known limitation of the `wavecraft_plugin!` macro).
 
+### Audio Runtime Status Contract (Browser Dev)
+
+Browser-dev audio startup in `wavecraft start` is deterministic and **independent** of parameter sidecar cache hit/miss paths. Audio runtime initialization is always attempted from the current runtime state after startup preconditions pass.
+
+Pre-1.0 behavior is strict fail-fast: runtime loader failures, FFI vtable load/version failures, and audio initialization failures are treated as startup-fatal with actionable diagnostics.
+
+The audio readiness contract is exposed over dedicated IPC APIs:
+
+- Method: `getAudioStatus`
+- Notification: `audioStatusChanged`
+
+These status APIs are separate from transport health. `useConnectionStatus()` reports transport connectivity (WebSocket/native bridge), not audio readiness.
+
+Current behavior: if no usable default output device is available, startup transitions to `failed` with diagnostic reason `noOutputDevice`. This remains startup-fatal until explicit device selection is implemented.
+
 ### Benefits
 
 - **Real engine communication**: Browser UI talks to real Rust backend
