@@ -268,9 +268,13 @@ enum Commands {
         name = "npm-updates"
     )]
     NpmUpdates {
-        /// Return success even when outdated packages are found
+        /// Return success even when outdated packages are found (check mode only)
         #[arg(long)]
         allow_updates: bool,
+
+        /// Upgrade npm dependencies in both npm areas instead of checking for outdated packages
+        #[arg(long)]
+        upgrade: bool,
     },
 }
 
@@ -435,9 +439,13 @@ fn main() -> Result<()> {
             };
             commands::validate_template::run(config)
         }
-        Some(Commands::NpmUpdates { allow_updates }) => {
+        Some(Commands::NpmUpdates {
+            allow_updates,
+            upgrade,
+        }) => {
             let config = commands::npm_updates::NpmUpdatesConfig {
                 strict: !allow_updates,
+                upgrade,
                 verbose: cli.verbose,
             };
             commands::npm_updates::run(config)

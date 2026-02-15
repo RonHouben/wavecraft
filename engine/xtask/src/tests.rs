@@ -57,6 +57,9 @@ mod cli_tests {
         NpmUpdates {
             #[arg(long)]
             allow_updates: bool,
+
+            #[arg(long)]
+            upgrade: bool,
         },
     }
 
@@ -369,8 +372,12 @@ mod cli_tests {
     fn test_npm_updates_command_default() {
         let cli = parse_args(&["npm-updates"]).expect("Failed to parse npm-updates command");
         match cli.command {
-            Some(TestCommands::NpmUpdates { allow_updates }) => {
+            Some(TestCommands::NpmUpdates {
+                allow_updates,
+                upgrade,
+            }) => {
                 assert!(!allow_updates);
+                assert!(!upgrade);
             }
             _ => panic!("Expected NpmUpdates command"),
         }
@@ -381,8 +388,44 @@ mod cli_tests {
         let cli = parse_args(&["npm-updates", "--allow-updates"])
             .expect("Failed to parse npm-updates --allow-updates");
         match cli.command {
-            Some(TestCommands::NpmUpdates { allow_updates }) => {
+            Some(TestCommands::NpmUpdates {
+                allow_updates,
+                upgrade,
+            }) => {
                 assert!(allow_updates);
+                assert!(!upgrade);
+            }
+            _ => panic!("Expected NpmUpdates command"),
+        }
+    }
+
+    #[test]
+    fn test_npm_updates_command_upgrade() {
+        let cli = parse_args(&["npm-updates", "--upgrade"])
+            .expect("Failed to parse npm-updates --upgrade");
+        match cli.command {
+            Some(TestCommands::NpmUpdates {
+                allow_updates,
+                upgrade,
+            }) => {
+                assert!(!allow_updates);
+                assert!(upgrade);
+            }
+            _ => panic!("Expected NpmUpdates command"),
+        }
+    }
+
+    #[test]
+    fn test_npm_updates_command_upgrade_with_allow_updates() {
+        let cli = parse_args(&["npm-updates", "--upgrade", "--allow-updates"])
+            .expect("Failed to parse npm-updates --upgrade --allow-updates");
+        match cli.command {
+            Some(TestCommands::NpmUpdates {
+                allow_updates,
+                upgrade,
+            }) => {
+                assert!(allow_updates);
+                assert!(upgrade);
             }
             _ => panic!("Expected NpmUpdates command"),
         }
