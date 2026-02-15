@@ -181,7 +181,9 @@ fn verify_generated_files(project_dir: &Path) -> Result<()> {
 /// Add Cargo path overrides to use local workspace dependencies.
 fn add_workspace_overrides(project_dir: &Path, workspace_root: &Path) -> Result<()> {
     let engine_cargo_toml = project_dir.join("engine/Cargo.toml");
+    let ui_package_json = project_dir.join("ui/package.json");
     let engine_crates = workspace_root.join("engine/crates");
+    let ui_packages = workspace_root.join("ui/packages");
 
     // Read the current Cargo.toml
     let content =
@@ -205,6 +207,32 @@ fn add_workspace_overrides(project_dir: &Path, workspace_root: &Path) -> Result<
 
     fs::write(&engine_cargo_toml, updated_lines.join("\n"))
         .context("Failed to write engine/Cargo.toml")?;
+
+    let ui_package_content =
+        fs::read_to_string(&ui_package_json).context("Failed to read ui/package.json")?;
+    let mut ui_package: serde_json::Value =
+        serde_json::from_str(&ui_package_content).context("Failed to parse ui/package.json")?;
+
+    let Some(dependencies) = ui_package
+        .get_mut("dependencies")
+        .and_then(serde_json::Value::as_object_mut)
+    else {
+        bail!("Missing dependencies object in ui/package.json");
+    };
+
+    dependencies.insert(
+        "@wavecraft/core".to_string(),
+        serde_json::Value::String(format!("file:{}", ui_packages.join("core").display())),
+    );
+    dependencies.insert(
+        "@wavecraft/components".to_string(),
+        serde_json::Value::String(format!("file:{}", ui_packages.join("components").display())),
+    );
+
+    let serialized_ui_package = serde_json::to_string_pretty(&ui_package)
+        .context("Failed to serialize updated ui/package.json")?;
+    fs::write(&ui_package_json, format!("{}\n", serialized_ui_package))
+        .context("Failed to write ui/package.json")?;
 
     Ok(())
 }

@@ -353,35 +353,43 @@ fn run_rust_dry_runs(
             "Note: crates.io 'already exists' and 'aborting upload due to dry run' warnings are expected in this phase.",
         );
 
-        if !cargo_workspaces_installed(project_root) {
+        if cargo_workspaces_installed(project_root) {
+            match run_cargo_ws_publish_dry_run(project_root, config.verbose) {
+                Ok(()) => summary.pass("engine/workspace"),
+                Err(err) => {
+                    print_error(&format!("engine workspace dry-run failed: {:#}", err));
+                    summary.fail("engine/workspace", err.to_string());
+                }
+            }
+        } else {
             print_warning(
                 "cargo-workspaces not found; using per-crate cargo publish --dry-run for engine crates.",
             );
-        }
 
-        match discover_publishable_engine_crates(project_root) {
-            Ok(crates) if crates.is_empty() => {
-                summary.skip("engine crates", "no publishable crates found");
-            }
-            Ok(crates) => {
-                for krate in crates {
-                    let label = format!("engine/{}", krate.name);
-                    match run_cargo_publish_dry_run_for_manifest(
-                        &krate.manifest_path,
-                        project_root,
-                        config.verbose,
-                    ) {
-                        Ok(()) => summary.pass(label),
-                        Err(err) => {
-                            print_error(&format!("{} failed: {:#}", krate.name, err));
-                            summary.fail(format!("engine/{}", krate.name), err.to_string());
+            match discover_publishable_engine_crates(project_root) {
+                Ok(crates) if crates.is_empty() => {
+                    summary.skip("engine crates", "no publishable crates found");
+                }
+                Ok(crates) => {
+                    for krate in crates {
+                        let label = format!("engine/{}", krate.name);
+                        match run_cargo_publish_dry_run_for_manifest(
+                            &krate.manifest_path,
+                            project_root,
+                            config.verbose,
+                        ) {
+                            Ok(()) => summary.pass(label),
+                            Err(err) => {
+                                print_error(&format!("{} failed: {:#}", krate.name, err));
+                                summary.fail(format!("engine/{}", krate.name), err.to_string());
+                            }
                         }
                     }
                 }
-            }
-            Err(err) => {
-                print_error(&format!("Failed to discover engine crates: {:#}", err));
-                summary.fail("engine crate discovery", err.to_string());
+                Err(err) => {
+                    print_error(&format!("Failed to discover engine crates: {:#}", err));
+                    summary.fail("engine crate discovery", err.to_string());
+                }
             }
         }
     } else {
@@ -389,12 +397,19 @@ fn run_rust_dry_runs(
     }
 
     if changes.dev_server {
-        let dev_server_dir = project_root.join("dev-server");
-        match run_cargo_publish_dry_run_in_dir(&dev_server_dir, config.verbose) {
-            Ok(()) => summary.pass("dev-server"),
-            Err(err) => {
-                print_error(&format!("dev-server failed: {:#}", err));
-                summary.fail("dev-server", err.to_string());
+        if changes.engine {
+            summary.skip(
+                "dev-server",
+                "engine changes detected; local dry-run cannot replay CI version sync + crates.io propagation",
+            );
+        } else {
+            let dev_server_dir = project_root.join("dev-server");
+            match run_cargo_publish_dry_run_in_dir(&dev_server_dir, config.verbose) {
+                Ok(()) => summary.pass("dev-server"),
+                Err(err) => {
+                    print_error(&format!("dev-server failed: {:#}", err));
+                    summary.fail("dev-server", err.to_string());
+                }
             }
         }
     } else {
@@ -552,6 +567,41 @@ fn run_cargo_publish_dry_run_for_manifest(
         anyhow::bail!(
             "cargo publish --dry-run failed for {}",
             manifest_path.display()
+        );
+    }
+
+    Ok(())
+}
+
+fn run_cargo_ws_publish_dry_run(project_root: &Path, verbose: bool) -> Result<()> {
+    let engine_dir = project_root.join("engine");
+
+    let mut command = Command::new("cargo");
+    command
+        .arg("ws")
+        .arg("publish")
+        .arg("--yes")
+        .arg("--no-git-push")
+        .arg("--allow-branch")
+        .arg("main")
+        .arg("--from-git")
+        .arg("--dry-run")
+        .current_dir(&engine_dir);
+
+    if verbose {
+        print_info(&format!(
+            "Running in {}: cargo ws publish --yes --no-git-push --allow-branch main --from-git --dry-run",
+            engine_dir.display()
+        ));
+    }
+
+    let status = command
+        .status()
+        .context("Failed to execute cargo ws publish")?;
+    if !status.success() {
+        anyhow::bail!(
+            "cargo ws publish --dry-run failed in {}",
+            engine_dir.display()
         );
     }
 

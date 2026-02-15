@@ -1,8 +1,4 @@
-import {
-  useAllParameters,
-  useParameterGroups,
-  useWindowResizeSync,
-} from '@wavecraft/core';
+import { useAllParameters, useParameterGroups, useWindowResizeSync } from '@wavecraft/core';
 import { type JSX } from 'react';
 import {
   Meter,
