@@ -6,6 +6,7 @@ import React from 'react';
 import { logger, useMeterFrame, useParameter } from '@wavecraft/core';
 import type { ParameterId } from '@wavecraft/core';
 import { ParameterSlider } from './ParameterSlider';
+import { useHasProcessor } from '@wavecraft/core';
 
 const SIGNAL_THRESHOLD = 1e-4;
 const OSCILLATOR_ENABLED_PARAM_ID = 'oscillator_enabled' as ParameterId;
@@ -25,7 +26,9 @@ export function OscillatorControl(props: Readonly<OscilloscopeProps>): React.JSX
     error: oscillatorError,
   } = useParameter(OSCILLATOR_ENABLED_PARAM_ID);
 
-  if (props.hideWhenNotInSignalChain && !oscillatorEnabled) {
+  const hasProcessorInSignalChain = useHasProcessor('oscillator');
+
+  if (props.hideWhenNotInSignalChain && !hasProcessorInSignalChain) {
     return null;
   }
 
