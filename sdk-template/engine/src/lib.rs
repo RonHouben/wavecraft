@@ -24,5 +24,11 @@ wavecraft_processor!(OutputGain => Gain);
 // `SignalChain![]` processes audio through each processor in order.
 wavecraft_plugin! {
     name: "My First Plugin",
-    signal: SignalChain![Oscillator, OscilloscopeTap, ExampleProcessor, InputGain, OutputGain],
+    signal: SignalChain![
+        Oscillator,
+        ExampleProcessor,
+        OscilloscopeTap,
+        InputGain,
+        OutputGain
+    ],
 }
