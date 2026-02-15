@@ -43,7 +43,7 @@ async fn assert_failed_status_broadcasted_to_connected_clients(code: AudioDiagno
     let host = Arc::new(DevServerHost::new(vec![]));
     let handler = Arc::new(IpcHandler::new(host.clone()));
     let port = free_port();
-    let server = WsServer::new(port, handler, false);
+    let server = WsServer::new(port, handler);
 
     server.start().await.expect("start ws server");
 
