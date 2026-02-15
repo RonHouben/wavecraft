@@ -18,12 +18,16 @@ on:
         description: "Force publish dev-server (ignore change detection)"
         type: boolean
         default: false
+      force-publish-npm-cohort:
+        description: "Force publish npm cohort (@wavecraft/core + @wavecraft/components) (ignore change detection)"
+        type: boolean
+        default: false
       force-publish-npm-core:
-        description: "Force publish @wavecraft/core (ignore change detection)"
+        description: "[DEPRECATED] Force publish @wavecraft/core. Use force-publish-npm-cohort instead."
         type: boolean
         default: false
       force-publish-npm-components:
-        description: "Force publish @wavecraft/components (ignore change detection)"
+        description: "[DEPRECATED] Force publish @wavecraft/components. Use force-publish-npm-cohort instead."
         type: boolean
         default: false
 
@@ -42,8 +46,13 @@ jobs:
     outputs:
       cli: ${{ steps.filter.outputs.cli == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force-publish-cli) }}
       engine: ${{ steps.filter.outputs.engine == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force-publish-engine) }}
-      npm-core: ${{ steps.filter.outputs.npm-core == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force-publish-npm-core) }}
-      npm-components: ${{ steps.filter.outputs.npm-components == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force-publish-npm-components) }}
+      npm-core: ${{ steps.filter.outputs.npm-core == 'true' }}
+      npm-components: ${{ steps.filter.outputs.npm-components == 'true' }}
+      npm-cohort: ${{
+        steps.filter.outputs.npm-core == 'true' ||
+        steps.filter.outputs.npm-components == 'true' ||
+        (github.event_name == 'workflow_dispatch' && (inputs.force-publish-npm-cohort || inputs.force-publish-npm-core || inputs.force-publish-npm-components))
+        }}
       dev-server: ${{ steps.filter.outputs.dev-server == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force-publish-dev-server) }}
       any_sdk_changed: ${{ steps.aggregate.outputs.any_sdk_changed }}
     steps:
@@ -83,6 +92,7 @@ jobs:
                 "${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-cli }}" == "true" || \
                 "${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-engine }}" == "true" || \
                 "${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-dev-server }}" == "true" || \
+                "${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-npm-cohort }}" == "true" || \
                 "${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-npm-core }}" == "true" || \
                 "${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-npm-components }}" == "true" ]]; then
             echo "any_sdk_changed=true" >> $GITHUB_OUTPUT
@@ -1061,120 +1071,166 @@ jobs:
           git push origin "wavecraft-dev-server-v${{ steps.final.outputs.version }}"
 
   # ============================================================================
-  # Job 4: Publish @wavecraft/core to npm
+  # Job 4: Prepare npm cohort lockstep target version
   # ============================================================================
-  publish-npm-core:
+  publish-npm-cohort-prepare:
     needs: detect-changes
-    if: needs.detect-changes.outputs.npm-core == 'true'
-    outputs:
-      version: ${{ steps.final.outputs.version }}
+    if: needs.detect-changes.outputs.npm-cohort == 'true'
     runs-on: ubuntu-latest
-    env:
-      NODE_AUTH_TOKEN: ""
-      NPM_TOKEN: ""
-    permissions:
-      id-token: write # Required for npm OIDC trusted publishing + provenance
-      contents: write # Required for version bump commits
+    outputs:
+      version: ${{ steps.target.outputs.version }}
+      core-already-published: ${{ steps.target.outputs.core_already_published }}
+      components-already-published: ${{ steps.target.outputs.components_already_published }}
+      registry-available: ${{ steps.target.outputs.registry_available }}
+      registry-state: ${{ steps.target.outputs.registry_state }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0 # Full history for git tagging
 
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          registry-url: "https://registry.npmjs.org"
-          scope: "@wavecraft"
-          always-auth: false
 
-      - name: Update npm to latest
-        run: npm install -g npm@latest
-
-      - name: Clear npm auth token
-        run: |
-          npm config delete //registry.npmjs.org/:_authToken || true
-          if [ -n "${NPM_CONFIG_USERCONFIG:-}" ]; then
-            rm -f "$NPM_CONFIG_USERCONFIG"
-          fi
-
-      - name: Install dependencies
+      - name: Compute cohort target version
+        id: target
         working-directory: ui
-        run: npm ci
-
-      - name: Determine publish version
-        id: version
-        working-directory: ui/packages/core
+        env:
+          FORCE_COHORT: ${{ github.event_name == 'workflow_dispatch' && (inputs.force-publish-npm-cohort || inputs.force-publish-npm-core || inputs.force-publish-npm-components) }}
+          LEGACY_FORCE: ${{ github.event_name == 'workflow_dispatch' && (inputs.force-publish-npm-core || inputs.force-publish-npm-components) }}
         run: |
-          LOCAL=$(node -p "require('./package.json').version")
-          LATEST=$(npm view @wavecraft/core version 2>/dev/null || echo "0.0.0")
-          echo "local=$LOCAL" >> $GITHUB_OUTPUT
-          echo "latest=$LATEST" >> $GITHUB_OUTPUT
+          npm_fetch_version() {
+            local package="$1"
+            local max_attempts=3
+            local delay=2
+            local attempt output parsed
 
-          if npx --yes semver "$LOCAL" -r ">$LATEST" > /dev/null 2>&1; then
-            echo "version=$LOCAL" >> $GITHUB_OUTPUT
-            echo "Publishing local version: $LOCAL (ahead of npm: $LATEST)"
-          else
-            echo "Auto-bumping: local $LOCAL is not ahead of npm $LATEST"
+            for attempt in $(seq 1 "$max_attempts"); do
+              if output=$(npm view "$package" version --json 2>&1); then
+                parsed=$(node -e "const raw = process.argv[1]; let value = JSON.parse(raw); if (Array.isArray(value)) value = value[value.length - 1]; if (!value) process.exit(1); process.stdout.write(String(value));" "$output" 2>/dev/null) || {
+                  echo "::error::Failed to parse npm version JSON for $package: $output" >&2
+                  return 1
+                }
+                echo "$parsed"
+                return 0
+              fi
+
+              if echo "$output" | grep -qiE 'E404|404 Not Found|is not in this registry'; then
+                echo "0.0.0"
+                return 0
+              fi
+
+              if [ "$attempt" -lt "$max_attempts" ]; then
+                echo "::warning::npm registry lookup failed for $package (attempt $attempt/$max_attempts). Retrying in ${delay}s..."
+                sleep "$delay"
+                delay=$((delay * 2))
+              else
+                echo "::error::npm registry lookup failed for $package after $max_attempts attempts: $output" >&2
+                return 1
+              fi
+            done
+          }
+
+          npm_version_exists() {
+            local package="$1"
+            local version="$2"
+            local max_attempts=3
+            local delay=2
+            local attempt output
+
+            for attempt in $(seq 1 "$max_attempts"); do
+              if output=$(npm view "$package@$version" version 2>&1); then
+                echo "true"
+                return 0
+              fi
+
+              if echo "$output" | grep -qiE 'E404|404 Not Found|is not in this registry'; then
+                echo "false"
+                return 0
+              fi
+
+              if [ "$attempt" -lt "$max_attempts" ]; then
+                echo "::warning::npm published-version check failed for $package@$version (attempt $attempt/$max_attempts). Retrying in ${delay}s..."
+                sleep "$delay"
+                delay=$((delay * 2))
+              else
+                echo "::error::npm published-version check failed for $package@$version after $max_attempts attempts: $output" >&2
+                return 1
+              fi
+            done
+          }
+
+          CORE_LOCAL=$(node -p "require('./packages/core/package.json').version")
+          COMPONENTS_LOCAL=$(node -p "require('./packages/components/package.json').version")
+
+          if ! CORE_PUBLISHED=$(npm_fetch_version "@wavecraft/core"); then
+            echo "version=" >> "$GITHUB_OUTPUT"
+            echo "core_already_published=unknown" >> "$GITHUB_OUTPUT"
+            echo "components_already_published=unknown" >> "$GITHUB_OUTPUT"
+            echo "registry_available=false" >> "$GITHUB_OUTPUT"
+            echo "registry_state=unknown" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
-      - name: Auto-bump patch version (if needed)
-        id: bump
-        if: steps.version.outputs.version == ''
-        working-directory: ui/packages/core
-        run: |
-          LATEST=${{ steps.version.outputs.latest }}
-          NEW=$(npx --yes semver "$LATEST" -i patch)
-          npm version "$NEW" --no-git-tag-version
-          echo "version=$NEW" >> $GITHUB_OUTPUT
-          echo "bumped=true" >> $GITHUB_OUTPUT
-          echo "Auto-bumped @wavecraft/core to $NEW"
+          if ! COMPONENTS_PUBLISHED=$(npm_fetch_version "@wavecraft/components"); then
+            echo "version=" >> "$GITHUB_OUTPUT"
+            echo "core_already_published=unknown" >> "$GITHUB_OUTPUT"
+            echo "components_already_published=unknown" >> "$GITHUB_OUTPUT"
+            echo "registry_available=false" >> "$GITHUB_OUTPUT"
+            echo "registry_state=unknown" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
-      - name: Commit auto-bump locally
-        if: steps.bump.outputs.bumped == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add ui/packages/core/package.json
-          git commit -m "chore: bump @wavecraft/core to ${{ steps.bump.outputs.version }} [auto-bump]"
-          # NOTE: No push to main — branch protection prevents direct pushes.
-          # The version bump exists locally for npm publish and tagging only.
+          TARGET=$(printf '%s\n' "$CORE_LOCAL" "$COMPONENTS_LOCAL" "$CORE_PUBLISHED" "$COMPONENTS_PUBLISHED" | sort -V | tail -1)
 
-      - name: Set final version
-        id: final
-        run: |
-          VERSION="${{ steps.version.outputs.version }}${{ steps.bump.outputs.version }}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Core local:          $CORE_LOCAL"
+          echo "Components local:    $COMPONENTS_LOCAL"
+          echo "Core published:      $CORE_PUBLISHED"
+          echo "Components published:$COMPONENTS_PUBLISHED"
+          echo "Cohort target:       $TARGET"
 
-      - name: Build package
-        working-directory: ui/packages/core
-        run: npm run build:lib
+          if [ "$LEGACY_FORCE" = "true" ]; then
+            echo "::warning::Deprecated inputs force-publish-npm-core / force-publish-npm-components were used. Migrate to force-publish-npm-cohort."
+          fi
 
-      - name: Verify publishability (dry-run)
-        working-directory: ui/packages/core
-        run: npm publish --access public --dry-run
+          if [ "$FORCE_COHORT" = "true" ]; then
+            echo "Cohort force-publish requested"
+          fi
 
-      - name: Publish to npm
-        working-directory: ui/packages/core
-        env:
-          NPM_CONFIG_PROVENANCE: true
-        run: npm publish --access public --provenance
+          if ! CORE_ALREADY=$(npm_version_exists "@wavecraft/core" "$TARGET"); then
+            echo "version=" >> "$GITHUB_OUTPUT"
+            echo "core_already_published=unknown" >> "$GITHUB_OUTPUT"
+            echo "components_already_published=unknown" >> "$GITHUB_OUTPUT"
+            echo "registry_available=false" >> "$GITHUB_OUTPUT"
+            echo "registry_state=unknown" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
-      - name: Create and push git tag
-        run: |
-          git tag "@wavecraft/core-v${{ steps.final.outputs.version }}"
-          git push origin "@wavecraft/core-v${{ steps.final.outputs.version }}"
+          if ! COMPONENTS_ALREADY=$(npm_version_exists "@wavecraft/components" "$TARGET"); then
+            echo "version=" >> "$GITHUB_OUTPUT"
+            echo "core_already_published=unknown" >> "$GITHUB_OUTPUT"
+            echo "components_already_published=unknown" >> "$GITHUB_OUTPUT"
+            echo "registry_available=false" >> "$GITHUB_OUTPUT"
+            echo "registry_state=unknown" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "version=$TARGET" >> "$GITHUB_OUTPUT"
+          echo "core_already_published=$CORE_ALREADY" >> "$GITHUB_OUTPUT"
+          echo "components_already_published=$COMPONENTS_ALREADY" >> "$GITHUB_OUTPUT"
+          echo "registry_available=true" >> "$GITHUB_OUTPUT"
+          echo "registry_state=available" >> "$GITHUB_OUTPUT"
 
   # ============================================================================
-  # Job 5: Publish @wavecraft/components to npm
+  # Job 5: Publish @wavecraft/core to npm (cohort lockstep)
   # ============================================================================
-  publish-npm-components:
-    needs: [detect-changes, publish-npm-core]
+  publish-npm-core:
+    needs: [detect-changes, publish-npm-cohort-prepare]
     if: |
       !cancelled() &&
-      needs.detect-changes.outputs.npm-components == 'true' &&
-      (needs.publish-npm-core.result == 'success' || needs.publish-npm-core.result == 'skipped' ||
-       (needs.publish-npm-core.result == 'failure' && needs.detect-changes.outputs.npm-core != 'true'))
+      needs.detect-changes.outputs.npm-cohort == 'true' &&
+      needs.publish-npm-cohort-prepare.outputs.registry-available == 'true' &&
+      needs.publish-npm-cohort-prepare.result == 'success'
+    outputs:
+      version: ${{ needs.publish-npm-cohort-prepare.outputs.version }}
     runs-on: ubuntu-latest
     env:
       NODE_AUTH_TOKEN: ""
@@ -1209,70 +1265,132 @@ jobs:
         working-directory: ui
         run: npm ci
 
-      - name: Determine publish version
-        id: version
-        working-directory: ui/packages/components
+      - name: Align core package version to cohort target
         run: |
-          LOCAL=$(node -p "require('./package.json').version")
-          LATEST=$(npm view @wavecraft/components version 2>/dev/null || echo "0.0.0")
-          echo "local=$LOCAL" >> $GITHUB_OUTPUT
-          echo "latest=$LATEST" >> $GITHUB_OUTPUT
-
-          if npx --yes semver "$LOCAL" -r ">$LATEST" > /dev/null 2>&1; then
-            echo "version=$LOCAL" >> $GITHUB_OUTPUT
-            echo "Publishing local version: $LOCAL (ahead of npm: $LATEST)"
-          else
-            echo "Auto-bumping: local $LOCAL is not ahead of npm $LATEST"
+          TARGET="${{ needs.publish-npm-cohort-prepare.outputs.version }}"
+          CURRENT=$(node -p "require('./ui/packages/core/package.json').version")
+          echo "Core current: $CURRENT"
+          echo "Cohort target: $TARGET"
+          if [ "$CURRENT" != "$TARGET" ]; then
+            npm --prefix ui/packages/core version "$TARGET" --no-git-tag-version
           fi
 
-      - name: Auto-bump patch version (if needed)
-        id: bump
-        if: steps.version.outputs.version == ''
-        working-directory: ui/packages/components
+      - name: Commit local lockstep alignment
         run: |
-          LATEST=${{ steps.version.outputs.latest }}
-          NEW=$(npx --yes semver "$LATEST" -i patch)
-          npm version "$NEW" --no-git-tag-version
-          echo "version=$NEW" >> $GITHUB_OUTPUT
-          echo "bumped=true" >> $GITHUB_OUTPUT
-          echo "Auto-bumped @wavecraft/components to $NEW"
+          if git diff --quiet -- ui/packages/core/package.json; then
+            echo "No lockstep alignment changes for core"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ui/packages/core/package.json
+          git commit -m "chore: align @wavecraft/core to npm cohort lockstep ${{ needs.publish-npm-cohort-prepare.outputs.version }} [auto-bump]"
 
-      - name: Sync @wavecraft/core dependency version
-        if: needs.publish-npm-core.outputs.version != ''
-        working-directory: ui/packages/components
+      - name: Build package
+        working-directory: ui/packages/core
+        run: npm run build:lib
+
+      - name: Verify publishability (dry-run)
+        working-directory: ui/packages/core
+        run: npm publish --access public --dry-run
+
+      - name: Publish to npm (idempotent)
+        working-directory: ui/packages/core
+        env:
+          NPM_CONFIG_PROVENANCE: true
         run: |
-          CORE_VERSION="${{ needs.publish-npm-core.outputs.version }}"
-          echo "Syncing @wavecraft/core dependency to ^$CORE_VERSION"
-          # Update package.json dependency to match published core version
+          TARGET="${{ needs.publish-npm-cohort-prepare.outputs.version }}"
+          if [ "${{ needs.publish-npm-cohort-prepare.outputs.core-already-published }}" = "true" ]; then
+            echo "@wavecraft/core@$TARGET already published — skipping"
+            exit 0
+          fi
+          npm publish --access public --provenance
+
+      - name: Create and push git tag (if missing)
+        run: |
+          TARGET="${{ needs.publish-npm-cohort-prepare.outputs.version }}"
+          TAG="@wavecraft/core-v$TARGET"
+          if git ls-remote --tags origin "refs/tags/$TAG" | grep -q "$TAG"; then
+            echo "Tag $TAG already exists — skipping"
+            exit 0
+          fi
+          git tag "$TAG"
+          git push origin "$TAG"
+
+  # ============================================================================
+  # Job 6: Publish @wavecraft/components to npm (cohort lockstep)
+  # ============================================================================
+  publish-npm-components:
+    needs: [detect-changes, publish-npm-cohort-prepare, publish-npm-core]
+    if: |
+      !cancelled() &&
+      needs.detect-changes.outputs.npm-cohort == 'true' &&
+      needs.publish-npm-cohort-prepare.outputs.registry-available == 'true' &&
+      needs.publish-npm-cohort-prepare.result == 'success' &&
+      (needs.publish-npm-core.result == 'success' || needs.publish-npm-core.result == 'skipped')
+    outputs:
+      version: ${{ needs.publish-npm-cohort-prepare.outputs.version }}
+    runs-on: ubuntu-latest
+    env:
+      NODE_AUTH_TOKEN: ""
+      NPM_TOKEN: ""
+    permissions:
+      id-token: write # Required for npm OIDC trusted publishing + provenance
+      contents: write # Required for version bump commits
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+          scope: "@wavecraft"
+          always-auth: false
+
+      - name: Update npm to latest
+        run: npm install -g npm@latest
+
+      - name: Clear npm auth token
+        run: |
+          npm config delete //registry.npmjs.org/:_authToken || true
+          if [ -n "${NPM_CONFIG_USERCONFIG:-}" ]; then
+            rm -f "$NPM_CONFIG_USERCONFIG"
+          fi
+
+      - name: Install dependencies
+        working-directory: ui
+        run: npm ci
+
+      - name: Align components version and @wavecraft/core dependency
+        run: |
+          TARGET="${{ needs.publish-npm-cohort-prepare.outputs.version }}"
           node -e "
             const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            const file = 'ui/packages/components/package.json';
+            const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
+            pkg.version = '$TARGET';
             if (pkg.dependencies && pkg.dependencies['@wavecraft/core']) {
-              pkg.dependencies['@wavecraft/core'] = '^$CORE_VERSION';
+              pkg.dependencies['@wavecraft/core'] = '^$TARGET';
             }
             if (pkg.peerDependencies && pkg.peerDependencies['@wavecraft/core']) {
-              pkg.peerDependencies['@wavecraft/core'] = '^$CORE_VERSION';
+              pkg.peerDependencies['@wavecraft/core'] = '^$TARGET';
             }
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+            fs.writeFileSync(file, JSON.stringify(pkg, null, 2) + '\n');
           "
-          echo "Updated @wavecraft/core dependency:"
-          grep '@wavecraft/core' package.json || true
 
-      - name: Commit auto-bump locally
-        if: steps.bump.outputs.bumped == 'true'
+      - name: Commit local lockstep alignment
         run: |
+          if git diff --quiet -- ui/packages/components/package.json; then
+            echo "No lockstep alignment changes for components"
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add ui/packages/components/package.json
-          git commit -m "chore: bump @wavecraft/components to ${{ steps.bump.outputs.version }} [auto-bump]"
-          # NOTE: No push to main — branch protection prevents direct pushes.
-          # The version bump exists locally for npm publish and tagging only.
-
-      - name: Set final version
-        id: final
-        run: |
-          VERSION="${{ steps.version.outputs.version }}${{ steps.bump.outputs.version }}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          git commit -m "chore: align @wavecraft/components cohort lockstep ${{ needs.publish-npm-cohort-prepare.outputs.version }} [auto-bump]"
 
       - name: Build package
         working-directory: ui/packages/components
@@ -1282,13 +1400,46 @@ jobs:
         working-directory: ui/packages/components
         run: npm publish --access public --dry-run
 
-      - name: Publish to npm
+      - name: Publish to npm (idempotent)
         working-directory: ui/packages/components
         env:
           NPM_CONFIG_PROVENANCE: true
-        run: npm publish --access public --provenance
-
-      - name: Create and push git tag
         run: |
-          git tag "@wavecraft/components-v${{ steps.final.outputs.version }}"
-          git push origin "@wavecraft/components-v${{ steps.final.outputs.version }}"
+          TARGET="${{ needs.publish-npm-cohort-prepare.outputs.version }}"
+          if [ "${{ needs.publish-npm-cohort-prepare.outputs.components-already-published }}" = "true" ]; then
+            echo "@wavecraft/components@$TARGET already published — skipping"
+            exit 0
+          fi
+          npm publish --access public --provenance
+
+      - name: Post-publish verify cohort alignment
+        run: |
+          TARGET="${{ needs.publish-npm-cohort-prepare.outputs.version }}"
+
+          if ! npm view "@wavecraft/core@$TARGET" version >/dev/null 2>&1; then
+            echo "❌ @wavecraft/core@$TARGET not found on npm"
+            exit 1
+          fi
+          if ! npm view "@wavecraft/components@$TARGET" version >/dev/null 2>&1; then
+            echo "❌ @wavecraft/components@$TARGET not found on npm"
+            exit 1
+          fi
+
+          CORE_PEER=$(npm view "@wavecraft/components@$TARGET" peerDependencies."@wavecraft/core" 2>/dev/null || true)
+          if [ "$CORE_PEER" != "^$TARGET" ]; then
+            echo "❌ @wavecraft/components@$TARGET peer dependency mismatch: expected ^$TARGET, got '$CORE_PEER'"
+            exit 1
+          fi
+
+          echo "✅ Cohort verification passed for version $TARGET"
+
+      - name: Create and push git tag (if missing)
+        run: |
+          TARGET="${{ needs.publish-npm-cohort-prepare.outputs.version }}"
+          TAG="@wavecraft/components-v$TARGET"
+          if git ls-remote --tags origin "refs/tags/$TAG" | grep -q "$TAG"; then
+            echo "Tag $TAG already exists — skipping"
+            exit 0
+          fi
+          git tag "$TAG"
+          git push origin "$TAG"
