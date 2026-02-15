@@ -19,10 +19,16 @@ const SDK_VERSION: &str = concat!("wavecraft-cli-v", env!("CARGO_PKG_VERSION"));
 #[command(
     name = "wavecraft",
     version,
+    propagate_version = true,
+    disable_version_flag = true,
     about = "Wavecraft SDK - Audio plugin development toolkit",
     long_about = "Create, build, and manage audio plugins (VST3/CLAP) with Rust + React UI."
 )]
 struct Cli {
+    /// Print version information
+    #[arg(short = 'v', long = "version", action = clap::ArgAction::Version, global = true)]
+    version: (),
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -85,10 +91,6 @@ enum Commands {
         /// Fail if node_modules is missing (CI mode, no prompts)
         #[arg(long)]
         no_install: bool,
-
-        /// Show verbose output from servers
-        #[arg(short, long)]
-        verbose: bool,
     },
 
     /// Update the CLI and project dependencies (Rust crates + npm packages)
@@ -142,14 +144,13 @@ fn main() -> Result<()> {
             ui_port,
             install,
             no_install,
-            verbose,
         } => {
             let cmd = StartCommand {
                 port,
                 ui_port,
                 install,
                 no_install,
-                verbose,
+                verbose: true,
             };
             cmd.execute()?;
         }

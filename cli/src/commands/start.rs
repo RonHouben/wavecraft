@@ -46,8 +46,6 @@ pub struct StartCommand {
     pub install: bool,
     /// Fail if dependencies are missing (no prompt)
     pub no_install: bool,
-    /// Show verbose output
-    pub verbose: bool,
 }
 
 const SDK_TSCONFIG_PATHS_MARKER: &str =
@@ -97,8 +95,8 @@ impl StartCommand {
         }
 
         // 3. Start servers
-        ensure_sdk_ui_paths_for_typescript(&project, self.verbose)?;
-        run_dev_servers(&project, self.port, self.ui_port, self.verbose)
+        ensure_sdk_ui_paths_for_typescript(&project)?;
+        run_dev_servers(&project, self.port, self.ui_port)
     }
 }
 
@@ -303,7 +301,7 @@ fn has_jsonc_property_after_anchor(segment: &str) -> bool {
     false
 }
 
-fn ensure_sdk_ui_paths_for_typescript(project: &ProjectMarkers, verbose: bool) -> Result<()> {
+fn ensure_sdk_ui_paths_for_typescript(project: &ProjectMarkers) -> Result<()> {
     if !project.sdk_mode {
         return Ok(());
     }
@@ -321,13 +319,11 @@ fn ensure_sdk_ui_paths_for_typescript(project: &ProjectMarkers, verbose: bool) -
             std::fs::write(&tsconfig_path, updated)
                 .with_context(|| format!("Failed to write {}", tsconfig_path.display()))?;
 
-            if verbose {
-                println!(
-                    "{} Enabled SDK TypeScript path mappings in {}",
-                    style("✓").green(),
-                    tsconfig_path.display()
-                );
-            }
+            println!(
+                "{} Enabled SDK TypeScript path mappings in {}",
+                style("✓").green(),
+                tsconfig_path.display()
+            );
         }
         TsconfigPathsInjection::Unchanged => {}
         TsconfigPathsInjection::Warning(message) => {
@@ -439,7 +435,6 @@ fn try_start_audio_in_process(
     host: std::sync::Arc<DevServerHost>,
     ws_handle: wavecraft_dev_server::WsHandle,
     param_bridge: std::sync::Arc<wavecraft_dev_server::AtomicParameterBridge>,
-    verbose: bool,
 ) -> Result<AudioStartupSuccess, AudioStartupFailure> {
     use wavecraft_dev_server::{AudioConfig, AudioServer, FfiProcessor};
 
@@ -479,16 +474,12 @@ fn try_start_audio_in_process(
             let error_text = e.to_string();
             let (code, hint) = classify_audio_init_error(&error_text);
 
-            if verbose {
-                println!(
-                    "{}",
-                    style(format!("⚠ Audio init failed: {:#}", e)).yellow()
-                );
-            } else {
-                println!("{}", style("⚠ No audio input device available").yellow());
-            }
+            println!(
+                "{}",
+                style(format!("⚠ Audio init failed: {:#}", e)).yellow()
+            );
+
             println!("  Aborting startup: audio runtime is required in SDK dev mode.");
-            println!();
 
             return Err(AudioStartupFailure {
                 code,
@@ -508,7 +499,7 @@ fn try_start_audio_in_process(
                 style(format!("⚠ Failed to start audio: {}", e)).yellow()
             );
             println!("  Aborting startup: audio runtime is required in SDK dev mode.");
-            println!();
+
             return Err(AudioStartupFailure {
                 code: AudioDiagnosticCode::StreamStartFailed,
                 message: e.to_string(),
@@ -558,7 +549,7 @@ fn try_start_audio_in_process(
 
 /// Load plugin runtime for audio startup independently from metadata cache path.
 #[cfg(feature = "audio-dev")]
-fn load_runtime_plugin_loader(engine_dir: &Path, verbose: bool) -> Result<PluginLoader> {
+fn load_runtime_plugin_loader(engine_dir: &Path) -> Result<PluginLoader> {
     let dylib_path = match find_plugin_dylib(engine_dir) {
         Ok(path) => path,
         Err(error) => {
@@ -572,17 +563,16 @@ fn load_runtime_plugin_loader(engine_dir: &Path, verbose: bool) -> Result<Plugin
     match PluginLoader::load(&dylib_path) {
         Ok(loader) => Ok(loader),
         Err(error) => {
-            if verbose {
-                println!(
-                    "{}",
-                    style(format!(
-                        "⚠ Failed to load plugin runtime from {}: {:#}",
-                        dylib_path.display(),
-                        error
-                    ))
-                    .yellow()
-                );
-            }
+            println!(
+                "{}",
+                style(format!(
+                    "⚠ Failed to load plugin runtime from {}: {:#}",
+                    dylib_path.display(),
+                    error
+                ))
+                .yellow()
+            );
+
             anyhow::bail!(
                 "Failed to load plugin runtime from {}: {:#}",
                 dylib_path.display(),
@@ -622,7 +612,7 @@ fn sidecar_json_path(engine_dir: &Path) -> Result<PathBuf> {
 ///
 /// Returns `Some(params)` if the file exists and is newer than the dylib
 /// (i.e., no source changes since last extraction). Returns `None` otherwise.
-fn try_read_cached_params(engine_dir: &Path, verbose: bool) -> Option<Vec<ParameterInfo>> {
+fn try_read_cached_params(engine_dir: &Path) -> Option<Vec<ParameterInfo>> {
     let sidecar_path = sidecar_json_path(engine_dir).ok()?;
     if !sidecar_path.exists() {
         return None;
@@ -639,26 +629,23 @@ fn try_read_cached_params(engine_dir: &Path, verbose: bool) -> Option<Vec<Parame
     let dylib_mtime = std::fs::metadata(&dylib_path).ok()?.modified().ok()?;
 
     if dylib_mtime > sidecar_mtime {
-        if verbose {
-            println!("  Sidecar cache stale (dylib newer), rebuilding...");
-        }
+        println!("  Sidecar cache stale (dylib newer), rebuilding...");
+
         return None;
     }
 
     if let Some(src_mtime) = newest_file_mtime_under(&engine_dir.join("src")) {
         if src_mtime > sidecar_mtime {
-            if verbose {
-                println!("  Sidecar cache stale (engine source newer), rebuilding...");
-            }
+            println!("  Sidecar cache stale (engine source newer), rebuilding...");
+
             return None;
         }
     }
 
     if let Some(cli_mtime) = current_exe_mtime() {
         if cli_mtime > sidecar_mtime {
-            if verbose {
-                println!("  Sidecar cache stale (CLI binary newer), rebuilding...");
-            }
+            println!("  Sidecar cache stale (CLI binary newer), rebuilding...");
+
             return None;
         }
     }
@@ -700,9 +687,9 @@ pub(crate) fn write_sidecar_cache(engine_dir: &Path, params: &[ParameterInfo]) -
 /// Two-phase process:
 /// 1. Try reading from cached sidecar (fast path)
 /// 2. Otherwise: build with _param-discovery, extract params, write sidecar
-async fn load_parameter_metadata(engine_dir: &Path, verbose: bool) -> Result<Vec<ParameterInfo>> {
+async fn load_parameter_metadata(engine_dir: &Path) -> Result<Vec<ParameterInfo>> {
     // 1. Try cached sidecar
-    if let Some(params) = try_read_cached_params(engine_dir, verbose) {
+    if let Some(params) = try_read_cached_params(engine_dir) {
         println!(
             "{} Loaded {} parameters (cached)",
             style("✓").green(),
@@ -724,11 +711,7 @@ async fn load_parameter_metadata(engine_dir: &Path, verbose: bool) -> Result<Vec
 
     let build_result = build_cmd
         .current_dir(engine_dir)
-        .stdout(if verbose {
-            Stdio::inherit()
-        } else {
-            Stdio::null()
-        })
+        .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .status();
 
@@ -743,9 +726,7 @@ async fn load_parameter_metadata(engine_dir: &Path, verbose: bool) -> Result<Vec
     let dylib_path = find_plugin_dylib(engine_dir)
         .context("Failed to find plugin library after discovery build")?;
 
-    if verbose {
-        println!("  Found dylib: {}", dylib_path.display());
-    }
+    println!("  Found dylib: {}", dylib_path.display());
 
     println!("{} Loading plugin parameters...", style("→").cyan());
     #[cfg(feature = "audio-dev")]
@@ -764,9 +745,7 @@ async fn load_parameter_metadata(engine_dir: &Path, verbose: bool) -> Result<Vec
 
     // Write sidecar cache for next run
     if let Err(e) = write_sidecar_cache(engine_dir, &params) {
-        if verbose {
-            println!("  Warning: failed to write param cache: {}", e);
-        }
+        println!("  Warning: failed to write param cache: {}", e);
     }
 
     println!("{} Loaded {} parameters", style("✓").green(), params.len());
@@ -774,12 +753,7 @@ async fn load_parameter_metadata(engine_dir: &Path, verbose: bool) -> Result<Vec
 }
 
 /// Run both development servers.
-fn run_dev_servers(
-    project: &ProjectMarkers,
-    ws_port: u16,
-    ui_port: u16,
-    verbose: bool,
-) -> Result<()> {
+fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u16) -> Result<()> {
     println!();
     println!(
         "{}",
@@ -795,20 +769,18 @@ fn run_dev_servers(
     // 1. Build the plugin and load parameters (two-phase or cached)
     // Create tokio runtime for async parameter loading
     let runtime = tokio::runtime::Runtime::new().context("Failed to create async runtime")?;
-    let params = runtime.block_on(load_parameter_metadata(&project.engine_dir, verbose))?;
+    let params = runtime.block_on(load_parameter_metadata(&project.engine_dir))?;
 
     write_parameter_types(&project.ui_dir, &params)
         .context("Failed to generate TypeScript parameter ID types")?;
 
-    if verbose {
-        for param in &params {
-            println!(
-                "  - {}: {} ({})",
-                param.id,
-                param.name,
-                param.group.as_deref().unwrap_or("ungrouped")
-            );
-        }
+    for param in &params {
+        println!(
+            "  - {}: {} ({})",
+            param.id,
+            param.name,
+            param.group.as_deref().unwrap_or("ungrouped")
+        );
     }
 
     // 2. Create AtomicParameterBridge for lock-free audio-thread param reads
@@ -834,7 +806,7 @@ fn run_dev_servers(
     let handler = std::sync::Arc::new(IpcHandler::new(host.clone()));
 
     // Start WebSocket server (runtime already created above for param loading)
-    let server = std::sync::Arc::new(WsServer::new(ws_port, handler.clone(), verbose));
+    let server = std::sync::Arc::new(WsServer::new(ws_port, handler.clone()));
     runtime.block_on(async { server.start().await.map_err(|e| anyhow::anyhow!("{}", e)) })?;
 
     println!("{} WebSocket server running", style("✓").green());
@@ -896,23 +868,23 @@ fn run_dev_servers(
 
         let initializing_status =
             wavecraft_dev_server::audio_status(AudioRuntimePhase::Initializing, None, None);
+
         host.set_audio_status(initializing_status.clone());
+
         if let Err(error) =
             runtime.block_on(ws_handle.broadcast_audio_status_changed(&initializing_status))
         {
-            if verbose {
-                println!(
-                    "{}",
-                    style(format!(
-                        "⚠ Failed to broadcast audio init status: {}",
-                        error
-                    ))
-                    .yellow()
-                );
-            }
+            println!(
+                "{}",
+                style(format!(
+                    "⚠ Failed to broadcast audio init status: {}",
+                    error
+                ))
+                .yellow()
+            );
         }
 
-        let runtime_loader = match load_runtime_plugin_loader(&project.engine_dir, verbose) {
+        let runtime_loader = match load_runtime_plugin_loader(&project.engine_dir) {
             Ok(loader) => loader,
             Err(error) => {
                 let message = error.to_string();
@@ -930,16 +902,14 @@ fn run_dev_servers(
                 if let Err(broadcast_error) =
                     runtime.block_on(ws_handle.broadcast_audio_status_changed(&status))
                 {
-                    if verbose {
-                        println!(
-                            "{}",
-                            style(format!(
-                                "⚠ Failed to broadcast audio status: {}",
-                                broadcast_error
-                            ))
-                            .yellow()
-                        );
-                    }
+                    println!(
+                        "{}",
+                        style(format!(
+                            "⚠ Failed to broadcast audio status: {}",
+                            broadcast_error
+                        ))
+                        .yellow()
+                    );
                 }
 
                 anyhow::bail!("Audio startup failed ({:?}): {}", code, message);
@@ -952,7 +922,6 @@ fn run_dev_servers(
                 host.clone(),
                 ws_handle.clone(),
                 param_bridge.clone(),
-                verbose,
             )
         }) {
             Ok(started) => {
@@ -961,13 +930,10 @@ fn run_dev_servers(
                 if let Err(error) =
                     runtime.block_on(ws_handle.broadcast_audio_status_changed(&status))
                 {
-                    if verbose {
-                        println!(
-                            "{}",
-                            style(format!("⚠ Failed to broadcast audio status: {}", error))
-                                .yellow()
-                        );
-                    }
+                    println!(
+                        "{}",
+                        style(format!("⚠ Failed to broadcast audio status: {}", error)).yellow()
+                    );
                 }
 
                 Some(started.handle)
@@ -985,13 +951,10 @@ fn run_dev_servers(
                 if let Err(error) =
                     runtime.block_on(ws_handle.broadcast_audio_status_changed(&status))
                 {
-                    if verbose {
-                        println!(
-                            "{}",
-                            style(format!("⚠ Failed to broadcast audio status: {}", error))
-                                .yellow()
-                        );
-                    }
+                    println!(
+                        "{}",
+                        style(format!("⚠ Failed to broadcast audio status: {}", error)).yellow()
+                    );
                 }
 
                 anyhow::bail!(
@@ -1462,7 +1425,7 @@ mod tests {
 
         super::write_sidecar_cache(&engine_dir, &params).expect("sidecar cache should be written");
 
-        let cached = super::try_read_cached_params(&engine_dir, false)
+        let cached = super::try_read_cached_params(&engine_dir)
             .expect("cached sidecar should be used in start path");
 
         let frequency = cached

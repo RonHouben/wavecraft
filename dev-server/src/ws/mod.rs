@@ -93,8 +93,6 @@ pub struct WsServer<H: ParameterHost + 'static> {
     handler: Arc<IpcHandler<H>>,
     /// Shutdown signal
     shutdown_tx: broadcast::Sender<()>,
-    /// Enable verbose logging (all JSON-RPC messages)
-    verbose: bool,
     /// Shared server state
     state: Arc<ServerState>,
 }
@@ -128,13 +126,12 @@ fn build_set_parameter_notification(
 
 impl<H: ParameterHost + 'static> WsServer<H> {
     /// Create a new WebSocket server
-    pub fn new(port: u16, handler: Arc<IpcHandler<H>>, verbose: bool) -> Self {
+    pub fn new(port: u16, handler: Arc<IpcHandler<H>>) -> Self {
         let (shutdown_tx, _) = broadcast::channel(1);
         Self {
             port,
             handler,
             shutdown_tx,
-            verbose,
             state: Arc::new(ServerState::new()),
         }
     }
@@ -179,7 +176,6 @@ impl<H: ParameterHost + 'static> WsServer<H> {
 
         let handler = Arc::clone(&self.handler);
         let mut shutdown_rx = self.shutdown_tx.subscribe();
-        let verbose = self.verbose;
         let state = Arc::clone(&self.state);
 
         tokio::spawn(async move {
@@ -191,7 +187,7 @@ impl<H: ParameterHost + 'static> WsServer<H> {
                                 info!("Client connected: {}", addr);
                                 let handler = Arc::clone(&handler);
                                 let state = Arc::clone(&state);
-                                tokio::spawn(handle_connection(handler, stream, addr, verbose, state));
+                                tokio::spawn(handle_connection(handler, stream, addr, state));
                             }
                             Err(e) => {
                                 error!("Accept error: {}", e);
@@ -223,7 +219,6 @@ async fn handle_connection<H: ParameterHost>(
     handler: Arc<IpcHandler<H>>,
     stream: TcpStream,
     addr: SocketAddr,
-    verbose: bool,
     state: Arc<ServerState>,
 ) {
     let ws_stream = match accept_async(stream).await {
@@ -260,10 +255,7 @@ async fn handle_connection<H: ParameterHost>(
     while let Some(msg) = read.next().await {
         match msg {
             Ok(Message::Text(json)) => {
-                // Log incoming message (verbose only)
-                if verbose {
-                    debug!("Received from {}: {}", addr, json);
-                }
+                debug!("Received from {}: {}", addr, json);
 
                 // Try to parse as IPC request for structured routing
                 let parsed_req = serde_json::from_str::<wavecraft_protocol::IpcRequest>(&json);
@@ -338,10 +330,8 @@ async fn handle_connection<H: ParameterHost>(
                     .await;
                 }
 
-                // Log outgoing response (verbose only)
-                if verbose {
-                    debug!("Sending to {}: {}", addr, response);
-                }
+                // Log outgoing response
+                debug!("Sending to {}: {}", addr, response);
 
                 // Send response
                 if let Err(e) = tx.try_send(response) {
@@ -409,7 +399,7 @@ mod tests {
     async fn test_server_creation() {
         let host = test_host();
         let handler = Arc::new(IpcHandler::new(host));
-        let server = WsServer::new(9001, handler, false);
+        let server = WsServer::new(9001, handler);
 
         // Just verify we can create a server without panicking
         assert_eq!(server.port, 9001);
