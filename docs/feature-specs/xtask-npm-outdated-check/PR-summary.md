@@ -5,12 +5,14 @@ Adds a new `xtask` command to check for outdated npm packages across the Wavecra
 ## Changes
 
 ### Build / Tooling
+
 - `engine/xtask/src/commands/npm_updates.rs` — Adds the new command implementation for npm outdated checks.
 - `engine/xtask/src/commands/mod.rs` — Registers the new command module.
 - `engine/xtask/src/main.rs` — Wires CLI argument parsing and dispatch for the new command.
 - `engine/xtask/src/tests.rs` — Adds/updates tests covering command behavior.
 
 ### Documentation / Repository housekeeping
+
 - `docs/feature-specs/_archive/oscilloscope-v1/PR-summary.md` — Path move in branch history (no content changes).
 
 ## Commits
@@ -22,6 +24,7 @@ Adds a new `xtask` command to check for outdated npm packages across the Wavecra
 Previously reported validation from the implementation phase was used for this PR body completion step.
 
 Additional note for this change set:
+
 - This final step only adds PR documentation (`PR-summary.md`) and does not modify runtime code.
 
 ## Checklist
