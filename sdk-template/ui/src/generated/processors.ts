@@ -7,8 +7,8 @@
 
 import { registerAvailableProcessors } from '@wavecraft/core';
 
-declare module '@wavecraft/core' {
-  interface ProcessorIdMap {
+declare global {
+  interface WavecraftProcessorIdMap {
     __wavecraft_internal_processors_augmented__: true;
     example_processor: true;
     oscillator: true;

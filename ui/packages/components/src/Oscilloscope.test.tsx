@@ -45,7 +45,7 @@ describe('Oscilloscope', () => {
   it('defaults to overlay channel view', () => {
     render(<Oscilloscope />);
     expect(screen.getByTestId('osc-channel-view')).toHaveValue('overlay');
-    expect(mockUseHasProcessor).toHaveBeenCalledWith('oscillator');
+    expect(mockUseHasProcessor).toHaveBeenCalledWith('oscilloscope_tap');
   });
 
   it('supports channel view switching', () => {

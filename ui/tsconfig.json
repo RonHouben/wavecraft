@@ -39,6 +39,7 @@
     "packages",
     "test",
     "vite.config.ts",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    "../sdk-template/ui/src/generated/processors.ts"
   ]
 }

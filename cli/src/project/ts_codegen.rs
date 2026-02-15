@@ -124,10 +124,11 @@ pub fn write_parameter_types(ui_dir: &Path, params: &[ParameterInfo]) -> Result<
 ///
 /// Output path: `{ui_dir}/src/generated/processors.ts`
 ///
-/// The file augments `@wavecraft/core`'s `ProcessorIdMap` interface so
-/// `ProcessorId` resolves to a typed union of processor IDs in the user's
-/// project TypeScript compilation. It also registers discovered processors at
-/// runtime for `useHasProcessor` and `useAvailableProcessors` hooks.
+/// The file augments global `WavecraftProcessorIdMap` so `ProcessorId`
+/// resolves to a typed union of processor IDs in both internal SDK source
+/// modules and user project TypeScript compilation. It also registers
+/// discovered processors at runtime for `useHasProcessor` and
+/// `useAvailableProcessors` hooks.
 pub fn write_processor_types(ui_dir: &Path, processors: &[ProcessorInfo]) -> Result<()> {
     let generated_dir = ui_dir.join("src").join("generated");
     fs::create_dir_all(&generated_dir).with_context(|| {
@@ -147,8 +148,8 @@ pub fn write_processor_types(ui_dir: &Path, processors: &[ProcessorInfo]) -> Res
 
     content.push_str("import { registerAvailableProcessors } from '@wavecraft/core';\n\n");
 
-    content.push_str("declare module '@wavecraft/core' {\n");
-    content.push_str("  interface ProcessorIdMap {\n");
+    content.push_str("declare global {\n");
+    content.push_str("  interface WavecraftProcessorIdMap {\n");
     content.push_str("    ");
     content.push_str(PROCESSOR_ID_MAP_AUGMENTED_MARKER);
     content.push_str(": true;\n");

@@ -7,11 +7,15 @@
 /**
  * Augmentable processor ID registry.
  *
- * The generated `ui/src/generated/processors.ts` file augments this interface
- * with the plugin's concrete processor IDs.
+ * The generated `ui/src/generated/processors.ts` file augments the global
+ * `WavecraftProcessorIdMap` interface with the plugin's concrete processor IDs.
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ProcessorIdMap {}
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  interface WavecraftProcessorIdMap {}
+}
+
+export interface ProcessorIdMap extends WavecraftProcessorIdMap {}
 
 /**
  * Internal marker key added by generated module augmentation.
