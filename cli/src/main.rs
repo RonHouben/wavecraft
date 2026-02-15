@@ -150,7 +150,6 @@ fn main() -> Result<()> {
                 ui_port,
                 install,
                 no_install,
-                verbose: true,
             };
             cmd.execute()?;
         }
