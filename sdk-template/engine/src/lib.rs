@@ -28,7 +28,7 @@ wavecraft_plugin! {
         Oscillator,
         ExampleProcessor,
         OscilloscopeTap,
-        InputGain,
-        OutputGain
+        // InputGain,
+        // OutputGain
     ],
 }
