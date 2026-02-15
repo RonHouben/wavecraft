@@ -30,9 +30,11 @@ impl Processor for ExampleProcessor {
         _transport: &Transport,
         _params: &Self::Params,
     ) {
+        // Your implementation here.
+        // This example simply applies a fixed 2x gain to all samples.
         for channel in buffer.iter_mut() {
-            for sample in channel.iter_mut() {
-                *sample *= 2.0;
+            for _sample in channel.iter_mut() {
+                // *sample *= 2.0;
             }
         }
     }
