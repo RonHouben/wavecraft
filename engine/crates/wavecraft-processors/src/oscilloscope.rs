@@ -161,11 +161,19 @@ impl OscilloscopeTap {
             self.aligned_l.copy_from_slice(&self.frame_l);
             self.aligned_r.copy_from_slice(&self.frame_r);
         } else {
-            for index in 0..OSCILLOSCOPE_FRAME_POINTS {
-                let source = (trigger_start + index) % OSCILLOSCOPE_FRAME_POINTS;
-                self.aligned_l[index] = self.frame_l[source];
-                self.aligned_r[index] = self.frame_r[source];
-            }
+            // Keep the aligned frame contiguous in time from the trigger point.
+            // Do not wrap to the start of the source frame, because that causes
+            // visible right-edge overlap/wiggle artifacts in the UI.
+            let available = OSCILLOSCOPE_FRAME_POINTS - trigger_start;
+            self.aligned_l[..available].copy_from_slice(&self.frame_l[trigger_start..]);
+            self.aligned_r[..available].copy_from_slice(&self.frame_r[trigger_start..]);
+
+            // Pad the remainder with the last valid sample so the tail remains
+            // visually stable when there are not enough post-trigger samples.
+            let tail_l = self.frame_l[OSCILLOSCOPE_FRAME_POINTS - 1];
+            let tail_r = self.frame_r[OSCILLOSCOPE_FRAME_POINTS - 1];
+            self.aligned_l[available..].fill(tail_l);
+            self.aligned_r[available..].fill(tail_r);
         }
 
         let frame = OscilloscopeFrameSnapshot {
@@ -277,6 +285,42 @@ mod tests {
 
         assert!(first <= 0.05, "expected start near zero, got {first}");
         assert!(second >= first, "expected rising edge at frame start");
+    }
+
+    #[test]
+    fn trigger_alignment_does_not_wrap_frame_tail() {
+        let (producer, mut consumer) = create_oscilloscope_channel(8);
+        let mut tap = OscilloscopeTap::with_output(producer);
+
+        let mut left = [0.5_f32; OSCILLOSCOPE_FRAME_POINTS];
+        let mut right = [0.25_f32; OSCILLOSCOPE_FRAME_POINTS];
+
+        // Force the first rising crossing very near the end of the frame.
+        // This ensures a short post-trigger segment where old behavior would
+        // wrap and pull samples from the start of the frame.
+        left[0] = 0.75;
+        left[1] = 0.9;
+        right[0] = -0.25;
+        right[1] = -0.5;
+        left[1000] = -0.1;
+        left[1001] = 0.1;
+        right[1000] = -0.3;
+        right[1001] = -0.2;
+
+        tap.capture_stereo(&left, &right);
+
+        let frame = consumer.read_latest().expect("frame should exist");
+
+        // Aligned frame starts at trigger sample.
+        assert!((frame.points_l[0] - left[1001]).abs() < f32::EPSILON);
+
+        // Tail is padded from the last source sample, not wrapped to frame start.
+        let last_source_l = left[OSCILLOSCOPE_FRAME_POINTS - 1];
+        let last_source_r = right[OSCILLOSCOPE_FRAME_POINTS - 1];
+        assert!((frame.points_l[50] - last_source_l).abs() < f32::EPSILON);
+        assert!((frame.points_r[50] - last_source_r).abs() < f32::EPSILON);
+        assert!((frame.points_l[50] - left[0]).abs() > f32::EPSILON);
+        assert!((frame.points_r[50] - right[0]).abs() > f32::EPSILON);
     }
 
     #[test]

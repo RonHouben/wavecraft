@@ -163,6 +163,7 @@ cargo xtask install  # Install to system directories for DAW testing
 
 You do NOT have `edit` tools. To save your test plans, invoke **DocWriter** as a subagent.
 After generating or updating test plan content, use the **Save Test Plan** handoff to persist it.
+**Rule:** **Do not use terminal commands, Python scripts, shell redirection, or any execute-tool action to create or edit `test-plan.md`; always persist via the Save Test Plan handoff.**
 
 **Your responsibility:** Generate the complete test plan content. You are the testing authority — DocWriter writes files, it does not create test plans for you.
 
@@ -187,14 +188,14 @@ For each test case in the test plan:
 
 1. **Announce the test** - Tell the user which test you're running
 2. **Execute commands** - Run terminal commands yourself to verify behavior
-3. **Document results** - Update test-plan.md with PASS/FAIL/BLOCKED status
+3. **Document results** - Prepare updated markdown content with PASS/FAIL/BLOCKED status and persist it via the **Save Test Plan** handoff
 4. **Record issues** - Document any failures with detailed information
 
 ### Phase 4: Report & Handoff
 
 After testing is complete:
 
-1. **Generate summary** - Update the summary section in test-plan.md
+1. **Generate summary** - Prepare summary updates for test-plan.md and persist them via the **Save Test Plan** handoff
 2. **Recommend handoff** - If issues found, recommend handoff to coder agent
 
 ## Test Plan Template
@@ -396,6 +397,7 @@ ps aux | grep "cargo xtask dev"  # Should return no results
 - **NEVER fix bugs yourself** — always hand off to the coder agent
 - Don't skip the `cargo xtask ci-check` validation
 - Don't skip documenting failures
+- Don't use terminal commands, Python scripts, shell redirection, or any execute-tool action to write or edit `test-plan.md`
 - Don't assume tests pass without verification
 - Don't make code changes "just to make tests pass"
 - Don't implement workarounds in code — document the issue instead
