@@ -362,38 +362,22 @@ fn refresh_param_codegen_caches_if_needed(
         .join("src")
         .join("generated")
         .join("parameters.ts");
-    if generated_params.is_file() {
-        if verbose {
-            print_status(&format!(
-                "Preflight: removing stale generated parameter types {}",
-                generated_params.display()
-            ));
-        }
-        fs::remove_file(&generated_params).with_context(|| {
-            format!(
-                "Failed to remove stale generated parameter types {}",
-                generated_params.display()
-            )
-        })?;
+    if verbose && generated_params.is_file() {
+        print_info(&format!(
+            "Preflight: keeping generated parameter types {} (will regenerate on start/reload)",
+            generated_params.display()
+        ));
     }
 
     let generated_processors = sdk_ui_dir
         .join("src")
         .join("generated")
         .join("processors.ts");
-    if generated_processors.is_file() {
-        if verbose {
-            print_status(&format!(
-                "Preflight: removing stale generated processor types {}",
-                generated_processors.display()
-            ));
-        }
-        fs::remove_file(&generated_processors).with_context(|| {
-            format!(
-                "Failed to remove stale generated processor types {}",
-                generated_processors.display()
-            )
-        })?;
+    if verbose && generated_processors.is_file() {
+        print_info(&format!(
+            "Preflight: keeping generated processor types {} (will regenerate on start/reload)",
+            generated_processors.display()
+        ));
     }
 
     Ok(PreflightResult::refreshed(format!(
