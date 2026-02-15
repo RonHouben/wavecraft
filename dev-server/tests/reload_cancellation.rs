@@ -27,7 +27,7 @@ async fn test_param_extraction_cancelled_on_new_change() {
 
     let host = Arc::new(DevServerHost::new(vec![]));
     let handler = Arc::new(wavecraft_bridge::handler::IpcHandler::new(host.clone()));
-    let ws_server = Arc::new(WsServer::new(8080, handler, false));
+    let ws_server = Arc::new(WsServer::new(8080, handler));
     let guard = Arc::new(BuildGuard::new());
     let (_shutdown_tx, shutdown_rx) = watch::channel(false);
 
@@ -110,7 +110,7 @@ async fn test_param_extraction_completes_normally() {
 
     let host = Arc::new(DevServerHost::new(vec![]));
     let handler = Arc::new(wavecraft_bridge::handler::IpcHandler::new(host.clone()));
-    let ws_server = Arc::new(WsServer::new(8080, handler, false));
+    let ws_server = Arc::new(WsServer::new(8080, handler));
     let guard = Arc::new(BuildGuard::new());
     let (_shutdown_tx, shutdown_rx) = watch::channel(false);
 

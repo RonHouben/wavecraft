@@ -14,7 +14,7 @@ fn test_version_flag_long_form() {
 #[test]
 fn test_version_flag_short_form() {
     let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wavecraft"));
-    cmd.arg("-V");
+    cmd.arg("-v");
 
     let output = cmd.output().expect("Failed to execute wavecraft binary");
     assert!(output.status.success());
@@ -59,6 +59,21 @@ fn test_help_shows_version_flag() {
     let output = cmd.output().expect("Failed to execute wavecraft binary");
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("-V, --version"));
+    assert!(stdout.contains("-v, --version"));
     assert!(stdout.contains("Print version"));
+}
+
+#[test]
+fn test_start_no_longer_accepts_verbose_flag() {
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wavecraft"));
+    cmd.args(["start", "--verbose", "--help"]);
+
+    let output = cmd.output().expect("Failed to execute wavecraft binary");
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("unexpected argument '--verbose'")
+            || stderr.contains("unexpected argument '--verbose' found"),
+        "Expected clap to reject removed --verbose flag, got: {stderr}"
+    );
 }
