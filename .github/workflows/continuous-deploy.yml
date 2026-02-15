@@ -1285,11 +1285,48 @@ jobs:
           NPM_CONFIG_PROVENANCE: true
         run: |
           TARGET="${{ needs.publish-npm-cohort-prepare.outputs.version }}"
+          PACKAGE="@wavecraft/core"
+
           if [ "${{ needs.publish-npm-cohort-prepare.outputs.core-already-published }}" = "true" ]; then
-            echo "@wavecraft/core@$TARGET already published — skipping"
+            echo "✅ $PACKAGE@$TARGET already published (preflight) — skipping"
             exit 0
           fi
-          npm publish --access public --provenance
+
+          # TOCTOU guard: recheck immediately before publish attempt.
+          if npm view "$PACKAGE@$TARGET" version >/dev/null 2>&1; then
+            echo "✅ $PACKAGE@$TARGET already published (just-before-publish recheck) — skipping"
+            exit 0
+          fi
+
+          PUBLISH_LOG=$(mktemp)
+          if npm publish --access public --provenance >"$PUBLISH_LOG" 2>&1; then
+            cat "$PUBLISH_LOG"
+            echo "✅ Published $PACKAGE@$TARGET"
+            exit 0
+          fi
+
+          cat "$PUBLISH_LOG"
+
+          # If publish lost a race on duplicate-version, confirm registry state and treat as success.
+          if grep -qiE 'EPUBLISHCONFLICT|cannot publish over the previously published versions|cannot publish over existing version|You cannot publish over previously published version' "$PUBLISH_LOG"; then
+            echo "⚠️ Duplicate-version publish error detected for $PACKAGE@$TARGET. Confirming npm registry state..."
+            CONFIRM_DELAYS=(2 4 8)
+            for i in "${!CONFIRM_DELAYS[@]}"; do
+              ATTEMPT=$((i + 1))
+              DELAY="${CONFIRM_DELAYS[$i]}"
+              echo "⏳ Confirm attempt $ATTEMPT/${#CONFIRM_DELAYS[@]} for $PACKAGE@$TARGET after ${DELAY}s backoff..."
+              sleep "$DELAY"
+              if npm view "$PACKAGE@$TARGET" version >/dev/null 2>&1; then
+                echo "✅ $PACKAGE@$TARGET is now present on npm (confirm attempt $ATTEMPT) — treating duplicate publish race as success"
+                exit 0
+              fi
+            done
+            echo "❌ Duplicate-version signature detected, but $PACKAGE@$TARGET is still missing from npm after ${#CONFIRM_DELAYS[@]} confirmation attempts (2s/4s/8s backoff)"
+            exit 1
+          fi
+
+          echo "❌ npm publish failed for $PACKAGE@$TARGET (non-duplicate error)"
+          exit 1
 
       - name: Create and push git tag (if missing)
         run: |
@@ -1391,11 +1428,48 @@ jobs:
           NPM_CONFIG_PROVENANCE: true
         run: |
           TARGET="${{ needs.publish-npm-cohort-prepare.outputs.version }}"
+          PACKAGE="@wavecraft/components"
+
           if [ "${{ needs.publish-npm-cohort-prepare.outputs.components-already-published }}" = "true" ]; then
-            echo "@wavecraft/components@$TARGET already published — skipping"
+            echo "✅ $PACKAGE@$TARGET already published (preflight) — skipping"
             exit 0
           fi
-          npm publish --access public --provenance
+
+          # TOCTOU guard: recheck immediately before publish attempt.
+          if npm view "$PACKAGE@$TARGET" version >/dev/null 2>&1; then
+            echo "✅ $PACKAGE@$TARGET already published (just-before-publish recheck) — skipping"
+            exit 0
+          fi
+
+          PUBLISH_LOG=$(mktemp)
+          if npm publish --access public --provenance >"$PUBLISH_LOG" 2>&1; then
+            cat "$PUBLISH_LOG"
+            echo "✅ Published $PACKAGE@$TARGET"
+            exit 0
+          fi
+
+          cat "$PUBLISH_LOG"
+
+          # If publish lost a race on duplicate-version, confirm registry state and treat as success.
+          if grep -qiE 'EPUBLISHCONFLICT|cannot publish over the previously published versions|cannot publish over existing version|You cannot publish over previously published version' "$PUBLISH_LOG"; then
+            echo "⚠️ Duplicate-version publish error detected for $PACKAGE@$TARGET. Confirming npm registry state..."
+            CONFIRM_DELAYS=(2 4 8)
+            for i in "${!CONFIRM_DELAYS[@]}"; do
+              ATTEMPT=$((i + 1))
+              DELAY="${CONFIRM_DELAYS[$i]}"
+              echo "⏳ Confirm attempt $ATTEMPT/${#CONFIRM_DELAYS[@]} for $PACKAGE@$TARGET after ${DELAY}s backoff..."
+              sleep "$DELAY"
+              if npm view "$PACKAGE@$TARGET" version >/dev/null 2>&1; then
+                echo "✅ $PACKAGE@$TARGET is now present on npm (confirm attempt $ATTEMPT) — treating duplicate publish race as success"
+                exit 0
+              fi
+            done
+            echo "❌ Duplicate-version signature detected, but $PACKAGE@$TARGET is still missing from npm after ${#CONFIRM_DELAYS[@]} confirmation attempts (2s/4s/8s backoff)"
+            exit 1
+          fi
+
+          echo "❌ npm publish failed for $PACKAGE@$TARGET (non-duplicate error)"
+          exit 1
 
       - name: Post-publish verify cohort alignment
         run: |
