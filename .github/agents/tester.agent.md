@@ -28,6 +28,10 @@ handoffs:
     agent: qa
     prompt: Please review the implementation for quality assurance.
     send: true
+  - label: Save Test Plan
+    agent: docwriter
+    prompt: Please write or update docs/feature-specs/{feature}/test-plan.md with the test plan content prepared above.
+    send: false
 ---
 
 # Manual Testing Specialist Agent
@@ -158,6 +162,7 @@ cargo xtask install  # Install to system directories for DAW testing
 ## Documentation Delegation
 
 You do NOT have `edit` tools. To save your test plans, invoke **DocWriter** as a subagent.
+After generating or updating test plan content, use the **Save Test Plan** handoff to persist it.
 
 **Your responsibility:** Generate the complete test plan content. You are the testing authority — DocWriter writes files, it does not create test plans for you.
 

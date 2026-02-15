@@ -2,6 +2,7 @@ use wavecraft::prelude::wavecraft_plugin;
 use wavecraft::prelude::wavecraft_processor;
 use wavecraft::prelude::SignalChain;
 use wavecraft::Oscillator;
+use wavecraft::OscilloscopeTap;
 
 // Custom processors live in the `processors/` folder.
 // See `processors/example_processor.rs` for a minimal custom processor.
@@ -23,5 +24,5 @@ wavecraft_processor!(OutputGain => Gain);
 // `SignalChain![]` processes audio through each processor in order.
 wavecraft_plugin! {
     name: "My First Plugin",
-    signal: SignalChain![Oscillator, ExampleProcessor, InputGain, OutputGain],
+    signal: SignalChain![Oscillator, OscilloscopeTap, ExampleProcessor, InputGain, OutputGain],
 }

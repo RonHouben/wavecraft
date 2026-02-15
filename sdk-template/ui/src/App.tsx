@@ -25,16 +25,14 @@ export function App(): JSX.Element {
 
       {/* Main Content */}
       <div className="flex flex-1 flex-col gap-6">
-        <OscillatorControl />
+        <div className="grid grid-cols-2 gap-4">
+          <OscillatorControl />
+          <Oscilloscope />
+        </div>
         {/* Metering Section */}
         <div className="rounded-lg border border-plugin-border bg-plugin-surface p-4">
           <h2 className="mb-3 text-base font-semibold text-gray-200">Output Metering</h2>
           <Meter />
-        </div>
-
-        <div className="rounded-lg border border-plugin-border bg-plugin-surface p-4">
-          <h2 className="mb-3 text-base font-semibold text-gray-200">Oscilloscope</h2>
-          <Oscilloscope />
         </div>
 
         {/* Info Section */}
