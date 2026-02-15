@@ -1,7 +1,5 @@
 import {
   useAllParameters,
-  useMeterFrame,
-  useParameter,
   useParameterGroups,
   useWindowResizeSync,
 } from '@wavecraft/core';
@@ -16,19 +14,16 @@ import {
   OscillatorControl,
 } from '@wavecraft/components';
 
-const DEDICATED_PARAMETER_IDS = new Set(['oscillator_enabled']);
+const DEDICATED_PARAMETER_IDS = new Set([
+  'oscillator_enabled',
+  'oscillator_frequency',
+  'oscillator_level',
+]);
 
 export function App(): JSX.Element {
   const { params, isLoading } = useAllParameters();
   const genericParams = params.filter((param) => !DEDICATED_PARAMETER_IDS.has(param.id));
   const groups = useParameterGroups(genericParams);
-  const meterFrame = useMeterFrame(100);
-  const { param: oscillatorEnabled, setValue: setOscillatorEnabled } =
-    useParameter('oscillator_enabled');
-
-  const oscillatorPeak = Math.max(meterFrame?.peak_l ?? 0, meterFrame?.peak_r ?? 0);
-  const isOscillatorProducing = oscillatorPeak > 1e-4;
-  const isOscillatorOn = (oscillatorEnabled?.value ?? 1) >= 0.5;
 
   useWindowResizeSync();
 
@@ -49,13 +44,7 @@ export function App(): JSX.Element {
         <div className="rounded-lg border border-plugin-border bg-plugin-surface p-4">
           <h2 className="mb-3 text-base font-semibold text-gray-200">Parameters</h2>
 
-          <OscillatorControl
-            isProducing={isOscillatorProducing}
-            isOn={isOscillatorOn}
-            onToggle={() => {
-              void setOscillatorEnabled(isOscillatorOn ? 0 : 1);
-            }}
-          />
+          <OscillatorControl />
 
           {isLoading ? (
             <p className="italic text-gray-500">Loading parameters...</p>

@@ -1,20 +1,42 @@
 /**
- * OscillatorControl - Displays oscillator signal status and a dedicated on/off toggle.
+ * OscillatorControl - Displays oscillator signal status and oscillator-specific controls.
  */
 
 import React from 'react';
+import { logger, useMeterFrame, useParameter } from '@wavecraft/core';
+import { ParameterSlider } from './ParameterSlider';
 
-interface OscillatorControlProps {
-  readonly isProducing: boolean;
-  readonly isOn: boolean;
-  readonly onToggle: () => void;
-}
+const SIGNAL_THRESHOLD = 1e-4;
 
-export function OscillatorControl({
-  isProducing,
-  isOn,
-  onToggle,
-}: OscillatorControlProps): React.JSX.Element {
+export function OscillatorControl(): React.JSX.Element {
+  const meterFrame = useMeterFrame(100);
+  const {
+    param: oscillatorEnabled,
+    setValue: setOscillatorEnabled,
+    isLoading: isOscillatorLoading,
+    error: oscillatorError,
+  } = useParameter('oscillator_enabled');
+
+  const oscillatorPeak = Math.max(meterFrame?.peak_l ?? 0, meterFrame?.peak_r ?? 0);
+  const isProducing = oscillatorPeak > SIGNAL_THRESHOLD;
+  const isOn = (oscillatorEnabled?.value ?? 0) >= 0.5;
+
+  const handleToggle = (): void => {
+    if (!oscillatorEnabled) {
+      return;
+    }
+
+    const newValue = isOn ? 0 : 1;
+    setOscillatorEnabled(newValue).catch((error) => {
+      logger.error('Failed to toggle oscillator output', {
+        error,
+        parameterId: 'oscillator_enabled',
+      });
+    });
+  };
+
+  const toggleDisabled = isOscillatorLoading || !oscillatorEnabled || Boolean(oscillatorError);
+
   return (
     <div
       className="mb-3 rounded-md border border-plugin-border bg-plugin-dark p-3"
@@ -38,16 +60,26 @@ export function OscillatorControl({
           className={`relative h-[26px] w-[50px] cursor-pointer rounded-full border-none outline-none transition-colors duration-200 ${
             isOn ? 'bg-accent hover:bg-accent-light' : 'bg-gray-600 hover:bg-gray-500'
           }`}
-          onClick={onToggle}
+          onClick={handleToggle}
           aria-label="Toggle oscillator output"
           aria-pressed={isOn}
+          disabled={toggleDisabled}
         >
           <span
             className={`absolute top-[3px] h-5 w-5 rounded-full bg-white transition-[left] duration-200 ${
               isOn ? 'left-[27px]' : 'left-[3px]'
             }`}
-          ></span>
+          />
         </button>
+      </div>
+
+      {oscillatorError ? (
+        <p className="mt-3 text-sm text-red-400">Error: {oscillatorError.message}</p>
+      ) : null}
+
+      <div className="mt-3">
+        <ParameterSlider id="oscillator_frequency" />
+        <ParameterSlider id="oscillator_level" />
       </div>
     </div>
   );

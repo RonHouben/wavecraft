@@ -1,10 +1,37 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OscillatorControl } from './OscillatorControl';
 
+const mockUseMeterFrame = vi.hoisted(() => vi.fn());
+const mockUseParameter = vi.hoisted(() => vi.fn());
+const mockSetOscillatorEnabled = vi.hoisted(() => vi.fn());
+
+vi.mock('@wavecraft/core', () => ({
+  logger: {
+    error: vi.fn(),
+  },
+  useMeterFrame: mockUseMeterFrame,
+  useParameter: mockUseParameter,
+}));
+
+vi.mock('./ParameterSlider', () => ({
+  ParameterSlider: ({ id }: { id: string }) => <div data-testid={`slider-${id}`} />,
+}));
+
 describe('OscillatorControl', () => {
-  it('shows producing status and on state when active', () => {
-    render(<OscillatorControl isProducing={true} isOn={true} onToggle={vi.fn()} />);
+  beforeEach(() => {
+    mockUseMeterFrame.mockReturnValue({ peak_l: 0.2, peak_r: 0.1 });
+    mockSetOscillatorEnabled.mockReset();
+    mockUseParameter.mockReturnValue({
+      param: { id: 'oscillator_enabled', name: 'Oscillator Enabled', value: 1 },
+      setValue: mockSetOscillatorEnabled,
+      isLoading: false,
+      error: undefined,
+    });
+  });
+
+  it('reflects oscillator enabled value changes in visual state', () => {
+    const { rerender } = render(<OscillatorControl />);
 
     expect(screen.getByText('Oscillator signal')).toBeInTheDocument();
     expect(screen.getByText('Producing')).toBeInTheDocument();
@@ -13,12 +40,16 @@ describe('OscillatorControl', () => {
       'aria-pressed',
       'true'
     );
-  });
 
-  it('shows no signal status and off state when inactive', () => {
-    render(<OscillatorControl isProducing={false} isOn={false} onToggle={vi.fn()} />);
+    mockUseParameter.mockReturnValue({
+      param: { id: 'oscillator_enabled', name: 'Oscillator Enabled', value: 0 },
+      setValue: mockSetOscillatorEnabled,
+      isLoading: false,
+      error: undefined,
+    });
 
-    expect(screen.getByText('No signal')).toBeInTheDocument();
+    rerender(<OscillatorControl />);
+
     expect(screen.getByText('Oscillator output: Off')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Toggle oscillator output' })).toHaveAttribute(
       'aria-pressed',
@@ -26,12 +57,77 @@ describe('OscillatorControl', () => {
     );
   });
 
-  it('invokes toggle handler when pressed', () => {
-    const onToggle = vi.fn();
-    render(<OscillatorControl isProducing={true} isOn={true} onToggle={onToggle} />);
+  it('can toggle oscillator off and back on', () => {
+    let enabledValue = 1;
+
+    mockUseParameter.mockImplementation(() => ({
+      param: { id: 'oscillator_enabled', name: 'Oscillator Enabled', value: enabledValue },
+      setValue: mockSetOscillatorEnabled,
+      isLoading: false,
+      error: undefined,
+    }));
+
+    mockSetOscillatorEnabled.mockImplementation(async (nextValue: number) => {
+      enabledValue = nextValue;
+    });
+
+    const { rerender } = render(<OscillatorControl />);
+    const toggle = screen.getByRole('button', { name: 'Toggle oscillator output' });
+
+    fireEvent.click(toggle);
+
+    expect(mockSetOscillatorEnabled).toHaveBeenCalledWith(0);
+
+    rerender(<OscillatorControl />);
+    expect(screen.getByText('Oscillator output: Off')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Toggle oscillator output' }));
 
-    expect(onToggle).toHaveBeenCalledTimes(1);
+    expect(mockSetOscillatorEnabled).toHaveBeenCalledWith(1);
+
+    rerender(<OscillatorControl />);
+    expect(screen.getByText('Oscillator output: On')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Toggle oscillator output' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+  });
+
+  it('renders oscillator frequency and level controls inside oscillator component', () => {
+    render(<OscillatorControl />);
+
+    expect(screen.getByTestId('oscillator-control')).toBeInTheDocument();
+    expect(screen.getByTestId('slider-oscillator_frequency')).toBeInTheDocument();
+    expect(screen.getByTestId('slider-oscillator_level')).toBeInTheDocument();
+  });
+
+  it('clears transient connection error UI after reconnect-driven hook recovery', () => {
+    mockUseParameter
+      .mockReturnValueOnce({
+        param: null,
+        setValue: mockSetOscillatorEnabled,
+        isLoading: true,
+        error: null,
+      })
+      .mockReturnValueOnce({
+        param: { id: 'oscillator_enabled', name: 'Oscillator Enabled', value: 1 },
+        setValue: mockSetOscillatorEnabled,
+        isLoading: false,
+        error: null,
+      });
+
+    const { rerender } = render(<OscillatorControl />);
+
+    expect(screen.queryByText(/Error:/)).not.toBeInTheDocument();
+    expect(screen.getByText('Oscillator output: Off')).toBeInTheDocument();
+
+    rerender(<OscillatorControl />);
+
+    expect(screen.queryByText(/Error:/)).not.toBeInTheDocument();
+    expect(screen.getByText('Oscillator output: On')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Toggle oscillator output' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
   });
 });

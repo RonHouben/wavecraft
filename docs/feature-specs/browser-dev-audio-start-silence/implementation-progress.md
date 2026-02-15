@@ -4,6 +4,19 @@
 
 In progress.
 
+### 2026-02-15 — Focused fix: runtime oscillator frequency/level bridge in dev audio callback
+
+- Root cause identified: dev-mode FFI processor path still processes with `from_param_defaults()` each block, so runtime slider updates for `oscillator_frequency`/`oscillator_level` were never injected into DSP state.
+- Implemented a focused, robust bridge in `dev-server/src/audio/server.rs`:
+  - kept existing `oscillator_enabled` on/off behavior intact.
+  - added runtime application of `oscillator_frequency` and `oscillator_level` in the audio callback via lock-free `AtomicParameterBridge` reads.
+  - maintains oscillator phase continuity across callbacks for stable tone generation.
+- Added regression tests covering:
+  - generated output from runtime frequency+level params,
+  - level=0 silence behavior,
+  - waveform changes when frequency changes.
+- Follow-up (documented): replace this targeted bridge with full generic parameter injection into the FFI process path when the vtable contract is extended beyond defaults-only params.
+
 ### 2026-02-15 — Regression fix: stale parameter ID cache dropped `oscillator_enabled`
 
 - Fixed stale parameter sidecar cache validation in `wavecraft start`:

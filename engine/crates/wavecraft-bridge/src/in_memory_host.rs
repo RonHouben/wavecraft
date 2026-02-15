@@ -115,6 +115,8 @@ impl ParameterHost for InMemoryParameterHost {
             param_type: param.param_type,
             value: self.current_value(&param.id, param.default),
             default: param.default,
+            min: param.min,
+            max: param.max,
             unit: param.unit.clone(),
             group: param.group.clone(),
         })
@@ -131,7 +133,14 @@ impl ParameterHost for InMemoryParameterHost {
             return Err(BridgeError::ParameterNotFound(id.to_string()));
         }
 
-        if !(0.0..=1.0).contains(&value) {
+        let Some(param) = parameters
+            .as_ref()
+            .and_then(|p| p.iter().find(|param| param.id == id))
+        else {
+            return Err(BridgeError::ParameterNotFound(id.to_string()));
+        };
+
+        if !(param.min..=param.max).contains(&value) {
             return Err(BridgeError::ParameterOutOfRange {
                 id: id.to_string(),
                 value,
@@ -159,6 +168,8 @@ impl ParameterHost for InMemoryParameterHost {
                 param_type: param.param_type,
                 value: self.current_value(&param.id, param.default),
                 default: param.default,
+                min: param.min,
+                max: param.max,
                 unit: param.unit.clone(),
                 group: param.group.clone(),
             })
@@ -203,6 +214,8 @@ mod tests {
                 param_type: ParameterType::Float,
                 value: 0.5,
                 default: 0.5,
+                min: 0.0,
+                max: 1.0,
                 unit: Some("dB".to_string()),
                 group: Some("Input".to_string()),
             },
@@ -212,6 +225,8 @@ mod tests {
                 param_type: ParameterType::Float,
                 value: 1.0,
                 default: 1.0,
+                min: 0.0,
+                max: 1.0,
                 unit: Some("%".to_string()),
                 group: None,
             },
@@ -292,6 +307,8 @@ mod tests {
                 param_type: ParameterType::Float,
                 value: 0.5,
                 default: 0.5,
+                min: 0.0,
+                max: 1.0,
                 unit: Some("dB".to_string()),
                 group: Some("Input".to_string()),
             },
@@ -301,6 +318,8 @@ mod tests {
                 param_type: ParameterType::Float,
                 value: 1.0,
                 default: 1.0,
+                min: 0.0,
+                max: 1.0,
                 unit: Some("%".to_string()),
                 group: None,
             },
@@ -310,6 +329,8 @@ mod tests {
                 param_type: ParameterType::Float,
                 value: 440.0,
                 default: 440.0,
+                min: 20.0,
+                max: 5_000.0,
                 unit: Some("Hz".to_string()),
                 group: None,
             },
@@ -341,6 +362,8 @@ mod tests {
             param_type: ParameterType::Float,
             value: 0.5,
             default: 0.5,
+            min: 0.0,
+            max: 1.0,
             unit: Some("dB".to_string()),
             group: Some("Input".to_string()),
         }];
@@ -353,5 +376,34 @@ mod tests {
 
         // Kept parameter should still be accessible
         assert!(host.get_parameter("gain").is_some());
+    }
+
+    #[test]
+    fn test_set_parameter_uses_declared_range_not_normalized_range() {
+        let host = InMemoryParameterHost::new(vec![ParameterInfo {
+            id: "oscillator_frequency".to_string(),
+            name: "Frequency".to_string(),
+            param_type: ParameterType::Float,
+            value: 440.0,
+            default: 440.0,
+            min: 20.0,
+            max: 5_000.0,
+            unit: Some("Hz".to_string()),
+            group: Some("Oscillator".to_string()),
+        }]);
+
+        host.set_parameter("oscillator_frequency", 2_000.0)
+            .expect("frequency in declared range should be accepted");
+
+        let freq = host
+            .get_parameter("oscillator_frequency")
+            .expect("frequency should exist");
+        assert!((freq.value - 2_000.0).abs() < f32::EPSILON);
+
+        let too_low = host.set_parameter("oscillator_frequency", 10.0);
+        assert!(too_low.is_err(), "value below min should be rejected");
+
+        let too_high = host.set_parameter("oscillator_frequency", 10_000.0);
+        assert!(too_high.is_err(), "value above max should be rejected");
     }
 }

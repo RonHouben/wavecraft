@@ -117,6 +117,8 @@ mod tests {
             param_type: ParameterType::Float,
             value: 0.5_f32,
             default: 0.5_f32,
+            min: 0.0,
+            max: 1.0,
             unit: None,
             group: None,
         }

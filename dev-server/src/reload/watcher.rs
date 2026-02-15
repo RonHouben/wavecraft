@@ -5,7 +5,7 @@
 
 use anyhow::Result;
 use notify::RecursiveMode;
-use notify_debouncer_full::{new_debouncer, DebounceEventResult, Debouncer, RecommendedCache};
+use notify_debouncer_full::{DebounceEventResult, Debouncer, RecommendedCache, new_debouncer};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -49,7 +49,12 @@ impl FileWatcher {
             Duration::from_millis(500),
             None, // no tick rate override
             move |result: DebounceEventResult| {
-                Self::handle_events(result, Arc::clone(&engine_dir), &tx, &shutdown_rx_for_events);
+                Self::handle_events(
+                    result,
+                    Arc::clone(&engine_dir),
+                    &tx,
+                    &shutdown_rx_for_events,
+                );
             },
         )?;
 

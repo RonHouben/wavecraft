@@ -114,14 +114,6 @@ impl<H: ParameterHost> IpcHandler<H> {
             }
         };
 
-        // Validate range
-        if !(0.0..=1.0).contains(&params.value) {
-            return Err(BridgeError::ParameterOutOfRange {
-                id: params.id.clone(),
-                value: params.value,
-            });
-        }
-
         // Set parameter
         self.host.set_parameter(&params.id, params.value)?;
 
@@ -217,6 +209,8 @@ mod tests {
                         param_type: ParameterType::Float,
                         value: 0.5,
                         default: 0.7,
+                        min: 0.0,
+                        max: 1.0,
                         unit: Some("dB".to_string()),
                         group: None,
                     },
@@ -226,6 +220,8 @@ mod tests {
                         param_type: ParameterType::Bool,
                         value: 0.0,
                         default: 0.0,
+                        min: 0.0,
+                        max: 1.0,
                         unit: None,
                         group: None,
                     },
@@ -239,11 +235,18 @@ mod tests {
             self.params.iter().find(|p| p.id == id).cloned()
         }
 
-        fn set_parameter(&self, id: &str, _value: f32) -> Result<(), BridgeError> {
-            // Verify parameter exists
-            if !self.params.iter().any(|p| p.id == id) {
+        fn set_parameter(&self, id: &str, value: f32) -> Result<(), BridgeError> {
+            let Some(param) = self.params.iter().find(|p| p.id == id) else {
                 return Err(BridgeError::ParameterNotFound(id.to_string()));
+            };
+
+            if !(param.min..=param.max).contains(&value) {
+                return Err(BridgeError::ParameterOutOfRange {
+                    id: id.to_string(),
+                    value,
+                });
             }
+
             // In real implementation, would update atomic value
             Ok(())
         }

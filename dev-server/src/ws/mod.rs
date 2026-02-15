@@ -11,8 +11,8 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{RwLock, broadcast};
 use tokio_tungstenite::{accept_async, tungstenite::protocol::Message};
 use tracing::{debug, error, info, warn};
-use wavecraft_protocol::{AudioRuntimeStatus, IpcNotification, NOTIFICATION_AUDIO_STATUS_CHANGED};
 use wavecraft_bridge::{IpcHandler, ParameterHost};
+use wavecraft_protocol::{AudioRuntimeStatus, IpcNotification, NOTIFICATION_AUDIO_STATUS_CHANGED};
 
 /// Shared state for tracking connected clients
 struct ServerState {
@@ -117,7 +117,10 @@ impl<H: ParameterHost + 'static> WsServer<H> {
         let clients = self.state.browser_clients.read().await;
         for client in clients.iter() {
             if let Err(e) = client.try_send(json.clone()) {
-                warn!("Failed to send parametersChanged notification to client: {}", e);
+                warn!(
+                    "Failed to send parametersChanged notification to client: {}",
+                    e
+                );
             }
         }
 
@@ -221,7 +224,7 @@ async fn handle_connection<H: ParameterHost>(
 
                 // Try to parse as IPC request for structured routing
                 let parsed_req = serde_json::from_str::<wavecraft_protocol::IpcRequest>(&json);
-                
+
                 if let Ok(ref req) = parsed_req {
                     // Handle registerAudio
                     if req.method == "registerAudio" {
@@ -234,7 +237,8 @@ async fn handle_connection<H: ParameterHost>(
                                 wavecraft_protocol::RegisterAudioParams,
                             >(params)
                         {
-                            *state.audio_client.write().await = Some(audio_params.client_id.clone());
+                            *state.audio_client.write().await =
+                                Some(audio_params.client_id.clone());
                         }
 
                         // Send success response using the request's id
@@ -257,7 +261,7 @@ async fn handle_connection<H: ParameterHost>(
                         }
                         continue;
                     }
-                    
+
                     // Handle meterUpdate from audio client
                     if is_audio_client && req.method == "meterUpdate" {
                         // Broadcast to all browser clients
@@ -266,7 +270,10 @@ async fn handle_connection<H: ParameterHost>(
                             if idx != client_index {
                                 // Don't send back to audio client
                                 if let Err(e) = client.try_send(json.clone()) {
-                                    warn!("Failed to broadcast meter update to client {}: {}", idx, e);
+                                    warn!(
+                                        "Failed to broadcast meter update to client {}: {}",
+                                        idx, e
+                                    );
                                 }
                             }
                         }
@@ -337,6 +344,8 @@ mod tests {
             param_type: ParameterType::Float,
             value: 0.5,
             default: 0.5,
+            min: 0.0,
+            max: 1.0,
             unit: Some("dB".to_string()),
             group: Some("Input".to_string()),
         }])

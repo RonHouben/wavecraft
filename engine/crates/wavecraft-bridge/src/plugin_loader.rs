@@ -316,6 +316,8 @@ mod tests {
             param_type: ParameterType::Float,
             value: 0.5,
             default: 0.5,
+            min: 0.0,
+            max: 1.0,
             unit: Some("dB".to_string()),
             group: Some("Main".to_string()),
         }];

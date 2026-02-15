@@ -120,7 +120,7 @@ pub struct GetParameterParams {
 pub struct GetParameterResult {
     /// Parameter ID
     pub id: String,
-    /// Current normalized value [0.0, 1.0]
+    /// Current parameter value in the parameter's declared range.
     pub value: f32,
 }
 
@@ -133,7 +133,7 @@ pub struct GetParameterResult {
 pub struct SetParameterParams {
     /// Parameter ID to update
     pub id: String,
-    /// New normalized value [0.0, 1.0]
+    /// New parameter value in the parameter's declared range.
     pub value: f32,
 }
 
@@ -162,10 +162,14 @@ pub struct ParameterInfo {
     /// Parameter type (float, bool, enum, etc.)
     #[serde(rename = "type")]
     pub param_type: ParameterType,
-    /// Current normalized value [0.0, 1.0]
+    /// Current parameter value in the parameter's declared range.
     pub value: f32,
-    /// Default normalized value [0.0, 1.0]
+    /// Default parameter value in the parameter's declared range.
     pub default: f32,
+    /// Minimum value for this parameter.
+    pub min: f32,
+    /// Maximum value for this parameter.
+    pub max: f32,
     /// Unit suffix for display (e.g., "dB", "%", "Hz")
     #[serde(skip_serializing_if = "Option::is_none")]
     pub unit: Option<String>,
@@ -192,7 +196,7 @@ pub enum ParameterType {
 pub struct ParameterChangedNotification {
     /// Parameter ID that changed
     pub id: String,
-    /// New normalized value [0.0, 1.0]
+    /// New parameter value in the parameter's declared range.
     pub value: f32,
 }
 

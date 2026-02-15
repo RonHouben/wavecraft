@@ -42,6 +42,8 @@ export interface ParameterInfo {
   type: ParameterType;
   value: number;
   default: number;
+  min: number;
+  max: number;
   unit?: string;
   group?: string;
 }

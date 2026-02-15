@@ -4,6 +4,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { ParameterClient } from '../ipc/ParameterClient';
+import { IpcBridge } from '../ipc/IpcBridge';
+import { useConnectionStatus } from './useConnectionStatus';
 import type { ParameterId, ParameterInfo } from '../types/parameters';
 
 export interface UseParameterResult {
@@ -17,45 +19,62 @@ export function useParameter(id: ParameterId): UseParameterResult {
   const [param, setParam] = useState<ParameterInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const { connected } = useConnectionStatus();
+
+  const isTransientTransportError = useCallback((err: unknown): boolean => {
+    if (!(err instanceof Error)) {
+      return false;
+    }
+
+    return err.message.includes('Transport not connected');
+  }, []);
+
+  const loadParameter = useCallback(async () => {
+    const client = ParameterClient.getInstance();
+    const bridge = IpcBridge.getInstance();
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Get all parameters and find the one we want
+      const allParams = await client.getAllParameters();
+      const foundParam = allParams.find((p) => p.id === id);
+
+      if (foundParam) {
+        setParam(foundParam);
+        setError(null);
+      } else {
+        setParam(null);
+        setError(new Error(`Parameter not found: ${id}`));
+      }
+      setIsLoading(false);
+    } catch (err) {
+      // Transient disconnect race during initial startup/reconnect.
+      // Keep loading and wait for the next connection-established event.
+      if (isTransientTransportError(err) && !bridge.isConnected()) {
+        setError(null);
+        setIsLoading(true);
+        return;
+      }
+
+      setError(err instanceof Error ? err : new Error(String(err)));
+      setIsLoading(false);
+    }
+  }, [id, isTransientTransportError]);
 
   // Load initial parameter value
   useEffect(() => {
-    let isMounted = true;
-    const client = ParameterClient.getInstance();
-
-    async function loadParameter(): Promise<void> {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        // Get all parameters and find the one we want
-        const allParams = await client.getAllParameters();
-        const foundParam = allParams.find((p) => p.id === id);
-
-        if (isMounted) {
-          if (foundParam) {
-            setParam(foundParam);
-          } else {
-            setError(new Error(`Parameter not found: ${id}`));
-          }
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(err instanceof Error ? err : new Error(String(err)));
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
+    if (connected) {
+      loadParameter();
+      return;
     }
 
-    loadParameter();
-
-    return (): void => {
-      isMounted = false;
-    };
-  }, [id]);
+    // Disconnected: keep stale parameter value if available, but avoid
+    // rendering stale transport errors as permanent failures.
+    setError((prev) => (prev?.message.includes('Transport not connected') ? null : prev));
+    setIsLoading(true);
+  }, [connected, loadParameter]);
 
   // Subscribe to parameter changes
   useEffect(() => {
@@ -77,6 +96,7 @@ export function useParameter(id: ParameterId): UseParameterResult {
         await client.setParameter(id, value);
         // Optimistically update local state
         setParam((prev) => (prev ? { ...prev, value } : null));
+        setError(null);
       } catch (err) {
         setError(err instanceof Error ? err : new Error(String(err)));
         throw err;

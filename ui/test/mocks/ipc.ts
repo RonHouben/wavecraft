@@ -45,6 +45,8 @@ export function setMockParameter(id: string, info: Partial<ParameterInfo>): void
     name: info.name ?? existing?.name ?? id,
     value: info.value ?? existing?.value ?? 0,
     default: info.default ?? existing?.default ?? 0,
+    min: info.min ?? existing?.min ?? 0,
+    max: info.max ?? existing?.max ?? 1,
     unit: info.unit ?? existing?.unit,
     type: info.type ?? existing?.type ?? 'float',
     ...info,

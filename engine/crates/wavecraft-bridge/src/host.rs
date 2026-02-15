@@ -38,6 +38,8 @@ use wavecraft_protocol::{AudioRuntimeStatus, MeterFrame, ParameterInfo};
 ///             param_type: ParameterType::Float,
 ///             value: params.get(idx).copied()?,
 ///             default: 0.5,
+///             min: 0.0,
+///             max: 1.0,
 ///             unit: None,
 ///             group: None,
 ///         })
@@ -89,12 +91,11 @@ pub trait ParameterHost: Send + Sync {
 
     /// Set a parameter value.
     ///
-    /// Updates the parameter to the given normalized value [0.0, 1.0].
-    /// The implementation should convert this to the parameter's actual range.
+    /// Updates the parameter to the given value in its declared `[min, max]` range.
     ///
     /// # Arguments
     /// * `id` - The parameter identifier
-    /// * `value` - Normalized value (0.0 = min, 1.0 = max)
+    /// * `value` - Parameter value in its declared range
     ///
     /// # Returns
     /// `Ok(())` if the parameter was updated, or an error if the ID is invalid

@@ -480,7 +480,10 @@ fn try_start_audio_in_process(
             let (code, hint) = classify_audio_init_error(&error_text);
 
             if verbose {
-                println!("{}", style(format!("⚠ Audio init failed: {:#}", e)).yellow());
+                println!(
+                    "{}",
+                    style(format!("⚠ Audio init failed: {:#}", e)).yellow()
+                );
             } else {
                 println!("{}", style("⚠ No audio input device available").yellow());
             }
@@ -559,7 +562,10 @@ fn load_runtime_plugin_loader(engine_dir: &Path, verbose: bool) -> Result<Plugin
     let dylib_path = match find_plugin_dylib(engine_dir) {
         Ok(path) => path,
         Err(error) => {
-            anyhow::bail!("Unable to locate plugin library for audio runtime: {:#}", error);
+            anyhow::bail!(
+                "Unable to locate plugin library for audio runtime: {:#}",
+                error
+            );
         }
     };
 
@@ -734,8 +740,8 @@ async fn load_parameter_metadata(engine_dir: &Path, verbose: bool) -> Result<Vec
     }
 
     // Discovery build succeeded — load params from safe dylib
-    let dylib_path =
-        find_plugin_dylib(engine_dir).context("Failed to find plugin library after discovery build")?;
+    let dylib_path = find_plugin_dylib(engine_dir)
+        .context("Failed to find plugin library after discovery build")?;
 
     if verbose {
         println!("  Found dylib: {}", dylib_path.display());
@@ -888,17 +894,20 @@ fn run_dev_servers(
     let (audio_handle, _runtime_loader) = {
         let ws_handle = server.handle();
 
-        let initializing_status = wavecraft_dev_server::audio_status(
-            AudioRuntimePhase::Initializing,
-            None,
-            None,
-        );
+        let initializing_status =
+            wavecraft_dev_server::audio_status(AudioRuntimePhase::Initializing, None, None);
         host.set_audio_status(initializing_status.clone());
-        if let Err(error) = runtime.block_on(ws_handle.broadcast_audio_status_changed(&initializing_status)) {
+        if let Err(error) =
+            runtime.block_on(ws_handle.broadcast_audio_status_changed(&initializing_status))
+        {
             if verbose {
                 println!(
                     "{}",
-                    style(format!("⚠ Failed to broadcast audio init status: {}", error)).yellow()
+                    style(format!(
+                        "⚠ Failed to broadcast audio init status: {}",
+                        error
+                    ))
+                    .yellow()
                 );
             }
         }
@@ -947,16 +956,16 @@ fn run_dev_servers(
             )
         }) {
             Ok(started) => {
-                let status = status_for_running_audio(
-                    started.sample_rate,
-                    started.buffer_size,
-                );
+                let status = status_for_running_audio(started.sample_rate, started.buffer_size);
                 host.set_audio_status(status.clone());
-                if let Err(error) = runtime.block_on(ws_handle.broadcast_audio_status_changed(&status)) {
+                if let Err(error) =
+                    runtime.block_on(ws_handle.broadcast_audio_status_changed(&status))
+                {
                     if verbose {
                         println!(
                             "{}",
-                            style(format!("⚠ Failed to broadcast audio status: {}", error)).yellow()
+                            style(format!("⚠ Failed to broadcast audio status: {}", error))
+                                .yellow()
                         );
                     }
                 }
@@ -973,11 +982,14 @@ fn run_dev_servers(
                     None,
                 );
                 host.set_audio_status(status.clone());
-                if let Err(error) = runtime.block_on(ws_handle.broadcast_audio_status_changed(&status)) {
+                if let Err(error) =
+                    runtime.block_on(ws_handle.broadcast_audio_status_changed(&status))
+                {
                     if verbose {
                         println!(
                             "{}",
-                            style(format!("⚠ Failed to broadcast audio status: {}", error)).yellow()
+                            style(format!("⚠ Failed to broadcast audio status: {}", error))
+                                .yellow()
                         );
                     }
                 }
@@ -1220,6 +1232,8 @@ fn create_temp_dylib_copy(dylib_path: &Path) -> Result<PathBuf> {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
     use super::{apply_sdk_tsconfig_paths, TsconfigPathsInjection};
 
     #[cfg(feature = "audio-dev")]
@@ -1398,5 +1412,63 @@ mod tests {
         let (code, hint) = classify_audio_init_error("No output device available");
         assert_eq!(code, AudioDiagnosticCode::NoOutputDevice);
         assert!(hint.is_some());
+    }
+
+    #[test]
+    fn cached_sidecar_path_preserves_full_frequency_range_for_browser_dev_mode() {
+        use wavecraft_protocol::{ParameterInfo, ParameterType};
+
+        let temp = tempfile::tempdir().expect("temp dir should be created");
+        let engine_dir = temp.path().join("engine");
+        let src_dir = engine_dir.join("src");
+        let debug_dir = engine_dir.join("target").join("debug");
+
+        fs::create_dir_all(&src_dir).expect("src dir should be created");
+        fs::create_dir_all(&debug_dir).expect("debug dir should be created");
+
+        // Build output discovery depends on Cargo.toml + dylib naming convention.
+        fs::write(
+            engine_dir.join("Cargo.toml"),
+            "[package]\nname = \"wavecraft-dev-template\"\n[lib]\nname = \"wavecraft_dev_template\"\n",
+        )
+        .expect("Cargo.toml should be written");
+
+        fs::write(src_dir.join("lib.rs"), "// test source").expect("source file should be written");
+
+        #[cfg(target_os = "macos")]
+        let dylib_name = "libwavecraft_dev_template.dylib";
+        #[cfg(target_os = "linux")]
+        let dylib_name = "libwavecraft_dev_template.so";
+        #[cfg(target_os = "windows")]
+        let dylib_name = "wavecraft_dev_template.dll";
+
+        fs::write(debug_dir.join(dylib_name), b"test dylib")
+            .expect("dylib placeholder should be written");
+
+        let params = vec![ParameterInfo {
+            id: "oscillator_frequency".to_string(),
+            name: "Frequency".to_string(),
+            param_type: ParameterType::Float,
+            value: 440.0,
+            default: 440.0,
+            min: 20.0,
+            max: 5_000.0,
+            unit: Some("Hz".to_string()),
+            group: Some("Oscillator".to_string()),
+        }];
+
+        super::write_sidecar_cache(&engine_dir, &params).expect("sidecar cache should be written");
+
+        let cached = super::try_read_cached_params(&engine_dir, false)
+            .expect("cached sidecar should be used in start path");
+
+        let frequency = cached
+            .iter()
+            .find(|param| param.id == "oscillator_frequency")
+            .expect("frequency parameter should exist");
+
+        assert!((frequency.min - 20.0).abs() < f32::EPSILON);
+        assert!((frequency.max - 5_000.0).abs() < f32::EPSILON);
+        assert!((frequency.value - 440.0).abs() < f32::EPSILON);
     }
 }

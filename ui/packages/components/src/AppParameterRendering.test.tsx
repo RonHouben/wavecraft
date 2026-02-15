@@ -15,14 +15,12 @@ interface TestParameter {
 const mockUseAllParameters = vi.hoisted(() => vi.fn());
 const mockUseParameterGroups = vi.hoisted(() => vi.fn());
 const mockUseMeterFrame = vi.hoisted(() => vi.fn());
-const mockUseParameter = vi.hoisted(() => vi.fn());
 const mockUseWindowResizeSync = vi.hoisted(() => vi.fn());
 
 vi.mock('@wavecraft/core', () => ({
   useAllParameters: mockUseAllParameters,
   useParameterGroups: mockUseParameterGroups,
   useMeterFrame: mockUseMeterFrame,
-  useParameter: mockUseParameter,
   useWindowResizeSync: mockUseWindowResizeSync,
 }));
 
@@ -49,6 +47,22 @@ describe('App parameter rendering', () => {
       group: 'Oscillator',
     },
     {
+      id: 'oscillator_frequency',
+      name: 'Frequency',
+      type: 'float',
+      value: 0.5,
+      default: 0.5,
+      group: 'Oscillator',
+    },
+    {
+      id: 'oscillator_level',
+      name: 'Level',
+      type: 'float',
+      value: 0.75,
+      default: 0.75,
+      group: 'Oscillator',
+    },
+    {
       id: 'gain',
       name: 'Gain',
       type: 'float',
@@ -62,10 +76,6 @@ describe('App parameter rendering', () => {
     mockUseAllParameters.mockReturnValue({ params: baseParams, isLoading: false });
     mockUseParameterGroups.mockImplementation(() => []);
     mockUseMeterFrame.mockReturnValue(undefined);
-    mockUseParameter.mockReturnValue({
-      param: { id: 'oscillator_enabled', value: 1 },
-      setValue: vi.fn(),
-    });
     mockUseWindowResizeSync.mockImplementation(() => undefined);
   });
 
@@ -75,6 +85,8 @@ describe('App parameter rendering', () => {
     expect(screen.getByTestId('oscillator-control')).toBeInTheDocument();
     expect(screen.getByTestId('slider-gain')).toBeInTheDocument();
     expect(screen.queryByTestId('slider-oscillator_enabled')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('slider-oscillator_frequency')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('slider-oscillator_level')).not.toBeInTheDocument();
 
     const lastCall = mockUseParameterGroups.mock.calls[
       mockUseParameterGroups.mock.calls.length - 1

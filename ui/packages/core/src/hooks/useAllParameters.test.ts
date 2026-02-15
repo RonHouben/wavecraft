@@ -22,6 +22,8 @@ const mockParams: ParameterInfo[] = [
     type: 'float',
     value: 0.5,
     default: 0.5,
+    min: 0,
+    max: 1,
     unit: 'dB',
   },
   {
@@ -30,6 +32,8 @@ const mockParams: ParameterInfo[] = [
     type: 'float',
     value: 0.3,
     default: 0.3,
+    min: 0,
+    max: 1,
     unit: '',
   },
 ];
@@ -478,6 +482,8 @@ describe('useAllParameters', () => {
           type: 'float',
           value: 440,
           default: 440,
+          min: 20,
+          max: 5000,
           unit: 'Hz',
         },
       ]);

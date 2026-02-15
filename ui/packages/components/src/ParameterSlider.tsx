@@ -37,10 +37,19 @@ export function ParameterSlider({ id }: ParameterSliderProps): React.JSX.Element
   };
 
   // Format display value
-  const unitSuffix = param.unit === '%' ? param.unit : ` ${param.unit}`;
-  const displayValue = param.unit
-    ? `${(param.value * 100).toFixed(1)}${unitSuffix}`
-    : param.value.toFixed(3);
+  const formatValue = (): string => {
+    if (!param.unit) {
+      return param.value.toFixed(3);
+    }
+
+    if (param.unit === '%') {
+      return `${(param.value * 100).toFixed(1)}%`;
+    }
+
+    return `${param.value.toFixed(1)} ${param.unit}`;
+  };
+
+  const displayValue = formatValue();
 
   return (
     <div
@@ -63,8 +72,8 @@ export function ParameterSlider({ id }: ParameterSliderProps): React.JSX.Element
         data-testid={`param-${id}-slider`}
         id={`slider-${id}`}
         type="range"
-        min="0"
-        max="1"
+        min={param.min}
+        max={param.max}
         step="0.001"
         value={param.value}
         onChange={handleChange}
