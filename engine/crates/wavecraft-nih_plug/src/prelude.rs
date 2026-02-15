@@ -17,6 +17,7 @@ pub use wavecraft_core::prelude::*;
 
 // Re-export wavecraft-dsp types
 pub use wavecraft_dsp::{Processor, ProcessorParams, Transport, builtins};
+pub use wavecraft_processors::{Oscillator, OscillatorParams};
 
 // Re-export wavecraft-protocol types
 pub use wavecraft_protocol::{ParamId, ParameterInfo, ParameterType, db_to_linear};

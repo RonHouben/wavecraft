@@ -4,10 +4,13 @@
 
 import React from 'react';
 import { logger, useMeterFrame, useParameter } from '@wavecraft/core';
+import type { ParameterId } from '@wavecraft/core';
 import { ParameterSlider } from './ParameterSlider';
 
 const SIGNAL_THRESHOLD = 1e-4;
-const OSCILLATOR_ENABLED_PARAM_ID = 'oscillator_enabled' as const;
+const OSCILLATOR_ENABLED_PARAM_ID = 'oscillator_enabled' as ParameterId;
+const OSCILLATOR_FREQUENCY_PARAM_ID = 'oscillator_frequency' as ParameterId;
+const OSCILLATOR_LEVEL_PARAM_ID = 'oscillator_level' as ParameterId;
 
 export function OscillatorControl(): React.JSX.Element {
   const meterFrame = useMeterFrame(100);
@@ -80,8 +83,8 @@ export function OscillatorControl(): React.JSX.Element {
       ) : null}
 
       <div className="mt-3">
-        <ParameterSlider id="oscillator_frequency" />
-        <ParameterSlider id="oscillator_level" />
+        <ParameterSlider id={OSCILLATOR_FREQUENCY_PARAM_ID} />
+        <ParameterSlider id={OSCILLATOR_LEVEL_PARAM_ID} />
       </div>
     </div>
   );

@@ -3444,10 +3444,18 @@ dependencies = [
  "wavecraft-dsp",
  "wavecraft-macros",
  "wavecraft-metering",
+ "wavecraft-processors",
  "wavecraft-protocol",
  "webview2-com",
  "windows 0.58.0",
  "wry",
+]
+
+[[package]]
+name = "wavecraft-processors"
+version = "0.12.6"
+dependencies = [
+ "wavecraft-dsp",
 ]
 
 [[package]]

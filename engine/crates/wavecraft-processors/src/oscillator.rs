@@ -1,23 +1,9 @@
-// Oscillator — a simple sine-wave generator.
-//
-// This file demonstrates how to implement a custom Processor with parameters.
-// It generates a pure sine tone whose frequency and level are controllable
-// from the DAW or the browser UI.
-//
-// Feel free to modify this file, or copy it to create new processors.
-// Add new processors to `processors/mod.rs` so the rest of the crate can see them.
+//! Oscillator — a simple sine-wave generator.
 
-use wavecraft::prelude::*;
+use wavecraft_dsp::{ParamRange, ParamSpec, Processor, ProcessorParams, Transport};
 
-// ---------------------------------------------------------------------------
-// Parameters
-// ---------------------------------------------------------------------------
-// This implementation is written manually (instead of `#[derive(ProcessorParams)]`)
-// so the `enabled` field can be a true boolean while still exposing framework
-// metadata with a stepped 0/1 range.
-
+/// Oscillator parameters.
 #[derive(Clone)]
-#[allow(dead_code)] // Unused in default signal chain (oscillator is commented out)
 pub struct OscillatorParams {
     /// Enable/disable oscillator output.
     pub enabled: bool,
@@ -80,18 +66,8 @@ impl ProcessorParams for OscillatorParams {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Processor
-// ---------------------------------------------------------------------------
-
 /// A minimal oscillator that produces a sine wave.
-///
-/// **Key concepts demonstrated here:**
-/// - Phase accumulation (how to keep track of where we are in the waveform)
-/// - Sample-rate awareness (frequency → phase increment)
-/// - State management (`reset()` clears the phase)
 #[derive(Default)]
-#[allow(dead_code)] // Unused in default signal chain (oscillator is commented out)
 pub struct Oscillator {
     /// Current sample rate provided by the host.
     sample_rate: f32,
@@ -124,22 +100,19 @@ impl Processor for Oscillator {
             return;
         }
 
-        // How far the phase advances per sample:
-        //   phase_delta = frequency / sample_rate
-        // e.g. 440 Hz at 44 100 S/s → 0.00998 per sample
+        // How far the phase advances per sample.
         let phase_delta = params.frequency / self.sample_rate;
 
         // Save the starting phase so every channel receives the same waveform.
-        // Without this, the right channel would be phase-shifted relative to left.
         let start_phase = self.phase;
 
         for channel in buffer.iter_mut() {
             self.phase = start_phase;
             for sample in channel.iter_mut() {
-                // Generate a sine wave and scale by level
+                // Generate a sine wave and scale by level.
                 *sample = (self.phase * std::f32::consts::TAU).sin() * params.level;
 
-                // Advance phase, wrapping at 1.0 to avoid floating-point drift
+                // Advance phase, wrapping at 1.0 to avoid floating-point drift.
                 self.phase += phase_delta;
                 if self.phase >= 1.0 {
                     self.phase -= 1.0;

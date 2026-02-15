@@ -18,6 +18,7 @@ pub mod util;
 pub use wavecraft_core::prelude as core_prelude;
 pub use wavecraft_dsp::{ParamRange, ParamSpec, Processor, ProcessorParams, Transport};
 pub use wavecraft_metering::{MeterConsumer, MeterFrame, MeterProducer, create_meter_channel};
+pub use wavecraft_processors::{Oscillator, OscillatorParams};
 pub use wavecraft_protocol::ParameterInfo;
 
 // Re-export the wavecraft_processor! macro from wavecraft_core

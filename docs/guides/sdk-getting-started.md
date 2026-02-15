@@ -187,7 +187,7 @@ my-plugin/
 │       ├── lib.rs           # Plugin assembly (signal chain + metadata)
 │       └── processors/      # Your custom DSP processors
 │           ├── mod.rs        # Module exports
-│           └── oscillator.rs # Example: sine-wave oscillator
+│           └── example_processor.rs # Minimal custom processor example
 │
 ├── ui/                      # React UI (TypeScript + Tailwind)
 │   ├── package.json         # Dependencies: @wavecraft/core + @wavecraft/components
@@ -202,12 +202,12 @@ my-plugin/
 
 **Key files:**
 
-| File                                  | Purpose                                                  |
-| ------------------------------------- | -------------------------------------------------------- |
-| `engine/src/lib.rs`                   | Plugin assembly — signal chain + `wavecraft_plugin!` DSL |
-| `engine/src/processors/`              | Folder for your custom `Processor` implementations       |
-| `engine/src/processors/oscillator.rs` | Example oscillator (sine wave, frequency + level)        |
-| `ui/src/App.tsx`                      | User interface layout with parameter controls            |
+| File                                         | Purpose                                                  |
+| -------------------------------------------- | -------------------------------------------------------- |
+| `engine/src/lib.rs`                          | Plugin assembly — signal chain + `wavecraft_plugin!` DSL |
+| `engine/src/processors/`                     | Folder for your custom `Processor` implementations       |
+| `engine/src/processors/example_processor.rs` | Minimal custom processor example                         |
+| `ui/src/App.tsx`                             | User interface layout with parameter controls            |
 
 **Note:** The generated project references:
 
@@ -224,7 +224,7 @@ The CLI-generated plugin uses the **declarative DSL**. Your plugin is assembled 
 use wavecraft::prelude::*;
 
 mod processors;
-use processors::Oscillator;
+use processors::ExampleProcessor;
 
 // Built-in processors need named wrappers (parameter-ID prefix)
 wavecraft_processor!(InputGain => Gain);
@@ -237,27 +237,28 @@ wavecraft_processor!(OutputGain => Gain);
 // Email is set explicitly in the macro (optional).
 wavecraft_plugin! {
     name: "My Plugin",
-    signal: SignalChain![InputGain, OutputGain],
-  email: "info@example.com",
-    // Enable the oscillator by switching to:
-    // signal: SignalChain![InputGain, Oscillator, OutputGain],
+    signal: SignalChain![ExampleProcessor, InputGain, OutputGain],
+    email: "info@example.com",
+    // Optional: use the reusable Oscillator exported by Wavecraft:
+    // use wavecraft::Oscillator;
+    // signal: SignalChain![Oscillator, InputGain, OutputGain],
 }
 ```
 
-Custom DSP code lives in the `engine/src/processors/` folder. The template includes a working oscillator example in `processors/oscillator.rs`.
+Custom DSP code lives in the `engine/src/processors/` folder. The template includes a minimal `ExampleProcessor` in `processors/example_processor.rs` as a starting point.
 
 ### Writing a Custom Processor
 
 Every processor needs two parts: a **parameter struct** and a **processor struct**.
 
 ```rust
-// engine/src/processors/oscillator.rs
+// engine/src/processors/filter.rs
 use wavecraft::prelude::*;
 use wavecraft::ProcessorParams;
 
 // 1. Define parameters with the derive macro
 #[derive(ProcessorParams, Default, Clone)]
-pub struct OscillatorParams {
+pub struct FilterParams {
     #[param(range = "20.0..=5000.0", default = 440.0, unit = "Hz", factor = 2.5)]
     pub frequency: f32,
 
@@ -267,13 +268,13 @@ pub struct OscillatorParams {
 
 // 2. Implement the Processor trait
 #[derive(Default)]
-pub struct Oscillator {
+pub struct Filter {
     sample_rate: f32,
     phase: f32,
 }
 
-impl Processor for Oscillator {
-    type Params = OscillatorParams;
+impl Processor for Filter {
+  type Params = FilterParams;
 
     fn set_sample_rate(&mut self, sample_rate: f32) {
         self.sample_rate = sample_rate;
@@ -325,7 +326,7 @@ impl Processor for Oscillator {
 ### Adding a Processor to Your Project
 
 1. Create a file: `engine/src/processors/filter.rs`
-2. Implement `Processor` + `ProcessorParams` (see oscillator example)
+2. Implement `Processor` + `ProcessorParams` (see the `FilterParams` example above)
 3. Export in `processors/mod.rs`:
    ```rust
    pub mod filter;
@@ -333,7 +334,8 @@ impl Processor for Oscillator {
    ```
 4. Wire into the signal chain in `lib.rs`:
    ```rust
-   use processors::{Oscillator, Filter};
+   use wavecraft::Oscillator;
+   use processors::Filter;
    // Custom processors are used directly in SignalChain (no wavecraft_processor! wrapper needed)
    // signal: SignalChain![InputGain, Oscillator, Filter, OutputGain],
    ```
