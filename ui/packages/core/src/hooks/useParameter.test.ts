@@ -118,4 +118,30 @@ describe('useParameter', () => {
     expect(result.current.error).toBeNull();
     expect(result.current.param).toEqual(mockGainParameter);
   });
+
+  it('uses backend-confirmed value after setValue write-through/read-back', async () => {
+    mockTransport.setConnected(true);
+    const client = ParameterClient.getInstance();
+
+    vi.spyOn(client, 'getAllParameters').mockResolvedValue([mockGainParameter]);
+    const setSpy = vi.spyOn(client, 'setParameter').mockResolvedValue();
+    const getSpy = vi.spyOn(client, 'getParameter').mockResolvedValue({
+      id: 'gain',
+      value: 0.37,
+    });
+
+    const { result } = renderHook(() => useParameter('gain'));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.setValue(0.2);
+    });
+
+    expect(setSpy).toHaveBeenCalledWith('gain', 0.2);
+    expect(getSpy).toHaveBeenCalledWith('gain');
+    expect(result.current.param?.value).toBe(0.37);
+  });
 });

@@ -4,6 +4,23 @@
 
 In progress.
 
+### 2026-02-15 — Focused fix: apply input/output gain in dev-mode runtime output modifiers
+
+- Traced end-to-end path for `input_gain_level` and `output_gain_level`:
+  - UI slider (`ParameterSlider`) → `useParameter.setValue()`
+  - `@wavecraft/core` `ParameterClient.setParameter()` JSON-RPC `setParameter`
+  - `wavecraft-bridge` handler → `DevServerHost::set_parameter()`
+  - host forwards successful writes into `AtomicParameterBridge` for audio-thread reads
+- Root cause: `dev-server/src/audio/server.rs::apply_output_modifiers()` only handled oscillator controls and never applied gain parameters to runtime output, so gain slider updates were accepted but had no audible effect in browser dev mode.
+- Implemented minimal fix in `apply_output_modifiers()`:
+  - read `input_gain_level` and `output_gain_level` lock-free from `AtomicParameterBridge`
+  - compute combined gain and apply it to the current output buffer every callback
+  - preserve existing oscillator enabled/frequency/level behavior exactly (including mute-on-disabled and phase continuity)
+  - robust defaults/fallbacks: missing/invalid gains resolve to unity (`1.0`), finite values clamped to `0.0..=2.0`
+- Added regression tests in `dev-server/src/audio/server.rs`:
+  - `output_modifiers_apply_input_and_output_gain_levels`
+  - `output_modifiers_apply_gain_without_oscillator_params`
+
 ### 2026-02-15 — Focused fix: runtime oscillator frequency/level bridge in dev audio callback
 
 - Root cause identified: dev-mode FFI processor path still processes with `from_param_defaults()` each block, so runtime slider updates for `oscillator_frequency`/`oscillator_level` were never injected into DSP state.

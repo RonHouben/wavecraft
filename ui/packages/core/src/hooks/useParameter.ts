@@ -94,8 +94,10 @@ export function useParameter(id: ParameterId): UseParameterResult {
       const client = ParameterClient.getInstance();
       try {
         await client.setParameter(id, value);
-        // Optimistically update local state
-        setParam((prev) => (prev ? { ...prev, value } : null));
+        // Read back authoritative host value so UI reflects clamping/remapping
+        // and never diverges from backend-confirmed state.
+        const confirmed = await client.getParameter(id);
+        setParam((prev) => (prev ? { ...prev, value: confirmed.value } : prev));
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err : new Error(String(err)));
