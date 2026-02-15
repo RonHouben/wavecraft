@@ -76,10 +76,10 @@ All SDK crates use the `wavecraft-*` naming convention for clear identification:
 | `wavecraft-core`       | Core SDK types, declarative macros, no nih_plug dependency                                                                                                                                                                                                                                    | ✅ crates.io                    | Re-exported via wavecraft-nih_plug                                                                       |
 | `wavecraft-macros`     | Procedural macros: `ProcessorParams` derive, `wavecraft_plugin!` proc-macro                                                                                                                                                                                                                   | ✅ crates.io                    | Used indirectly via wavecraft-nih_plug                                                                   |
 | `wavecraft-protocol`   | IPC contracts, parameter types, JSON-RPC definitions, FFI vtable contract (`DevProcessorVTable`)                                                                                                                                                                                              | ✅ crates.io                    | Implements `ParamSet` trait                                                                              |
-| `wavecraft-bridge`     | IPC handler, `ParameterHost` trait, `PluginParamLoader` (dlopen + param/vtable loading)                                                                                                                                                                                                       | ✅ crates.io                    | CLI uses for plugin loading                                                                              |
+| `wavecraft-bridge`     | IPC handler, `ParameterHost` trait, `PluginParamLoader` (dlopen + parameter metadata + processor metadata + dev vtable loading)                                                                                                                                                               | ✅ crates.io                    | CLI uses for plugin loading                                                                              |
 | `wavecraft-metering`   | Real-time safe SPSC ring buffer for audio → UI metering                                                                                                                                                                                                                                       | ✅ crates.io                    | Uses `MeterProducer` in DSP                                                                              |
 | `wavecraft-dsp`        | DSP primitives, `Processor` trait, built-in processors                                                                                                                                                                                                                                        | ✅ crates.io                    | Implements `Processor` trait                                                                             |
-| `wavecraft-processors` | Reusable SDK-owned processor implementations (for example, `Oscillator`) used by templates and plugin projects; complements `wavecraft-dsp` primitives                                                                                                                                      | ✅ crates.io                    | Imported by user plugins when they want SDK-provided processors                                          |
+| `wavecraft-processors` | Reusable SDK-owned processor implementations (for example, `Oscillator`) used by templates and plugin projects; complements `wavecraft-dsp` primitives                                                                                                                                        | ✅ crates.io                    | Imported by user plugins when they want SDK-provided processors                                          |
 | `wavecraft-dev-server` | Unified dev server at `dev-server/` (repo root): WebSocket server, `DevAudioProcessor` trait, `FfiProcessor` wrapper, `AudioServer` (full-duplex), `AtomicParameterBridge`, hot-reload, file watching. Feature-gated audio (`default = ["audio"]`). CLI uses with `default-features = false`. | ❌ Standalone (publish = false) | CLI uses for dev mode                                                                                    |
 | `sdk-template`         | Canonical plugin scaffold at repository root. Used both for CLI template embedding and SDK-mode development (`cargo xtask dev` after running `scripts/setup-dev-template.sh`).                                                                                                                | ❌ Internal scaffold            | Source of truth for generated projects and SDK contributor workflow                                      |
 
@@ -89,10 +89,10 @@ All SDK crates use the `wavecraft-*` naming convention for clear identification:
 
 The UI SDK is distributed as npm packages, enabling standard JavaScript/TypeScript dependency management:
 
-| Package                 | Purpose                                   | Exports                                                                                                                                                                                            |
-| ----------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@wavecraft/core`       | IPC bridge, React hooks, utilities, types | `useParameter`, `useAllParameters`, `useMeterFrame`, `useAudioStatus`, `IpcBridge`, `Logger`, `ParameterId`, `ParameterIdMap`, `AudioRuntimeStatus`, `AudioRuntimePhase`, `AudioDiagnostic`, types |
-| `@wavecraft/components` | Pre-built React components                | `Meter`, `ParameterSlider`, `ParameterGroup`, `ParameterToggle`, `VersionBadge`, `ConnectionStatus`, `LatencyMonitor`, `ResizeHandle`, `ResizeControls`                                            |
+| Package                 | Purpose                                   | Exports                                                                                                                                                                                                                                                                          |
+| ----------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@wavecraft/core`       | IPC bridge, React hooks, utilities, types | `useParameter`, `useAllParameters`, `useMeterFrame`, `useAudioStatus`, `useHasProcessor`, `useAvailableProcessors`, `IpcBridge`, `Logger`, `ParameterId`, `ParameterIdMap`, `ProcessorId`, `ProcessorIdMap`, `AudioRuntimeStatus`, `AudioRuntimePhase`, `AudioDiagnostic`, types |
+| `@wavecraft/components` | Pre-built React components                | `Meter`, `ParameterSlider`, `ParameterGroup`, `ParameterToggle`, `VersionBadge`, `ConnectionStatus`, `LatencyMonitor`, `ResizeHandle`, `ResizeControls`                                                                                                                          |
 
 **Subpath Exports:**
 
@@ -137,6 +137,10 @@ function MyPluginUI() {
 - `useConnectionStatus()` answers: _"Is the transport connected?"_
 - `useAudioStatus()` answers: _"Is audio runtime initialized/running, and if not, why?"_
 - Pre-1.0, this contract is strict current-version required: incompatible/missing runtime status expectations fail fast with actionable diagnostics instead of silent compatibility fallbacks.
+
+### Processor presence contract (v1)
+
+Processor presence in v1 is codegen-first and local: `wavecraft start` generates `ui/src/generated/processors.ts`, which registers and types available processors at startup for `@wavecraft/core` hooks (`useHasProcessor`, `useAvailableProcessors`). No new runtime JSON-RPC endpoint is introduced for processor presence in v1.
 
 ## Public API Surface (Rust)
 
@@ -251,7 +255,8 @@ my-plugin/
 │   └── src/
 │       ├── App.tsx          ← User's custom UI (imports from npm packages)
 │       └── generated/       ← Build artifacts (gitignored)
-│           └── parameters.ts ← ParameterId types (auto-generated by `wavecraft start`)
+│           ├── parameters.ts ← ParameterId types (auto-generated by `wavecraft start`)
+│           └── processors.ts ← Processor presence/types (auto-generated by `wavecraft start`)
 │
 └── xtask/                   ← Build automation (bundle, dev, etc.)
 ```

@@ -111,6 +111,13 @@ enum Commands {
         /// Path to the plugin dylib
         dylib_path: std::path::PathBuf,
     },
+
+    /// Extract processors from a plugin dylib (hidden — internal use only)
+    #[command(hide = true)]
+    ExtractProcessors {
+        /// Path to the plugin dylib
+        dylib_path: std::path::PathBuf,
+    },
 }
 
 fn main() -> Result<()> {
@@ -160,6 +167,10 @@ fn main() -> Result<()> {
 
         Commands::ExtractParams { dylib_path } => {
             commands::extract_params::execute(dylib_path)?;
+        }
+
+        Commands::ExtractProcessors { dylib_path } => {
+            commands::extract_processors::execute(dylib_path)?;
         }
     }
 

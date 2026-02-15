@@ -8,47 +8,30 @@ use anyhow::{Context, Result};
 use std::path::Path;
 use std::time::Duration;
 use wavecraft_protocol::ParameterInfo;
+use wavecraft_protocol::ProcessorInfo;
 
 /// Default timeout for subprocess parameter extraction.
 pub const DEFAULT_EXTRACT_TIMEOUT: Duration = Duration::from_secs(30);
 
-/// Extract parameters from a plugin dylib via a subprocess.
-///
-/// Spawns `wavecraft extract-params <dylib_path>` and parses JSON from stdout.
-/// The subprocess is killed if it exceeds the timeout.
-///
-/// # Safety
-///
-/// This isolates `dlopen` from the parent process, preventing hangs caused by
-/// macOS static initializers in nih-plug dependencies. The subprocess can be
-/// forcefully terminated with `SIGKILL` on timeout.
-///
-/// # Arguments
-///
-/// * `dylib_path` - Path to the plugin dylib to extract parameters from
-/// * `timeout` - Maximum time to wait before killing the subprocess
-///
-/// # Returns
-///
-/// * `Ok(Vec<ParameterInfo>)` - Successfully extracted parameters
-/// * `Err(_)` - Timeout, subprocess crashed, or invalid output
-pub async fn extract_params_subprocess(
+async fn extract_via_subprocess(
+    subcommand: &str,
     dylib_path: &Path,
     timeout: Duration,
-) -> Result<Vec<ParameterInfo>> {
+) -> Result<String> {
     // Resolve the path to the current wavecraft binary
     let self_exe = std::env::current_exe().context("Failed to determine wavecraft binary path")?;
 
     // Spawn the extraction subprocess
     let mut child = tokio::process::Command::new(&self_exe)
-        .arg("extract-params")
+        .arg(subcommand)
         .arg(dylib_path)
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .spawn()
         .with_context(|| {
             format!(
-                "Failed to spawn parameter extraction subprocess: {}",
+                "Failed to spawn {} subprocess: {}",
+                subcommand,
                 self_exe.display()
             )
         })?;
@@ -86,17 +69,15 @@ pub async fn extract_params_subprocess(
                 let stdout_str = String::from_utf8(stdout_buf)
                     .context("Subprocess stdout was not valid UTF-8")?;
 
-                let params: Vec<ParameterInfo> = serde_json::from_str(stdout_str.trim())
-                    .context("Failed to parse parameter JSON from subprocess")?;
-
-                Ok(params)
+                Ok(stdout_str)
             } else {
                 // Subprocess exited with error
                 let stderr_str = String::from_utf8_lossy(&stderr_buf);
                 let code = status.code().unwrap_or(-1);
 
                 anyhow::bail!(
-                    "Parameter extraction failed (exit code {}):\n{}",
+                    "{} failed (exit code {}):\n{}",
+                    subcommand,
                     code,
                     stderr_str
                 );
@@ -114,7 +95,7 @@ pub async fn extract_params_subprocess(
             let _ = child.kill().await;
 
             anyhow::bail!(
-                "Parameter extraction timed out after {}s. \
+                "{} timed out after {}s. \
                  This is likely caused by macOS static initializers in the plugin dylib. \
                  The plugin was built with --features _param-discovery but dlopen \
                  still hung. Check for transitive dependencies that register with \
@@ -126,10 +107,48 @@ pub async fn extract_params_subprocess(
                  • File a bug with the offending dependency\n\
                  \n\
                  Dylib: {}",
+                subcommand,
                 timeout.as_secs(),
                 dylib_path.display(),
                 dylib_path.display()
             );
         }
     }
+}
+
+/// Extract parameters from a plugin dylib via a subprocess.
+///
+/// Spawns `wavecraft extract-params <dylib_path>` and parses JSON from stdout.
+/// The subprocess is killed if it exceeds the timeout.
+///
+/// # Safety
+///
+/// This isolates `dlopen` from the parent process, preventing hangs caused by
+/// macOS static initializers in nih-plug dependencies. The subprocess can be
+/// forcefully terminated with `SIGKILL` on timeout.
+///
+/// # Arguments
+///
+/// * `dylib_path` - Path to the plugin dylib to extract parameters from
+/// * `timeout` - Maximum time to wait before killing the subprocess
+///
+/// # Returns
+///
+/// * `Ok(Vec<ParameterInfo>)` - Successfully extracted parameters
+/// * `Err(_)` - Timeout, subprocess crashed, or invalid output
+pub async fn extract_params_subprocess(
+    dylib_path: &Path,
+    timeout: Duration,
+) -> Result<Vec<ParameterInfo>> {
+    let json = extract_via_subprocess("extract-params", dylib_path, timeout).await?;
+    serde_json::from_str(json.trim()).context("Failed to parse parameter JSON from subprocess")
+}
+
+/// Extract processor metadata from a plugin dylib via subprocess isolation.
+pub async fn extract_processors_subprocess(
+    dylib_path: &Path,
+    timeout: Duration,
+) -> Result<Vec<ProcessorInfo>> {
+    let json = extract_via_subprocess("extract-processors", dylib_path, timeout).await?;
+    serde_json::from_str(json.trim()).context("Failed to parse processor JSON from subprocess")
 }

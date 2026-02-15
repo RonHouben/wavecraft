@@ -26,6 +26,9 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, Stream, StreamConfig};
+use wavecraft_processors::{
+    OscilloscopeFrameConsumer, OscilloscopeTap, create_oscilloscope_channel,
+};
 use wavecraft_protocol::MeterUpdateNotification;
 
 use super::atomic_params::AtomicParameterBridge;
@@ -131,7 +134,13 @@ impl AudioServer {
     /// buffer (RT-safe: no allocations on the audio thread).
     ///
     /// Drop the handle to stop audio.
-    pub fn start(mut self) -> Result<(AudioHandle, rtrb::Consumer<MeterUpdateNotification>)> {
+    pub fn start(
+        mut self,
+    ) -> Result<(
+        AudioHandle,
+        rtrb::Consumer<MeterUpdateNotification>,
+        OscilloscopeFrameConsumer,
+    )> {
         // Set sample rate from the actual input device config
         let actual_sample_rate = self.input_config.sample_rate.0 as f32;
         self.processor.set_sample_rate(actual_sample_rate);
@@ -154,6 +163,9 @@ impl AudioServer {
         // to maintain real-time safety on the audio thread.
         let (mut meter_producer, meter_consumer) =
             rtrb::RingBuffer::<MeterUpdateNotification>::new(64);
+        let (oscilloscope_producer, oscilloscope_consumer) = create_oscilloscope_channel(8);
+        let mut oscilloscope_tap = OscilloscopeTap::with_output(oscilloscope_producer);
+        oscilloscope_tap.set_sample_rate_hz(actual_sample_rate);
 
         let mut frame_counter = 0u64;
         let mut oscillator_phase = 0.0_f32;
@@ -216,6 +228,9 @@ impl AudioServer {
                     // Re-borrow after process()
                     let left = &left_buf[..actual_samples];
                     let right = &right_buf[..actual_samples];
+
+                    // Observation-only waveform capture for oscilloscope UI.
+                    oscilloscope_tap.capture_stereo(left, right);
 
                     // Compute meters from processed output
                     let (peak_left, rms_left) = compute_peak_and_rms(left);
@@ -317,6 +332,7 @@ impl AudioServer {
                 _output_stream: Some(output_stream),
             },
             meter_consumer,
+            oscilloscope_consumer,
         ))
     }
 

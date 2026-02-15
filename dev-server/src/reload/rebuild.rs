@@ -19,7 +19,7 @@ use tokio::io::AsyncReadExt;
 use tokio::process::Command;
 use tokio::sync::watch;
 use wavecraft_bridge::ParameterHost;
-use wavecraft_protocol::ParameterInfo;
+use wavecraft_protocol::{ParameterInfo, ProcessorInfo};
 
 use crate::host::DevServerHost;
 use crate::reload::guard::BuildGuard;
@@ -36,11 +36,21 @@ pub type ParamLoaderFn = Arc<
         + Sync,
 >;
 
+/// Callback type for loading processors from a rebuilt dylib.
+pub type ProcessorLoaderFn = Arc<
+    dyn Fn(PathBuf) -> Pin<Box<dyn Future<Output = Result<Vec<ProcessorInfo>>> + Send>>
+        + Send
+        + Sync,
+>;
+
 /// Callback type for writing parameter cache to a sidecar file.
 pub type SidecarWriterFn = Arc<dyn Fn(&Path, &[ParameterInfo]) -> Result<()> + Send + Sync>;
 
 /// Callback type for writing generated TypeScript parameter ID types.
 pub type TsTypesWriterFn = Arc<dyn Fn(&[ParameterInfo]) -> Result<()> + Send + Sync>;
+
+/// Callback type for writing generated TypeScript processor ID types.
+pub type ProcessorTsTypesWriterFn = Arc<dyn Fn(&[ProcessorInfo]) -> Result<()> + Send + Sync>;
 
 /// Callbacks for CLI-specific operations.
 ///
@@ -56,9 +66,13 @@ pub struct RebuildCallbacks {
     pub write_sidecar: Option<SidecarWriterFn>,
     /// Optional TypeScript types writer (writes generated parameter ID typings).
     pub write_ts_types: Option<TsTypesWriterFn>,
+    /// Optional TypeScript types writer for processor IDs.
+    pub write_processor_ts_types: Option<ProcessorTsTypesWriterFn>,
     /// Loads parameters from the rebuilt dylib (async).
     /// Receives the engine directory and returns parsed parameters.
     pub param_loader: ParamLoaderFn,
+    /// Loads processors from the rebuilt dylib (async).
+    pub processor_loader: Option<ProcessorLoaderFn>,
 }
 
 /// Rebuild pipeline for hot-reload.
@@ -130,6 +144,28 @@ impl RebuildPipeline {
                 Ok((params, param_count_change)) => {
                     let mut reload_ok = true;
                     let mut ts_types_ok = true;
+                    let mut processor_types_ok = true;
+
+                    let processors = if let Some(ref loader) = self.callbacks.processor_loader {
+                        match loader(self.engine_dir.clone()).await {
+                            Ok(processors) => Some(processors),
+                            Err(e) => {
+                                processor_types_ok = false;
+                                println!(
+                                    "  {} Failed to load processor metadata after rebuild: {}",
+                                    style("⚠").yellow(),
+                                    e
+                                );
+                                println!(
+                                    "  {} Save a Rust source file to retry, or restart the dev server",
+                                    style("  ↳").dim(),
+                                );
+                                None
+                            }
+                        }
+                    } else {
+                        None
+                    };
 
                     if let Some(ref writer) = self.callbacks.write_sidecar
                         && let Err(e) = writer(&self.engine_dir, &params)
@@ -143,6 +179,23 @@ impl RebuildPipeline {
                         ts_types_ok = false;
                         println!(
                             "  {} Failed to regenerate TypeScript parameter types: {}",
+                            style("⚠").yellow(),
+                            e
+                        );
+                        println!(
+                            "  {} Save a Rust source file to retry, or restart the dev server",
+                            style("  ↳").dim(),
+                        );
+                    }
+
+                    if let (Some(processors), Some(writer)) = (
+                        processors.as_deref(),
+                        self.callbacks.write_processor_ts_types.as_ref(),
+                    ) && let Err(e) = writer(processors)
+                    {
+                        processor_types_ok = false;
+                        println!(
+                            "  {} Failed to regenerate TypeScript processor types: {}",
                             style("⚠").yellow(),
                             e
                         );
@@ -220,16 +273,25 @@ impl RebuildPipeline {
                             String::new()
                         };
 
+                        let param_types_status = if ts_types_ok {
+                            ""
+                        } else {
+                            " (⚠ TypeScript parameter types stale)"
+                        };
+
+                        let processor_types_status = if processor_types_ok {
+                            ""
+                        } else {
+                            " (⚠ TypeScript processor types stale)"
+                        };
+
                         println!(
-                            "  {} Hot-reload complete — {} parameters{}{}",
+                            "  {} Hot-reload complete — {} parameters{}{}{}",
                             style("✓").green(),
                             params.len(),
                             change_info,
-                            if ts_types_ok {
-                                ""
-                            } else {
-                                " (⚠ TypeScript types stale)"
-                            }
+                            param_types_status,
+                            processor_types_status,
                         );
 
                         // Trigger audio reload if audio is enabled

@@ -18,9 +18,10 @@
     "declaration": true,
     "declarationDir": "./dist",
     "paths": {
-      "@wavecraft/core": ["../core/src"]
+      "@wavecraft/core": ["../core/src/index.ts"],
+      "@wavecraft/core/*": ["../core/src/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "../../../sdk-template/ui/src/generated/processors.ts"],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }

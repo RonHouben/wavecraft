@@ -4,12 +4,18 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use crate::{BridgeError, ParameterHost};
-use wavecraft_protocol::{AudioRuntimeStatus, MeterFrame, ParameterInfo};
+use wavecraft_protocol::{AudioRuntimeStatus, MeterFrame, OscilloscopeFrame, ParameterInfo};
 
 /// Provides metering data for an in-memory host.
 pub trait MeterProvider: Send + Sync {
     /// Return the latest meter frame, if available.
     fn get_meter_frame(&self) -> Option<MeterFrame>;
+}
+
+/// Provides oscilloscope frame data for an in-memory host.
+pub trait OscilloscopeProvider: Send + Sync {
+    /// Return the latest oscilloscope frame, if available.
+    fn get_oscilloscope_frame(&self) -> Option<OscilloscopeFrame>;
 }
 
 /// In-memory host for storing parameter values and optional meter data.
@@ -19,6 +25,7 @@ pub struct InMemoryParameterHost {
     parameters: RwLock<Vec<ParameterInfo>>,
     values: RwLock<HashMap<String, f32>>,
     meter_provider: Option<Arc<dyn MeterProvider>>,
+    oscilloscope_provider: Option<Arc<dyn OscilloscopeProvider>>,
 }
 
 impl InMemoryParameterHost {
@@ -33,6 +40,7 @@ impl InMemoryParameterHost {
             parameters: RwLock::new(parameters),
             values: RwLock::new(values),
             meter_provider: None,
+            oscilloscope_provider: None,
         }
     }
 
@@ -43,6 +51,28 @@ impl InMemoryParameterHost {
     ) -> Self {
         let mut host = Self::new(parameters);
         host.meter_provider = Some(meter_provider);
+        host
+    }
+
+    /// Create a new in-memory host with an oscilloscope provider.
+    pub fn with_oscilloscope_provider(
+        parameters: Vec<ParameterInfo>,
+        oscilloscope_provider: Arc<dyn OscilloscopeProvider>,
+    ) -> Self {
+        let mut host = Self::new(parameters);
+        host.oscilloscope_provider = Some(oscilloscope_provider);
+        host
+    }
+
+    /// Create a new in-memory host with both meter and oscilloscope providers.
+    pub fn with_providers(
+        parameters: Vec<ParameterInfo>,
+        meter_provider: Option<Arc<dyn MeterProvider>>,
+        oscilloscope_provider: Option<Arc<dyn OscilloscopeProvider>>,
+    ) -> Self {
+        let mut host = Self::new(parameters);
+        host.meter_provider = meter_provider;
+        host.oscilloscope_provider = oscilloscope_provider;
         host
     }
 
@@ -182,6 +212,12 @@ impl ParameterHost for InMemoryParameterHost {
             .and_then(|provider| provider.get_meter_frame())
     }
 
+    fn get_oscilloscope_frame(&self) -> Option<OscilloscopeFrame> {
+        self.oscilloscope_provider
+            .as_ref()
+            .and_then(|provider| provider.get_oscilloscope_frame())
+    }
+
     fn request_resize(&self, _width: u32, _height: u32) -> bool {
         false
     }
@@ -200,9 +236,19 @@ mod tests {
         frame: MeterFrame,
     }
 
+    struct StaticOscilloscopeProvider {
+        frame: OscilloscopeFrame,
+    }
+
     impl MeterProvider for StaticMeterProvider {
         fn get_meter_frame(&self) -> Option<MeterFrame> {
             Some(self.frame)
+        }
+    }
+
+    impl OscilloscopeProvider for StaticOscilloscopeProvider {
+        fn get_oscilloscope_frame(&self) -> Option<OscilloscopeFrame> {
+            Some(self.frame.clone())
         }
     }
 
@@ -289,6 +335,27 @@ mod tests {
         let read = host.get_meter_frame().expect("should have meter frame");
         assert!((read.peak_l - 0.7).abs() < f32::EPSILON);
         assert!((read.rms_r - 0.4).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_get_oscilloscope_frame() {
+        let frame = OscilloscopeFrame {
+            points_l: vec![0.1; 1024],
+            points_r: vec![0.2; 1024],
+            sample_rate: 48_000.0,
+            timestamp: 99,
+            no_signal: false,
+            trigger_mode: wavecraft_protocol::OscilloscopeTriggerMode::RisingZeroCrossing,
+        };
+        let provider = Arc::new(StaticOscilloscopeProvider { frame });
+        let host = InMemoryParameterHost::with_oscilloscope_provider(test_params(), provider);
+
+        let read = host
+            .get_oscilloscope_frame()
+            .expect("should have oscilloscope frame");
+        assert_eq!(read.points_l.len(), 1024);
+        assert_eq!(read.points_r.len(), 1024);
+        assert_eq!(read.timestamp, 99);
     }
 
     #[test]

@@ -9,3 +9,5 @@ repository.workspace = true
 
 [dependencies]
 wavecraft-dsp.workspace = true
+wavecraft-protocol.workspace = true
+rtrb = "0.3"

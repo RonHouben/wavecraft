@@ -12,6 +12,8 @@ use std::sync::{Arc, Mutex};
 use nih_plug::prelude::*;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use wavecraft_metering::MeterConsumer;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+use wavecraft_processors::OscilloscopeFrameConsumer;
 
 mod assets;
 mod bridge;
@@ -37,6 +39,8 @@ pub struct WavecraftEditor<P: Params> {
     params: Arc<P>,
     /// Meter consumer for audio metering - taken on first editor spawn
     meter_consumer: Mutex<Option<MeterConsumer>>,
+    /// Oscilloscope consumer for waveform snapshots - taken on first editor spawn
+    oscilloscope_consumer: Mutex<Option<OscilloscopeFrameConsumer>>,
     size: Arc<Mutex<(u32, u32)>>,
     /// Handle to the WebView for resize operations
     webview_handle: Arc<Mutex<Option<Box<dyn WebViewHandle>>>>,
@@ -55,12 +59,14 @@ impl<P: Params> WavecraftEditor<P> {
     pub fn new(
         params: Arc<P>,
         meter_consumer: Option<MeterConsumer>,
+        oscilloscope_consumer: Option<OscilloscopeFrameConsumer>,
         width: u32,
         height: u32,
     ) -> Self {
         Self {
             params,
             meter_consumer: Mutex::new(meter_consumer),
+            oscilloscope_consumer: Mutex::new(oscilloscope_consumer),
             size: Arc::new(Mutex::new((width, height))),
             webview_handle: Arc::new(Mutex::new(None)),
         }
@@ -76,6 +82,7 @@ impl<P: Params> Editor for WavecraftEditor<P> {
     ) -> Box<dyn Any + Send> {
         // Take the meter consumer (only works for first editor instance)
         let meter_consumer = self.meter_consumer.lock().unwrap().take();
+        let oscilloscope_consumer = self.oscilloscope_consumer.lock().unwrap().take();
 
         let size = *self.size.lock().unwrap();
 
@@ -86,6 +93,7 @@ impl<P: Params> Editor for WavecraftEditor<P> {
             width: size.0,
             height: size.1,
             meter_consumer,
+            oscilloscope_consumer,
             editor_size: self.size.clone(),
         };
 
@@ -183,12 +191,14 @@ impl<P: Params> Editor for WavecraftEditor<P> {
 pub fn create_webview_editor<P: Params + 'static>(
     params: Arc<P>,
     meter_consumer: Option<MeterConsumer>,
+    oscilloscope_consumer: Option<OscilloscopeFrameConsumer>,
     width: u32,
     height: u32,
 ) -> Option<Box<dyn Editor>> {
     Some(Box::new(WavecraftEditor::new(
         params,
         meter_consumer,
+        oscilloscope_consumer,
         width,
         height,
     )))

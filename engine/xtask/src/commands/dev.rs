@@ -3,13 +3,15 @@
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
 use std::sync::mpsc;
-use std::thread;
-use std::time::SystemTime;
+use std::time::{Duration, Instant, SystemTime};
 use xtask::npm_command;
 use xtask::output::*;
 use xtask::paths;
+
+const CTRL_C_POLL_INTERVAL: Duration = Duration::from_millis(100);
+const SHUTDOWN_GRACE_PERIOD: Duration = Duration::from_secs(5);
 
 /// Run the development server via `wavecraft start` CLI command.
 ///
@@ -61,31 +63,52 @@ pub fn run(port: u16, verbose: bool) -> Result<()> {
     // Set up Ctrl+C handler
     let (tx, rx) = mpsc::channel();
     ctrlc::set_handler(move || {
-        tx.send(()).expect("Could not send signal on channel");
+        let _ = tx.send(());
     })
     .context("Error setting Ctrl+C handler")?;
 
-    // Wait for Ctrl+C or CLI process to exit
-    let child_result = thread::spawn(move || child.wait());
-
-    match rx.recv_timeout(std::time::Duration::from_millis(100)) {
-        Ok(_) | Err(mpsc::RecvTimeoutError::Disconnected) => {
-            println!();
-            print_status("Shutting down...");
-        }
-        Err(mpsc::RecvTimeoutError::Timeout) => {
-            if child_result.is_finished() {
-                // CLI exited on its own
-            } else {
-                let _ = rx.recv();
-                println!();
-                print_status("Shutting down...");
-            }
-        }
-    }
+    wait_for_shutdown_or_exit(&mut child, &rx)?;
 
     print_success("Development server stopped");
     Ok(())
+}
+
+fn wait_for_shutdown_or_exit(child: &mut Child, rx: &mpsc::Receiver<()>) -> Result<()> {
+    let mut shutdown_started_at: Option<Instant> = None;
+
+    loop {
+        if shutdown_started_at.is_none() {
+            match rx.recv_timeout(CTRL_C_POLL_INTERVAL) {
+                Ok(_) | Err(mpsc::RecvTimeoutError::Disconnected) => {
+                    println!();
+                    print_status("Shutting down...");
+                    shutdown_started_at = Some(Instant::now());
+                }
+                Err(mpsc::RecvTimeoutError::Timeout) => {}
+            }
+        }
+
+        if child.try_wait()?.is_some() {
+            return Ok(());
+        }
+
+        if let Some(started_at) = shutdown_started_at
+            && has_exceeded_shutdown_grace_period(started_at, Instant::now(), SHUTDOWN_GRACE_PERIOD)
+        {
+            print_warning("Shutdown timed out, forcing process termination...");
+            let _ = child.kill();
+            let _ = child.wait();
+            return Ok(());
+        }
+    }
+}
+
+fn has_exceeded_shutdown_grace_period(
+    started_at: Instant,
+    now: Instant,
+    grace_period: Duration,
+) -> bool {
+    now.duration_since(started_at) >= grace_period
 }
 
 fn run_preflight(verbose: bool) -> Result<()> {
@@ -241,7 +264,11 @@ fn refresh_param_codegen_caches_if_needed(
         ));
     }
 
-    let sidecar_candidates = sidecar_cache_candidates(&sdk_engine_dir);
+    let mut sidecar_candidates = sidecar_cache_candidates(&sdk_engine_dir, "wavecraft-params.json");
+    sidecar_candidates.extend(sidecar_cache_candidates(
+        &sdk_engine_dir,
+        "wavecraft-processors.json",
+    ));
     let existing_sidecars: Vec<PathBuf> = sidecar_candidates
         .into_iter()
         .filter(|path| path.is_file())
@@ -335,19 +362,22 @@ fn refresh_param_codegen_caches_if_needed(
         .join("src")
         .join("generated")
         .join("parameters.ts");
-    if generated_params.is_file() {
-        if verbose {
-            print_status(&format!(
-                "Preflight: removing stale generated parameter types {}",
-                generated_params.display()
-            ));
-        }
-        fs::remove_file(&generated_params).with_context(|| {
-            format!(
-                "Failed to remove stale generated parameter types {}",
-                generated_params.display()
-            )
-        })?;
+    if verbose && generated_params.is_file() {
+        print_info(&format!(
+            "Preflight: keeping generated parameter types {} (will regenerate on start/reload)",
+            generated_params.display()
+        ));
+    }
+
+    let generated_processors = sdk_ui_dir
+        .join("src")
+        .join("generated")
+        .join("processors.ts");
+    if verbose && generated_processors.is_file() {
+        print_info(&format!(
+            "Preflight: keeping generated processor types {} (will regenerate on start/reload)",
+            generated_processors.display()
+        ));
     }
 
     Ok(PreflightResult::refreshed(format!(
@@ -356,30 +386,15 @@ fn refresh_param_codegen_caches_if_needed(
     )))
 }
 
-fn sidecar_cache_candidates(engine_dir: &Path) -> Vec<PathBuf> {
+fn sidecar_cache_candidates(engine_dir: &Path, file_name: &str) -> Vec<PathBuf> {
     let mut caches = Vec::with_capacity(3);
-    caches.push(
-        engine_dir
-            .join("target")
-            .join("debug")
-            .join("wavecraft-params.json"),
-    );
+    caches.push(engine_dir.join("target").join("debug").join(file_name));
 
     if let Some(parent) = engine_dir.parent() {
-        caches.push(
-            parent
-                .join("target")
-                .join("debug")
-                .join("wavecraft-params.json"),
-        );
+        caches.push(parent.join("target").join("debug").join(file_name));
 
         if let Some(grand_parent) = parent.parent() {
-            caches.push(
-                grand_parent
-                    .join("target")
-                    .join("debug")
-                    .join("wavecraft-params.json"),
-            );
+            caches.push(grand_parent.join("target").join("debug").join(file_name));
         }
     }
 
@@ -478,13 +493,35 @@ fn max_time(a: Option<SystemTime>, b: Option<SystemTime>) -> Option<SystemTime> 
 #[cfg(test)]
 mod tests {
     use super::{
-        RefreshReason, collect_latest_mtime, decide_refresh, latest_mtime_for_path,
-        sidecar_cache_candidates,
+        RefreshReason, collect_latest_mtime, decide_refresh, has_exceeded_shutdown_grace_period,
+        latest_mtime_for_path, sidecar_cache_candidates,
     };
     use std::fs;
     use std::path::PathBuf;
     use std::thread;
-    use std::time::{Duration, SystemTime};
+    use std::time::{Duration, Instant, SystemTime};
+
+    #[test]
+    fn shutdown_grace_period_is_not_exceeded_before_deadline() {
+        let start = Instant::now();
+        let now = start + Duration::from_millis(499);
+        assert!(!has_exceeded_shutdown_grace_period(
+            start,
+            now,
+            Duration::from_millis(500)
+        ));
+    }
+
+    #[test]
+    fn shutdown_grace_period_is_exceeded_at_deadline() {
+        let start = Instant::now();
+        let now = start + Duration::from_millis(500);
+        assert!(has_exceeded_shutdown_grace_period(
+            start,
+            now,
+            Duration::from_millis(500)
+        ));
+    }
 
     #[test]
     fn decide_refresh_identifies_missing_outputs() {
@@ -570,7 +607,7 @@ mod tests {
     #[test]
     fn sidecar_cache_candidates_cover_all_expected_locations() {
         let engine_dir = PathBuf::from("/tmp/wavecraft/sdk-template/engine");
-        let candidates = sidecar_cache_candidates(&engine_dir);
+        let candidates = sidecar_cache_candidates(&engine_dir, "wavecraft-params.json");
 
         assert_eq!(candidates.len(), 3);
         assert!(candidates[0].ends_with("sdk-template/engine/target/debug/wavecraft-params.json"));

@@ -44,7 +44,9 @@ async fn test_param_extraction_cancelled_on_new_change() {
         package_name: None,
         write_sidecar: None,
         write_ts_types: None,
+        write_processor_ts_types: None,
         param_loader: slow_loader,
+        processor_loader: None,
     };
 
     let pipeline = RebuildPipeline::new(
@@ -126,7 +128,9 @@ async fn test_param_extraction_completes_normally() {
         package_name: None,
         write_sidecar: None,
         write_ts_types: None,
+        write_processor_ts_types: None,
         param_loader: fast_loader,
+        processor_loader: None,
     };
 
     let pipeline = RebuildPipeline::new(

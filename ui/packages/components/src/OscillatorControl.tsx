@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { logger, useMeterFrame, useParameter } from '@wavecraft/core';
+import { logger, useMeterFrame, useParameter, useHasProcessor } from '@wavecraft/core';
 import type { ParameterId } from '@wavecraft/core';
 import { ParameterSlider } from './ParameterSlider';
 
@@ -12,7 +12,11 @@ const OSCILLATOR_ENABLED_PARAM_ID = 'oscillator_enabled' as ParameterId;
 const OSCILLATOR_FREQUENCY_PARAM_ID = 'oscillator_frequency' as ParameterId;
 const OSCILLATOR_LEVEL_PARAM_ID = 'oscillator_level' as ParameterId;
 
-export function OscillatorControl(): React.JSX.Element {
+interface OscilloscopeProps {
+  hideWhenNotInSignalChain?: boolean;
+}
+
+export function OscillatorControl(props: Readonly<OscilloscopeProps>): React.JSX.Element | null {
   const meterFrame = useMeterFrame(100);
   const {
     param: oscillatorEnabled,
@@ -20,6 +24,12 @@ export function OscillatorControl(): React.JSX.Element {
     isLoading: isOscillatorLoading,
     error: oscillatorError,
   } = useParameter(OSCILLATOR_ENABLED_PARAM_ID);
+
+  const hasProcessorInSignalChain = useHasProcessor('oscillator');
+
+  if (props.hideWhenNotInSignalChain && !hasProcessorInSignalChain) {
+    return null;
+  }
 
   const oscillatorPeak = Math.max(meterFrame?.peak_l ?? 0, meterFrame?.peak_r ?? 0);
   const isProducing = oscillatorPeak > SIGNAL_THRESHOLD;

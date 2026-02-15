@@ -1,6 +1,6 @@
 // ExampleProcessor — minimal custom processor template.
 //
-// This processor is intentionally simple: it does not modify the signal.
+// This processor applies a fixed 2x gain to all channels/samples.
 // Use it as a starting point for your own custom DSP.
 
 use wavecraft::prelude::*;
@@ -26,10 +26,16 @@ impl Processor for ExampleProcessor {
 
     fn process(
         &mut self,
-        _buffer: &mut [&mut [f32]],
+        buffer: &mut [&mut [f32]],
         _transport: &Transport,
         _params: &Self::Params,
     ) {
-        // Intentionally a no-op.
+        // Your implementation here.
+        // This example simply applies a fixed 2x gain to all samples.
+        for channel in buffer.iter_mut() {
+            for _sample in channel.iter_mut() {
+                // *sample *= 2.0;
+            }
+        }
     }
 }

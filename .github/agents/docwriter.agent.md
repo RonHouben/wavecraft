@@ -6,7 +6,7 @@ model:
   - Claude Sonnet 4.5 (copilot)
   - GPT-5.2 (copilot)
 tools: ['read', 'search', 'edit', 'web', 'agent', 'todo', 'memory']
-agents: [orchestrator, search]
+agents: ['*']
 user-invokable: false
 ---
 

@@ -14,7 +14,7 @@
 //!
 //! ```rust,no_run
 //! use wavecraft_bridge::{IpcHandler, ParameterHost, BridgeError};
-//! use wavecraft_protocol::{AudioRuntimeStatus, MeterFrame, ParameterInfo};
+//! use wavecraft_protocol::{AudioRuntimeStatus, MeterFrame, OscilloscopeFrame, ParameterInfo};
 //!
 //! // Implement ParameterHost for your application state
 //! struct MyApp;
@@ -36,6 +36,11 @@
 //!     }
 //!
 //!     fn get_meter_frame(&self) -> Option<MeterFrame> {
+//!         // Implementation
+//!         None
+//!     }
+//!
+//!     fn get_oscilloscope_frame(&self) -> Option<OscilloscopeFrame> {
 //!         // Implementation
 //!         None
 //!     }
@@ -69,13 +74,13 @@ pub mod plugin_loader;
 pub use error::BridgeError;
 pub use handler::IpcHandler;
 pub use host::ParameterHost;
-pub use in_memory_host::{InMemoryParameterHost, MeterProvider};
+pub use in_memory_host::{InMemoryParameterHost, MeterProvider, OscilloscopeProvider};
 pub use plugin_loader::{PluginLoaderError, PluginParamLoader};
 
 // Re-export protocol types used in bridge API
 pub use wavecraft_protocol::{
     GetAllParametersResult, GetParameterParams, GetParameterResult, IpcError, IpcNotification,
     IpcRequest, IpcResponse, MeterUpdateNotification, ParameterChangedNotification, ParameterInfo,
-    ParameterType, RegisterAudioParams, RegisterAudioResult, RequestId, SetParameterParams,
-    SetParameterResult,
+    ParameterType, ProcessorInfo, RegisterAudioParams, RegisterAudioResult, RequestId,
+    SetParameterParams, SetParameterResult,
 };

@@ -4,11 +4,11 @@ use crate::error::BridgeError;
 use crate::host::ParameterHost;
 use serde::Serialize;
 use wavecraft_protocol::{
-    GetAllParametersResult, GetAudioStatusResult, GetMeterFrameResult, GetParameterParams,
-    GetParameterResult, IpcRequest, IpcResponse, METHOD_GET_ALL_PARAMETERS,
-    METHOD_GET_AUDIO_STATUS, METHOD_GET_METER_FRAME, METHOD_GET_PARAMETER, METHOD_REQUEST_RESIZE,
-    METHOD_SET_PARAMETER, RequestId, RequestResizeParams, RequestResizeResult, SetParameterParams,
-    SetParameterResult,
+    GetAllParametersResult, GetAudioStatusResult, GetMeterFrameResult, GetOscilloscopeFrameResult,
+    GetParameterParams, GetParameterResult, IpcRequest, IpcResponse, METHOD_GET_ALL_PARAMETERS,
+    METHOD_GET_AUDIO_STATUS, METHOD_GET_METER_FRAME, METHOD_GET_OSCILLOSCOPE_FRAME,
+    METHOD_GET_PARAMETER, METHOD_REQUEST_RESIZE, METHOD_SET_PARAMETER, RequestId,
+    RequestResizeParams, RequestResizeResult, SetParameterParams, SetParameterResult,
 };
 
 /// IPC message handler that dispatches requests to a ParameterHost
@@ -32,6 +32,7 @@ impl<H: ParameterHost> IpcHandler<H> {
             METHOD_SET_PARAMETER => self.handle_set_parameter(&request),
             METHOD_GET_ALL_PARAMETERS => self.handle_get_all_parameters(&request),
             METHOD_GET_METER_FRAME => self.handle_get_meter_frame(&request),
+            METHOD_GET_OSCILLOSCOPE_FRAME => self.handle_get_oscilloscope_frame(&request),
             METHOD_GET_AUDIO_STATUS => self.handle_get_audio_status(&request),
             METHOD_REQUEST_RESIZE => self.handle_request_resize(&request),
             "ping" => self.handle_ping(&request),
@@ -141,6 +142,17 @@ impl<H: ParameterHost> IpcHandler<H> {
         Ok(IpcResponse::success(request.id.clone(), result))
     }
 
+    fn handle_get_oscilloscope_frame(
+        &self,
+        request: &IpcRequest,
+    ) -> Result<IpcResponse, BridgeError> {
+        let frame = self.host.get_oscilloscope_frame();
+
+        let result = GetOscilloscopeFrameResult { frame };
+
+        Ok(IpcResponse::success(request.id.clone(), result))
+    }
+
     fn handle_request_resize(&self, request: &IpcRequest) -> Result<IpcResponse, BridgeError> {
         // Parse params
         let params: RequestResizeParams = match &request.params {
@@ -191,7 +203,8 @@ impl<H: ParameterHost> IpcHandler<H> {
 mod tests {
     use super::*;
     use wavecraft_protocol::{
-        AudioRuntimePhase, AudioRuntimeStatus, MeterFrame, ParameterInfo, ParameterType, RequestId,
+        AudioRuntimePhase, AudioRuntimeStatus, MeterFrame, OscilloscopeFrame, ParameterInfo,
+        ParameterType, RequestId,
     };
 
     // Mock ParameterHost for testing
@@ -257,6 +270,10 @@ mod tests {
 
         fn get_meter_frame(&self) -> Option<MeterFrame> {
             // Mock returns None
+            None
+        }
+
+        fn get_oscilloscope_frame(&self) -> Option<OscilloscopeFrame> {
             None
         }
 
@@ -425,5 +442,20 @@ mod tests {
                 .expect("audio status result should deserialize");
         let status = result.status.expect("status should be present");
         assert_eq!(status.phase, AudioRuntimePhase::RunningFullDuplex);
+    }
+
+    #[test]
+    fn test_get_oscilloscope_frame_none() {
+        let handler = IpcHandler::new(MockHost::new());
+
+        let request = IpcRequest::new(RequestId::Number(8), METHOD_GET_OSCILLOSCOPE_FRAME, None);
+
+        let response = handler.handle_request(request);
+        assert!(response.result.is_some());
+
+        let result: GetOscilloscopeFrameResult =
+            serde_json::from_value(response.result.expect("oscilloscope response should exist"))
+                .expect("oscilloscope result should deserialize");
+        assert!(result.frame.is_none());
     }
 }

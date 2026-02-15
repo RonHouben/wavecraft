@@ -178,6 +178,13 @@ pub struct ParameterInfo {
     pub group: Option<String>,
 }
 
+/// Information about a discovered processor in the signal chain.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcessorInfo {
+    /// Canonical processor ID (snake_case type-derived identifier).
+    pub id: String,
+}
+
 /// Parameter type discriminator
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -212,6 +219,8 @@ pub const METHOD_SET_PARAMETER: &str = "setParameter";
 pub const METHOD_GET_ALL_PARAMETERS: &str = "getAllParameters";
 /// Method: Get current meter frame (peak/RMS levels)
 pub const METHOD_GET_METER_FRAME: &str = "getMeterFrame";
+/// Method: Get current oscilloscope frame (1024-point waveform)
+pub const METHOD_GET_OSCILLOSCOPE_FRAME: &str = "getOscilloscopeFrame";
 /// Method: Get current audio runtime status
 pub const METHOD_GET_AUDIO_STATUS: &str = "getAudioStatus";
 /// Method: Request resize of editor window
@@ -462,6 +471,24 @@ mod tests {
         assert!(json.contains("\"phase\":\"runningFullDuplex\""));
         assert!(json.contains("\"sample_rate\":44100"));
     }
+
+    #[test]
+    fn test_oscilloscope_frame_serialization() {
+        let result = GetOscilloscopeFrameResult {
+            frame: Some(OscilloscopeFrame {
+                points_l: vec![0.0; 1024],
+                points_r: vec![0.0; 1024],
+                sample_rate: 44100.0,
+                timestamp: 7,
+                no_signal: true,
+                trigger_mode: OscilloscopeTriggerMode::RisingZeroCrossing,
+            }),
+        };
+
+        let json = serde_json::to_string(&result).expect("oscilloscope result should serialize");
+        assert!(json.contains("\"sample_rate\":44100"));
+        assert!(json.contains("\"trigger_mode\":\"risingZeroCrossing\""));
+    }
 }
 
 // ============================================================================
@@ -490,6 +517,50 @@ pub struct MeterFrame {
 pub struct GetMeterFrameResult {
     /// Latest meter frame, or null if no data available
     pub frame: Option<MeterFrame>,
+}
+
+// ============================================================================
+// Oscilloscope Types
+// ============================================================================
+
+/// Trigger mode for oscilloscope frame alignment.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum OscilloscopeTriggerMode {
+    RisingZeroCrossing,
+}
+
+/// Channel view mode for oscilloscope visualization.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum OscilloscopeChannelView {
+    Overlay,
+    Left,
+    Right,
+}
+
+/// Oscilloscope waveform frame data for UI visualization.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OscilloscopeFrame {
+    /// Left channel waveform points (length 1024).
+    pub points_l: Vec<f32>,
+    /// Right channel waveform points (length 1024).
+    pub points_r: Vec<f32>,
+    /// Sample rate in Hz used to capture the frame.
+    pub sample_rate: f32,
+    /// Sample timestamp (monotonic).
+    pub timestamp: u64,
+    /// True when signal amplitude stayed below threshold for full frame.
+    pub no_signal: bool,
+    /// Trigger mode used for alignment.
+    pub trigger_mode: OscilloscopeTriggerMode,
+}
+
+/// Result for getOscilloscopeFrame method.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetOscilloscopeFrameResult {
+    /// Latest oscilloscope frame, or null if no data available.
+    pub frame: Option<OscilloscopeFrame>,
 }
 
 // ----------------------------------------------------------------------------
