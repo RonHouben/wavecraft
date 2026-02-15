@@ -5,8 +5,14 @@
  * using pluggable transport implementations (NativeTransport, WebSocketTransport).
  */
 
-import type { IpcRequest, IpcResponse, IpcNotification } from '../types/ipc';
-import { isIpcNotification } from '../types/ipc';
+import type {
+  AudioRuntimeStatus,
+  GetAudioStatusResult,
+  IpcNotification,
+  IpcRequest,
+  IpcResponse,
+} from '../types/ipc';
+import { METHOD_GET_AUDIO_STATUS, isIpcNotification } from '../types/ipc';
 import type { Transport } from '../transports';
 import { getTransport } from '../transports';
 import { logger } from '../logger/Logger';
@@ -109,6 +115,14 @@ export class IpcBridge {
     }
 
     return response.result as TResult;
+  }
+
+  /**
+   * Fetch current audio runtime status from the host.
+   */
+  public async getAudioStatus(): Promise<AudioRuntimeStatus | null> {
+    const result = await this.invoke<GetAudioStatusResult>(METHOD_GET_AUDIO_STATUS);
+    return result.status;
   }
 
   /**

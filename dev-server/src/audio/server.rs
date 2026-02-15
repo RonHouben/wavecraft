@@ -53,9 +53,9 @@ pub struct AudioServer {
     processor: Box<dyn DevAudioProcessor>,
     config: AudioConfig,
     input_device: Device,
-    output_device: Option<Device>,
+    output_device: Device,
     input_config: StreamConfig,
-    output_config: Option<StreamConfig>,
+    output_config: StreamConfig,
     param_bridge: Arc<AtomicParameterBridge>,
 }
 
@@ -82,42 +82,30 @@ impl AudioServer {
         tracing::info!("Input sample rate: {} Hz", input_sample_rate);
         let input_config: StreamConfig = supported_input.into();
 
-        // Output device (optional — graceful fallback to metering-only)
-        let (output_device, output_config) = match host.default_output_device() {
-            Some(dev) => {
-                match dev.name() {
-                    Ok(name) => tracing::info!("Using output device: {}", name),
-                    Err(_) => tracing::info!("Using output device: (unnamed)"),
-                }
-                match dev.default_output_config() {
-                    Ok(supported_output) => {
-                        let output_sr = supported_output.sample_rate().0;
-                        tracing::info!("Output sample rate: {} Hz", output_sr);
-                        if output_sr != input_sample_rate {
-                            tracing::warn!(
-                                "Input/output sample rate mismatch ({} vs {}). \
-                                 Processing at input rate; output device may resample.",
-                                input_sample_rate,
-                                output_sr
-                            );
-                        }
-                        let cfg: StreamConfig = supported_output.into();
-                        (Some(dev), Some(cfg))
-                    }
-                    Err(e) => {
-                        tracing::warn!(
-                            "Failed to get output config: {}. Metering-only mode.",
-                            e
-                        );
-                        (None, None)
-                    }
-                }
-            }
-            None => {
-                tracing::warn!("No output device available. Metering-only mode.");
-                (None, None)
-            }
-        };
+        // Output device (required): dev mode expects audible output by default.
+        let output_device = host
+            .default_output_device()
+            .context("No output device available")?;
+
+        match output_device.name() {
+            Ok(name) => tracing::info!("Using output device: {}", name),
+            Err(_) => tracing::info!("Using output device: (unnamed)"),
+        }
+
+        let supported_output = output_device
+            .default_output_config()
+            .context("Failed to get default output config")?;
+        let output_sr = supported_output.sample_rate().0;
+        tracing::info!("Output sample rate: {} Hz", output_sr);
+        if output_sr != input_sample_rate {
+            tracing::warn!(
+                "Input/output sample rate mismatch ({} vs {}). \
+                 Processing at input rate; output device may resample.",
+                input_sample_rate,
+                output_sr
+            );
+        }
+        let output_config: StreamConfig = supported_output.into();
 
         Ok(Self {
             processor,
@@ -144,13 +132,14 @@ impl AudioServer {
 
         let mut processor = self.processor;
         let buffer_size = self.config.buffer_size as usize;
-        let num_channels = self.input_config.channels as usize;
-        let _param_bridge = Arc::clone(&self.param_bridge);
+        let input_channels = self.input_config.channels as usize;
+        let output_channels = self.output_config.channels as usize;
+        let param_bridge = Arc::clone(&self.param_bridge);
 
         // --- SPSC ring buffer for input→output audio transfer ---
         // Capacity: buffer_size * num_channels * 4 blocks of headroom.
         // Data format: interleaved f32 samples (matches cpal output).
-        let ring_capacity = buffer_size * num_channels.max(2) * 4;
+        let ring_capacity = buffer_size * 2 * 4;
         let (mut ring_producer, mut ring_consumer) = rtrb::RingBuffer::new(ring_capacity);
 
         // --- SPSC ring buffer for meter data (audio → consumer task) ---
@@ -178,8 +167,8 @@ impl AudioServer {
                 move |data: &[f32], _: &cpal::InputCallbackInfo| {
                     frame_counter += 1;
 
-                    let num_samples = data.len() / num_channels.max(1);
-                    if num_samples == 0 || num_channels == 0 {
+                    let num_samples = data.len() / input_channels.max(1);
+                    if num_samples == 0 || input_channels == 0 {
                         return;
                     }
 
@@ -192,24 +181,24 @@ impl AudioServer {
                     right.fill(0.0);
 
                     for i in 0..actual_samples {
-                        left[i] = data[i * num_channels];
-                        if num_channels > 1 {
-                            right[i] = data[i * num_channels + 1];
+                        left[i] = data[i * input_channels];
+                        if input_channels > 1 {
+                            right[i] = data[i * input_channels + 1];
                         } else {
                             right[i] = left[i];
                         }
                     }
-
-                    // Read parameter values at block boundary (RT-safe atomic reads).
-                    // Currently the bridge is kept alive in the closure for future
-                    // vtable v2 parameter injection. The infrastructure is in place.
-                    let _ = &_param_bridge;
 
                     // Process through the user's DSP (stack-local channel array)
                     {
                         let mut channels: [&mut [f32]; 2] = [left, right];
                         processor.process(&mut channels);
                     }
+
+                    // Apply runtime output modifiers from lock-free parameters.
+                    // This provides immediate control for source generators in
+                    // browser dev mode while FFI parameter injection is evolving.
+                    apply_output_modifiers(left, right, &param_bridge);
 
                     // Re-borrow after process()
                     let left = &left_buf[..actual_samples];
@@ -241,7 +230,7 @@ impl AudioServer {
                         let _ = meter_producer.push(notification);
                     }
 
-                    // Interleave processed audio and write to ring buffer.
+                    // Interleave processed stereo audio and write to ring buffer.
                     // If the ring buffer is full, samples are silently dropped
                     // (acceptable — temporary glitch, RT-safe).
                     let interleave = &mut interleave_buf[..actual_samples * 2];
@@ -251,7 +240,6 @@ impl AudioServer {
                     }
 
                     // Write to SPSC ring buffer — non-blocking, lock-free.
-                    // Push sample by sample; if full, remaining samples are dropped.
                     for &sample in interleave.iter() {
                         if ring_producer.push(sample).is_err() {
                             break;
@@ -270,46 +258,55 @@ impl AudioServer {
             .context("Failed to start input stream")?;
         tracing::info!("Input stream started");
 
-        // --- Output stream (optional) ---
-        let output_stream = if let (Some(output_device), Some(output_config)) =
-            (self.output_device, self.output_config)
-        {
-            let stream = output_device
-                .build_output_stream(
-                    &output_config,
-                    move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-                        // Read from SPSC ring buffer — non-blocking, lock-free.
-                        // If underflow, fill with silence (zeros).
-                        for sample in data.iter_mut() {
-                            *sample = ring_consumer.pop().unwrap_or(0.0);
+        // --- Output stream (required) ---
+        let output_stream = self
+            .output_device
+            .build_output_stream(
+                &self.output_config,
+                move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
+                    if output_channels == 0 {
+                        data.fill(0.0);
+                        return;
+                    }
+
+                    // Route stereo frames from the ring into the device layout.
+                    // Underflow is filled with silence.
+                    for frame in data.chunks_mut(output_channels) {
+                        let left = ring_consumer.pop().unwrap_or(0.0);
+                        let right = ring_consumer.pop().unwrap_or(0.0);
+
+                        if output_channels == 1 {
+                            frame[0] = 0.5 * (left + right);
+                            continue;
                         }
-                    },
-                    |err| {
-                        tracing::error!("Audio output stream error: {}", err);
-                    },
-                    None,
-                )
-                .context("Failed to build output stream")?;
 
-            stream.play().context("Failed to start output stream")?;
-            tracing::info!("Output stream started");
-            Some(stream)
-        } else {
-            tracing::info!("No output device — metering-only mode");
-            None
-        };
+                        frame[0] = left;
+                        frame[1] = right;
 
-        let mode = if output_stream.is_some() {
-            "full-duplex (input + output)"
-        } else {
-            "input-only (metering)"
-        };
+                        for channel in frame.iter_mut().skip(2) {
+                            *channel = 0.0;
+                        }
+                    }
+                },
+                |err| {
+                    tracing::error!("Audio output stream error: {}", err);
+                },
+                None,
+            )
+            .context("Failed to build output stream")?;
+
+        output_stream
+            .play()
+            .context("Failed to start output stream")?;
+        tracing::info!("Output stream started");
+
+        let mode = "full-duplex (input + output)";
         tracing::info!("Audio server started in {} mode", mode);
 
         Ok((
             AudioHandle {
                 _input_stream: input_stream,
-                _output_stream: output_stream,
+                _output_stream: Some(output_stream),
             },
             meter_consumer,
         ))
@@ -317,6 +314,65 @@ impl AudioServer {
 
     /// Returns true if an output device is available for audio playback.
     pub fn has_output(&self) -> bool {
-        self.output_device.is_some()
+        true
+    }
+}
+
+fn apply_output_modifiers(
+    left: &mut [f32],
+    right: &mut [f32],
+    param_bridge: &AtomicParameterBridge,
+) {
+    // Temporary dedicated control for sdk-template oscillator source.
+    // 1.0 = on, 0.0 = off.
+    if let Some(enabled) = param_bridge.read("oscillator_enabled")
+        && enabled < 0.5
+    {
+        left.fill(0.0);
+        right.fill(0.0);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::apply_output_modifiers;
+    use crate::audio::atomic_params::AtomicParameterBridge;
+    use wavecraft_protocol::{ParameterInfo, ParameterType};
+
+    fn bridge_with_enabled(default_value: f32) -> AtomicParameterBridge {
+        AtomicParameterBridge::new(&[ParameterInfo {
+            id: "oscillator_enabled".to_string(),
+            name: "Enabled".to_string(),
+            param_type: ParameterType::Float,
+            value: default_value,
+            default: default_value,
+            unit: Some("%".to_string()),
+            group: Some("Oscillator".to_string()),
+        }])
+    }
+
+    #[test]
+    fn output_modifiers_mute_when_oscillator_disabled() {
+        let bridge = bridge_with_enabled(1.0);
+        bridge.write("oscillator_enabled", 0.0);
+
+        let mut left = [0.25_f32, -0.5, 0.75];
+        let mut right = [0.2_f32, -0.4, 0.6];
+        apply_output_modifiers(&mut left, &mut right, &bridge);
+
+        assert!(left.iter().all(|s| s.abs() <= f32::EPSILON));
+        assert!(right.iter().all(|s| s.abs() <= f32::EPSILON));
+    }
+
+    #[test]
+    fn output_modifiers_keep_signal_when_oscillator_enabled() {
+        let bridge = bridge_with_enabled(1.0);
+
+        let mut left = [0.25_f32, -0.5, 0.75];
+        let mut right = [0.2_f32, -0.4, 0.6];
+        apply_output_modifiers(&mut left, &mut right, &bridge);
+
+        assert_eq!(left, [0.25, -0.5, 0.75]);
+        assert_eq!(right, [0.2, -0.4, 0.6]);
     }
 }

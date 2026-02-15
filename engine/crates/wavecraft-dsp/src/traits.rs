@@ -27,6 +27,16 @@ pub struct Transport {
 pub trait ProcessorParams: Default + Send + Sync + 'static {
     /// Returns the parameter specifications for this processor.
     fn param_specs() -> &'static [ParamSpec];
+
+    /// Builds parameter values initialized from each [`ParamSpec::default`].
+    ///
+    /// By default this falls back to `Self::default()`. Implementations should
+    /// override this when struct field defaults differ from declared
+    /// `param_specs()` defaults (common with `#[derive(Default)]` on numeric
+    /// fields, which initializes them to zero).
+    fn from_param_defaults() -> Self {
+        Self::default()
+    }
 }
 
 /// Specification for a single parameter.

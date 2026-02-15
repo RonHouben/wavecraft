@@ -587,15 +587,14 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
             ///
             /// # Known Limitation
             ///
-            /// Currently returns default params. Full bidirectional parameter sync
-            /// between nih-plug and processor params is not yet implemented.
-            /// The DSL-generated nih-plug params work correctly for host automation
-            /// and UI display, but processor-level params use defaults.
+            /// Full bidirectional parameter sync between nih-plug and processor
+            /// params is not yet implemented. For now this initializes processor
+            /// params from `ProcessorParams::from_param_defaults()`.
             ///
             /// For custom parameter behavior, implement the `Plugin` trait directly
             /// instead of using the `wavecraft_plugin!` macro.
             fn build_processor_params(&self) -> <__ProcessorType as #krate::Processor>::Params {
-                <<__ProcessorType as #krate::Processor>::Params as ::std::default::Default>::default()
+                <<__ProcessorType as #krate::Processor>::Params as #krate::ProcessorParams>::from_param_defaults()
             }
         }
 
@@ -718,7 +717,7 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
                         .collect();
 
                     let transport = #krate::Transport::default();
-                    let params = <__Params as ::std::default::Default>::default();
+                    let params = <__Params as #krate::ProcessorParams>::from_param_defaults();
 
                     #krate::Processor::process(processor, &mut channel_slices, &transport, &params);
                 }));

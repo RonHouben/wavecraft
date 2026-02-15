@@ -17,13 +17,14 @@ pub use dev_audio_ffi::{DEV_PROCESSOR_SYMBOL, DEV_PROCESSOR_VTABLE_VERSION, DevP
 
 // Re-export key IPC types for convenience
 pub use ipc::{
-    ERROR_INTERNAL, ERROR_INVALID_PARAMS, ERROR_INVALID_REQUEST, ERROR_METHOD_NOT_FOUND,
-    ERROR_PARAM_NOT_FOUND, ERROR_PARAM_OUT_OF_RANGE, ERROR_PARSE, GetAllParametersResult,
+    AudioDiagnostic, AudioDiagnosticCode, AudioRuntimePhase, AudioRuntimeStatus, ERROR_INTERNAL,
+    ERROR_INVALID_PARAMS, ERROR_INVALID_REQUEST, ERROR_METHOD_NOT_FOUND, ERROR_PARAM_NOT_FOUND,
+    ERROR_PARAM_OUT_OF_RANGE, ERROR_PARSE, GetAllParametersResult, GetAudioStatusResult,
     GetMeterFrameResult, GetParameterParams, GetParameterResult, IpcError, IpcNotification,
-    IpcRequest, IpcResponse, METHOD_GET_ALL_PARAMETERS, METHOD_GET_METER_FRAME,
-    METHOD_GET_PARAMETER, METHOD_REGISTER_AUDIO, METHOD_REQUEST_RESIZE, METHOD_SET_PARAMETER,
-    MeterFrame, MeterUpdateNotification, NOTIFICATION_METER_UPDATE, NOTIFICATION_PARAMETER_CHANGED,
-    ParameterChangedNotification, ParameterInfo, ParameterType, RegisterAudioParams,
-    RegisterAudioResult, RequestId, RequestResizeParams, RequestResizeResult, SetParameterParams,
-    SetParameterResult,
+    IpcRequest, IpcResponse, METHOD_GET_ALL_PARAMETERS, METHOD_GET_AUDIO_STATUS,
+    METHOD_GET_METER_FRAME, METHOD_GET_PARAMETER, METHOD_REGISTER_AUDIO, METHOD_REQUEST_RESIZE,
+    METHOD_SET_PARAMETER, MeterFrame, MeterUpdateNotification, NOTIFICATION_AUDIO_STATUS_CHANGED,
+    NOTIFICATION_METER_UPDATE, NOTIFICATION_PARAMETER_CHANGED, ParameterChangedNotification,
+    ParameterInfo, ParameterType, RegisterAudioParams, RegisterAudioResult, RequestId,
+    RequestResizeParams, RequestResizeResult, SetParameterParams, SetParameterResult,
 };

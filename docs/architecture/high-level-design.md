@@ -35,6 +35,8 @@
 
 Build the audio/DSP core and host/plugin API surface in Rust (use a modern Rust plugin framework such as nih-plug), expose a minimal parameter and event API, and embed a React frontend by bundling the built static assets into an embedded WebView runtime (WKWebView on macOS; Windows/Linux support deprioritized). **Primary target is macOS + Ableton Live.** Communicate via a well-defined IPC (JSON-RPC style) and strictly separate real-time audio thread concerns (lock-free param state and ring buffers) from UI work (runs on main/UI thread). This gives you idiomatic Rust DSP code, a maintainable React codebase, and a focused path to production on the primary platform. ￼
 
+**Pre-1.0 contract policy:** SDK and IPC contracts are treated as current-version required during development. Incompatible versions/configurations fail fast with actionable diagnostics, and any temporary compatibility path must be explicit and opt-in (never the default).
+
 ⸻
 
 ## Repository Structure (Monorepo)
@@ -387,7 +389,7 @@ Define JSON messages exchanged over the webview bridge. Keep it small and versio
 { "type": "meterFrame", "meters": [{ "id":"outL", "peak":0.7, "rms":0.12 }, ...], "ts": 1680000000 }
 ```
 
-Version each message payload so UI and plugin can be backward compatible.
+Version each message payload so contract mismatches can be detected immediately and surfaced as actionable errors.
 
 ⸻
 

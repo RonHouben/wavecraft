@@ -7,8 +7,12 @@
 
 #[cfg(feature = "audio")]
 use std::sync::Arc;
+use std::sync::RwLock;
+use std::time::{SystemTime, UNIX_EPOCH};
 use wavecraft_bridge::{BridgeError, InMemoryParameterHost, ParameterHost};
-use wavecraft_protocol::{MeterFrame, ParameterInfo};
+use wavecraft_protocol::{
+    AudioRuntimePhase, AudioRuntimeStatus, MeterFrame, MeterUpdateNotification, ParameterInfo,
+};
 
 #[cfg(feature = "audio")]
 use crate::audio::atomic_params::AtomicParameterBridge;
@@ -26,6 +30,8 @@ use crate::audio::atomic_params::AtomicParameterBridge;
 /// The `AtomicParameterBridge` uses lock-free atomics for audio thread.
 pub struct DevServerHost {
     inner: InMemoryParameterHost,
+    latest_meter_frame: Arc<RwLock<Option<MeterFrame>>>,
+    audio_status: Arc<RwLock<AudioRuntimeStatus>>,
     #[cfg(feature = "audio")]
     param_bridge: Option<Arc<AtomicParameterBridge>>,
 }
@@ -42,9 +48,19 @@ impl DevServerHost {
     #[cfg_attr(feature = "audio", allow(dead_code))]
     pub fn new(parameters: Vec<ParameterInfo>) -> Self {
         let inner = InMemoryParameterHost::new(parameters);
+        let latest_meter_frame = Arc::new(RwLock::new(None));
+        let audio_status = Arc::new(RwLock::new(AudioRuntimeStatus {
+            phase: AudioRuntimePhase::Disabled,
+            diagnostic: None,
+            sample_rate: None,
+            buffer_size: None,
+            updated_at_ms: now_millis(),
+        }));
 
         Self {
             inner,
+            latest_meter_frame,
+            audio_status,
             #[cfg(feature = "audio")]
             param_bridge: None,
         }
@@ -60,9 +76,19 @@ impl DevServerHost {
         bridge: Arc<AtomicParameterBridge>,
     ) -> Self {
         let inner = InMemoryParameterHost::new(parameters);
+        let latest_meter_frame = Arc::new(RwLock::new(None));
+        let audio_status = Arc::new(RwLock::new(AudioRuntimeStatus {
+            phase: AudioRuntimePhase::Disabled,
+            diagnostic: None,
+            sample_rate: None,
+            buffer_size: None,
+            updated_at_ms: now_millis(),
+        }));
 
         Self {
             inner,
+            latest_meter_frame,
+            audio_status,
             param_bridge: Some(bridge),
         }
     }
@@ -80,6 +106,30 @@ impl DevServerHost {
     pub fn replace_parameters(&self, new_params: Vec<ParameterInfo>) -> Result<(), String> {
         self.inner.replace_parameters(new_params)
     }
+
+    /// Store the latest metering snapshot for polling-based consumers.
+    pub fn set_latest_meter_frame(&self, update: &MeterUpdateNotification) {
+        let mut meter = self
+            .latest_meter_frame
+            .write()
+            .expect("latest_meter_frame lock poisoned");
+        *meter = Some(MeterFrame {
+            peak_l: update.left_peak,
+            peak_r: update.right_peak,
+            rms_l: update.left_rms,
+            rms_r: update.right_rms,
+            timestamp: update.timestamp_us,
+        });
+    }
+
+    /// Update the shared audio runtime status.
+    pub fn set_audio_status(&self, status: AudioRuntimeStatus) {
+        let mut current = self
+            .audio_status
+            .write()
+            .expect("audio_status lock poisoned");
+        *current = status;
+    }
 }
 
 impl ParameterHost for DevServerHost {
@@ -92,7 +142,9 @@ impl ParameterHost for DevServerHost {
 
         // Forward to atomic bridge for audio-thread access (lock-free)
         #[cfg(feature = "audio")]
-        if result.is_ok() && let Some(ref bridge) = self.param_bridge {
+        if result.is_ok()
+            && let Some(ref bridge) = self.param_bridge
+        {
             bridge.write(id, value);
         }
 
@@ -104,14 +156,30 @@ impl ParameterHost for DevServerHost {
     }
 
     fn get_meter_frame(&self) -> Option<MeterFrame> {
-        // Meters are now provided externally via the audio server's meter
-        // channel → WebSocket broadcast. No synthetic generation.
-        None
+        self.latest_meter_frame
+            .read()
+            .expect("latest_meter_frame lock poisoned")
+            .clone()
     }
 
     fn request_resize(&self, _width: u32, _height: u32) -> bool {
         self.inner.request_resize(_width, _height)
     }
+
+    fn get_audio_status(&self) -> Option<AudioRuntimeStatus> {
+        Some(
+            self.audio_status
+                .read()
+                .expect("audio_status lock poisoned")
+                .clone(),
+        )
+    }
+}
+
+fn now_millis() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |duration| duration.as_millis() as u64)
 }
 
 #[cfg(test)]
@@ -199,7 +267,62 @@ mod tests {
     #[test]
     fn test_get_meter_frame() {
         let host = DevServerHost::new(test_params());
-        // Meters are now provided externally — no synthetic generation
+        // Initially no externally provided meter data.
         assert!(host.get_meter_frame().is_none());
+
+        host.set_latest_meter_frame(&MeterUpdateNotification {
+            timestamp_us: 42,
+            left_peak: 0.9,
+            left_rms: 0.4,
+            right_peak: 0.8,
+            right_rms: 0.3,
+        });
+
+        let frame = host
+            .get_meter_frame()
+            .expect("meter frame should be populated after update");
+        assert!((frame.peak_l - 0.9).abs() < f32::EPSILON);
+        assert!((frame.rms_r - 0.3).abs() < f32::EPSILON);
+        assert_eq!(frame.timestamp, 42);
+    }
+
+    #[test]
+    fn test_audio_status_roundtrip() {
+        let host = DevServerHost::new(test_params());
+
+        let status = AudioRuntimeStatus {
+            phase: AudioRuntimePhase::RunningInputOnly,
+            diagnostic: None,
+            sample_rate: Some(44100.0),
+            buffer_size: Some(512),
+            updated_at_ms: 100,
+        };
+
+        host.set_audio_status(status.clone());
+
+        let stored = host
+            .get_audio_status()
+            .expect("audio status should always be present in dev host");
+        assert_eq!(stored.phase, status.phase);
+        assert_eq!(stored.buffer_size, status.buffer_size);
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn test_set_audio_status_inside_runtime_does_not_panic() {
+        let host = DevServerHost::new(test_params());
+
+        host.set_audio_status(AudioRuntimeStatus {
+            phase: AudioRuntimePhase::Initializing,
+            diagnostic: None,
+            sample_rate: Some(48000.0),
+            buffer_size: Some(256),
+            updated_at_ms: 200,
+        });
+
+        let stored = host
+            .get_audio_status()
+            .expect("audio status should always be present in dev host");
+        assert_eq!(stored.phase, AudioRuntimePhase::Initializing);
+        assert_eq!(stored.buffer_size, Some(256));
     }
 }

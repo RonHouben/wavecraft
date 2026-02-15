@@ -86,3 +86,15 @@ fn test_default_value_calculation() {
     // Default should be midpoint: (0 + 10) / 2 = 5.0
     assert_eq!(specs[0].default, 5.0);
 }
+
+#[test]
+fn test_from_param_defaults_uses_explicit_default() {
+    let defaults = SimpleParams::from_param_defaults();
+    assert!((defaults.value - 0.5).abs() < f32::EPSILON);
+}
+
+#[test]
+fn test_from_param_defaults_uses_range_midpoint_when_default_missing() {
+    let defaults = NoDefaultParam::from_param_defaults();
+    assert!((defaults.level - 5.0).abs() < f32::EPSILON);
+}

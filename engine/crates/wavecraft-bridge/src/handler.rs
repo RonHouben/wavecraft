@@ -4,10 +4,11 @@ use crate::error::BridgeError;
 use crate::host::ParameterHost;
 use serde::Serialize;
 use wavecraft_protocol::{
-    GetAllParametersResult, GetMeterFrameResult, GetParameterParams, GetParameterResult,
-    IpcRequest, IpcResponse, METHOD_GET_ALL_PARAMETERS, METHOD_GET_METER_FRAME,
-    METHOD_GET_PARAMETER, METHOD_REQUEST_RESIZE, METHOD_SET_PARAMETER, RequestId,
-    RequestResizeParams, RequestResizeResult, SetParameterParams, SetParameterResult,
+    GetAllParametersResult, GetAudioStatusResult, GetMeterFrameResult, GetParameterParams,
+    GetParameterResult, IpcRequest, IpcResponse, METHOD_GET_ALL_PARAMETERS,
+    METHOD_GET_AUDIO_STATUS, METHOD_GET_METER_FRAME, METHOD_GET_PARAMETER, METHOD_REQUEST_RESIZE,
+    METHOD_SET_PARAMETER, RequestId, RequestResizeParams, RequestResizeResult, SetParameterParams,
+    SetParameterResult,
 };
 
 /// IPC message handler that dispatches requests to a ParameterHost
@@ -31,6 +32,7 @@ impl<H: ParameterHost> IpcHandler<H> {
             METHOD_SET_PARAMETER => self.handle_set_parameter(&request),
             METHOD_GET_ALL_PARAMETERS => self.handle_get_all_parameters(&request),
             METHOD_GET_METER_FRAME => self.handle_get_meter_frame(&request),
+            METHOD_GET_AUDIO_STATUS => self.handle_get_audio_status(&request),
             METHOD_REQUEST_RESIZE => self.handle_request_resize(&request),
             "ping" => self.handle_ping(&request),
             _ => Err(BridgeError::UnknownMethod(request.method.clone())),
@@ -167,6 +169,14 @@ impl<H: ParameterHost> IpcHandler<H> {
         Ok(IpcResponse::success(request.id.clone(), result))
     }
 
+    fn handle_get_audio_status(&self, request: &IpcRequest) -> Result<IpcResponse, BridgeError> {
+        let result = GetAudioStatusResult {
+            status: self.host.get_audio_status(),
+        };
+
+        Ok(IpcResponse::success(request.id.clone(), result))
+    }
+
     fn handle_ping(&self, request: &IpcRequest) -> Result<IpcResponse, BridgeError> {
         // Simple ping/pong for testing connectivity
         #[derive(Serialize)]
@@ -188,7 +198,9 @@ impl<H: ParameterHost> IpcHandler<H> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use wavecraft_protocol::{MeterFrame, ParameterInfo, ParameterType, RequestId};
+    use wavecraft_protocol::{
+        AudioRuntimePhase, AudioRuntimeStatus, MeterFrame, ParameterInfo, ParameterType, RequestId,
+    };
 
     // Mock ParameterHost for testing
     struct MockHost {
@@ -248,6 +260,16 @@ mod tests {
         fn request_resize(&self, _width: u32, _height: u32) -> bool {
             // Mock always accepts resize requests
             true
+        }
+
+        fn get_audio_status(&self) -> Option<AudioRuntimeStatus> {
+            Some(AudioRuntimeStatus {
+                phase: AudioRuntimePhase::RunningFullDuplex,
+                diagnostic: None,
+                sample_rate: Some(44100.0),
+                buffer_size: Some(512),
+                updated_at_ms: 123,
+            })
         }
     }
 
@@ -384,5 +406,21 @@ mod tests {
         let response_json = handler.handle_json(json);
 
         assert!(response_json.contains("\"error\""));
+    }
+
+    #[test]
+    fn test_get_audio_status() {
+        let handler = IpcHandler::new(MockHost::new());
+
+        let request = IpcRequest::new(RequestId::Number(7), METHOD_GET_AUDIO_STATUS, None);
+
+        let response = handler.handle_request(request);
+        assert!(response.result.is_some());
+
+        let result: GetAudioStatusResult =
+            serde_json::from_value(response.result.expect("audio status response should exist"))
+                .expect("audio status result should deserialize");
+        let status = result.status.expect("status should be present");
+        assert_eq!(status.phase, AudioRuntimePhase::RunningFullDuplex);
     }
 }

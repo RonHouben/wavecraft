@@ -208,6 +208,8 @@ pub const METHOD_SET_PARAMETER: &str = "setParameter";
 pub const METHOD_GET_ALL_PARAMETERS: &str = "getAllParameters";
 /// Method: Get current meter frame (peak/RMS levels)
 pub const METHOD_GET_METER_FRAME: &str = "getMeterFrame";
+/// Method: Get current audio runtime status
+pub const METHOD_GET_AUDIO_STATUS: &str = "getAudioStatus";
 /// Method: Request resize of editor window
 pub const METHOD_REQUEST_RESIZE: &str = "requestResize";
 /// Method: Register audio client with dev server
@@ -216,6 +218,8 @@ pub const METHOD_REGISTER_AUDIO: &str = "registerAudio";
 pub const NOTIFICATION_PARAMETER_CHANGED: &str = "parameterChanged";
 /// Notification: Meter update from audio binary (push to browser)
 pub const NOTIFICATION_METER_UPDATE: &str = "meterUpdate";
+/// Notification: Audio runtime status changed
+pub const NOTIFICATION_AUDIO_STATUS_CHANGED: &str = "audioStatusChanged";
 
 // ============================================================================
 // Helper Constructors
@@ -437,6 +441,23 @@ mod tests {
         assert!(json.contains("\"method\":\"meterUpdate\""));
         assert!(json.contains("\"left_peak\":0.5"));
     }
+
+    #[test]
+    fn test_audio_status_serialization() {
+        let result = GetAudioStatusResult {
+            status: Some(AudioRuntimeStatus {
+                phase: AudioRuntimePhase::RunningFullDuplex,
+                diagnostic: None,
+                sample_rate: Some(44100.0),
+                buffer_size: Some(512),
+                updated_at_ms: 123,
+            }),
+        };
+
+        let json = serde_json::to_string(&result).expect("status result should serialize");
+        assert!(json.contains("\"phase\":\"runningFullDuplex\""));
+        assert!(json.contains("\"sample_rate\":44100"));
+    }
 }
 
 // ============================================================================
@@ -465,6 +486,73 @@ pub struct MeterFrame {
 pub struct GetMeterFrameResult {
     /// Latest meter frame, or null if no data available
     pub frame: Option<MeterFrame>,
+}
+
+// ----------------------------------------------------------------------------
+// getAudioStatus
+// ----------------------------------------------------------------------------
+
+/// Audio runtime phase as observed by browser dev mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AudioRuntimePhase {
+    Disabled,
+    Initializing,
+    RunningFullDuplex,
+    RunningInputOnly,
+    Degraded,
+    Failed,
+}
+
+/// Structured diagnostic code for audio startup/runtime issues.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AudioDiagnosticCode {
+    LoaderUnavailable,
+    VtableMissing,
+    ProcessorCreateFailed,
+    NoInputDevice,
+    InputPermissionDenied,
+    NoOutputDevice,
+    StreamStartFailed,
+    Unknown,
+}
+
+/// Optional diagnostic details for the current runtime status.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AudioDiagnostic {
+    /// Machine-readable diagnostic code.
+    pub code: AudioDiagnosticCode,
+    /// Human-readable error/diagnostic message.
+    pub message: String,
+    /// Optional actionable hint for the user.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hint: Option<String>,
+}
+
+/// Current audio runtime status for browser dev mode.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AudioRuntimeStatus {
+    /// Current runtime phase.
+    pub phase: AudioRuntimePhase,
+    /// Optional startup/runtime diagnostic details.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub diagnostic: Option<AudioDiagnostic>,
+    /// Active sample rate when available.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sample_rate: Option<f32>,
+    /// Active audio buffer size when available.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub buffer_size: Option<u32>,
+    /// Last update timestamp (milliseconds since UNIX epoch).
+    pub updated_at_ms: u64,
+}
+
+/// Result for getAudioStatus method.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetAudioStatusResult {
+    /// Current status if available on this host.
+    pub status: Option<AudioRuntimeStatus>,
 }
 
 // ----------------------------------------------------------------------------

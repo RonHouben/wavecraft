@@ -11,6 +11,7 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{RwLock, broadcast};
 use tokio_tungstenite::{accept_async, tungstenite::protocol::Message};
 use tracing::{debug, error, info, warn};
+use wavecraft_protocol::{AudioRuntimeStatus, IpcNotification, NOTIFICATION_AUDIO_STATUS_CHANGED};
 use wavecraft_bridge::{IpcHandler, ParameterHost};
 
 /// Shared state for tracking connected clients
@@ -49,6 +50,20 @@ impl WsHandle {
                 warn!("Failed to broadcast message to client: {}", e);
             }
         }
+    }
+
+    /// Broadcast an audioStatusChanged notification to connected clients.
+    pub async fn broadcast_audio_status_changed(
+        &self,
+        status: &AudioRuntimeStatus,
+    ) -> Result<(), serde_json::Error> {
+        let json = serde_json::to_string(&IpcNotification::new(
+            NOTIFICATION_AUDIO_STATUS_CHANGED,
+            status,
+        ))?;
+
+        self.broadcast(&json).await;
+        Ok(())
     }
 }
 

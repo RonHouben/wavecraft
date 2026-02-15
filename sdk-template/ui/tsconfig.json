@@ -21,8 +21,8 @@
     "noFallthroughCasesInSwitch": true,
 
     /* SDK development — resolve @wavecraft packages from monorepo source */
-    "baseUrl": ".",
     "paths": {
+      "*": ["./*"],
       "@wavecraft/core": ["../../ui/packages/core/src/index.ts"],
       "@wavecraft/core/*": ["../../ui/packages/core/src/*"],
       "@wavecraft/components": ["../../ui/packages/components/src/index.ts"],

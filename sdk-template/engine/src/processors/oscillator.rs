@@ -22,6 +22,10 @@ use wavecraft::ProcessorParams;
 #[derive(ProcessorParams, Default, Clone)]
 #[allow(dead_code)] // Unused in default signal chain (oscillator is commented out)
 pub struct OscillatorParams {
+    /// Enable/disable oscillator output (0 = off, 1 = on).
+    #[param(range = "0.0..=1.0", default = 1.0, unit = "%")]
+    pub enabled: f32,
+
     /// Frequency in Hz.  `factor = 2.5` gives a logarithmic feel in the UI.
     #[param(range = "20.0..=5000.0", default = 440.0, unit = "Hz", factor = 2.5)]
     pub frequency: f32,
@@ -63,6 +67,13 @@ impl Processor for Oscillator {
         _transport: &Transport,
         params: &Self::Params,
     ) {
+        if params.enabled < 0.5 {
+            for channel in buffer.iter_mut() {
+                channel.fill(0.0);
+            }
+            return;
+        }
+
         // Guard: if set_sample_rate() hasn't been called yet, leave buffer unchanged.
         if self.sample_rate == 0.0 {
             return;
@@ -94,5 +105,61 @@ impl Processor for Oscillator {
 
     fn reset(&mut self) {
         self.phase = 0.0;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_params(enabled: f32) -> OscillatorParams {
+        OscillatorParams {
+            enabled,
+            frequency: 440.0,
+            level: 0.5,
+        }
+    }
+
+    #[test]
+    fn oscillator_outputs_silence_when_disabled() {
+        let mut osc = Oscillator::default();
+        osc.set_sample_rate(48_000.0);
+
+        let mut left = [1.0_f32; 64];
+        let mut right = [1.0_f32; 64];
+        let mut buffer = [&mut left[..], &mut right[..]];
+
+        osc.process(&mut buffer, &Transport::default(), &test_params(0.0));
+
+        assert!(left.iter().all(|s| s.abs() <= f32::EPSILON));
+        assert!(right.iter().all(|s| s.abs() <= f32::EPSILON));
+    }
+
+    #[test]
+    fn oscillator_outputs_signal_when_enabled() {
+        let mut osc = Oscillator::default();
+        osc.set_sample_rate(48_000.0);
+
+        let mut left = [0.0_f32; 128];
+        let mut right = [0.0_f32; 128];
+        let mut buffer = [&mut left[..], &mut right[..]];
+
+        osc.process(&mut buffer, &Transport::default(), &test_params(1.0));
+
+        let peak_left = left
+            .iter()
+            .fold(0.0_f32, |acc, sample| acc.max(sample.abs()));
+        let peak_right = right
+            .iter()
+            .fold(0.0_f32, |acc, sample| acc.max(sample.abs()));
+
+        assert!(
+            peak_left > 0.01,
+            "expected audible oscillator output on left"
+        );
+        assert!(
+            peak_right > 0.01,
+            "expected audible oscillator output on right"
+        );
     }
 }

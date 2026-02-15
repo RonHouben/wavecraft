@@ -3,7 +3,7 @@
 //! This command provides the development experience for wavecraft plugins:
 //! 1. Builds the plugin in debug mode
 //! 2. Loads parameter metadata via FFI from the compiled dylib
-//! 3. Optionally loads the audio processor vtable and runs audio in-process
+//! 3. Loads and validates the audio processor vtable, then runs audio in-process
 //! 4. Starts an embedded WebSocket server for browser UI communication
 //! 5. Starts the Vite dev server for UI hot-reloading
 
@@ -17,8 +17,9 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::mpsc;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 use tokio::sync::watch;
+use walkdir::WalkDir;
 
 use crate::project::{
     find_plugin_dylib, has_node_modules, read_engine_package_name, resolve_debug_dir,
@@ -26,7 +27,7 @@ use crate::project::{
 };
 use wavecraft_bridge::IpcHandler;
 use wavecraft_dev_server::{DevServerHost, DevSession, RebuildCallbacks, WsServer};
-use wavecraft_protocol::ParameterInfo;
+use wavecraft_protocol::{AudioDiagnosticCode, AudioRuntimePhase, ParameterInfo};
 
 #[cfg(not(feature = "audio-dev"))]
 use crate::project::param_extract::{extract_params_subprocess, DEFAULT_EXTRACT_TIMEOUT};
@@ -358,37 +359,95 @@ fn prompt_install() -> Result<bool> {
 
 /// Try to start audio processing in-process via FFI vtable.
 ///
-/// - If the plugin exports the vtable symbol: creates an `FfiProcessor`,
-///   starts audio capture via cpal, and returns the audio handle.
-/// - If the symbol is missing (older SDK): logs info and returns `None`.
-/// - If audio init fails (no microphone, etc.): logs warning and returns `None`.
+/// - If successful, returns the started audio handle and mode details.
+/// - If initialization fails, returns a structured diagnostic code and message.
+#[cfg(feature = "audio-dev")]
+struct AudioStartupSuccess {
+    handle: wavecraft_dev_server::AudioHandle,
+    sample_rate: f32,
+    buffer_size: u32,
+}
+
+#[cfg(feature = "audio-dev")]
+struct AudioStartupFailure {
+    code: AudioDiagnosticCode,
+    message: String,
+    hint: Option<&'static str>,
+}
+
+#[cfg(feature = "audio-dev")]
+fn status_for_running_audio(
+    sample_rate: f32,
+    buffer_size: u32,
+) -> wavecraft_protocol::AudioRuntimeStatus {
+    wavecraft_dev_server::audio_status(
+        AudioRuntimePhase::RunningFullDuplex,
+        Some(sample_rate),
+        Some(buffer_size),
+    )
+}
+
+#[cfg(feature = "audio-dev")]
+fn classify_audio_init_error(error_text: &str) -> (AudioDiagnosticCode, Option<&'static str>) {
+    let lower = error_text.to_lowercase();
+
+    if lower.contains("permission") || lower.contains("denied") {
+        (
+            AudioDiagnosticCode::InputPermissionDenied,
+            Some("Grant microphone access to Terminal/host app in macOS Privacy settings."),
+        )
+    } else if lower.contains("no output device") || lower.contains("default output config") {
+        (
+            AudioDiagnosticCode::NoOutputDevice,
+            Some("Ensure a default system output device is available and enabled, then retry `wavecraft start`."),
+        )
+    } else if lower.contains("no input device") {
+        (
+            AudioDiagnosticCode::NoInputDevice,
+            Some("Connect/enable an input device and retry `wavecraft start`."),
+        )
+    } else {
+        (AudioDiagnosticCode::Unknown, None)
+    }
+}
+
+#[cfg(feature = "audio-dev")]
+fn classify_runtime_loader_error(error_text: &str) -> (AudioDiagnosticCode, Option<&'static str>) {
+    let lower = error_text.to_lowercase();
+
+    if lower.contains("wavecraft_dev_create_processor")
+        || lower.contains("vtable")
+        || lower.contains("version mismatch")
+    {
+        (
+            AudioDiagnosticCode::VtableMissing,
+            Some(
+                "Rebuild the plugin with current SDK dev exports and ensure dev processor vtable symbols are present.",
+            ),
+        )
+    } else {
+        (
+            AudioDiagnosticCode::LoaderUnavailable,
+            Some("Ensure the plugin dylib is built and loadable, then retry `wavecraft start`."),
+        )
+    }
+}
+
 #[cfg(feature = "audio-dev")]
 fn try_start_audio_in_process(
     loader: &PluginLoader,
+    host: std::sync::Arc<DevServerHost>,
     ws_handle: wavecraft_dev_server::WsHandle,
     param_bridge: std::sync::Arc<wavecraft_dev_server::AtomicParameterBridge>,
     verbose: bool,
-) -> Option<wavecraft_dev_server::AudioHandle> {
+) -> Result<AudioStartupSuccess, AudioStartupFailure> {
     use wavecraft_dev_server::{AudioConfig, AudioServer, FfiProcessor};
 
     println!();
     println!("{} Checking for audio processor...", style("→").cyan());
 
-    let vtable = match loader.dev_processor_vtable() {
-        Some(vt) => {
-            println!("{} Audio processor vtable loaded", style("✓").green());
-            vt
-        }
-        None => {
-            println!(
-                "{}",
-                style("ℹ Audio processor not available (plugin may use older SDK)").blue()
-            );
-            println!("  Continuing without audio processing...");
-            println!();
-            return None;
-        }
-    };
+    let vtable = loader.dev_processor_vtable();
+    println!("{} Audio processor vtable loaded", style("✓").green());
 
     let processor = match FfiProcessor::new(vtable) {
         Some(p) => p,
@@ -397,9 +456,13 @@ fn try_start_audio_in_process(
                 "{}",
                 style("⚠ Failed to create audio processor (create returned null)").yellow()
             );
-            println!("  Continuing without audio processing...");
+            println!("  Aborting startup: audio runtime is required in SDK dev mode.");
             println!();
-            return None;
+            return Err(AudioStartupFailure {
+                code: AudioDiagnosticCode::ProcessorCreateFailed,
+                message: "Audio processor create() returned null".to_string(),
+                hint: Some("Check the processor constructor and FFI vtable exports in the plugin."),
+            });
         }
     };
 
@@ -407,25 +470,30 @@ fn try_start_audio_in_process(
         sample_rate: 44100.0,
         buffer_size: 512,
     };
+    let target_sample_rate = config.sample_rate;
+    let target_buffer_size = config.buffer_size;
 
     let server = match AudioServer::new(Box::new(processor), config, param_bridge) {
         Ok(s) => s,
         Err(e) => {
+            let error_text = e.to_string();
+            let (code, hint) = classify_audio_init_error(&error_text);
+
             if verbose {
-                println!(
-                    "{}",
-                    style(format!("⚠ Audio init failed: {:#}", e)).yellow()
-                );
+                println!("{}", style(format!("⚠ Audio init failed: {:#}", e)).yellow());
             } else {
                 println!("{}", style("⚠ No audio input device available").yellow());
             }
-            println!("  Continuing without audio...");
+            println!("  Aborting startup: audio runtime is required in SDK dev mode.");
             println!();
-            return None;
+
+            return Err(AudioStartupFailure {
+                code,
+                message: error_text,
+                hint,
+            });
         }
     };
-
-    let has_output = server.has_output();
 
     // Start audio server. Returns a lock-free ring buffer consumer for
     // meter data (RT-safe: audio thread writes without allocations).
@@ -436,9 +504,13 @@ fn try_start_audio_in_process(
                 "{}",
                 style(format!("⚠ Failed to start audio: {}", e)).yellow()
             );
-            println!("  Continuing without audio...");
+            println!("  Aborting startup: audio runtime is required in SDK dev mode.");
             println!();
-            return None;
+            return Err(AudioStartupFailure {
+                code: AudioDiagnosticCode::StreamStartFailed,
+                message: e.to_string(),
+                hint: Some("Check current audio device availability and retry."),
+            });
         }
     };
 
@@ -456,6 +528,8 @@ fn try_start_audio_in_process(
                 latest = Some(notification);
             }
             if let Some(notification) = latest {
+                host.set_latest_meter_frame(&notification);
+
                 if let Ok(json) = serde_json::to_string(&IpcNotification::new(
                     NOTIFICATION_METER_UPDATE,
                     notification,
@@ -466,19 +540,50 @@ fn try_start_audio_in_process(
         }
     });
 
-    if has_output {
-        println!(
-            "{} Audio server started — full-duplex (input + output)",
-            style("✓").green()
-        );
-    } else {
-        println!(
-            "{} Audio server started — input-only (metering)",
-            style("✓").green()
-        );
-    }
+    println!(
+        "{} Audio server started — full-duplex (input + output)",
+        style("✓").green()
+    );
     println!();
-    Some(handle)
+
+    Ok(AudioStartupSuccess {
+        handle,
+        sample_rate: target_sample_rate,
+        buffer_size: target_buffer_size,
+    })
+}
+
+/// Load plugin runtime for audio startup independently from metadata cache path.
+#[cfg(feature = "audio-dev")]
+fn load_runtime_plugin_loader(engine_dir: &Path, verbose: bool) -> Result<PluginLoader> {
+    let dylib_path = match find_plugin_dylib(engine_dir) {
+        Ok(path) => path,
+        Err(error) => {
+            anyhow::bail!("Unable to locate plugin library for audio runtime: {:#}", error);
+        }
+    };
+
+    match PluginLoader::load(&dylib_path) {
+        Ok(loader) => Ok(loader),
+        Err(error) => {
+            if verbose {
+                println!(
+                    "{}",
+                    style(format!(
+                        "⚠ Failed to load plugin runtime from {}: {:#}",
+                        dylib_path.display(),
+                        error
+                    ))
+                    .yellow()
+                );
+            }
+            anyhow::bail!(
+                "Failed to load plugin runtime from {}: {:#}",
+                dylib_path.display(),
+                error
+            )
+        }
+    }
 }
 
 /// Install npm dependencies in the ui/ directory.
@@ -517,7 +622,12 @@ fn try_read_cached_params(engine_dir: &Path, verbose: bool) -> Option<Vec<Parame
         return None;
     }
 
-    // Check if sidecar is still valid (newer than any source file change)
+    // Check if sidecar is still valid.
+    //
+    // A sidecar is valid only when it is newer than:
+    // - the compiled dylib currently used for extraction
+    // - the newest file under engine/src (source edits before rebuild)
+    // - the currently running CLI binary (cache format/logic migrations)
     let dylib_path = find_plugin_dylib(engine_dir).ok()?;
     let sidecar_mtime = std::fs::metadata(&sidecar_path).ok()?.modified().ok()?;
     let dylib_mtime = std::fs::metadata(&dylib_path).ok()?.modified().ok()?;
@@ -529,9 +639,46 @@ fn try_read_cached_params(engine_dir: &Path, verbose: bool) -> Option<Vec<Parame
         return None;
     }
 
+    if let Some(src_mtime) = newest_file_mtime_under(&engine_dir.join("src")) {
+        if src_mtime > sidecar_mtime {
+            if verbose {
+                println!("  Sidecar cache stale (engine source newer), rebuilding...");
+            }
+            return None;
+        }
+    }
+
+    if let Some(cli_mtime) = current_exe_mtime() {
+        if cli_mtime > sidecar_mtime {
+            if verbose {
+                println!("  Sidecar cache stale (CLI binary newer), rebuilding...");
+            }
+            return None;
+        }
+    }
+
     // Load parameters from JSON file (inline to avoid publish dep issues)
     let contents = std::fs::read_to_string(&sidecar_path).ok()?;
     serde_json::from_str(&contents).ok()
+}
+
+fn newest_file_mtime_under(root: &Path) -> Option<SystemTime> {
+    if !root.is_dir() {
+        return None;
+    }
+
+    WalkDir::new(root)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|entry| entry.file_type().is_file())
+        .filter_map(|entry| entry.metadata().ok())
+        .filter_map(|metadata| metadata.modified().ok())
+        .max()
+}
+
+fn current_exe_mtime() -> Option<SystemTime> {
+    let current_exe = std::env::current_exe().ok()?;
+    std::fs::metadata(current_exe).ok()?.modified().ok()
 }
 
 /// Write parameter metadata to the sidecar JSON cache.
@@ -542,18 +689,12 @@ pub(crate) fn write_sidecar_cache(engine_dir: &Path, params: &[ParameterInfo]) -
     Ok(())
 }
 
-/// Load plugin parameters using cached sidecar or feature-gated build.
-///
-/// Returns parameter metadata and optionally a PluginLoader (when audio-dev
-/// feature is enabled and the vtable is available).
+/// Load plugin parameter metadata using cached sidecar or feature-gated build.
 ///
 /// Two-phase process:
 /// 1. Try reading from cached sidecar (fast path)
-/// 2. Otherwise: build with _param-discovery, load via subprocess (or in-process for audio-dev), write sidecar
-async fn load_parameters(
-    engine_dir: &Path,
-    verbose: bool,
-) -> Result<(Vec<ParameterInfo>, Option<PluginLoader>)> {
+/// 2. Otherwise: build with _param-discovery, extract params, write sidecar
+async fn load_parameter_metadata(engine_dir: &Path, verbose: bool) -> Result<Vec<ParameterInfo>> {
     // 1. Try cached sidecar
     if let Some(params) = try_read_cached_params(engine_dir, verbose) {
         println!(
@@ -561,7 +702,7 @@ async fn load_parameters(
             style("✓").green(),
             params.len()
         );
-        return Ok((params, None));
+        return Ok(params);
     }
 
     // 2. Build with _param-discovery feature (skip nih-plug exports)
@@ -585,83 +726,45 @@ async fn load_parameters(
         .stderr(Stdio::inherit())
         .status();
 
-    match build_result {
-        Ok(status) if status.success() => {
-            // Discovery build succeeded — load params from safe dylib
-            let dylib_path = find_plugin_dylib(engine_dir)
-                .context("Failed to find plugin library after discovery build")?;
+    let status = build_result.context("Failed to run cargo build for parameter discovery")?;
+    if !status.success() {
+        anyhow::bail!(
+            "Parameter discovery build failed. This project must support --features _param-discovery in SDK dev mode."
+        );
+    }
 
-            if verbose {
-                println!("  Found dylib: {}", dylib_path.display());
-            }
+    // Discovery build succeeded — load params from safe dylib
+    let dylib_path =
+        find_plugin_dylib(engine_dir).context("Failed to find plugin library after discovery build")?;
 
-            println!("{} Loading plugin parameters...", style("→").cyan());
-            #[cfg(feature = "audio-dev")]
-            let (params, loader) = {
-                let loader = PluginLoader::load(&dylib_path)
-                    .context("Failed to load plugin for parameter discovery")?;
-                let params = loader.parameters().to_vec();
-                (params, Some(loader))
-            };
-            #[cfg(not(feature = "audio-dev"))]
-            let (params, loader) = {
-                let params = extract_params_subprocess(&dylib_path, DEFAULT_EXTRACT_TIMEOUT)
-                    .await
-                    .context("Failed to extract parameters from plugin")?;
-                (params, None)
-            };
+    if verbose {
+        println!("  Found dylib: {}", dylib_path.display());
+    }
 
-            // Write sidecar cache for next run
-            if let Err(e) = write_sidecar_cache(engine_dir, &params) {
-                if verbose {
-                    println!("  Warning: failed to write param cache: {}", e);
-                }
-            }
+    println!("{} Loading plugin parameters...", style("→").cyan());
+    #[cfg(feature = "audio-dev")]
+    let params = {
+        let loader = PluginLoader::load(&dylib_path)
+            .context("Failed to load plugin for parameter discovery")?;
+        loader.parameters().to_vec()
+    };
+    #[cfg(not(feature = "audio-dev"))]
+    let params = {
+        let params = extract_params_subprocess(&dylib_path, DEFAULT_EXTRACT_TIMEOUT)
+            .await
+            .context("Failed to extract parameters from plugin")?;
+        params
+    };
 
-            println!("{} Loaded {} parameters", style("✓").green(), params.len());
-            Ok((params, loader))
-        }
-        _ => {
-            // 3. Fallback: normal build (for older plugins without _param-discovery)
-            if verbose {
-                println!("  Discovery build failed, falling back to standard build...");
-            }
-            println!("{} Building plugin...", style("→").cyan());
-            let fallback_status = Command::new("cargo")
-                .args(["build", "--lib"])
-                .current_dir(engine_dir)
-                .stdout(if verbose {
-                    Stdio::inherit()
-                } else {
-                    Stdio::null()
-                })
-                .stderr(Stdio::inherit())
-                .status()
-                .context("Failed to run cargo build")?;
-
-            if !fallback_status.success() {
-                anyhow::bail!("Plugin build failed. Please fix the errors above.");
-            }
-
-            let dylib_path = find_plugin_dylib(engine_dir)?;
-            println!("{} Loading plugin parameters...", style("→").cyan());
-            #[cfg(feature = "audio-dev")]
-            let (params, loader) = {
-                let loader = PluginLoader::load(&dylib_path).context("Failed to load plugin")?;
-                let params = loader.parameters().to_vec();
-                (params, Some(loader))
-            };
-            #[cfg(not(feature = "audio-dev"))]
-            let (params, loader) = {
-                let params = extract_params_subprocess(&dylib_path, DEFAULT_EXTRACT_TIMEOUT)
-                    .await
-                    .context("Failed to extract parameters from plugin")?;
-                (params, None)
-            };
-            println!("{} Loaded {} parameters", style("✓").green(), params.len());
-            Ok((params, loader))
+    // Write sidecar cache for next run
+    if let Err(e) = write_sidecar_cache(engine_dir, &params) {
+        if verbose {
+            println!("  Warning: failed to write param cache: {}", e);
         }
     }
+
+    println!("{} Loaded {} parameters", style("✓").green(), params.len());
+    Ok(params)
 }
 
 /// Run both development servers.
@@ -686,8 +789,7 @@ fn run_dev_servers(
     // 1. Build the plugin and load parameters (two-phase or cached)
     // Create tokio runtime for async parameter loading
     let runtime = tokio::runtime::Runtime::new().context("Failed to create async runtime")?;
-    #[cfg_attr(not(feature = "audio-dev"), allow(unused_variables))]
-    let (params, loader) = runtime.block_on(load_parameters(&project.engine_dir, verbose))?;
+    let params = runtime.block_on(load_parameter_metadata(&project.engine_dir, verbose))?;
 
     write_parameter_types(&project.ui_dir, &params)
         .context("Failed to generate TypeScript parameter ID types")?;
@@ -777,25 +879,119 @@ fn run_dev_servers(
     );
     println!();
 
-    // 5. Try to start audio in-process via FFI (optional, graceful fallback)
+    // 5. Start audio in-process via FFI (strict in SDK dev mode)
     // Store the AudioHandle so the cpal stream stays alive until shutdown.
     // When this variable is dropped (reverse declaration order for locals),
     // the FfiProcessor inside the closure is dropped while the Library in
-    // `loader` is still loaded — preserving vtable pointer validity.
+    // `runtime_loader` is still loaded — preserving vtable pointer validity.
     #[cfg(feature = "audio-dev")]
-    let audio_handle = runtime.block_on(async {
+    let (audio_handle, _runtime_loader) = {
         let ws_handle = server.handle();
-        match &loader {
-            Some(l) => try_start_audio_in_process(l, ws_handle, param_bridge.clone(), verbose),
-            None => {
-                // Loaded from cache — no loader available, skip audio
-                if verbose {
-                    println!("  Skipping audio (params loaded from cache, no dylib loaded)");
-                }
-                None
+
+        let initializing_status = wavecraft_dev_server::audio_status(
+            AudioRuntimePhase::Initializing,
+            None,
+            None,
+        );
+        host.set_audio_status(initializing_status.clone());
+        if let Err(error) = runtime.block_on(ws_handle.broadcast_audio_status_changed(&initializing_status)) {
+            if verbose {
+                println!(
+                    "{}",
+                    style(format!("⚠ Failed to broadcast audio init status: {}", error)).yellow()
+                );
             }
         }
-    });
+
+        let runtime_loader = match load_runtime_plugin_loader(&project.engine_dir, verbose) {
+            Ok(loader) => loader,
+            Err(error) => {
+                let message = error.to_string();
+                let (code, hint) = classify_runtime_loader_error(&message);
+                let status = wavecraft_dev_server::audio_status_with_diagnostic(
+                    AudioRuntimePhase::Failed,
+                    code,
+                    message.clone(),
+                    hint,
+                    None,
+                    None,
+                );
+
+                host.set_audio_status(status.clone());
+                if let Err(broadcast_error) =
+                    runtime.block_on(ws_handle.broadcast_audio_status_changed(&status))
+                {
+                    if verbose {
+                        println!(
+                            "{}",
+                            style(format!(
+                                "⚠ Failed to broadcast audio status: {}",
+                                broadcast_error
+                            ))
+                            .yellow()
+                        );
+                    }
+                }
+
+                anyhow::bail!("Audio startup failed ({:?}): {}", code, message);
+            }
+        };
+
+        let audio_handle = match runtime.block_on(async {
+            try_start_audio_in_process(
+                &runtime_loader,
+                host.clone(),
+                ws_handle.clone(),
+                param_bridge.clone(),
+                verbose,
+            )
+        }) {
+            Ok(started) => {
+                let status = status_for_running_audio(
+                    started.sample_rate,
+                    started.buffer_size,
+                );
+                host.set_audio_status(status.clone());
+                if let Err(error) = runtime.block_on(ws_handle.broadcast_audio_status_changed(&status)) {
+                    if verbose {
+                        println!(
+                            "{}",
+                            style(format!("⚠ Failed to broadcast audio status: {}", error)).yellow()
+                        );
+                    }
+                }
+
+                Some(started.handle)
+            }
+            Err(failure) => {
+                let status = wavecraft_dev_server::audio_status_with_diagnostic(
+                    AudioRuntimePhase::Failed,
+                    failure.code,
+                    failure.message.clone(),
+                    failure.hint,
+                    None,
+                    None,
+                );
+                host.set_audio_status(status.clone());
+                if let Err(error) = runtime.block_on(ws_handle.broadcast_audio_status_changed(&status)) {
+                    if verbose {
+                        println!(
+                            "{}",
+                            style(format!("⚠ Failed to broadcast audio status: {}", error)).yellow()
+                        );
+                    }
+                }
+
+                anyhow::bail!(
+                    "Audio startup failed ({:?}): {}",
+                    failure.code,
+                    failure.message
+                );
+            }
+        };
+
+        (audio_handle, runtime_loader)
+    };
     #[cfg(feature = "audio-dev")]
     let has_audio = audio_handle.is_some();
     #[cfg(not(feature = "audio-dev"))]
@@ -1026,6 +1222,13 @@ fn create_temp_dylib_copy(dylib_path: &Path) -> Result<PathBuf> {
 mod tests {
     use super::{apply_sdk_tsconfig_paths, TsconfigPathsInjection};
 
+    #[cfg(feature = "audio-dev")]
+    use super::classify_audio_init_error;
+    #[cfg(feature = "audio-dev")]
+    use super::classify_runtime_loader_error;
+    #[cfg(feature = "audio-dev")]
+    use wavecraft_protocol::{AudioDiagnosticCode, AudioRuntimePhase};
+
     #[test]
     fn injects_sdk_paths_when_missing() {
         let input = r#"{
@@ -1123,5 +1326,77 @@ mod tests {
             "Injected paths block must not be adjacent to next property without comma:\n{}",
             output
         );
+    }
+
+    #[cfg(feature = "audio-dev")]
+    #[test]
+    fn classify_audio_init_error_maps_permission_denied() {
+        let (code, hint) = classify_audio_init_error("Microphone permission denied by system");
+        assert_eq!(code, AudioDiagnosticCode::InputPermissionDenied);
+        assert!(hint.is_some());
+    }
+
+    #[cfg(feature = "audio-dev")]
+    #[test]
+    fn classify_audio_init_error_maps_no_input_device() {
+        let (code, hint) = classify_audio_init_error("No input device available");
+        assert_eq!(code, AudioDiagnosticCode::NoInputDevice);
+        assert!(hint.is_some());
+    }
+
+    #[cfg(feature = "audio-dev")]
+    #[test]
+    fn classify_audio_init_error_defaults_to_unknown() {
+        let (code, hint) = classify_audio_init_error("backend crashed with opaque cpal error");
+        assert_eq!(code, AudioDiagnosticCode::Unknown);
+        assert!(hint.is_none());
+    }
+
+    #[cfg(feature = "audio-dev")]
+    #[test]
+    fn classify_runtime_loader_error_maps_vtable_missing() {
+        let (code, hint) = classify_runtime_loader_error(
+            "Symbol not found: wavecraft_dev_create_processor: dlsym failed",
+        );
+        assert_eq!(code, AudioDiagnosticCode::VtableMissing);
+        assert!(hint.is_some());
+    }
+
+    #[cfg(feature = "audio-dev")]
+    #[test]
+    fn classify_runtime_loader_error_maps_loader_unavailable() {
+        let (code, hint) = classify_runtime_loader_error(
+            "Failed to load plugin runtime from /tmp/libplugin.dylib: image not found",
+        );
+        assert_eq!(code, AudioDiagnosticCode::LoaderUnavailable);
+        assert!(hint.is_some());
+    }
+
+    #[cfg(feature = "audio-dev")]
+    #[test]
+    fn status_for_running_audio_marks_full_duplex_as_running() {
+        let status = super::status_for_running_audio(48_000.0, 256);
+        assert_eq!(status.phase, AudioRuntimePhase::RunningFullDuplex);
+        assert!(status.diagnostic.is_none());
+        assert_eq!(status.sample_rate, Some(48_000.0));
+        assert_eq!(status.buffer_size, Some(256));
+    }
+
+    #[cfg(feature = "audio-dev")]
+    #[test]
+    fn status_for_running_audio_does_not_degrade_when_running() {
+        let status = super::status_for_running_audio(44_100.0, 512);
+        assert_eq!(status.phase, AudioRuntimePhase::RunningFullDuplex);
+        assert!(status.diagnostic.is_none());
+        assert_eq!(status.sample_rate, Some(44_100.0));
+        assert_eq!(status.buffer_size, Some(512));
+    }
+
+    #[cfg(feature = "audio-dev")]
+    #[test]
+    fn classify_audio_init_error_maps_no_output_device() {
+        let (code, hint) = classify_audio_init_error("No output device available");
+        assert_eq!(code, AudioDiagnosticCode::NoOutputDevice);
+        assert!(hint.is_some());
     }
 }

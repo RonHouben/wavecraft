@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use crate::{BridgeError, ParameterHost};
-use wavecraft_protocol::{MeterFrame, ParameterInfo};
+use wavecraft_protocol::{AudioRuntimeStatus, MeterFrame, ParameterInfo};
 
 /// Provides metering data for an in-memory host.
 pub trait MeterProvider: Send + Sync {
@@ -173,6 +173,10 @@ impl ParameterHost for InMemoryParameterHost {
 
     fn request_resize(&self, _width: u32, _height: u32) -> bool {
         false
+    }
+
+    fn get_audio_status(&self) -> Option<AudioRuntimeStatus> {
+        None
     }
 }
 

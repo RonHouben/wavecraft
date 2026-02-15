@@ -13,7 +13,7 @@ use wavecraft_bridge::{BridgeError, ParameterHost};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use wavecraft_metering::MeterConsumer;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-use wavecraft_protocol::{ParameterInfo, ParameterType};
+use wavecraft_protocol::{AudioRuntimeStatus, ParameterInfo, ParameterType};
 
 /// Bridge between nih-plug and the IPC handler.
 ///
@@ -167,5 +167,9 @@ impl<P: Params> ParameterHost for PluginEditorBridge<P> {
         }
 
         accepted
+    }
+
+    fn get_audio_status(&self) -> Option<AudioRuntimeStatus> {
+        None
     }
 }

@@ -27,6 +27,10 @@ impl ProcessorParams for GainParams {
         }];
         &SPECS
     }
+
+    fn from_param_defaults() -> Self {
+        Self { level: 1.0 }
+    }
 }
 
 /// Gain processor - applies amplitude scaling to audio.
@@ -122,5 +126,11 @@ mod tests {
         assert_eq!(specs[0].id_suffix, "level");
         assert_eq!(specs[0].default, 1.0);
         assert_eq!(specs[0].unit, "x");
+    }
+
+    #[test]
+    fn test_from_param_defaults_uses_spec_default() {
+        let defaults = GainParams::from_param_defaults();
+        assert!((defaults.level - 1.0).abs() < 1e-6);
     }
 }
