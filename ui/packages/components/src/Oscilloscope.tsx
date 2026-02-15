@@ -33,10 +33,6 @@ export function Oscilloscope(props: Readonly<OscilloscopeProps>): React.JSX.Elem
   const frameRef = useRef<OscilloscopeFrame | null>(null);
   const rafRef = useRef<number | null>(null);
 
-  if (props.hideWhenNotInSignalChain && !hasProcessorInSignalChain) {
-    return null;
-  }
-
   useEffect(() => {
     frameRef.current = frame;
   }, [frame]);
@@ -158,6 +154,10 @@ export function Oscilloscope(props: Readonly<OscilloscopeProps>): React.JSX.Elem
       }
     };
   }, [channelView, connected]);
+
+  if (props.hideWhenNotInSignalChain && !hasProcessorInSignalChain) {
+    return null;
+  }
 
   return (
     <div
