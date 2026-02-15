@@ -29,6 +29,7 @@ export type {
 export type {
   // Parameter types
   ParameterInfo,
+  ParameterValue,
   ParameterId,
   ParameterIdMap,
   ParameterType,

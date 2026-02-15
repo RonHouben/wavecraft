@@ -6,8 +6,8 @@ interface TestParameter {
   id: string;
   name: string;
   type: 'float' | 'bool' | 'enum';
-  value: number;
-  default: number;
+  value: number | boolean;
+  default: number | boolean;
   unit?: string;
   group?: string;
 }
@@ -41,9 +41,9 @@ describe('App parameter rendering', () => {
     {
       id: 'oscillator_enabled',
       name: 'Enabled',
-      type: 'float',
-      value: 1,
-      default: 1,
+      type: 'bool',
+      value: true,
+      default: true,
       group: 'Oscillator',
     },
     {

@@ -3,12 +3,12 @@
 //! Generates `ui/src/generated/parameters.ts` with module augmentation for
 //! `@wavecraft/core` so parameter IDs are available as IDE autocomplete.
 
-use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use wavecraft_protocol::ParameterInfo;
+use wavecraft_protocol::{ParameterInfo, ParameterType};
 
 const PARAMETER_ID_MAP_AUGMENTED_MARKER: &str = "__wavecraft_internal_augmented__";
 
@@ -35,6 +35,13 @@ fn ts_interface_property_key(value: &str) -> Result<String> {
         Ok(value.to_string())
     } else {
         ts_string_literal(value)
+    }
+}
+
+fn ts_value_type_for_param(param_type: ParameterType) -> &'static str {
+    match param_type {
+        ParameterType::Bool => "boolean",
+        ParameterType::Float | ParameterType::Enum => "number",
     }
 }
 
@@ -68,8 +75,13 @@ pub fn write_parameter_types(ui_dir: &Path, params: &[ParameterInfo]) -> Result<
     content.push_str(PARAMETER_ID_MAP_AUGMENTED_MARKER);
     content.push_str(": true;\n");
 
-    let ids: BTreeSet<&str> = params.iter().map(|param| param.id.as_str()).collect();
-    for id in &ids {
+    let mut typed_ids: BTreeMap<&str, &str> = BTreeMap::new();
+    for param in params {
+        let value_type = ts_value_type_for_param(param.param_type);
+        typed_ids.entry(param.id.as_str()).or_insert(value_type);
+    }
+
+    for (id, value_type) in &typed_ids {
         if *id == PARAMETER_ID_MAP_AUGMENTED_MARKER {
             anyhow::bail!(
                 "Parameter id '{}' is reserved for TypeScript code generation",
@@ -80,7 +92,9 @@ pub fn write_parameter_types(ui_dir: &Path, params: &[ParameterInfo]) -> Result<
         let id_literal = ts_interface_property_key(id)?;
         content.push_str("    ");
         content.push_str(&id_literal);
-        content.push_str(": true;\n");
+        content.push_str(": ");
+        content.push_str(value_type);
+        content.push_str(";\n");
     }
 
     content.push_str("  }\n");
@@ -135,11 +149,15 @@ mod tests {
         let output_path = ui_dir.join("src/generated/parameters.ts");
         let output = fs::read_to_string(output_path).expect("generated file should exist");
 
-        let a_pos = output.find("a_id: true;").expect("a_id present");
-        let b_pos = output.find("b_id: true;").expect("b_id present");
+        let a_pos = output.find("a_id: number;").expect("a_id present");
+        let b_pos = output.find("b_id: number;").expect("b_id present");
 
         assert!(a_pos < b_pos, "IDs should be sorted");
-        assert_eq!(output.matches("b_id: true;").count(), 1, "IDs deduplicated");
+        assert_eq!(
+            output.matches("b_id: number;").count(),
+            1,
+            "IDs deduplicated"
+        );
         assert!(
             output.contains("__wavecraft_internal_augmented__: true;"),
             "augmentation marker should always be present"
@@ -183,17 +201,46 @@ mod tests {
         let output = fs::read_to_string(output_path).expect("generated file should exist");
 
         assert!(
-            output.contains("gain: true;"),
+            output.contains("gain: number;"),
             "valid identifier keys should be unquoted"
         );
         assert!(
-            output.contains("\"gain-db\": true;"),
+            output.contains("\"gain-db\": number;"),
             "non-identifier keys should remain quoted"
         );
         assert!(
-            output.contains("\"gain\\\"quoted\\\\slash\": true;"),
+            output.contains("\"gain\\\"quoted\\\\slash\": number;"),
             "quoted keys should be escaped as valid TypeScript string literals"
         );
+    }
+
+    #[test]
+    fn emits_boolean_value_types_for_bool_parameters() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let ui_dir = temp.path();
+
+        let params = vec![
+            ParameterInfo {
+                id: "enabled".to_string(),
+                name: "Enabled".to_string(),
+                param_type: ParameterType::Bool,
+                value: 0.0,
+                default: 0.0,
+                min: 0.0,
+                max: 1.0,
+                unit: None,
+                group: None,
+            },
+            param("level"),
+        ];
+
+        write_parameter_types(ui_dir, &params).expect("write should succeed");
+
+        let output_path = ui_dir.join("src/generated/parameters.ts");
+        let output = fs::read_to_string(output_path).expect("generated file should exist");
+
+        assert!(output.contains("enabled: boolean;"));
+        assert!(output.contains("level: number;"));
     }
 
     #[test]

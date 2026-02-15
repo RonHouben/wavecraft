@@ -9,30 +9,75 @@
 
 use wavecraft::prelude::*;
 
-// Import the derive macro for parameter definitions.
-// The prelude provides the ProcessorParams *trait*; this brings the *derive macro*.
-use wavecraft::ProcessorParams;
-
 // ---------------------------------------------------------------------------
 // Parameters
 // ---------------------------------------------------------------------------
-// The `#[derive(ProcessorParams)]` macro generates the `param_specs()` method
-// that tells the framework (and the UI) about each knob/slider.
+// This implementation is written manually (instead of `#[derive(ProcessorParams)]`)
+// so the `enabled` field can be a true boolean while still exposing framework
+// metadata with a stepped 0/1 range.
 
-#[derive(ProcessorParams, Default, Clone)]
+#[derive(Clone)]
 #[allow(dead_code)] // Unused in default signal chain (oscillator is commented out)
 pub struct OscillatorParams {
-    /// Enable/disable oscillator output (0 = off, 1 = on).
-    #[param(range = "0.0..=1.0", default = 0, unit = "%")]
-    pub enabled: f32,
+    /// Enable/disable oscillator output.
+    pub enabled: bool,
 
-    /// Frequency in Hz.  `factor = 2.5` gives a logarithmic feel in the UI.
-    #[param(range = "20.0..=5000.0", default = 440.0, unit = "Hz", factor = 2.5)]
+    /// Frequency in Hz. `factor = 2.5` gives a logarithmic feel in the UI.
     pub frequency: f32,
 
     /// Output level (0 % – 100 %).
-    #[param(range = "0.0..=1.0", default = 0.5, unit = "%")]
     pub level: f32,
+}
+
+impl Default for OscillatorParams {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            frequency: 440.0,
+            level: 0.5,
+        }
+    }
+}
+
+impl ProcessorParams for OscillatorParams {
+    fn param_specs() -> &'static [ParamSpec] {
+        static SPECS: [ParamSpec; 3] = [
+            ParamSpec {
+                name: "Enabled",
+                id_suffix: "enabled",
+                range: ParamRange::Stepped { min: 0, max: 1 },
+                default: 0.0,
+                unit: "",
+                group: None,
+            },
+            ParamSpec {
+                name: "Frequency",
+                id_suffix: "frequency",
+                range: ParamRange::Skewed {
+                    min: 20.0,
+                    max: 5000.0,
+                    factor: 2.5,
+                },
+                default: 440.0,
+                unit: "Hz",
+                group: None,
+            },
+            ParamSpec {
+                name: "Level",
+                id_suffix: "level",
+                range: ParamRange::Linear { min: 0.0, max: 1.0 },
+                default: 0.5,
+                unit: "%",
+                group: None,
+            },
+        ];
+
+        &SPECS
+    }
+
+    fn from_param_defaults() -> Self {
+        Self::default()
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -67,7 +112,7 @@ impl Processor for Oscillator {
         _transport: &Transport,
         params: &Self::Params,
     ) {
-        if params.enabled < 0.5 {
+        if !params.enabled {
             for channel in buffer.iter_mut() {
                 channel.fill(0.0);
             }
@@ -112,7 +157,7 @@ impl Processor for Oscillator {
 mod tests {
     use super::*;
 
-    fn test_params(enabled: f32) -> OscillatorParams {
+    fn test_params(enabled: bool) -> OscillatorParams {
         OscillatorParams {
             enabled,
             frequency: 440.0,
@@ -129,7 +174,7 @@ mod tests {
         let mut right = [1.0_f32; 64];
         let mut buffer = [&mut left[..], &mut right[..]];
 
-        osc.process(&mut buffer, &Transport::default(), &test_params(0.0));
+        osc.process(&mut buffer, &Transport::default(), &test_params(false));
 
         assert!(left.iter().all(|s| s.abs() <= f32::EPSILON));
         assert!(right.iter().all(|s| s.abs() <= f32::EPSILON));
@@ -144,7 +189,7 @@ mod tests {
         let mut right = [0.0_f32; 128];
         let mut buffer = [&mut left[..], &mut right[..]];
 
-        osc.process(&mut buffer, &Transport::default(), &test_params(1.0));
+        osc.process(&mut buffer, &Transport::default(), &test_params(true));
 
         let peak_left = left
             .iter()

@@ -23,7 +23,7 @@ describe('OscillatorControl', () => {
     mockUseMeterFrame.mockReturnValue({ peak_l: 0.2, peak_r: 0.1 });
     mockSetOscillatorEnabled.mockReset();
     mockUseParameter.mockReturnValue({
-      param: { id: 'oscillator_enabled', name: 'Oscillator Enabled', value: 1 },
+      param: { id: 'oscillator_enabled', name: 'Oscillator Enabled', value: true },
       setValue: mockSetOscillatorEnabled,
       isLoading: false,
       error: undefined,
@@ -42,7 +42,7 @@ describe('OscillatorControl', () => {
     );
 
     mockUseParameter.mockReturnValue({
-      param: { id: 'oscillator_enabled', name: 'Oscillator Enabled', value: 0 },
+      param: { id: 'oscillator_enabled', name: 'Oscillator Enabled', value: false },
       setValue: mockSetOscillatorEnabled,
       isLoading: false,
       error: undefined,
@@ -58,7 +58,7 @@ describe('OscillatorControl', () => {
   });
 
   it('can toggle oscillator off and back on', () => {
-    let enabledValue = 1;
+    let enabledValue = true;
 
     mockUseParameter.mockImplementation(() => ({
       param: { id: 'oscillator_enabled', name: 'Oscillator Enabled', value: enabledValue },
@@ -67,7 +67,7 @@ describe('OscillatorControl', () => {
       error: undefined,
     }));
 
-    mockSetOscillatorEnabled.mockImplementation(async (nextValue: number) => {
+    mockSetOscillatorEnabled.mockImplementation(async (nextValue: boolean) => {
       enabledValue = nextValue;
     });
 
@@ -76,14 +76,14 @@ describe('OscillatorControl', () => {
 
     fireEvent.click(toggle);
 
-    expect(mockSetOscillatorEnabled).toHaveBeenCalledWith(0);
+    expect(mockSetOscillatorEnabled).toHaveBeenCalledWith(false);
 
     rerender(<OscillatorControl />);
     expect(screen.getByText('Oscillator output: Off')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Toggle oscillator output' }));
 
-    expect(mockSetOscillatorEnabled).toHaveBeenCalledWith(1);
+    expect(mockSetOscillatorEnabled).toHaveBeenCalledWith(true);
 
     rerender(<OscillatorControl />);
     expect(screen.getByText('Oscillator output: On')).toBeInTheDocument();
@@ -110,7 +110,7 @@ describe('OscillatorControl', () => {
         error: null,
       })
       .mockReturnValueOnce({
-        param: { id: 'oscillator_enabled', name: 'Oscillator Enabled', value: 1 },
+        param: { id: 'oscillator_enabled', name: 'Oscillator Enabled', value: true },
         setValue: mockSetOscillatorEnabled,
         isLoading: false,
         error: null,

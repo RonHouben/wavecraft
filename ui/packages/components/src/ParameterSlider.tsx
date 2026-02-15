@@ -49,7 +49,8 @@ export function ParameterSlider({ id }: ParameterSliderProps): React.JSX.Element
       logger.error('Failed to set parameter', { error: err, parameterId: id });
     });
   };
-  const displayValue = formatParameterValue(param.value, param.unit);
+  const numericValue = typeof param.value === 'boolean' ? (param.value ? 1 : 0) : param.value;
+  const displayValue = formatParameterValue(numericValue, param.unit);
 
   return (
     <div
@@ -75,7 +76,7 @@ export function ParameterSlider({ id }: ParameterSliderProps): React.JSX.Element
         min={param.min}
         max={param.max}
         step="0.001"
-        value={param.value}
+        value={numericValue}
         onChange={handleChange}
         className="slider-thumb h-1.5 w-full appearance-none rounded-sm bg-plugin-border outline-none"
       />

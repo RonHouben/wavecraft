@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ParameterClient } from '../ipc/ParameterClient';
 import { IpcBridge } from '../ipc/IpcBridge';
 import { useConnectionStatus } from './useConnectionStatus';
-import type { ParameterId, ParameterInfo } from '../types/parameters';
+import type { ParameterId, ParameterInfo, ParameterValue } from '../types/parameters';
 
 const TRANSPORT_NOT_CONNECTED = 'Transport not connected';
 
@@ -20,9 +20,29 @@ function isTransportNotConnectedError(err: unknown): boolean {
 
 export interface UseParameterResult {
   param: ParameterInfo | null;
-  setValue: (value: number) => Promise<void>;
+  setValue: (value: ParameterValue) => Promise<void>;
   isLoading: boolean;
   error: Error | null;
+}
+
+function toBackendValue(value: ParameterValue): number {
+  return typeof value === 'boolean' ? (value ? 1 : 0) : value;
+}
+
+function toFrontendValue(paramType: ParameterInfo['type'], value: ParameterValue): ParameterValue {
+  if (paramType === 'bool') {
+    return typeof value === 'boolean' ? value : value >= 0.5;
+  }
+
+  return typeof value === 'boolean' ? (value ? 1 : 0) : value;
+}
+
+function normalizeParameter(param: ParameterInfo): ParameterInfo {
+  return {
+    ...param,
+    value: toFrontendValue(param.type, param.value),
+    default: toFrontendValue(param.type, param.default),
+  };
 }
 
 export function useParameter(id: ParameterId): UseParameterResult {
@@ -45,7 +65,7 @@ export function useParameter(id: ParameterId): UseParameterResult {
       const foundParam = allParams.find((p) => p.id === id);
 
       if (foundParam) {
-        setParam(foundParam);
+        setParam(normalizeParameter(foundParam));
         setError(null);
       } else {
         setParam(null);
@@ -86,7 +106,14 @@ export function useParameter(id: ParameterId): UseParameterResult {
     const client = ParameterClient.getInstance();
     const unsubscribe = client.onParameterChanged((changedId, value) => {
       if (changedId === id) {
-        setParam((prev) => (prev ? { ...prev, value } : null));
+        setParam((prev) =>
+          prev
+            ? {
+                ...prev,
+                value: toFrontendValue(prev.type, value),
+              }
+            : null
+        );
       }
     });
 
@@ -95,14 +122,21 @@ export function useParameter(id: ParameterId): UseParameterResult {
 
   // Set parameter value
   const setValue = useCallback(
-    async (value: number) => {
+    async (value: ParameterValue) => {
       const client = ParameterClient.getInstance();
       try {
-        await client.setParameter(id, value);
+        await client.setParameter(id, toBackendValue(value));
         // Read back authoritative host value so UI reflects clamping/remapping
         // and never diverges from backend-confirmed state.
         const confirmed = await client.getParameter(id);
-        setParam((prev) => (prev ? { ...prev, value: confirmed.value } : prev));
+        setParam((prev) =>
+          prev
+            ? {
+                ...prev,
+                value: toFrontendValue(prev.type, confirmed.value),
+              }
+            : prev
+        );
         setError(null);
       } catch (err) {
         setError(toError(err));

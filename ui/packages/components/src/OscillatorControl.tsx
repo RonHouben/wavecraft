@@ -20,7 +20,7 @@ export function OscillatorControl(): React.JSX.Element {
 
   const oscillatorPeak = Math.max(meterFrame?.peak_l ?? 0, meterFrame?.peak_r ?? 0);
   const isProducing = oscillatorPeak > SIGNAL_THRESHOLD;
-  const isOn = (oscillatorEnabled?.value ?? 0) >= 0.5;
+  const isOn = Boolean(oscillatorEnabled?.value ?? false);
   const signalStatusLabel = isProducing ? 'Producing' : 'No signal';
   const outputStateLabel = isOn ? 'On' : 'Off';
   const signalStatusClassName = isProducing
@@ -32,7 +32,7 @@ export function OscillatorControl(): React.JSX.Element {
       return;
     }
 
-    const newValue = isOn ? 0 : 1;
+    const newValue = !isOn;
     setOscillatorEnabled(newValue).catch((error) => {
       logger.error('Failed to toggle oscillator output', {
         error,
