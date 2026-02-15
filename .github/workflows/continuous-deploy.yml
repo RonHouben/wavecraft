@@ -1561,12 +1561,30 @@ jobs:
         run: |
           TARGET="${{ needs.publish-npm-cohort-prepare.outputs.version }}"
 
-          if ! npm view "@wavecraft/core@$TARGET" version >/dev/null 2>&1; then
-            echo "❌ @wavecraft/core@$TARGET not found on npm"
+          wait_for_visibility() {
+            local package="$1"
+            local delays=(2 4 8)
+
+            for i in "${!delays[@]}"; do
+              local attempt=$((i + 1))
+              local delay="${delays[$i]}"
+              echo "⏳ Checking visibility for $package (attempt $attempt/${#delays[@]}) after ${delay}s..."
+              sleep "$delay"
+
+              if npm view "$package" version >/dev/null 2>&1; then
+                echo "✅ $package is visible on npm"
+                return 0
+              fi
+            done
+
+            echo "❌ $package is not visible on npm after ${#delays[@]} attempts (2s/4s/8s backoff)"
+            return 1
+          }
+
+          if ! wait_for_visibility "@wavecraft/core@$TARGET"; then
             exit 1
           fi
-          if ! npm view "@wavecraft/components@$TARGET" version >/dev/null 2>&1; then
-            echo "❌ @wavecraft/components@$TARGET not found on npm"
+          if ! wait_for_visibility "@wavecraft/components@$TARGET"; then
             exit 1
           fi
 
