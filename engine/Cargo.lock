@@ -3451,6 +3451,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "wavecraft-processors"
+version = "0.12.6"
+dependencies = [
+ "wavecraft-dsp",
+]
+
+[[package]]
 name = "wavecraft-protocol"
 version = "0.12.6"
 dependencies = [
