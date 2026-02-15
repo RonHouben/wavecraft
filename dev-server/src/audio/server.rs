@@ -33,36 +33,9 @@ use super::ffi_processor::DevAudioProcessor;
 
 const GAIN_MULTIPLIER_MIN: f32 = 0.0;
 const GAIN_MULTIPLIER_MAX: f32 = 2.0;
-// Ordered lookup IDs for runtime compatibility.
-//
-// IMPORTANT: Order is intentional.
-// 1) Prefer current canonical snake_case IDs first.
-// 2) Fall back to legacy compact IDs for backward compatibility.
-const INPUT_GAIN_PARAM_IDS_ORDERED: &[&str] = &[
-    "input_gain_level",
-    "input_gain_gain",
-    "inputgain_level",
-    "inputgain_gain",
-];
-const OUTPUT_GAIN_PARAM_IDS_ORDERED: &[&str] = &[
-    "output_gain_level",
-    "output_gain_gain",
-    "outputgain_level",
-    "outputgain_gain",
-];
-
-#[derive(Debug, Clone, Copy)]
-enum GainRole {
-    Input,
-    Output,
-}
-
-fn gain_param_ids(role: GainRole) -> &'static [&'static str] {
-    match role {
-        GainRole::Input => INPUT_GAIN_PARAM_IDS_ORDERED,
-        GainRole::Output => OUTPUT_GAIN_PARAM_IDS_ORDERED,
-    }
-}
+// Strict runtime policy: canonical IDs only (no alias/legacy fallbacks).
+const INPUT_GAIN_PARAM_ID: &str = "input_gain_level";
+const OUTPUT_GAIN_PARAM_ID: &str = "output_gain_level";
 
 /// Configuration for audio server.
 #[derive(Debug, Clone)]
@@ -360,8 +333,8 @@ fn apply_output_modifiers(
     oscillator_phase: &mut f32,
     sample_rate: f32,
 ) {
-    let input_gain = read_gain_multiplier_for_role(param_bridge, GainRole::Input);
-    let output_gain = read_gain_multiplier_for_role(param_bridge, GainRole::Output);
+    let input_gain = read_gain_multiplier(param_bridge, INPUT_GAIN_PARAM_ID);
+    let output_gain = read_gain_multiplier(param_bridge, OUTPUT_GAIN_PARAM_ID);
     let combined_gain = input_gain * output_gain;
 
     // Temporary dedicated control for sdk-template oscillator source.
@@ -421,17 +394,11 @@ fn apply_output_modifiers(
     apply_gain(left, right, combined_gain);
 }
 
-fn read_gain_multiplier_for_role(param_bridge: &AtomicParameterBridge, role: GainRole) -> f32 {
-    read_gain_multiplier(param_bridge, gain_param_ids(role))
-}
-
-fn read_gain_multiplier(param_bridge: &AtomicParameterBridge, ids: &[&str]) -> f32 {
-    for id in ids {
-        if let Some(value) = param_bridge.read(id)
-            && value.is_finite()
-        {
-            return value.clamp(GAIN_MULTIPLIER_MIN, GAIN_MULTIPLIER_MAX);
-        }
+fn read_gain_multiplier(param_bridge: &AtomicParameterBridge, id: &str) -> f32 {
+    if let Some(value) = param_bridge.read(id)
+        && value.is_finite()
+    {
+        return value.clamp(GAIN_MULTIPLIER_MIN, GAIN_MULTIPLIER_MAX);
     }
 
     1.0
@@ -736,7 +703,7 @@ mod tests {
     }
 
     #[test]
-    fn output_modifiers_apply_gain_with_compact_legacy_ids() {
+    fn output_modifiers_ignore_compact_legacy_gain_ids() {
         let bridge = AtomicParameterBridge::new(&[
             ParameterInfo {
                 id: "inputgain_level".to_string(),
@@ -768,13 +735,14 @@ mod tests {
 
         apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
 
-        let expected = 0.5 * 0.2 * 0.2;
+        // Legacy compact IDs are intentionally unsupported.
+        let expected = 0.5;
         assert!(left.iter().all(|sample| (*sample - expected).abs() < 1e-6));
         assert!(right.iter().all(|sample| (*sample - expected).abs() < 1e-6));
     }
 
     #[test]
-    fn output_modifiers_apply_gain_with_snake_case_gain_suffix_ids() {
+    fn output_modifiers_ignore_legacy_snake_case_gain_suffix_ids() {
         let bridge = AtomicParameterBridge::new(&[
             ParameterInfo {
                 id: "input_gain_gain".to_string(),
@@ -806,13 +774,14 @@ mod tests {
 
         apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
 
-        let expected = 0.5 * 0.2 * 0.2;
+        // Legacy "*_gain" aliases are intentionally unsupported.
+        let expected = 0.5;
         assert!(left.iter().all(|sample| (*sample - expected).abs() < 1e-6));
         assert!(right.iter().all(|sample| (*sample - expected).abs() < 1e-6));
     }
 
     #[test]
-    fn output_modifiers_prefer_snake_case_gain_ids_when_both_variants_exist() {
+    fn output_modifiers_use_canonical_ids_even_when_legacy_variants_exist() {
         let bridge = AtomicParameterBridge::new(&[
             ParameterInfo {
                 id: "input_gain_level".to_string(),
@@ -855,7 +824,7 @@ mod tests {
 
         apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
 
-        // Canonical snake_case variant should win over compact legacy fallback.
+        // Strict canonical-only policy: legacy variants are ignored when present.
         let expected = 0.5 * 1.6;
         assert!(left.iter().all(|sample| (*sample - expected).abs() < 1e-6));
         assert!(right.iter().all(|sample| (*sample - expected).abs() < 1e-6));
