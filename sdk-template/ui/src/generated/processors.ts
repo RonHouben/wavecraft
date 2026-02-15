@@ -18,10 +18,10 @@ declare global {
 }
 
 const PROCESSOR_IDS = [
-  "example_processor",
-  "oscillator",
-  "oscilloscope_tap",
-  "output_gain",
+  'example_processor',
+  'oscillator',
+  'oscilloscope_tap',
+  'output_gain',
 ] as const;
 
 registerAvailableProcessors(PROCESSOR_IDS);

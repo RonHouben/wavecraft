@@ -14,7 +14,26 @@ const PARAMETER_ID_MAP_AUGMENTED_MARKER: &str = "__wavecraft_internal_augmented_
 const PROCESSOR_ID_MAP_AUGMENTED_MARKER: &str = "__wavecraft_internal_processors_augmented__";
 
 fn ts_string_literal(value: &str) -> Result<String> {
-    serde_json::to_string(value).context("Failed to escape TypeScript string literal")
+    let mut escaped = String::new();
+    for ch in value.chars() {
+        match ch {
+            '\\' => escaped.push_str("\\\\"),
+            '\'' => escaped.push_str("\\'"),
+            '\n' => escaped.push_str("\\n"),
+            '\r' => escaped.push_str("\\r"),
+            '\t' => escaped.push_str("\\t"),
+            '\u{08}' => escaped.push_str("\\b"),
+            '\u{0C}' => escaped.push_str("\\f"),
+            c if c.is_control() => {
+                use std::fmt::Write as _;
+                write!(&mut escaped, "\\u{:04x}", c as u32)
+                    .context("Failed to escape TypeScript string literal")?;
+            }
+            c => escaped.push(c),
+        }
+    }
+
+    Ok(format!("'{}'", escaped))
 }
 
 fn is_ascii_typescript_identifier(value: &str) -> bool {
@@ -290,11 +309,11 @@ mod tests {
             "valid identifier keys should be unquoted"
         );
         assert!(
-            output.contains("\"gain-db\": number;"),
+            output.contains("'gain-db': number;"),
             "non-identifier keys should remain quoted"
         );
         assert!(
-            output.contains("\"gain\\\"quoted\\\\slash\": number;"),
+            output.contains("'gain\"quoted\\\\slash': number;"),
             "quoted keys should be escaped as valid TypeScript string literals"
         );
     }
@@ -412,5 +431,25 @@ mod tests {
             err.to_string().contains("reserved"),
             "error should explain reserved marker collision"
         );
+    }
+
+    #[test]
+    fn emits_prettier_stable_processor_string_literals() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let ui_dir = temp.path();
+
+        let processors = vec![
+            processor("gain-stage"),
+            processor("gain\"quoted\\slash"),
+            processor("gain'single"),
+        ];
+        write_processor_types(ui_dir, &processors).expect("write should succeed");
+
+        let output_path = ui_dir.join("src/generated/processors.ts");
+        let output = fs::read_to_string(output_path).expect("generated file should exist");
+
+        assert!(output.contains("'gain-stage'"));
+        assert!(output.contains("'gain\"quoted\\\\slash'"));
+        assert!(output.contains("'gain\\'single'"));
     }
 }
