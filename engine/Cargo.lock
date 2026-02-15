@@ -3444,6 +3444,7 @@ dependencies = [
  "wavecraft-dsp",
  "wavecraft-macros",
  "wavecraft-metering",
+ "wavecraft-processors",
  "wavecraft-protocol",
  "webview2-com",
  "windows 0.58.0",

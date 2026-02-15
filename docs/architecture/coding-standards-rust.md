@@ -51,9 +51,7 @@ wavecraft_processor!(OutputStage => Passthrough);
 
 ```rust
 use wavecraft::prelude::*;
-
-mod processors;
-use processors::Oscillator;
+use wavecraft::Oscillator;
 
 // Built-in processors need wrappers (provides parameter-ID prefix)
 wavecraft_processor!(InputGain => Gain);

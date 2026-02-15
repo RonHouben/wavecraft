@@ -6,6 +6,6 @@
 //   3. Re-export the processor type    (e.g. `pub use filter::Filter;`)
 //   4. Wire it into the signal chain in `lib.rs`
 
-pub mod oscillator;
+pub mod example_processor;
 
-pub use oscillator::Oscillator;
+pub use example_processor::ExampleProcessor;

@@ -88,10 +88,10 @@ All SDK crates use the `wavecraft-*` naming convention for clear identification:
 
 The UI SDK is distributed as npm packages, enabling standard JavaScript/TypeScript dependency management:
 
-| Package                 | Purpose                                   | Exports                                                                                                                                                 |
-| ----------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Package                 | Purpose                                   | Exports                                                                                                                                                                                            |
+| ----------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@wavecraft/core`       | IPC bridge, React hooks, utilities, types | `useParameter`, `useAllParameters`, `useMeterFrame`, `useAudioStatus`, `IpcBridge`, `Logger`, `ParameterId`, `ParameterIdMap`, `AudioRuntimeStatus`, `AudioRuntimePhase`, `AudioDiagnostic`, types |
-| `@wavecraft/components` | Pre-built React components                | `Meter`, `ParameterSlider`, `ParameterGroup`, `ParameterToggle`, `VersionBadge`, `ConnectionStatus`, `LatencyMonitor`, `ResizeHandle`, `ResizeControls` |
+| `@wavecraft/components` | Pre-built React components                | `Meter`, `ParameterSlider`, `ParameterGroup`, `ParameterToggle`, `VersionBadge`, `ConnectionStatus`, `LatencyMonitor`, `ResizeHandle`, `ResizeControls`                                            |
 
 **Subpath Exports:**
 
@@ -145,6 +145,7 @@ The SDK exposes a minimal, stable API through the `wavecraft::prelude` module (w
 // wavecraft::prelude re-exports (via wavecraft-nih_plug)
 pub use nih_plug::prelude::*;  // From wavecraft-nih_plug
 pub use wavecraft_dsp::{Processor, ProcessorParams, Transport, builtins};
+pub use wavecraft_processors::{Oscillator, OscillatorParams};
 pub use wavecraft_protocol::{ParamId, ParameterInfo, ParameterType, db_to_linear};
 pub use wavecraft_metering::{MeterConsumer, MeterFrame, MeterProducer, create_meter_channel};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -241,7 +242,7 @@ my-plugin/
 │       ├── lib.rs           ← Plugin assembly (signal chain + metadata)
 │       └── processors/      ← Custom DSP processors
 │           ├── mod.rs        ← Module exports
-│           └── oscillator.rs ← Example: sine-wave oscillator
+│           └── example_processor.rs ← Minimal custom processor example
 │
 ├── ui/
 │   ├── package.json         ← Depends on @wavecraft/core + @wavecraft/components
