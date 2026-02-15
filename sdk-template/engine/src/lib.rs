@@ -14,8 +14,7 @@ use processors::ExampleProcessor;
 // ---------------------------------------------------------------------------
 // `wavecraft_processor!` creates a named wrapper around a built-in processor.
 // Wrapper names are converted to snake_case and prefixed into parameter IDs
-// (e.g. `InputGain` contributes the `input_gain_*` prefix).
-wavecraft_processor!(InputGain => Gain);
+// (e.g. `OutputGain` contributes the `output_gain_*` prefix).
 wavecraft_processor!(OutputGain => Gain);
 
 // ---------------------------------------------------------------------------
@@ -28,7 +27,6 @@ wavecraft_plugin! {
         Oscillator,
         ExampleProcessor,
         OscilloscopeTap,
-        // InputGain,
-        // OutputGain
+        OutputGain
     ],
 }
