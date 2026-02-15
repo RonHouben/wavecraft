@@ -117,6 +117,16 @@ cargo xtask dev
 wavecraft start
 ```
 
+`cargo xtask dev` now runs a **preflight refresh** before launching `wavecraft start`.
+The preflight is fail-fast and logs explicit status lines for each rule (refreshed vs skipped):
+
+- **UI package artifacts** (`ui/packages/core/dist`, `ui/packages/components/dist`)
+  - Runs `npm run build:lib` in `ui/` when package source/config files are newer than dist outputs or outputs are missing.
+  - Skips when artifacts are up-to-date.
+- **Parameter/typegen startup caches** (`wavecraft-params.json`, `sdk-template/ui/src/generated/parameters.ts`)
+  - Invalidates stale sidecar caches when SDK engine sources or relevant dev tooling files changed.
+  - Removes stale generated parameter typing when sidecars are invalidated, so `wavecraft start` regenerates fresh types during startup.
+
 **SDK Mode Detection:**
 
 When `cargo xtask dev` (or `wavecraft start`) is run from the SDK repository root, the CLI detects the `[workspace]` in `engine/Cargo.toml` and automatically enters "SDK mode." In this mode, the CLI redirects all engine/UI operations (build, parameter extraction, FFI loading, file watching, UI dev server) to the canonical scaffold at `sdk-template/engine` and `sdk-template/ui`.
@@ -286,7 +296,7 @@ Wavecraft uses a Rust-based build system (`xtask`) that provides a unified inter
 | `cargo xtask ci-check`          | **Pre-push validation** — 6-phase local CI simulation (docs, UI build, lint+typecheck, tests; add `--full` for template validation + CD dry-run) |
 | `cargo xtask ci-check -F`       | **Full validation** — All 6 phases including template validation and CD dry-run                                                                  |
 | `cargo xtask validate-template` | Validate CLI template generation (replicates CI `template-validation.yml`)                                                                       |
-| `cargo xtask dev`               | Start WebSocket + Vite dev servers for browser development                                                                                       |
+| `cargo xtask dev`               | Run preflight refresh (UI package artifacts + param/typegen cache invalidation) then start WebSocket + Vite dev servers                          |
 | `cargo xtask bundle`            | Build and bundle VST3/CLAP plugins                                                                                                               |
 | `cargo xtask test`              | Run all tests (Engine + UI)                                                                                                                      |
 | `cargo xtask test --ui`         | Run UI tests only (Vitest)                                                                                                                       |

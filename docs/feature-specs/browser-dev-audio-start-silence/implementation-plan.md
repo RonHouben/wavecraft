@@ -73,6 +73,7 @@ Fix browser dev mode startup so audio initialization is attempted deterministica
 2. Introduce runtime loader acquisition independent of metadata source.
 3. Update startup flow to always attempt runtime loader and audio init in dev-audio mode.
 4. Emit initial `Initializing` status before runtime attempt.
+5. Remove the browser-dev audio-start-silence feature flag and any conditional feature-flag code path; make this behavior unconditionally enabled by default.
 
 **Dependencies:** none (foundation)  
 **Risk:** medium (central startup flow)  
