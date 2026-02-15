@@ -23,7 +23,7 @@ use wavecraft::ProcessorParams;
 #[allow(dead_code)] // Unused in default signal chain (oscillator is commented out)
 pub struct OscillatorParams {
     /// Enable/disable oscillator output (0 = off, 1 = on).
-    #[param(range = "0.0..=1.0", default = 1.0, unit = "%")]
+    #[param(range = "0.0..=1.0", default = 0, unit = "%")]
     pub enabled: f32,
 
     /// Frequency in Hz.  `factor = 2.5` gives a logarithmic feel in the UI.
