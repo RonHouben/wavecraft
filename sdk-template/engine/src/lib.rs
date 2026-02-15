@@ -12,7 +12,8 @@ use processors::ExampleProcessor;
 // Processor wrappers
 // ---------------------------------------------------------------------------
 // `wavecraft_processor!` creates a named wrapper around a built-in processor.
-// The wrapper name becomes the parameter-ID prefix (e.g. "inputgain_gain").
+// Wrapper names are converted to snake_case and prefixed into parameter IDs
+// (e.g. `InputGain` contributes the `input_gain_*` prefix).
 wavecraft_processor!(InputGain => Gain);
 wavecraft_processor!(OutputGain => Gain);
 

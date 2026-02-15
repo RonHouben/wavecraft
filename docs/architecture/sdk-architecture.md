@@ -79,6 +79,7 @@ All SDK crates use the `wavecraft-*` naming convention for clear identification:
 | `wavecraft-bridge`     | IPC handler, `ParameterHost` trait, `PluginParamLoader` (dlopen + param/vtable loading)                                                                                                                                                                                                       | ✅ crates.io                    | CLI uses for plugin loading                                                                              |
 | `wavecraft-metering`   | Real-time safe SPSC ring buffer for audio → UI metering                                                                                                                                                                                                                                       | ✅ crates.io                    | Uses `MeterProducer` in DSP                                                                              |
 | `wavecraft-dsp`        | DSP primitives, `Processor` trait, built-in processors                                                                                                                                                                                                                                        | ✅ crates.io                    | Implements `Processor` trait                                                                             |
+| `wavecraft-processors` | Reusable SDK-owned processor implementations (for example, `Oscillator`) used by templates and plugin projects; complements `wavecraft-dsp` primitives                                                                                                                                      | ✅ crates.io                    | Imported by user plugins when they want SDK-provided processors                                          |
 | `wavecraft-dev-server` | Unified dev server at `dev-server/` (repo root): WebSocket server, `DevAudioProcessor` trait, `FfiProcessor` wrapper, `AudioServer` (full-duplex), `AtomicParameterBridge`, hot-reload, file watching. Feature-gated audio (`default = ["audio"]`). CLI uses with `default-features = false`. | ❌ Standalone (publish = false) | CLI uses for dev mode                                                                                    |
 | `sdk-template`         | Canonical plugin scaffold at repository root. Used both for CLI template embedding and SDK-mode development (`cargo xtask dev` after running `scripts/setup-dev-template.sh`).                                                                                                                | ❌ Internal scaffold            | Source of truth for generated projects and SDK contributor workflow                                      |
 
@@ -298,6 +299,12 @@ export function App() {
   );
 }
 ```
+
+### Ownership Boundary: SDK vs User Processors
+
+- **SDK-owned**: `engine/crates/wavecraft-processors` contains reusable processors maintained by Wavecraft and versioned with the SDK.
+- **User-owned**: `my-plugin/engine/src/processors/` in generated projects contains plugin-specific processors authored by plugin developers.
+- **Relationship**: User plugins can combine both in `SignalChain![]` (SDK processors from `wavecraft-processors` + custom project-local processors).
 
 ## SDK Design Principles
 
