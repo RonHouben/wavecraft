@@ -1277,7 +1277,50 @@ jobs:
 
       - name: Verify publishability (dry-run)
         working-directory: ui/packages/core
-        run: npm publish --access public --dry-run
+        run: |
+          TARGET="${{ needs.publish-npm-cohort-prepare.outputs.version }}"
+          PACKAGE="@wavecraft/core"
+
+          if [ "${{ needs.publish-npm-cohort-prepare.outputs.core-already-published }}" = "true" ]; then
+            echo "✅ $PACKAGE@$TARGET already published (preflight) — skipping dry-run"
+            exit 0
+          fi
+
+          # TOCTOU guard: recheck immediately before dry-run.
+          if npm view "$PACKAGE@$TARGET" version >/dev/null 2>&1; then
+            echo "✅ $PACKAGE@$TARGET already published (just-before-dry-run recheck) — skipping dry-run"
+            exit 0
+          fi
+
+          DRY_RUN_LOG=$(mktemp)
+          if npm publish --access public --dry-run >"$DRY_RUN_LOG" 2>&1; then
+            cat "$DRY_RUN_LOG"
+            echo "✅ Dry-run publishability check passed for $PACKAGE@$TARGET"
+            exit 0
+          fi
+
+          cat "$DRY_RUN_LOG"
+
+          # If dry-run lost a race on duplicate-version, confirm registry state and treat as success.
+          if grep -qiE 'EPUBLISHCONFLICT|cannot publish over the previously published versions|cannot publish over existing version|You cannot publish over previously published version' "$DRY_RUN_LOG"; then
+            echo "⚠️ Duplicate-version dry-run error detected for $PACKAGE@$TARGET. Confirming npm registry state..."
+            CONFIRM_DELAYS=(2 4 8)
+            for i in "${!CONFIRM_DELAYS[@]}"; do
+              ATTEMPT=$((i + 1))
+              DELAY="${CONFIRM_DELAYS[$i]}"
+              echo "⏳ Confirm attempt $ATTEMPT/${#CONFIRM_DELAYS[@]} for $PACKAGE@$TARGET after ${DELAY}s backoff..."
+              sleep "$DELAY"
+              if npm view "$PACKAGE@$TARGET" version >/dev/null 2>&1; then
+                echo "✅ $PACKAGE@$TARGET is now present on npm (confirm attempt $ATTEMPT) — treating duplicate dry-run race as success"
+                exit 0
+              fi
+            done
+            echo "❌ Duplicate-version signature detected during dry-run, but $PACKAGE@$TARGET is still missing from npm after ${#CONFIRM_DELAYS[@]} confirmation attempts (2s/4s/8s backoff)"
+            exit 1
+          fi
+
+          echo "❌ npm dry-run publishability check failed for $PACKAGE@$TARGET (non-duplicate error)"
+          exit 1
 
       - name: Publish to npm (idempotent)
         working-directory: ui/packages/core
@@ -1420,7 +1463,50 @@ jobs:
 
       - name: Verify publishability (dry-run)
         working-directory: ui/packages/components
-        run: npm publish --access public --dry-run
+        run: |
+          TARGET="${{ needs.publish-npm-cohort-prepare.outputs.version }}"
+          PACKAGE="@wavecraft/components"
+
+          if [ "${{ needs.publish-npm-cohort-prepare.outputs.components-already-published }}" = "true" ]; then
+            echo "✅ $PACKAGE@$TARGET already published (preflight) — skipping dry-run"
+            exit 0
+          fi
+
+          # TOCTOU guard: recheck immediately before dry-run.
+          if npm view "$PACKAGE@$TARGET" version >/dev/null 2>&1; then
+            echo "✅ $PACKAGE@$TARGET already published (just-before-dry-run recheck) — skipping dry-run"
+            exit 0
+          fi
+
+          DRY_RUN_LOG=$(mktemp)
+          if npm publish --access public --dry-run >"$DRY_RUN_LOG" 2>&1; then
+            cat "$DRY_RUN_LOG"
+            echo "✅ Dry-run publishability check passed for $PACKAGE@$TARGET"
+            exit 0
+          fi
+
+          cat "$DRY_RUN_LOG"
+
+          # If dry-run lost a race on duplicate-version, confirm registry state and treat as success.
+          if grep -qiE 'EPUBLISHCONFLICT|cannot publish over the previously published versions|cannot publish over existing version|You cannot publish over previously published version' "$DRY_RUN_LOG"; then
+            echo "⚠️ Duplicate-version dry-run error detected for $PACKAGE@$TARGET. Confirming npm registry state..."
+            CONFIRM_DELAYS=(2 4 8)
+            for i in "${!CONFIRM_DELAYS[@]}"; do
+              ATTEMPT=$((i + 1))
+              DELAY="${CONFIRM_DELAYS[$i]}"
+              echo "⏳ Confirm attempt $ATTEMPT/${#CONFIRM_DELAYS[@]} for $PACKAGE@$TARGET after ${DELAY}s backoff..."
+              sleep "$DELAY"
+              if npm view "$PACKAGE@$TARGET" version >/dev/null 2>&1; then
+                echo "✅ $PACKAGE@$TARGET is now present on npm (confirm attempt $ATTEMPT) — treating duplicate dry-run race as success"
+                exit 0
+              fi
+            done
+            echo "❌ Duplicate-version signature detected during dry-run, but $PACKAGE@$TARGET is still missing from npm after ${#CONFIRM_DELAYS[@]} confirmation attempts (2s/4s/8s backoff)"
+            exit 1
+          fi
+
+          echo "❌ npm dry-run publishability check failed for $PACKAGE@$TARGET (non-duplicate error)"
+          exit 1
 
       - name: Publish to npm (idempotent)
         working-directory: ui/packages/components
