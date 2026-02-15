@@ -23,7 +23,7 @@ describe('useHasProcessor', () => {
   it('returns false for unknown processor id', () => {
     registerAvailableProcessors(['oscillator']);
 
-    const { result } = renderHook(() => useHasProcessor('oscilloscope_tap'));
+    const { result } = renderHook(() => useHasProcessor('example_processor'));
 
     expect(result.current).toBe(false);
   });

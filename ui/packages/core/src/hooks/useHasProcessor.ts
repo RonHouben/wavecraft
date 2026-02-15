@@ -9,7 +9,7 @@ import {
 /**
  * Returns true when a processor ID is present in the generated processor registry.
  */
-export function useHasProcessor(processorId: ProcessorId): boolean {
+export function useHasProcessor(processorId: ProcessorId | (string & {})): boolean {
   const availableProcessors = useSyncExternalStore(
     subscribeToRegisteredProcessors,
     getRegisteredProcessorsSnapshot,
