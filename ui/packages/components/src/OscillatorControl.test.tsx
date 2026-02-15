@@ -5,6 +5,7 @@ import { OscillatorControl } from './OscillatorControl';
 const mockUseMeterFrame = vi.hoisted(() => vi.fn());
 const mockUseParameter = vi.hoisted(() => vi.fn());
 const mockSetOscillatorEnabled = vi.hoisted(() => vi.fn());
+const mockUseHasProcessor = vi.hoisted(() => vi.fn());
 
 vi.mock('@wavecraft/core', () => ({
   logger: {
@@ -12,6 +13,7 @@ vi.mock('@wavecraft/core', () => ({
   },
   useMeterFrame: mockUseMeterFrame,
   useParameter: mockUseParameter,
+  useHasProcessor: mockUseHasProcessor,
 }));
 
 vi.mock('./ParameterSlider', () => ({
@@ -28,6 +30,7 @@ describe('OscillatorControl', () => {
       isLoading: false,
       error: undefined,
     });
+    mockUseHasProcessor.mockReturnValue(true);
   });
 
   it('reflects oscillator enabled value changes in visual state', () => {
