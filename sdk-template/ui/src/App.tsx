@@ -7,16 +7,21 @@ import {
   VersionBadge,
   ConnectionStatus,
   LatencyMonitor,
+  OscillatorControl,
 } from '@wavecraft/components';
-import { useParameter } from '@wavecraft/core';
+
+const DEDICATED_PARAMETER_IDS = new Set([
+  'oscillator_enabled',
+  'oscillator_frequency',
+  'oscillator_level',
+]);
 
 export function App(): JSX.Element {
   const { params, isLoading } = useAllParameters();
-  const groups = useParameterGroups(params);
+  const genericParams = params.filter((param) => !DEDICATED_PARAMETER_IDS.has(param.id));
+  const groups = useParameterGroups(genericParams);
 
   useWindowResizeSync();
-
-  useParameter('input_gain_level');
 
   return (
     <div className="flex h-screen flex-col gap-4 bg-plugin-dark p-6">
@@ -34,13 +39,16 @@ export function App(): JSX.Element {
         {/* Parameters Section */}
         <div className="rounded-lg border border-plugin-border bg-plugin-surface p-4">
           <h2 className="mb-3 text-base font-semibold text-gray-200">Parameters</h2>
+
+          <OscillatorControl />
+
           {isLoading ? (
             <p className="italic text-gray-500">Loading parameters...</p>
           ) : (
             <div className="space-y-4">
               {groups.length > 0
                 ? groups.map((group) => <ParameterGroup key={group.name} group={group} />)
-                : params?.map((p) => <ParameterSlider key={p.id} id={p.id} />)}
+                : genericParams.map((p) => <ParameterSlider key={p.id} id={p.id} />)}
             </div>
           )}
         </div>

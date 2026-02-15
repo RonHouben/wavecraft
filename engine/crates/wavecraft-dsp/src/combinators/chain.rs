@@ -99,6 +99,13 @@ where
         // Leak to get 'static reference (intentional - see comment above)
         Box::leak(merged.into_boxed_slice())
     }
+
+    fn from_param_defaults() -> Self {
+        Self {
+            first: PA::from_param_defaults(),
+            second: PB::from_param_defaults(),
+        }
+    }
 }
 
 impl<A, B> Processor for Chain<A, B>
@@ -113,12 +120,82 @@ where
         self.first.process(buffer, transport, &params.first);
         self.second.process(buffer, transport, &params.second);
     }
+
+    fn set_sample_rate(&mut self, sample_rate: f32) {
+        self.first.set_sample_rate(sample_rate);
+        self.second.set_sample_rate(sample_rate);
+    }
+
+    fn reset(&mut self) {
+        self.first.reset();
+        self.second.reset();
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::builtins::{GainDsp, GainParams, PassthroughDsp, PassthroughParams};
+    use std::sync::{
+        Arc,
+        atomic::{AtomicBool, AtomicU32, Ordering},
+    };
+
+    #[derive(Clone)]
+    struct TestParams;
+
+    impl Default for TestParams {
+        fn default() -> Self {
+            Self
+        }
+    }
+
+    impl ProcessorParams for TestParams {
+        fn param_specs() -> &'static [ParamSpec] {
+            &[]
+        }
+    }
+
+    struct LifecycleProbe {
+        set_sample_rate_calls: Arc<AtomicU32>,
+        reset_calls: Arc<AtomicU32>,
+        last_sample_rate_bits: Arc<AtomicU32>,
+        touched_process: Arc<AtomicBool>,
+    }
+
+    impl LifecycleProbe {
+        fn new() -> Self {
+            Self {
+                set_sample_rate_calls: Arc::new(AtomicU32::new(0)),
+                reset_calls: Arc::new(AtomicU32::new(0)),
+                last_sample_rate_bits: Arc::new(AtomicU32::new(0)),
+                touched_process: Arc::new(AtomicBool::new(false)),
+            }
+        }
+    }
+
+    impl Processor for LifecycleProbe {
+        type Params = TestParams;
+
+        fn process(
+            &mut self,
+            _buffer: &mut [&mut [f32]],
+            _transport: &Transport,
+            _params: &Self::Params,
+        ) {
+            self.touched_process.store(true, Ordering::SeqCst);
+        }
+
+        fn set_sample_rate(&mut self, sample_rate: f32) {
+            self.set_sample_rate_calls.fetch_add(1, Ordering::SeqCst);
+            self.last_sample_rate_bits
+                .store(sample_rate.to_bits(), Ordering::SeqCst);
+        }
+
+        fn reset(&mut self) {
+            self.reset_calls.fetch_add(1, Ordering::SeqCst);
+        }
+    }
 
     #[test]
     fn test_chain_processes_in_order() {
@@ -181,5 +258,46 @@ mod tests {
     fn test_chain_default() {
         let _chain: Chain<GainDsp, PassthroughDsp> = Chain::default();
         let _params: ChainParams<GainParams, PassthroughParams> = ChainParams::default();
+    }
+
+    #[test]
+    fn test_chain_from_param_defaults_uses_children_spec_defaults() {
+        let defaults = <ChainParams<GainParams, GainParams>>::from_param_defaults();
+        assert!((defaults.first.level - 1.0).abs() < 1e-6);
+        assert!((defaults.second.level - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_chain_propagates_set_sample_rate_to_both_processors() {
+        let first = LifecycleProbe::new();
+        let second = LifecycleProbe::new();
+
+        let first_calls = Arc::clone(&first.set_sample_rate_calls);
+        let second_calls = Arc::clone(&second.set_sample_rate_calls);
+        let first_sr = Arc::clone(&first.last_sample_rate_bits);
+        let second_sr = Arc::clone(&second.last_sample_rate_bits);
+
+        let mut chain = Chain { first, second };
+        chain.set_sample_rate(48_000.0);
+
+        assert_eq!(first_calls.load(Ordering::SeqCst), 1);
+        assert_eq!(second_calls.load(Ordering::SeqCst), 1);
+        assert_eq!(f32::from_bits(first_sr.load(Ordering::SeqCst)), 48_000.0);
+        assert_eq!(f32::from_bits(second_sr.load(Ordering::SeqCst)), 48_000.0);
+    }
+
+    #[test]
+    fn test_chain_propagates_reset_to_both_processors() {
+        let first = LifecycleProbe::new();
+        let second = LifecycleProbe::new();
+
+        let first_resets = Arc::clone(&first.reset_calls);
+        let second_resets = Arc::clone(&second.reset_calls);
+
+        let mut chain = Chain { first, second };
+        chain.reset();
+
+        assert_eq!(first_resets.load(Ordering::SeqCst), 1);
+        assert_eq!(second_resets.load(Ordering::SeqCst), 1);
     }
 }

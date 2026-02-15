@@ -466,7 +466,7 @@ let processor = unsafe { Box::from_raw(ptr as *mut SomeType) };  // WRONG alloca
 **VTable Versioning:**
 
 ```rust
-// ✅ Version field enables graceful fallback on ABI mismatch
+// ✅ Version field enables fail-fast contract checks on ABI mismatch
 #[repr(C)]
 pub struct DevProcessorVTable {
     pub version: u32,  // Must equal DEV_PROCESSOR_VTABLE_VERSION
@@ -481,7 +481,8 @@ pub struct DevProcessorVTable {
 ```rust
 // ✅ Comprehensive SAFETY annotations
 // SAFETY: `library` is a valid loaded Library. If the symbol doesn't exist,
-// `get()` returns Err which `.ok()?` converts to None (graceful fallback).
+// `get()` returns Err; callers must surface this as an explicit contract error
+// (or use an explicit opt-in compatibility mode), never as a silent default path.
 // The symbol type is trusted to match the macro-generated `extern "C"` function.
 let symbol: Symbol<DevProcessorVTableFn> =
     unsafe { library.get(b"wavecraft_dev_create_processor\0").ok()? };

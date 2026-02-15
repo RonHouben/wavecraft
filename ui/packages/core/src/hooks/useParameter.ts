@@ -4,65 +4,116 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { ParameterClient } from '../ipc/ParameterClient';
-import type { ParameterId, ParameterInfo } from '../types/parameters';
+import { IpcBridge } from '../ipc/IpcBridge';
+import { useConnectionStatus } from './useConnectionStatus';
+import type { ParameterId, ParameterInfo, ParameterValue } from '../types/parameters';
+
+const TRANSPORT_NOT_CONNECTED = 'Transport not connected';
+
+function toError(err: unknown): Error {
+  return err instanceof Error ? err : new Error(String(err));
+}
+
+function isTransportNotConnectedError(err: unknown): boolean {
+  return err instanceof Error && err.message.includes(TRANSPORT_NOT_CONNECTED);
+}
 
 export interface UseParameterResult {
   param: ParameterInfo | null;
-  setValue: (value: number) => Promise<void>;
+  setValue: (value: ParameterValue) => Promise<void>;
   isLoading: boolean;
   error: Error | null;
+}
+
+function toBackendValue(value: ParameterValue): number {
+  return typeof value === 'boolean' ? (value ? 1 : 0) : value;
+}
+
+function toFrontendValue(paramType: ParameterInfo['type'], value: ParameterValue): ParameterValue {
+  if (paramType === 'bool') {
+    return typeof value === 'boolean' ? value : value >= 0.5;
+  }
+
+  return typeof value === 'boolean' ? (value ? 1 : 0) : value;
+}
+
+function normalizeParameter(param: ParameterInfo): ParameterInfo {
+  return {
+    ...param,
+    value: toFrontendValue(param.type, param.value),
+    default: toFrontendValue(param.type, param.default),
+  };
 }
 
 export function useParameter(id: ParameterId): UseParameterResult {
   const [param, setParam] = useState<ParameterInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const { connected } = useConnectionStatus();
+
+  const loadParameter = useCallback(async () => {
+    const client = ParameterClient.getInstance();
+    const bridge = IpcBridge.getInstance();
+    let keepLoading = false;
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Get all parameters and find the one we want
+      const allParams = await client.getAllParameters();
+      const foundParam = allParams.find((p) => p.id === id);
+
+      if (foundParam) {
+        setParam(normalizeParameter(foundParam));
+        setError(null);
+      } else {
+        setParam(null);
+        setError(new Error(`Parameter not found: ${id}`));
+      }
+    } catch (err) {
+      // Transient disconnect race during initial startup/reconnect.
+      // Keep loading and wait for the next connection-established event.
+      if (isTransportNotConnectedError(err) && !bridge.isConnected()) {
+        keepLoading = true;
+        setError(null);
+        return;
+      }
+
+      setError(toError(err));
+    } finally {
+      if (!keepLoading) {
+        setIsLoading(false);
+      }
+    }
+  }, [id]);
 
   // Load initial parameter value
   useEffect(() => {
-    let isMounted = true;
-    const client = ParameterClient.getInstance();
-
-    async function loadParameter(): Promise<void> {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        // Get all parameters and find the one we want
-        const allParams = await client.getAllParameters();
-        const foundParam = allParams.find((p) => p.id === id);
-
-        if (isMounted) {
-          if (foundParam) {
-            setParam(foundParam);
-          } else {
-            setError(new Error(`Parameter not found: ${id}`));
-          }
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(err instanceof Error ? err : new Error(String(err)));
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
+    if (connected) {
+      loadParameter();
+      return;
     }
 
-    loadParameter();
-
-    return (): void => {
-      isMounted = false;
-    };
-  }, [id]);
+    // Disconnected: keep stale parameter value if available, but avoid
+    // rendering stale transport errors as permanent failures.
+    setError((prev) => (isTransportNotConnectedError(prev) ? null : prev));
+    setIsLoading(true);
+  }, [connected, loadParameter]);
 
   // Subscribe to parameter changes
   useEffect(() => {
     const client = ParameterClient.getInstance();
     const unsubscribe = client.onParameterChanged((changedId, value) => {
       if (changedId === id) {
-        setParam((prev) => (prev ? { ...prev, value } : null));
+        setParam((prev) =>
+          prev
+            ? {
+                ...prev,
+                value: toFrontendValue(prev.type, value),
+              }
+            : null
+        );
       }
     });
 
@@ -71,14 +122,24 @@ export function useParameter(id: ParameterId): UseParameterResult {
 
   // Set parameter value
   const setValue = useCallback(
-    async (value: number) => {
+    async (value: ParameterValue) => {
       const client = ParameterClient.getInstance();
       try {
-        await client.setParameter(id, value);
-        // Optimistically update local state
-        setParam((prev) => (prev ? { ...prev, value } : null));
+        await client.setParameter(id, toBackendValue(value));
+        // Read back authoritative host value so UI reflects clamping/remapping
+        // and never diverges from backend-confirmed state.
+        const confirmed = await client.getParameter(id);
+        setParam((prev) =>
+          prev
+            ? {
+                ...prev,
+                value: toFrontendValue(prev.type, confirmed.value),
+              }
+            : prev
+        );
+        setError(null);
       } catch (err) {
-        setError(err instanceof Error ? err : new Error(String(err)));
+        setError(toError(err));
         throw err;
       }
     },

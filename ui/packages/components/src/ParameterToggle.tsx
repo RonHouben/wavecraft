@@ -29,10 +29,10 @@ export function ParameterToggle({ id }: ParameterToggleProps): React.JSX.Element
     );
   }
 
-  const isOn = param.value >= 0.5;
+  const isOn = Boolean(param.value);
 
   const handleToggle = (): void => {
-    const newValue = isOn ? 0 : 1;
+    const newValue = !isOn;
     setValue(newValue).catch((err) => {
       logger.error('Failed to set parameter', { error: err, parameterId: id });
     });

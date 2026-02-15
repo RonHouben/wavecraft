@@ -14,6 +14,11 @@ export { isWebViewEnvironment, isBrowserEnvironment } from './utils/environment'
 // =============================================================================
 export type {
   // IPC types
+  AudioDiagnostic,
+  AudioDiagnosticCode,
+  AudioRuntimePhase,
+  AudioRuntimeStatus,
+  GetAudioStatusResult,
   IpcRequest,
   IpcResponse,
   IpcNotification,
@@ -24,6 +29,7 @@ export type {
 export type {
   // Parameter types
   ParameterInfo,
+  ParameterValue,
   ParameterId,
   ParameterIdMap,
   ParameterType,
@@ -50,6 +56,9 @@ export {
   ERROR_INTERNAL,
   ERROR_PARAM_NOT_FOUND,
   ERROR_PARAM_OUT_OF_RANGE,
+  METHOD_GET_AUDIO_STATUS,
+  NOTIFICATION_AUDIO_STATUS_CHANGED,
+  isAudioRuntimeStatus,
   isIpcResponse,
   isIpcNotification,
   isIpcError,
@@ -88,6 +97,8 @@ export { useLatencyMonitor } from './hooks/useLatencyMonitor';
 export type { UseLatencyMonitorResult } from './hooks/useLatencyMonitor';
 
 export { useMeterFrame } from './hooks/useMeterFrame';
+export { useAudioStatus } from './hooks/useAudioStatus';
+export type { UseAudioStatusResult } from './hooks/useAudioStatus';
 
 export { useRequestResize } from './hooks/useRequestResize';
 

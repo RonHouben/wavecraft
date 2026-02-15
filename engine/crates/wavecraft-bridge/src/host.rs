@@ -4,7 +4,7 @@
 //! and the actual parameter storage (typically in the plugin or DAW host).
 
 use crate::error::BridgeError;
-use wavecraft_protocol::{MeterFrame, ParameterInfo};
+use wavecraft_protocol::{AudioRuntimeStatus, MeterFrame, ParameterInfo};
 
 /// Trait for objects that store and manage parameters.
 ///
@@ -21,7 +21,7 @@ use wavecraft_protocol::{MeterFrame, ParameterInfo};
 ///
 /// ```rust,no_run
 /// use wavecraft_bridge::{BridgeError, ParameterHost};
-/// use wavecraft_protocol::{MeterFrame, ParameterInfo, ParameterType};
+/// use wavecraft_protocol::{AudioRuntimeStatus, MeterFrame, ParameterInfo, ParameterType};
 /// use std::sync::{Arc, Mutex};
 ///
 /// struct MyHost {
@@ -38,6 +38,8 @@ use wavecraft_protocol::{MeterFrame, ParameterInfo};
 ///             param_type: ParameterType::Float,
 ///             value: params.get(idx).copied()?,
 ///             default: 0.5,
+///             min: 0.0,
+///             max: 1.0,
 ///             unit: None,
 ///             group: None,
 ///         })
@@ -69,6 +71,10 @@ use wavecraft_protocol::{MeterFrame, ParameterInfo};
 ///     fn request_resize(&self, _width: u32, _height: u32) -> bool {
 ///         false
 ///     }
+///
+///     fn get_audio_status(&self) -> Option<AudioRuntimeStatus> {
+///         None
+///     }
 /// }
 /// ```
 pub trait ParameterHost: Send + Sync {
@@ -85,12 +91,11 @@ pub trait ParameterHost: Send + Sync {
 
     /// Set a parameter value.
     ///
-    /// Updates the parameter to the given normalized value [0.0, 1.0].
-    /// The implementation should convert this to the parameter's actual range.
+    /// Updates the parameter to the given value in its declared `[min, max]` range.
     ///
     /// # Arguments
     /// * `id` - The parameter identifier
-    /// * `value` - Normalized value (0.0 = min, 1.0 = max)
+    /// * `value` - Parameter value in its declared range
     ///
     /// # Returns
     /// `Ok(())` if the parameter was updated, or an error if the ID is invalid
@@ -127,6 +132,11 @@ pub trait ParameterHost: Send + Sync {
     /// # Returns
     /// `true` if the host accepted the resize request, `false` if rejected.
     fn request_resize(&self, width: u32, height: u32) -> bool;
+
+    /// Get the current audio runtime status for browser/dev hosts.
+    ///
+    /// Implementers that do not expose runtime audio state should return `None`.
+    fn get_audio_status(&self) -> Option<AudioRuntimeStatus>;
 }
 
 /// Blanket implementation for Arc<T> where T: ParameterHost.
@@ -154,5 +164,9 @@ impl<T: ParameterHost> ParameterHost for std::sync::Arc<T> {
 
     fn request_resize(&self, width: u32, height: u32) -> bool {
         (**self).request_resize(width, height)
+    }
+
+    fn get_audio_status(&self) -> Option<AudioRuntimeStatus> {
+        (**self).get_audio_status()
     }
 }

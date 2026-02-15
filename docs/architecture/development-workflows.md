@@ -98,7 +98,8 @@ The IPC system uses a factory pattern to automatically select the appropriate tr
    - Lazy initialization of transport
    - Same API regardless of transport type
    - Rate-limited disconnect warnings (1 per 5s)
-   - Graceful degradation when disconnected
+
+- Explicit disconnected state with actionable diagnostics
 
 4. **WebSocket Features**:
    - Automatic reconnection with exponential backoff (1s, 2s, 4s, 8s, 16s)
@@ -115,6 +116,16 @@ cargo xtask dev
 # Start embedded dev server from a plugin project (recommended for plugin authors)
 wavecraft start
 ```
+
+`cargo xtask dev` now runs a **preflight refresh** before launching `wavecraft start`.
+The preflight is fail-fast and logs explicit status lines for each rule (refreshed vs skipped):
+
+- **UI package artifacts** (`ui/packages/core/dist`, `ui/packages/components/dist`)
+  - Runs `npm run build:lib` in `ui/` when package source/config files are newer than dist outputs or outputs are missing.
+  - Skips when artifacts are up-to-date.
+- **Parameter/typegen startup caches** (`wavecraft-params.json`, `sdk-template/ui/src/generated/parameters.ts`)
+  - Invalidates stale sidecar caches when SDK engine sources or relevant dev tooling files changed.
+  - Removes stale generated parameter typing when sidecars are invalidated, so `wavecraft start` regenerates fresh types during startup.
 
 **SDK Mode Detection:**
 
@@ -147,7 +158,7 @@ When `wavecraft start` launches, it:
 
 This enables IDE autocompletion and compile-time type safety for `useParameter('inputgain_gain')` calls without any developer configuration.
 
-The generated file is a build artifact (gitignored) and should not be checked into source control. If type generation fails during hot-reload, the dev server continues running with stale types and prints a warning.
+The generated file is a build artifact (gitignored) and should not be checked into source control. In SDK mode, this codegen output is a required contract: if generation fails during startup or hot-reload, the update fails fast and prints actionable diagnostics (root cause + remediation) instead of silently continuing with stale types.
 
 ### Why Module-Level Detection?
 
@@ -160,7 +171,7 @@ When running `wavecraft start`, the CLI uses a **two-phase approach** for parame
 1. **Cached Parameter Discovery** — First checks for a cached `wavecraft-params.json` sidecar file
 2. **Feature-Gated Build** — If not cached, builds with `--features _param-discovery` which skips nih-plug's VST3/CLAP static initializers (preventing macOS `AudioComponentRegistrar` hangs during `dlopen`)
 3. **FFI Extraction** — Extracts parameter metadata from this safe dylib via `wavecraft_get_params_json` and caches it for subsequent runs
-4. **Backwards Compatibility** — Falls back to standard build for older plugins without the `_param-discovery` feature
+4. **Contract Enforcement** — Current SDK parameter-discovery contract is required in SDK mode. Missing/incompatible discovery symbols or feature expectations fail fast with actionable diagnostics.
 
 After parameter discovery completes, the CLI also attempts to load an FFI vtable symbol (`wavecraft_dev_create_processor`). This symbol is **not** gated by the `_param-discovery` feature and remains available regardless of which build was used. If found, audio processing runs **in-process** via cpal — no separate binary or subprocess is needed. Users never see or write any audio capture code.
 
@@ -176,7 +187,7 @@ After parameter discovery completes, the CLI also attempts to load an FFI vtable
 │  │  2. If not cached: cargo build --features _param-discovery      │         │
 │  │     (skips nih-plug static initializers, prevents dlopen hang)  │         │
 │  │  3. dlopen(cdylib) → wavecraft_get_params_json() → cache JSON   │         │
-│  │  4. Fallback: standard build for older plugins (no feature)     │         │
+│  │  4. Contract check: mismatch/missing symbols → fail fast         │         │
 │  └──────────────────────────────────────────────────────────────────┘         │
 │                                                                              │
 │  ┌─────────────────────┐     ┌──────────────────────────────┐                │
@@ -223,7 +234,7 @@ The `DevProcessorVTable` (`wavecraft-protocol`) is a `#[repr(C)]` struct with `e
 | `reset`           | Clear processor state (delay lines, filters, etc.)             |
 | `drop`            | Free the processor instance                                    |
 
-The vtable includes a `version` field (`DEV_PROCESSOR_VTABLE_VERSION`) so the CLI can detect incompatible changes and fall back gracefully instead of invoking undefined behavior.
+The vtable includes a `version` field (`DEV_PROCESSOR_VTABLE_VERSION`) so the CLI can detect incompatible changes and fail fast with actionable diagnostics instead of invoking undefined behavior.
 
 #### Key Components
 
@@ -231,10 +242,10 @@ The vtable includes a `version` field (`DEV_PROCESSOR_VTABLE_VERSION`) so the CL
 
 - **`DevProcessorVTable`** (`wavecraft-protocol`): Versioned C-ABI vtable defining the FFI contract between user cdylib and CLI.
 - **`wavecraft_dev_create_processor`** (`wavecraft-macros` generated): FFI symbol exported by `wavecraft_plugin!` that returns the vtable. Every `extern "C"` function is wrapped in `catch_unwind` for panic safety.
-- **`PluginParamLoader`** (`wavecraft-bridge`): Extended to optionally load the vtable alongside parameters via `try_load_processor_vtable()`. Missing vtable → graceful fallback to metering-only mode.
+- **`PluginParamLoader`** (`wavecraft-bridge`): Loads the vtable alongside parameters via `try_load_processor_vtable()`. Missing/incompatible vtable in SDK mode is treated as a contract violation and fails fast with remediation guidance.
 - **`DevAudioProcessor`** trait (`wavecraft-dev-server`): Simplified audio processing trait without associated types — compatible with both FFI and direct Rust usage.
 - **`FfiProcessor`** (`wavecraft-dev-server`): Safe wrapper around the vtable's opaque `*mut c_void` instance. Implements `DevAudioProcessor` and calls through vtable function pointers. Uses stack-allocated `[*mut f32; 2]` for channel pointers (no heap allocation). `Drop` implementation calls the vtable's `drop` function.
-- **`AudioServer`** (`wavecraft-dev-server`): Full-duplex audio I/O server. Opens paired cpal input + output streams connected by an `rtrb` SPSC ring buffer. Input callback: deinterleave → `FfiProcessor::process()` → compute meters → write to audio ring buffer. Output callback: read from ring buffer → speakers (silence on underflow). Meter data is delivered via a separate `rtrb` SPSC ring buffer to a tokio drain task for WebSocket broadcast. All buffers are pre-allocated before stream creation. Gracefully falls back to input-only (metering) mode if no output device is available.
+- **`AudioServer`** (`wavecraft-dev-server`): Full-duplex audio I/O server. Opens paired cpal input + output streams connected by an `rtrb` SPSC ring buffer. Input callback: deinterleave → `FfiProcessor::process()` → compute meters → write to audio ring buffer. Output callback: read from ring buffer → speakers (silence on underflow). Meter data is delivered via a separate `rtrb` SPSC ring buffer to a tokio drain task for WebSocket broadcast. All buffers are pre-allocated before stream creation. Missing required devices/configuration in SDK mode fails fast with explicit diagnostics.
 - **`AtomicParameterBridge`** (`wavecraft-dev-server`): Lock-free bridge for passing parameter values from the WebSocket thread to the audio thread. Contains a `HashMap<String, Arc<AtomicF32>>` built once at startup (immutable structure, mutable atomic values). WS thread writes via `store(Relaxed)`, audio thread reads via `load(Relaxed)`. Zero allocations, zero locks on the audio thread.
 
 #### Memory and Lifetime Safety
@@ -246,9 +257,11 @@ All processor memory is allocated and freed **inside the dylib** via vtable func
 1. **Struct field order** in `PluginParamLoader`: `_library` is the last field, so it's dropped last.
 2. **Local variable order** in the CLI: `_audio_handle` is declared after `loader`, so it's dropped first (reverse declaration order for locals).
 
-#### Backward Compatibility
+#### Contract Policy (Pre-1.0)
 
-Plugins compiled with older SDK versions that don't export `wavecraft_dev_create_processor` continue to work — the CLI falls back to silent meters (zeros) with a clear informational message. No synthetic/animated meter data is generated; the honest representation is "no audio processing is happening." Version mismatches in the vtable also trigger a graceful fallback with upgrade guidance.
+Pre-1.0 SDK development prioritizes fast iteration and strict contracts over backward compatibility in dev mode. Plugins that do not export `wavecraft_dev_create_processor`, have incompatible vtable versions, or otherwise violate current SDK contracts fail fast with actionable diagnostics (what failed, expected contract, and how to fix).
+
+If a temporary compatibility path is introduced for migration, it must be explicit and opt-in (for example, a dedicated CLI flag or environment variable) and must never be the default behavior.
 
 #### Parameter Sync in Dev Mode
 
@@ -260,13 +273,28 @@ The `AtomicParameterBridge` enables lock-free parameter flow from the browser UI
 
 The FFI vtable v1 `process()` does not accept parameters directly. The bridge infrastructure is in place for future vtable v2 which will add a `set_parameter` function pointer. Currently, parameter values are available to the audio callback but not injected into the processor (documented known limitation of the `wavecraft_plugin!` macro).
 
+### Audio Runtime Status Contract (Browser Dev)
+
+Browser-dev audio startup in `wavecraft start` is deterministic and **independent** of parameter sidecar cache hit/miss paths. Audio runtime initialization is always attempted from the current runtime state after startup preconditions pass.
+
+Pre-1.0 behavior is strict fail-fast: runtime loader failures, FFI vtable load/version failures, and audio initialization failures are treated as startup-fatal with actionable diagnostics.
+
+The audio readiness contract is exposed over dedicated IPC APIs:
+
+- Method: `getAudioStatus`
+- Notification: `audioStatusChanged`
+
+These status APIs are separate from transport health. `useConnectionStatus()` reports transport connectivity (WebSocket/native bridge), not audio readiness.
+
+Current behavior: if no usable default output device is available, startup transitions to `failed` with diagnostic reason `noOutputDevice`. This remains startup-fatal until explicit device selection is implemented.
+
 ### Benefits
 
 - **Real engine communication**: Browser UI talks to real Rust backend
 - **Hot module reload**: Vite HMR for instant UI updates
 - **Same IPC layer**: Identical JSON-RPC protocol as production
 - **Robust reconnection**: Automatic recovery from connection drops; `useAllParameters` re-fetches parameters on reconnection
-- **Graceful degradation**: UI shows "Connecting..." when disconnected
+- **Explicit failure states**: UI shows clear connection/error states with actionable diagnostics
 - **In-process audio**: Full-duplex audio I/O (input → process → output) via FFI with zero user boilerplate
 - **Lock-free parameter sync**: UI parameter changes reach the audio thread via `AtomicParameterBridge` with zero allocations
 
@@ -283,7 +311,7 @@ Wavecraft uses a Rust-based build system (`xtask`) that provides a unified inter
 | `cargo xtask ci-check`          | **Pre-push validation** — 6-phase local CI simulation (docs, UI build, lint+typecheck, tests; add `--full` for template validation + CD dry-run) |
 | `cargo xtask ci-check -F`       | **Full validation** — All 6 phases including template validation and CD dry-run                                                                  |
 | `cargo xtask validate-template` | Validate CLI template generation (replicates CI `template-validation.yml`)                                                                       |
-| `cargo xtask dev`               | Start WebSocket + Vite dev servers for browser development                                                                                       |
+| `cargo xtask dev`               | Run preflight refresh (UI package artifacts + param/typegen cache invalidation) then start WebSocket + Vite dev servers                          |
 | `cargo xtask bundle`            | Build and bundle VST3/CLAP plugins                                                                                                               |
 | `cargo xtask test`              | Run all tests (Engine + UI)                                                                                                                      |
 | `cargo xtask test --ui`         | Run UI tests only (Vitest)                                                                                                                       |

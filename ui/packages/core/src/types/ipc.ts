@@ -37,6 +37,49 @@ export interface IpcError {
 }
 
 // ============================================================================
+// Audio Runtime Status Types
+// ============================================================================
+
+export type AudioRuntimePhase =
+  | 'disabled'
+  | 'initializing'
+  | 'runningFullDuplex'
+  | 'runningInputOnly'
+  | 'degraded'
+  | 'failed';
+
+export type AudioDiagnosticCode =
+  | 'loaderUnavailable'
+  | 'vtableMissing'
+  | 'processorCreateFailed'
+  | 'noInputDevice'
+  | 'inputPermissionDenied'
+  | 'noOutputDevice'
+  | 'streamStartFailed'
+  | 'unknown';
+
+export interface AudioDiagnostic {
+  code: AudioDiagnosticCode;
+  message: string;
+  hint?: string;
+}
+
+export interface AudioRuntimeStatus {
+  phase: AudioRuntimePhase;
+  diagnostic?: AudioDiagnostic;
+  sample_rate?: number;
+  buffer_size?: number;
+  updated_at_ms: number;
+}
+
+export interface GetAudioStatusResult {
+  status: AudioRuntimeStatus | null;
+}
+
+export const METHOD_GET_AUDIO_STATUS = 'getAudioStatus';
+export const NOTIFICATION_AUDIO_STATUS_CHANGED = 'audioStatusChanged';
+
+// ============================================================================
 // Error Codes (matching Rust constants)
 // ============================================================================
 
@@ -86,4 +129,15 @@ export function isIpcNotification(obj: unknown): obj is IpcNotification {
 
 export function isIpcError(obj: unknown): obj is IpcError {
   return typeof obj === 'object' && obj !== null && 'code' in obj && 'message' in obj;
+}
+
+export function isAudioRuntimeStatus(obj: unknown): obj is AudioRuntimeStatus {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'phase' in obj &&
+    typeof (obj as { phase: unknown }).phase === 'string' &&
+    'updated_at_ms' in obj &&
+    typeof (obj as { updated_at_ms: unknown }).updated_at_ms === 'number'
+  );
 }

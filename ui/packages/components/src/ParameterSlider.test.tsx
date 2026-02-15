@@ -17,6 +17,8 @@ describe('ParameterSlider', () => {
       name: 'Gain',
       value: 0.5,
       default: 0.5,
+      min: 0,
+      max: 1,
       type: 'float',
       unit: '%',
     });
@@ -64,5 +66,24 @@ describe('ParameterSlider', () => {
     expect(slider).toHaveAttribute('min', '0');
     expect(slider).toHaveAttribute('max', '1');
     expect(slider).toHaveAttribute('step', '0.001');
+  });
+
+  it('uses full frequency range and shows Hz without percent scaling', () => {
+    setMockParameter('oscillator_frequency', {
+      name: 'Oscillator Frequency',
+      value: 440,
+      default: 440,
+      min: 20,
+      max: 5000,
+      type: 'float',
+      unit: 'Hz',
+    });
+
+    render(<ParameterSlider id="oscillator_frequency" />);
+
+    const slider = screen.getByRole('slider');
+    expect(slider).toHaveAttribute('min', '20');
+    expect(slider).toHaveAttribute('max', '5000');
+    expect(screen.getByText('440.0 Hz')).toBeInTheDocument();
   });
 });

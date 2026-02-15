@@ -8,6 +8,7 @@ import { IpcBridge } from './IpcBridge';
 import type {
   ParameterId,
   ParameterInfo,
+  ParameterValue,
   GetParameterResult,
   SetParameterResult,
   GetAllParametersResult,
@@ -20,7 +21,7 @@ import {
   NOTIFICATION_PARAMETER_CHANGED,
 } from '../types/parameters';
 
-type ParameterChangeCallback = (id: ParameterId, value: number) => void;
+type ParameterChangeCallback = (id: ParameterId, value: ParameterValue) => void;
 
 export class ParameterClient {
   private static instance: ParameterClient | null = null;
@@ -48,12 +49,12 @@ export class ParameterClient {
   /**
    * Set a parameter's value
    * @param id Parameter ID
-   * @param value Normalized value [0.0, 1.0]
+   * @param value Parameter value (bool params accept booleans)
    */
-  public async setParameter(id: ParameterId, value: number): Promise<void> {
+  public async setParameter(id: ParameterId, value: ParameterValue): Promise<void> {
     await this.bridge.invoke<SetParameterResult>(METHOD_SET_PARAMETER, {
       id,
-      value,
+      value: typeof value === 'boolean' ? (value ? 1 : 0) : value,
     });
   }
 

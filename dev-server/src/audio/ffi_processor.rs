@@ -106,8 +106,8 @@ impl Drop for FfiProcessor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
     use std::sync::Mutex;
+    use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
     // Mutex to serialize tests that share static mock flags.
     // This prevents race conditions when tests run in parallel.

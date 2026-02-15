@@ -5,6 +5,7 @@
  */
 
 export type ParameterType = 'float' | 'bool' | 'enum';
+export type ParameterValue = number | boolean;
 
 /**
  * Augmentable parameter ID registry.
@@ -14,6 +15,28 @@ export type ParameterType = 'float' | 'bool' | 'enum';
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface ParameterIdMap {}
+
+type ParameterIdMapEntryValue = true | number | boolean;
+
+type ParameterIdMapEntry<TId extends ParameterId> = TId extends keyof ParameterIdMap
+  ? ParameterIdMap[TId]
+  : true;
+
+/**
+ * Compile-time parameter value type for a specific parameter ID.
+ *
+ * Generated `ParameterIdMap` augmentation can provide value types per ID:
+ * - `number` for float/enum-like params
+ * - `boolean` for bool params
+ *
+ * Legacy generated maps that use `true` keep resolving to `number`.
+ */
+export type ParameterValueForId<TId extends ParameterId> =
+  ParameterIdMapEntry<TId> extends true
+    ? number
+    : ParameterIdMapEntry<TId> extends ParameterIdMapEntryValue
+      ? ParameterIdMapEntry<TId>
+      : number;
 
 /**
  * Internal marker key added by generated module augmentation.
@@ -40,8 +63,10 @@ export interface ParameterInfo {
   id: ParameterId;
   name: string;
   type: ParameterType;
-  value: number;
-  default: number;
+  value: ParameterValue;
+  default: ParameterValue;
+  min: number;
+  max: number;
   unit?: string;
   group?: string;
 }
@@ -53,13 +78,13 @@ export interface GetParameterParams {
 
 export interface GetParameterResult {
   id: ParameterId;
-  value: number;
+  value: ParameterValue;
 }
 
 // setParameter
 export interface SetParameterParams {
   id: ParameterId;
-  value: number;
+  value: ParameterValue;
 }
 
 export type SetParameterResult = Record<string, never>;
@@ -72,7 +97,7 @@ export interface GetAllParametersResult {
 // Notification: parameterChanged
 export interface ParameterChangedNotification {
   id: ParameterId;
-  value: number;
+  value: ParameterValue;
 }
 
 // Method Names (matching Rust constants)

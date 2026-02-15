@@ -13,7 +13,7 @@ use wavecraft_bridge::{BridgeError, ParameterHost};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use wavecraft_metering::MeterConsumer;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-use wavecraft_protocol::{ParameterInfo, ParameterType};
+use wavecraft_protocol::{AudioRuntimeStatus, ParameterInfo, ParameterType};
 
 /// Bridge between nih-plug and the IPC handler.
 ///
@@ -49,6 +49,45 @@ impl<P: Params> PluginEditorBridge<P> {
             editor_size,
         }
     }
+
+    fn parameter_info_from_ptr(param_id: &str, param_ptr: ParamPtr, group: &str) -> ParameterInfo {
+        // SAFETY: ParamPtr values come from `self.params.param_map()`, and `self.params` is
+        // kept alive by `Arc<P>` on this struct for the full bridge lifetime.
+        let (name, unit_str, value, default, mut min, mut max) = unsafe {
+            (
+                param_ptr.name(),
+                param_ptr.unit(),
+                param_ptr.modulated_plain_value(),
+                param_ptr.default_plain_value(),
+                param_ptr.preview_plain(0.0),
+                param_ptr.preview_plain(1.0),
+            )
+        };
+
+        if min > max {
+            std::mem::swap(&mut min, &mut max);
+        }
+
+        ParameterInfo {
+            id: param_id.to_string(),
+            name: name.to_string(),
+            param_type: ParameterType::Float,
+            value,
+            default,
+            min,
+            max,
+            unit: if unit_str.is_empty() {
+                None
+            } else {
+                Some(unit_str.to_string())
+            },
+            group: if group.is_empty() {
+                None
+            } else {
+                Some(group.to_string())
+            },
+        }
+    }
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -58,41 +97,20 @@ impl<P: Params> ParameterHost for PluginEditorBridge<P> {
         let param_map = self.params.param_map();
         param_map.iter().find_map(|(param_id, param_ptr, _group)| {
             if param_id == id {
-                // Access metadata directly from ParamPtr
-                let name = unsafe { param_ptr.name() };
-                let value = unsafe { param_ptr.modulated_normalized_value() };
-                let default = unsafe { param_ptr.default_normalized_value() };
-                let unit_str = unsafe { param_ptr.unit() };
-
-                Some(ParameterInfo {
-                    id: param_id.clone(),
-                    name: name.to_string(),
-                    param_type: ParameterType::Float, // For now, assume float
-                    value,
-                    default,
-                    // Convert empty string to None
-                    unit: if unit_str.is_empty() {
-                        None
-                    } else {
-                        Some(unit_str.to_string())
-                    },
-                    // Use group from param_map (third element of tuple)
-                    group: if _group.is_empty() {
-                        None
-                    } else {
-                        Some(_group.to_string())
-                    },
-                })
+                Some(Self::parameter_info_from_ptr(param_id, *param_ptr, _group))
             } else {
                 None
             }
         })
     }
 
-    fn set_parameter(&self, id: &str, normalized_value: f32) -> Result<(), BridgeError> {
+    fn set_parameter(&self, id: &str, plain_value: f32) -> Result<(), BridgeError> {
         // Use nih-plug's param_map to find the parameter
         let param_map = self.params.param_map();
         if let Some((_, param_ptr, _)) = param_map.iter().find(|(param_id, _, _)| param_id == id) {
+            // SAFETY: ParamPtr is valid while `self.params` is alive (kept by Arc), and
+            // `preview_normalized` is a pure conversion on the parameter's own range mapping.
+            let normalized_value = unsafe { param_ptr.preview_normalized(plain_value) };
             // Use nih-plug's GuiContext for proper host automation
             unsafe {
                 self.context.raw_begin_set_parameter(*param_ptr);
@@ -112,31 +130,7 @@ impl<P: Params> ParameterHost for PluginEditorBridge<P> {
         param_map
             .iter()
             .map(|(param_id, param_ptr, _group)| {
-                // Access metadata directly from ParamPtr
-                let name = unsafe { param_ptr.name() };
-                let value = unsafe { param_ptr.modulated_normalized_value() };
-                let default = unsafe { param_ptr.default_normalized_value() };
-                let unit_str = unsafe { param_ptr.unit() };
-
-                ParameterInfo {
-                    id: param_id.clone(),
-                    name: name.to_string(),
-                    param_type: ParameterType::Float, // For now, assume float
-                    value,
-                    default,
-                    // Convert empty string to None
-                    unit: if unit_str.is_empty() {
-                        None
-                    } else {
-                        Some(unit_str.to_string())
-                    },
-                    // Use group from param_map (third element of tuple)
-                    group: if _group.is_empty() {
-                        None
-                    } else {
-                        Some(_group.to_string())
-                    },
-                }
+                Self::parameter_info_from_ptr(param_id, *param_ptr, _group)
             })
             .collect()
     }
@@ -167,5 +161,142 @@ impl<P: Params> ParameterHost for PluginEditorBridge<P> {
         }
 
         accepted
+    }
+
+    fn get_audio_status(&self) -> Option<AudioRuntimeStatus> {
+        None
+    }
+}
+
+#[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
+mod tests {
+    use super::*;
+    use std::collections::BTreeMap;
+    use std::sync::Mutex;
+
+    #[derive(Params)]
+    struct TestParams {
+        #[id = "freq"]
+        freq: FloatParam,
+
+        #[id = "lvl"]
+        level: FloatParam,
+
+        #[id = "ena"]
+        enabled: BoolParam,
+    }
+
+    impl Default for TestParams {
+        fn default() -> Self {
+            Self {
+                freq: FloatParam::new(
+                    "Frequency",
+                    440.0,
+                    FloatRange::Skewed {
+                        min: 20.0,
+                        max: 5_000.0,
+                        factor: 2.5,
+                    },
+                )
+                .with_unit(" Hz"),
+                level: FloatParam::new("Level", 0.5, FloatRange::Linear { min: 0.0, max: 1.0 }),
+                enabled: BoolParam::new("Enabled", true),
+            }
+        }
+    }
+
+    struct MockGuiContext {
+        resize_accepted: bool,
+        set_calls: Mutex<Vec<(ParamPtr, f32)>>,
+    }
+
+    impl MockGuiContext {
+        fn new(resize_accepted: bool) -> Self {
+            Self {
+                resize_accepted,
+                set_calls: Mutex::new(Vec::new()),
+            }
+        }
+    }
+
+    impl GuiContext for MockGuiContext {
+        fn plugin_api(&self) -> PluginApi {
+            PluginApi::Standalone
+        }
+
+        fn request_resize(&self) -> bool {
+            self.resize_accepted
+        }
+
+        unsafe fn raw_begin_set_parameter(&self, _param: ParamPtr) {}
+
+        unsafe fn raw_set_parameter_normalized(&self, param: ParamPtr, normalized: f32) {
+            self.set_calls
+                .lock()
+                .expect("set_calls lock poisoned")
+                .push((param, normalized));
+        }
+
+        unsafe fn raw_end_set_parameter(&self, _param: ParamPtr) {}
+
+        fn get_state(&self) -> PluginState {
+            PluginState {
+                version: String::new(),
+                params: BTreeMap::new(),
+                fields: BTreeMap::new(),
+            }
+        }
+
+        fn set_state(&self, _state: PluginState) {}
+    }
+
+    #[test]
+    fn get_parameter_returns_plain_frequency_range_and_default() {
+        let params = Arc::new(TestParams::default());
+        let context = Arc::new(MockGuiContext::new(true));
+        let bridge =
+            PluginEditorBridge::new(params, context, None, Arc::new(Mutex::new((800, 600))));
+
+        let frequency = bridge
+            .get_parameter("freq")
+            .expect("frequency parameter should exist");
+
+        assert_eq!(frequency.id, "freq");
+        assert_eq!(frequency.name, "Frequency");
+        assert!((frequency.min - 20.0).abs() < 1e-5);
+        assert!((frequency.max - 5_000.0).abs() < 1e-3);
+        assert!((frequency.default - 440.0).abs() < 1e-4);
+        assert!((frequency.value - 440.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn set_parameter_converts_plain_to_normalized_before_host_call() {
+        let params = Arc::new(TestParams::default());
+        let context = Arc::new(MockGuiContext::new(true));
+
+        let expected_normalized = {
+            let param_map = params.param_map();
+            let (_, param_ptr, _) = param_map
+                .iter()
+                .find(|(id, _, _)| id == "freq")
+                .expect("freq pointer should exist");
+            // SAFETY: ParamPtr originates from `params.param_map()` and `params` is alive.
+            unsafe { param_ptr.preview_normalized(2_000.0) }
+        };
+
+        let bridge = PluginEditorBridge::new(
+            params,
+            context.clone(),
+            None,
+            Arc::new(Mutex::new((800, 600))),
+        );
+
+        bridge
+            .set_parameter("freq", 2_000.0)
+            .expect("setting frequency should succeed");
+
+        let calls = context.set_calls.lock().expect("set_calls lock poisoned");
+        let (_, normalized) = calls.last().expect("expected a set_parameter call");
+        assert!((*normalized - expected_normalized).abs() < 1e-5);
     }
 }

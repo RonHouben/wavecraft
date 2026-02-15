@@ -31,6 +31,12 @@ use wavecraft_protocol::MeterUpdateNotification;
 use super::atomic_params::AtomicParameterBridge;
 use super::ffi_processor::DevAudioProcessor;
 
+const GAIN_MULTIPLIER_MIN: f32 = 0.0;
+const GAIN_MULTIPLIER_MAX: f32 = 2.0;
+// Strict runtime policy: canonical IDs only (no alias/legacy fallbacks).
+const INPUT_GAIN_PARAM_ID: &str = "input_gain_level";
+const OUTPUT_GAIN_PARAM_ID: &str = "output_gain_level";
+
 /// Configuration for audio server.
 #[derive(Debug, Clone)]
 pub struct AudioConfig {
@@ -53,9 +59,9 @@ pub struct AudioServer {
     processor: Box<dyn DevAudioProcessor>,
     config: AudioConfig,
     input_device: Device,
-    output_device: Option<Device>,
+    output_device: Device,
     input_config: StreamConfig,
-    output_config: Option<StreamConfig>,
+    output_config: StreamConfig,
     param_bridge: Arc<AtomicParameterBridge>,
 }
 
@@ -82,42 +88,30 @@ impl AudioServer {
         tracing::info!("Input sample rate: {} Hz", input_sample_rate);
         let input_config: StreamConfig = supported_input.into();
 
-        // Output device (optional — graceful fallback to metering-only)
-        let (output_device, output_config) = match host.default_output_device() {
-            Some(dev) => {
-                match dev.name() {
-                    Ok(name) => tracing::info!("Using output device: {}", name),
-                    Err(_) => tracing::info!("Using output device: (unnamed)"),
-                }
-                match dev.default_output_config() {
-                    Ok(supported_output) => {
-                        let output_sr = supported_output.sample_rate().0;
-                        tracing::info!("Output sample rate: {} Hz", output_sr);
-                        if output_sr != input_sample_rate {
-                            tracing::warn!(
-                                "Input/output sample rate mismatch ({} vs {}). \
-                                 Processing at input rate; output device may resample.",
-                                input_sample_rate,
-                                output_sr
-                            );
-                        }
-                        let cfg: StreamConfig = supported_output.into();
-                        (Some(dev), Some(cfg))
-                    }
-                    Err(e) => {
-                        tracing::warn!(
-                            "Failed to get output config: {}. Metering-only mode.",
-                            e
-                        );
-                        (None, None)
-                    }
-                }
-            }
-            None => {
-                tracing::warn!("No output device available. Metering-only mode.");
-                (None, None)
-            }
-        };
+        // Output device (required): dev mode expects audible output by default.
+        let output_device = host
+            .default_output_device()
+            .context("No output device available")?;
+
+        match output_device.name() {
+            Ok(name) => tracing::info!("Using output device: {}", name),
+            Err(_) => tracing::info!("Using output device: (unnamed)"),
+        }
+
+        let supported_output = output_device
+            .default_output_config()
+            .context("Failed to get default output config")?;
+        let output_sr = supported_output.sample_rate().0;
+        tracing::info!("Output sample rate: {} Hz", output_sr);
+        if output_sr != input_sample_rate {
+            tracing::warn!(
+                "Input/output sample rate mismatch ({} vs {}). \
+                 Processing at input rate; output device may resample.",
+                input_sample_rate,
+                output_sr
+            );
+        }
+        let output_config: StreamConfig = supported_output.into();
 
         Ok(Self {
             processor,
@@ -144,13 +138,14 @@ impl AudioServer {
 
         let mut processor = self.processor;
         let buffer_size = self.config.buffer_size as usize;
-        let num_channels = self.input_config.channels as usize;
-        let _param_bridge = Arc::clone(&self.param_bridge);
+        let input_channels = self.input_config.channels as usize;
+        let output_channels = self.output_config.channels as usize;
+        let param_bridge = Arc::clone(&self.param_bridge);
 
         // --- SPSC ring buffer for input→output audio transfer ---
         // Capacity: buffer_size * num_channels * 4 blocks of headroom.
         // Data format: interleaved f32 samples (matches cpal output).
-        let ring_capacity = buffer_size * num_channels.max(2) * 4;
+        let ring_capacity = buffer_size * 2 * 4;
         let (mut ring_producer, mut ring_consumer) = rtrb::RingBuffer::new(ring_capacity);
 
         // --- SPSC ring buffer for meter data (audio → consumer task) ---
@@ -161,6 +156,7 @@ impl AudioServer {
             rtrb::RingBuffer::<MeterUpdateNotification>::new(64);
 
         let mut frame_counter = 0u64;
+        let mut oscillator_phase = 0.0_f32;
 
         // Pre-allocate deinterleaved buffers BEFORE the audio callback.
         // These are moved into the closure and reused on every invocation,
@@ -178,8 +174,8 @@ impl AudioServer {
                 move |data: &[f32], _: &cpal::InputCallbackInfo| {
                     frame_counter += 1;
 
-                    let num_samples = data.len() / num_channels.max(1);
-                    if num_samples == 0 || num_channels == 0 {
+                    let num_samples = data.len() / input_channels.max(1);
+                    if num_samples == 0 || input_channels == 0 {
                         return;
                     }
 
@@ -192,18 +188,13 @@ impl AudioServer {
                     right.fill(0.0);
 
                     for i in 0..actual_samples {
-                        left[i] = data[i * num_channels];
-                        if num_channels > 1 {
-                            right[i] = data[i * num_channels + 1];
+                        left[i] = data[i * input_channels];
+                        if input_channels > 1 {
+                            right[i] = data[i * input_channels + 1];
                         } else {
                             right[i] = left[i];
                         }
                     }
-
-                    // Read parameter values at block boundary (RT-safe atomic reads).
-                    // Currently the bridge is kept alive in the closure for future
-                    // vtable v2 parameter injection. The infrastructure is in place.
-                    let _ = &_param_bridge;
 
                     // Process through the user's DSP (stack-local channel array)
                     {
@@ -211,17 +202,24 @@ impl AudioServer {
                         processor.process(&mut channels);
                     }
 
+                    // Apply runtime output modifiers from lock-free parameters.
+                    // This provides immediate control for source generators in
+                    // browser dev mode while FFI parameter injection is evolving.
+                    apply_output_modifiers(
+                        left,
+                        right,
+                        &param_bridge,
+                        &mut oscillator_phase,
+                        actual_sample_rate,
+                    );
+
                     // Re-borrow after process()
                     let left = &left_buf[..actual_samples];
                     let right = &right_buf[..actual_samples];
 
                     // Compute meters from processed output
-                    let peak_left = left.iter().copied().fold(0.0f32, |a, b| a.max(b.abs()));
-                    let rms_left =
-                        (left.iter().map(|x| x * x).sum::<f32>() / left.len() as f32).sqrt();
-                    let peak_right = right.iter().copied().fold(0.0f32, |a, b| a.max(b.abs()));
-                    let rms_right =
-                        (right.iter().map(|x| x * x).sum::<f32>() / right.len() as f32).sqrt();
+                    let (peak_left, rms_left) = compute_peak_and_rms(left);
+                    let (peak_right, rms_right) = compute_peak_and_rms(right);
 
                     // Send meter update approximately every other callback.
                     // At 44100 Hz / 512 samples per buffer ≈ 86 callbacks/sec,
@@ -241,7 +239,7 @@ impl AudioServer {
                         let _ = meter_producer.push(notification);
                     }
 
-                    // Interleave processed audio and write to ring buffer.
+                    // Interleave processed stereo audio and write to ring buffer.
                     // If the ring buffer is full, samples are silently dropped
                     // (acceptable — temporary glitch, RT-safe).
                     let interleave = &mut interleave_buf[..actual_samples * 2];
@@ -251,7 +249,6 @@ impl AudioServer {
                     }
 
                     // Write to SPSC ring buffer — non-blocking, lock-free.
-                    // Push sample by sample; if full, remaining samples are dropped.
                     for &sample in interleave.iter() {
                         if ring_producer.push(sample).is_err() {
                             break;
@@ -270,46 +267,54 @@ impl AudioServer {
             .context("Failed to start input stream")?;
         tracing::info!("Input stream started");
 
-        // --- Output stream (optional) ---
-        let output_stream = if let (Some(output_device), Some(output_config)) =
-            (self.output_device, self.output_config)
-        {
-            let stream = output_device
-                .build_output_stream(
-                    &output_config,
-                    move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-                        // Read from SPSC ring buffer — non-blocking, lock-free.
-                        // If underflow, fill with silence (zeros).
-                        for sample in data.iter_mut() {
-                            *sample = ring_consumer.pop().unwrap_or(0.0);
+        // --- Output stream (required) ---
+        let output_stream = self
+            .output_device
+            .build_output_stream(
+                &self.output_config,
+                move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
+                    if output_channels == 0 {
+                        data.fill(0.0);
+                        return;
+                    }
+
+                    // Route stereo frames from the ring into the device layout.
+                    // Underflow is filled with silence.
+                    for frame in data.chunks_mut(output_channels) {
+                        let left = ring_consumer.pop().unwrap_or(0.0);
+                        let right = ring_consumer.pop().unwrap_or(0.0);
+
+                        if output_channels == 1 {
+                            frame[0] = 0.5 * (left + right);
+                            continue;
                         }
-                    },
-                    |err| {
-                        tracing::error!("Audio output stream error: {}", err);
-                    },
-                    None,
-                )
-                .context("Failed to build output stream")?;
 
-            stream.play().context("Failed to start output stream")?;
-            tracing::info!("Output stream started");
-            Some(stream)
-        } else {
-            tracing::info!("No output device — metering-only mode");
-            None
-        };
+                        frame[0] = left;
+                        frame[1] = right;
 
-        let mode = if output_stream.is_some() {
-            "full-duplex (input + output)"
-        } else {
-            "input-only (metering)"
-        };
-        tracing::info!("Audio server started in {} mode", mode);
+                        for channel in frame.iter_mut().skip(2) {
+                            *channel = 0.0;
+                        }
+                    }
+                },
+                |err| {
+                    tracing::error!("Audio output stream error: {}", err);
+                },
+                None,
+            )
+            .context("Failed to build output stream")?;
+
+        output_stream
+            .play()
+            .context("Failed to start output stream")?;
+        tracing::info!("Output stream started");
+
+        tracing::info!("Audio server started in full-duplex (input + output) mode");
 
         Ok((
             AudioHandle {
                 _input_stream: input_stream,
-                _output_stream: output_stream,
+                _output_stream: Some(output_stream),
             },
             meter_consumer,
         ))
@@ -317,6 +322,511 @@ impl AudioServer {
 
     /// Returns true if an output device is available for audio playback.
     pub fn has_output(&self) -> bool {
-        self.output_device.is_some()
+        true
+    }
+}
+
+fn apply_output_modifiers(
+    left: &mut [f32],
+    right: &mut [f32],
+    param_bridge: &AtomicParameterBridge,
+    oscillator_phase: &mut f32,
+    sample_rate: f32,
+) {
+    let input_gain = read_gain_multiplier(param_bridge, INPUT_GAIN_PARAM_ID);
+    let output_gain = read_gain_multiplier(param_bridge, OUTPUT_GAIN_PARAM_ID);
+    let combined_gain = input_gain * output_gain;
+
+    // Temporary dedicated control for sdk-template oscillator source.
+    // 1.0 = on, 0.0 = off.
+    if let Some(enabled) = param_bridge.read("oscillator_enabled")
+        && enabled < 0.5
+    {
+        left.fill(0.0);
+        right.fill(0.0);
+        apply_gain(left, right, combined_gain);
+        return;
+    }
+
+    // Focused dev-mode bridge for sdk-template oscillator parameters while
+    // full generic FFI parameter injection is still being implemented.
+    let oscillator_frequency = param_bridge.read("oscillator_frequency");
+    let oscillator_level = param_bridge.read("oscillator_level");
+
+    if let (Some(frequency), Some(level)) = (oscillator_frequency, oscillator_level) {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            apply_gain(left, right, combined_gain);
+            return;
+        }
+
+        let clamped_frequency = if frequency.is_finite() {
+            frequency.clamp(20.0, 5000.0)
+        } else {
+            440.0
+        };
+        let clamped_level = if level.is_finite() {
+            level.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+
+        let phase_delta = clamped_frequency / sample_rate;
+        let mut phase = if oscillator_phase.is_finite() {
+            *oscillator_phase
+        } else {
+            0.0
+        };
+
+        for (left_sample, right_sample) in left.iter_mut().zip(right.iter_mut()) {
+            let sample = (phase * std::f32::consts::TAU).sin() * clamped_level;
+            *left_sample = sample;
+            *right_sample = sample;
+
+            phase += phase_delta;
+            if phase >= 1.0 {
+                phase -= phase.floor();
+            }
+        }
+
+        *oscillator_phase = phase;
+    }
+
+    apply_gain(left, right, combined_gain);
+}
+
+fn read_gain_multiplier(param_bridge: &AtomicParameterBridge, id: &str) -> f32 {
+    if let Some(value) = param_bridge.read(id)
+        && value.is_finite()
+    {
+        return value.clamp(GAIN_MULTIPLIER_MIN, GAIN_MULTIPLIER_MAX);
+    }
+
+    1.0
+}
+
+fn compute_peak_and_rms(samples: &[f32]) -> (f32, f32) {
+    let peak = samples
+        .iter()
+        .copied()
+        .fold(0.0f32, |acc, sample| acc.max(sample.abs()));
+    let rms =
+        (samples.iter().map(|sample| sample * sample).sum::<f32>() / samples.len() as f32).sqrt();
+
+    (peak, rms)
+}
+
+fn apply_gain(left: &mut [f32], right: &mut [f32], gain: f32) {
+    if (gain - 1.0).abs() <= f32::EPSILON {
+        return;
+    }
+
+    for (left_sample, right_sample) in left.iter_mut().zip(right.iter_mut()) {
+        *left_sample *= gain;
+        *right_sample *= gain;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::apply_output_modifiers;
+    use crate::audio::atomic_params::AtomicParameterBridge;
+    use wavecraft_protocol::{ParameterInfo, ParameterType};
+
+    fn bridge_with_enabled(default_value: f32) -> AtomicParameterBridge {
+        AtomicParameterBridge::new(&[ParameterInfo {
+            id: "oscillator_enabled".to_string(),
+            name: "Enabled".to_string(),
+            param_type: ParameterType::Float,
+            value: default_value,
+            default: default_value,
+            unit: Some("%".to_string()),
+            min: 0.0,
+            max: 1.0,
+            group: Some("Oscillator".to_string()),
+        }])
+    }
+
+    #[test]
+    fn output_modifiers_mute_when_oscillator_disabled() {
+        let bridge = bridge_with_enabled(1.0);
+        bridge.write("oscillator_enabled", 0.0);
+
+        let mut left = [0.25_f32, -0.5, 0.75];
+        let mut right = [0.2_f32, -0.4, 0.6];
+        let mut phase = 0.0;
+        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
+
+        assert!(left.iter().all(|s| s.abs() <= f32::EPSILON));
+        assert!(right.iter().all(|s| s.abs() <= f32::EPSILON));
+    }
+
+    #[test]
+    fn output_modifiers_keep_signal_when_oscillator_enabled() {
+        let bridge = bridge_with_enabled(1.0);
+
+        let mut left = [0.25_f32, -0.5, 0.75];
+        let mut right = [0.2_f32, -0.4, 0.6];
+        let mut phase = 0.0;
+        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
+
+        assert_eq!(left, [0.25, -0.5, 0.75]);
+        assert_eq!(right, [0.2, -0.4, 0.6]);
+    }
+
+    fn oscillator_bridge(
+        frequency: f32,
+        level: f32,
+        enabled: f32,
+        input_gain_level: f32,
+        output_gain_level: f32,
+    ) -> AtomicParameterBridge {
+        AtomicParameterBridge::new(&[
+            ParameterInfo {
+                id: "oscillator_enabled".to_string(),
+                name: "Enabled".to_string(),
+                param_type: ParameterType::Float,
+                value: enabled,
+                default: enabled,
+                unit: Some("%".to_string()),
+                min: 0.0,
+                max: 1.0,
+                group: Some("Oscillator".to_string()),
+            },
+            ParameterInfo {
+                id: "oscillator_frequency".to_string(),
+                name: "Frequency".to_string(),
+                param_type: ParameterType::Float,
+                value: frequency,
+                default: frequency,
+                min: 20.0,
+                max: 5_000.0,
+                unit: Some("Hz".to_string()),
+                group: Some("Oscillator".to_string()),
+            },
+            ParameterInfo {
+                id: "oscillator_level".to_string(),
+                name: "Level".to_string(),
+                param_type: ParameterType::Float,
+                value: level,
+                default: level,
+                unit: Some("%".to_string()),
+                min: 0.0,
+                max: 1.0,
+                group: Some("Oscillator".to_string()),
+            },
+            ParameterInfo {
+                id: "input_gain_level".to_string(),
+                name: "Level".to_string(),
+                param_type: ParameterType::Float,
+                value: input_gain_level,
+                default: input_gain_level,
+                unit: Some("x".to_string()),
+                min: 0.0,
+                max: 2.0,
+                group: Some("InputGain".to_string()),
+            },
+            ParameterInfo {
+                id: "output_gain_level".to_string(),
+                name: "Level".to_string(),
+                param_type: ParameterType::Float,
+                value: output_gain_level,
+                default: output_gain_level,
+                unit: Some("x".to_string()),
+                min: 0.0,
+                max: 2.0,
+                group: Some("OutputGain".to_string()),
+            },
+        ])
+    }
+
+    #[test]
+    fn output_modifiers_generate_runtime_oscillator_from_frequency_and_level() {
+        let bridge = oscillator_bridge(880.0, 0.75, 1.0, 1.0, 1.0);
+        let mut left = [0.0_f32; 128];
+        let mut right = [0.0_f32; 128];
+        let mut phase = 0.0;
+
+        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
+
+        let peak_left = left
+            .iter()
+            .fold(0.0_f32, |acc, sample| acc.max(sample.abs()));
+        let peak_right = right
+            .iter()
+            .fold(0.0_f32, |acc, sample| acc.max(sample.abs()));
+
+        assert!(peak_left > 0.2, "expected audible generated oscillator");
+        assert!(peak_right > 0.2, "expected audible generated oscillator");
+        assert_eq!(left, right, "expected in-phase stereo oscillator output");
+        assert!(phase > 0.0, "phase should advance after generation");
+    }
+
+    #[test]
+    fn output_modifiers_level_zero_produces_silence() {
+        let bridge = oscillator_bridge(440.0, 0.0, 1.0, 1.0, 1.0);
+        let mut left = [0.1_f32; 64];
+        let mut right = [0.1_f32; 64];
+        let mut phase = 0.0;
+
+        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
+
+        assert!(left.iter().all(|s| s.abs() <= f32::EPSILON));
+        assert!(right.iter().all(|s| s.abs() <= f32::EPSILON));
+    }
+
+    #[test]
+    fn output_modifiers_frequency_change_changes_waveform() {
+        let low_freq_bridge = oscillator_bridge(220.0, 0.5, 1.0, 1.0, 1.0);
+        let high_freq_bridge = oscillator_bridge(1760.0, 0.5, 1.0, 1.0, 1.0);
+
+        let mut low_left = [0.0_f32; 256];
+        let mut low_right = [0.0_f32; 256];
+        let mut high_left = [0.0_f32; 256];
+        let mut high_right = [0.0_f32; 256];
+
+        let mut low_phase = 0.0;
+        let mut high_phase = 0.0;
+
+        apply_output_modifiers(
+            &mut low_left,
+            &mut low_right,
+            &low_freq_bridge,
+            &mut low_phase,
+            48_000.0,
+        );
+        apply_output_modifiers(
+            &mut high_left,
+            &mut high_right,
+            &high_freq_bridge,
+            &mut high_phase,
+            48_000.0,
+        );
+
+        assert_ne!(
+            low_left, high_left,
+            "frequency updates should alter waveform"
+        );
+        assert_eq!(low_left, low_right);
+        assert_eq!(high_left, high_right);
+    }
+
+    #[test]
+    fn output_modifiers_apply_input_and_output_gain_levels() {
+        let unity_bridge = oscillator_bridge(880.0, 0.5, 1.0, 1.0, 1.0);
+        let boosted_bridge = oscillator_bridge(880.0, 0.5, 1.0, 1.5, 2.0);
+
+        let mut unity_left = [0.0_f32; 256];
+        let mut unity_right = [0.0_f32; 256];
+        let mut boosted_left = [0.0_f32; 256];
+        let mut boosted_right = [0.0_f32; 256];
+
+        let mut unity_phase = 0.0;
+        let mut boosted_phase = 0.0;
+
+        apply_output_modifiers(
+            &mut unity_left,
+            &mut unity_right,
+            &unity_bridge,
+            &mut unity_phase,
+            48_000.0,
+        );
+        apply_output_modifiers(
+            &mut boosted_left,
+            &mut boosted_right,
+            &boosted_bridge,
+            &mut boosted_phase,
+            48_000.0,
+        );
+
+        let unity_peak = unity_left
+            .iter()
+            .fold(0.0_f32, |acc, sample| acc.max(sample.abs()));
+        let boosted_peak = boosted_left
+            .iter()
+            .fold(0.0_f32, |acc, sample| acc.max(sample.abs()));
+
+        assert!(boosted_peak > unity_peak * 2.5);
+        assert_eq!(boosted_left, boosted_right);
+        assert_eq!(unity_left, unity_right);
+    }
+
+    #[test]
+    fn output_modifiers_apply_gain_without_oscillator_params() {
+        let bridge = AtomicParameterBridge::new(&[
+            ParameterInfo {
+                id: "input_gain_level".to_string(),
+                name: "Level".to_string(),
+                param_type: ParameterType::Float,
+                value: 1.5,
+                default: 1.5,
+                unit: Some("x".to_string()),
+                min: 0.0,
+                max: 2.0,
+                group: Some("InputGain".to_string()),
+            },
+            ParameterInfo {
+                id: "output_gain_level".to_string(),
+                name: "Level".to_string(),
+                param_type: ParameterType::Float,
+                value: 1.2,
+                default: 1.2,
+                unit: Some("x".to_string()),
+                min: 0.0,
+                max: 2.0,
+                group: Some("OutputGain".to_string()),
+            },
+        ]);
+
+        let mut left = [0.25_f32, -0.5, 0.75];
+        let mut right = [0.2_f32, -0.4, 0.6];
+        let mut phase = 0.0;
+
+        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
+
+        let expected_gain = 1.5 * 1.2;
+        assert_eq!(
+            left,
+            [
+                0.25 * expected_gain,
+                -0.5 * expected_gain,
+                0.75 * expected_gain
+            ]
+        );
+        assert_eq!(
+            right,
+            [
+                0.2 * expected_gain,
+                -0.4 * expected_gain,
+                0.6 * expected_gain
+            ]
+        );
+    }
+
+    #[test]
+    fn output_modifiers_ignore_compact_legacy_gain_ids() {
+        let bridge = AtomicParameterBridge::new(&[
+            ParameterInfo {
+                id: "inputgain_level".to_string(),
+                name: "Level".to_string(),
+                param_type: ParameterType::Float,
+                value: 0.2,
+                default: 0.2,
+                unit: Some("x".to_string()),
+                min: 0.0,
+                max: 2.0,
+                group: Some("InputGain".to_string()),
+            },
+            ParameterInfo {
+                id: "outputgain_level".to_string(),
+                name: "Level".to_string(),
+                param_type: ParameterType::Float,
+                value: 0.2,
+                default: 0.2,
+                unit: Some("x".to_string()),
+                min: 0.0,
+                max: 2.0,
+                group: Some("OutputGain".to_string()),
+            },
+        ]);
+
+        let mut left = [0.5_f32; 16];
+        let mut right = [0.5_f32; 16];
+        let mut phase = 0.0;
+
+        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
+
+        // Legacy compact IDs are intentionally unsupported.
+        let expected = 0.5;
+        assert!(left.iter().all(|sample| (*sample - expected).abs() < 1e-6));
+        assert!(right.iter().all(|sample| (*sample - expected).abs() < 1e-6));
+    }
+
+    #[test]
+    fn output_modifiers_ignore_legacy_snake_case_gain_suffix_ids() {
+        let bridge = AtomicParameterBridge::new(&[
+            ParameterInfo {
+                id: "input_gain_gain".to_string(),
+                name: "Gain".to_string(),
+                param_type: ParameterType::Float,
+                value: 0.2,
+                default: 0.2,
+                unit: Some("x".to_string()),
+                min: 0.0,
+                max: 2.0,
+                group: Some("InputGain".to_string()),
+            },
+            ParameterInfo {
+                id: "output_gain_gain".to_string(),
+                name: "Gain".to_string(),
+                param_type: ParameterType::Float,
+                value: 0.2,
+                default: 0.2,
+                unit: Some("x".to_string()),
+                min: 0.0,
+                max: 2.0,
+                group: Some("OutputGain".to_string()),
+            },
+        ]);
+
+        let mut left = [0.5_f32; 16];
+        let mut right = [0.5_f32; 16];
+        let mut phase = 0.0;
+
+        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
+
+        // Legacy "*_gain" aliases are intentionally unsupported.
+        let expected = 0.5;
+        assert!(left.iter().all(|sample| (*sample - expected).abs() < 1e-6));
+        assert!(right.iter().all(|sample| (*sample - expected).abs() < 1e-6));
+    }
+
+    #[test]
+    fn output_modifiers_use_canonical_ids_even_when_legacy_variants_exist() {
+        let bridge = AtomicParameterBridge::new(&[
+            ParameterInfo {
+                id: "input_gain_level".to_string(),
+                name: "Level".to_string(),
+                param_type: ParameterType::Float,
+                value: 1.6,
+                default: 1.6,
+                unit: Some("x".to_string()),
+                min: 0.0,
+                max: 2.0,
+                group: Some("InputGain".to_string()),
+            },
+            ParameterInfo {
+                id: "inputgain_level".to_string(),
+                name: "Level".to_string(),
+                param_type: ParameterType::Float,
+                value: 0.4,
+                default: 0.4,
+                unit: Some("x".to_string()),
+                min: 0.0,
+                max: 2.0,
+                group: Some("InputGain".to_string()),
+            },
+            ParameterInfo {
+                id: "output_gain_level".to_string(),
+                name: "Level".to_string(),
+                param_type: ParameterType::Float,
+                value: 1.0,
+                default: 1.0,
+                unit: Some("x".to_string()),
+                min: 0.0,
+                max: 2.0,
+                group: Some("OutputGain".to_string()),
+            },
+        ]);
+
+        let mut left = [0.5_f32; 8];
+        let mut right = [0.5_f32; 8];
+        let mut phase = 0.0;
+
+        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
+
+        // Strict canonical-only policy: legacy variants are ignored when present.
+        let expected = 0.5 * 1.6;
+        assert!(left.iter().all(|sample| (*sample - expected).abs() < 1e-6));
+        assert!(right.iter().all(|sample| (*sample - expected).abs() < 1e-6));
     }
 }

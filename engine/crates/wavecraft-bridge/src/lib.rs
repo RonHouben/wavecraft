@@ -14,7 +14,7 @@
 //!
 //! ```rust,no_run
 //! use wavecraft_bridge::{IpcHandler, ParameterHost, BridgeError};
-//! use wavecraft_protocol::{MeterFrame, ParameterInfo};
+//! use wavecraft_protocol::{AudioRuntimeStatus, MeterFrame, ParameterInfo};
 //!
 //! // Implement ParameterHost for your application state
 //! struct MyApp;
@@ -43,6 +43,11 @@
 //!     fn request_resize(&self, _width: u32, _height: u32) -> bool {
 //!         // Implementation
 //!         false
+//!     }
+//!
+//!     fn get_audio_status(&self) -> Option<AudioRuntimeStatus> {
+//!         // Implementation
+//!         None
 //!     }
 //! }
 //!

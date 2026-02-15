@@ -8,6 +8,7 @@
 import React from 'react';
 import type { ParameterGroup as ParameterGroupType } from '@wavecraft/core';
 import { ParameterSlider } from './ParameterSlider';
+import { ParameterToggle } from './ParameterToggle';
 
 export interface ParameterGroupProps {
   /** The parameter group to display */
@@ -39,9 +40,13 @@ export function ParameterGroup({ group }: Readonly<ParameterGroupProps>): React.
 
       {/* Parameter list */}
       <div className="space-y-3">
-        {group.parameters.map((param) => (
-          <ParameterSlider key={param.id} id={param.id} />
-        ))}
+        {group.parameters.map((param) =>
+          param.type === 'bool' ? (
+            <ParameterToggle key={param.id} id={param.id} />
+          ) : (
+            <ParameterSlider key={param.id} id={param.id} />
+          )
+        )}
       </div>
     </div>
   );

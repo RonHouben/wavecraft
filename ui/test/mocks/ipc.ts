@@ -8,6 +8,7 @@
 import { useState, useCallback } from 'react';
 import type {
   ParameterInfo,
+  ParameterValue,
   MeterFrame,
   UseParameterResult,
   UseAllParametersResult,
@@ -45,6 +46,8 @@ export function setMockParameter(id: string, info: Partial<ParameterInfo>): void
     name: info.name ?? existing?.name ?? id,
     value: info.value ?? existing?.value ?? 0,
     default: info.default ?? existing?.default ?? 0,
+    min: info.min ?? existing?.min ?? 0,
+    max: info.max ?? existing?.max ?? 1,
     unit: info.unit ?? existing?.unit,
     type: info.type ?? existing?.type ?? 'float',
     ...info,
@@ -91,7 +94,7 @@ export function useParameter(id: string): UseParameterResult {
   );
 
   const setValue = useCallback(
-    async (value: number): Promise<void> => {
+    async (value: ParameterValue): Promise<void> => {
       const existing = mockParameters.get(id);
       if (existing) {
         const updated = { ...existing, value };

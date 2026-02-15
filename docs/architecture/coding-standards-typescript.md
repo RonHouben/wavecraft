@@ -254,9 +254,11 @@ export {};
 
 | State                                               | `ParameterId` resolves to                               |
 | --------------------------------------------------- | ------------------------------------------------------- |
-| No augmentation (library consumers without codegen) | `string` (backward compatible)                          |
+| No augmentation (library consumers without codegen) | `string` (only outside SDK dev mode)                    |
 | Augmented with parameters                           | `'inputgain_gain' \| 'outputgain_gain'` (literal union) |
 | Augmented but empty (plugin has no parameters)      | `never`                                                 |
+
+In **SDK dev mode**, generated augmentation is part of the required current contract. Missing/invalid augmentation must fail fast with actionable diagnostics. Any temporary compatibility mode must be explicit and opt-in, never default.
 
 **Key conventions:**
 

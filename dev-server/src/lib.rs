@@ -55,3 +55,7 @@ pub use audio::atomic_params::AtomicParameterBridge;
 pub use audio::ffi_processor::{DevAudioProcessor, FfiProcessor};
 #[cfg(feature = "audio")]
 pub use audio::server::{AudioConfig, AudioHandle, AudioServer};
+#[cfg(feature = "audio")]
+pub use audio::status::{
+    status as audio_status, status_with_diagnostic as audio_status_with_diagnostic,
+};

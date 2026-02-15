@@ -93,6 +93,7 @@ pub mod __internal {
     pub use wavecraft_protocol::DEV_PROCESSOR_VTABLE_VERSION;
     pub use wavecraft_protocol::DevProcessorVTable;
 
+    use wavecraft_dsp::ParamRange;
     use wavecraft_dsp::ParamSpec;
 
     /// Convert ParamSpec to ParameterInfo for JSON serialization.
@@ -100,12 +101,27 @@ pub mod __internal {
     /// This function bridges the DSP layer's ParamSpec to the protocol's
     /// ParameterInfo, enabling FFI export of parameter metadata.
     pub fn param_spec_to_info(spec: &ParamSpec, id_prefix: &str) -> ParameterInfo {
+        let (min, max, param_type) = match spec.range {
+            ParamRange::Linear { min, max } => (min as f32, max as f32, ParameterType::Float),
+            ParamRange::Skewed { min, max, .. } => (min as f32, max as f32, ParameterType::Float),
+            ParamRange::Stepped { min, max } => {
+                let param_type = if min == 0 && max == 1 {
+                    ParameterType::Bool
+                } else {
+                    ParameterType::Enum
+                };
+                (min as f32, max as f32, param_type)
+            }
+        };
+
         ParameterInfo {
             id: format!("{}_{}", id_prefix, spec.id_suffix),
             name: spec.name.to_string(),
-            param_type: ParameterType::Float,
+            param_type,
             value: spec.default as f32,
             default: spec.default as f32,
+            min,
+            max,
             unit: if spec.unit.is_empty() {
                 None
             } else {

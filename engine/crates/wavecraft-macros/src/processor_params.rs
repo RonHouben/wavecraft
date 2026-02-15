@@ -41,6 +41,7 @@ fn expand_derive(input: &DeriveInput) -> syn::Result<TokenStream> {
 
     // Extract parameter specifications from fields
     let mut param_specs = Vec::new();
+    let mut default_initializers = Vec::new();
 
     for field in fields {
         let field_name = field.ident.as_ref().expect("named fields");
@@ -54,7 +55,15 @@ fn expand_derive(input: &DeriveInput) -> syn::Result<TokenStream> {
 
         if let Some(attr) = param_attr {
             let spec = parse_param_attr(&field_name_str, attr)?;
+            let default = spec.default;
+            default_initializers.push(quote! {
+                #field_name: #default as _
+            });
             param_specs.push(spec);
+        } else {
+            default_initializers.push(quote! {
+                #field_name: ::std::default::Default::default()
+            });
         }
     }
 
@@ -93,6 +102,12 @@ fn expand_derive(input: &DeriveInput) -> syn::Result<TokenStream> {
                     #(#spec_items),*
                 ];
                 &SPECS
+            }
+
+            fn from_param_defaults() -> Self {
+                Self {
+                    #(#default_initializers),*
+                }
             }
         }
     })

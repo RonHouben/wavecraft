@@ -10,6 +10,18 @@ interface ParameterSliderProps {
   readonly id: ParameterId;
 }
 
+function formatParameterValue(value: number, unit?: string): string {
+  if (!unit) {
+    return value.toFixed(3);
+  }
+
+  if (unit === '%') {
+    return `${(value * 100).toFixed(1)}%`;
+  }
+
+  return `${value.toFixed(1)} ${unit}`;
+}
+
 export function ParameterSlider({ id }: ParameterSliderProps): React.JSX.Element {
   const { param, setValue, isLoading, error } = useParameter(id);
 
@@ -22,25 +34,23 @@ export function ParameterSlider({ id }: ParameterSliderProps): React.JSX.Element
   }
 
   if (error || !param) {
+    const message = error?.message || 'Parameter not found';
+
     return (
       <div className="mb-4 rounded-lg border border-red-400 bg-plugin-surface p-4 text-red-400">
-        Error: {error?.message || 'Parameter not found'}
+        Error: {message}
       </div>
     );
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    const value = Number.parseFloat(e.target.value);
-    setValue(value).catch((err) => {
+    const nextValue = Number.parseFloat(e.currentTarget.value);
+    setValue(nextValue).catch((err) => {
       logger.error('Failed to set parameter', { error: err, parameterId: id });
     });
   };
-
-  // Format display value
-  const unitSuffix = param.unit === '%' ? param.unit : ` ${param.unit}`;
-  const displayValue = param.unit
-    ? `${(param.value * 100).toFixed(1)}${unitSuffix}`
-    : param.value.toFixed(3);
+  const numericValue = typeof param.value === 'boolean' ? (param.value ? 1 : 0) : param.value;
+  const displayValue = formatParameterValue(numericValue, param.unit);
 
   return (
     <div
@@ -63,10 +73,10 @@ export function ParameterSlider({ id }: ParameterSliderProps): React.JSX.Element
         data-testid={`param-${id}-slider`}
         id={`slider-${id}`}
         type="range"
-        min="0"
-        max="1"
+        min={param.min}
+        max={param.max}
         step="0.001"
-        value={param.value}
+        value={numericValue}
         onChange={handleChange}
         className="slider-thumb h-1.5 w-full appearance-none rounded-sm bg-plugin-border outline-none"
       />

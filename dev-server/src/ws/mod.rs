@@ -12,6 +12,9 @@ use tokio::sync::{RwLock, broadcast};
 use tokio_tungstenite::{accept_async, tungstenite::protocol::Message};
 use tracing::{debug, error, info, warn};
 use wavecraft_bridge::{IpcHandler, ParameterHost};
+use wavecraft_protocol::{
+    AudioRuntimeStatus, IpcNotification, IpcResponse, NOTIFICATION_AUDIO_STATUS_CHANGED,
+};
 
 /// Shared state for tracking connected clients
 struct ServerState {
@@ -43,11 +46,41 @@ pub struct WsHandle {
 impl WsHandle {
     /// Broadcast a JSON string to all connected browser clients.
     pub async fn broadcast(&self, json: &str) {
-        let clients = self.state.browser_clients.read().await;
-        for client in clients.iter() {
-            if let Err(e) = client.try_send(json.to_owned()) {
-                warn!("Failed to broadcast message to client: {}", e);
-            }
+        broadcast_to_browser_clients(&self.state, json, None, "broadcast message").await;
+    }
+
+    /// Broadcast an audioStatusChanged notification to connected clients.
+    pub async fn broadcast_audio_status_changed(
+        &self,
+        status: &AudioRuntimeStatus,
+    ) -> Result<(), serde_json::Error> {
+        let json = serde_json::to_string(&IpcNotification::new(
+            NOTIFICATION_AUDIO_STATUS_CHANGED,
+            status,
+        ))?;
+
+        self.broadcast(&json).await;
+        Ok(())
+    }
+}
+
+async fn broadcast_to_browser_clients(
+    state: &Arc<ServerState>,
+    json: &str,
+    exclude_client_index: Option<usize>,
+    warning_context: &str,
+) {
+    let clients = state.browser_clients.read().await;
+    for (index, client) in clients.iter().enumerate() {
+        if exclude_client_index.is_some_and(|excluded| index == excluded) {
+            continue;
+        }
+
+        if let Err(error) = client.try_send(json.to_owned()) {
+            warn!(
+                "Failed to {} (client {}): {}",
+                warning_context, index, error
+            );
         }
     }
 }
@@ -64,6 +97,33 @@ pub struct WsServer<H: ParameterHost + 'static> {
     verbose: bool,
     /// Shared server state
     state: Arc<ServerState>,
+}
+
+fn build_set_parameter_notification(
+    request: &wavecraft_protocol::IpcRequest,
+    response: &str,
+) -> Option<String> {
+    if request.method != wavecraft_protocol::METHOD_SET_PARAMETER {
+        return None;
+    }
+
+    let response_msg = serde_json::from_str::<IpcResponse>(response).ok()?;
+    if response_msg.error.is_some() {
+        return None;
+    }
+
+    let params = request.params.clone()?;
+    let set_params =
+        serde_json::from_value::<wavecraft_protocol::SetParameterParams>(params).ok()?;
+
+    serde_json::to_string(&IpcNotification::new(
+        wavecraft_protocol::NOTIFICATION_PARAMETER_CHANGED,
+        serde_json::json!({
+            "id": set_params.id,
+            "value": set_params.value,
+        }),
+    ))
+    .ok()
 }
 
 impl<H: ParameterHost + 'static> WsServer<H> {
@@ -99,12 +159,13 @@ impl<H: ParameterHost + 'static> WsServer<H> {
         let notification = IpcNotification::new("parametersChanged", serde_json::json!({}));
         let json = serde_json::to_string(&notification)?;
 
-        let clients = self.state.browser_clients.read().await;
-        for client in clients.iter() {
-            if let Err(e) = client.try_send(json.clone()) {
-                warn!("Failed to send parametersChanged notification to client: {}", e);
-            }
-        }
+        broadcast_to_browser_clients(
+            &self.state,
+            &json,
+            None,
+            "send parametersChanged notification",
+        )
+        .await;
 
         Ok(())
     }
@@ -206,7 +267,7 @@ async fn handle_connection<H: ParameterHost>(
 
                 // Try to parse as IPC request for structured routing
                 let parsed_req = serde_json::from_str::<wavecraft_protocol::IpcRequest>(&json);
-                
+
                 if let Ok(ref req) = parsed_req {
                     // Handle registerAudio
                     if req.method == "registerAudio" {
@@ -219,7 +280,8 @@ async fn handle_connection<H: ParameterHost>(
                                 wavecraft_protocol::RegisterAudioParams,
                             >(params)
                         {
-                            *state.audio_client.write().await = Some(audio_params.client_id.clone());
+                            *state.audio_client.write().await =
+                                Some(audio_params.client_id.clone());
                         }
 
                         // Send success response using the request's id
@@ -242,25 +304,39 @@ async fn handle_connection<H: ParameterHost>(
                         }
                         continue;
                     }
-                    
+
                     // Handle meterUpdate from audio client
                     if is_audio_client && req.method == "meterUpdate" {
                         // Broadcast to all browser clients
-                        let clients = state.browser_clients.read().await;
-                        for (idx, client) in clients.iter().enumerate() {
-                            if idx != client_index {
-                                // Don't send back to audio client
-                                if let Err(e) = client.try_send(json.clone()) {
-                                    warn!("Failed to broadcast meter update to client {}: {}", idx, e);
-                                }
-                            }
-                        }
+                        broadcast_to_browser_clients(
+                            &state,
+                            &json,
+                            Some(client_index),
+                            "broadcast meter update",
+                        )
+                        .await;
                         continue;
                     }
                 }
 
                 // Route through existing IpcHandler
                 let response = handler.handle_json(&json);
+
+                // Mirror native editor behavior in dev mode: after successful
+                // setParameter, emit parameterChanged so hooks relying on
+                // notifications stay in sync with backend-confirmed state.
+                if let Ok(req) = &parsed_req
+                    && let Some(notification_json) =
+                        build_set_parameter_notification(req, &response)
+                {
+                    broadcast_to_browser_clients(
+                        &state,
+                        &notification_json,
+                        None,
+                        "send parameterChanged notification",
+                    )
+                    .await;
+                }
 
                 // Log outgoing response (verbose only)
                 if verbose {
@@ -312,7 +388,7 @@ async fn handle_connection<H: ParameterHost>(
 mod tests {
     use super::*;
     use wavecraft_bridge::InMemoryParameterHost;
-    use wavecraft_protocol::{ParameterInfo, ParameterType};
+    use wavecraft_protocol::{IpcRequest, IpcResponse, ParameterInfo, ParameterType, RequestId};
 
     /// Simple test host for unit tests
     fn test_host() -> InMemoryParameterHost {
@@ -322,6 +398,8 @@ mod tests {
             param_type: ParameterType::Float,
             value: 0.5,
             default: 0.5,
+            min: 0.0,
+            max: 1.0,
             unit: Some("dB".to_string()),
             group: Some("Input".to_string()),
         }])
@@ -335,5 +413,59 @@ mod tests {
 
         // Just verify we can create a server without panicking
         assert_eq!(server.port, 9001);
+    }
+
+    #[test]
+    fn build_set_parameter_notification_from_success_response() {
+        let request = IpcRequest::new(
+            RequestId::Number(1),
+            wavecraft_protocol::METHOD_SET_PARAMETER,
+            Some(serde_json::json!({ "id": "gain", "value": 0.8 })),
+        );
+        let response = serde_json::to_string(&IpcResponse::success(
+            RequestId::Number(1),
+            serde_json::json!({}),
+        ))
+        .expect("serialize response");
+
+        let notification = build_set_parameter_notification(&request, &response)
+            .expect("should create parameterChanged notification");
+        let json: serde_json::Value =
+            serde_json::from_str(&notification).expect("notification should parse");
+
+        assert_eq!(
+            json.get("method"),
+            Some(&serde_json::json!(
+                wavecraft_protocol::NOTIFICATION_PARAMETER_CHANGED
+            ))
+        );
+        assert_eq!(json.pointer("/params/id"), Some(&serde_json::json!("gain")));
+        let Some(value) = json
+            .pointer("/params/value")
+            .and_then(serde_json::Value::as_f64)
+        else {
+            panic!("notification should contain numeric params.value");
+        };
+        assert!(
+            (value - 0.8).abs() < 1e-5,
+            "expected approx 0.8, got {value}"
+        );
+    }
+
+    #[test]
+    fn build_set_parameter_notification_ignores_error_response() {
+        let request = IpcRequest::new(
+            RequestId::Number(1),
+            wavecraft_protocol::METHOD_SET_PARAMETER,
+            Some(serde_json::json!({ "id": "gain", "value": 10.0 })),
+        );
+
+        let response = serde_json::to_string(&IpcResponse::error(
+            RequestId::Number(1),
+            wavecraft_protocol::IpcError::invalid_params("out of range"),
+        ))
+        .expect("serialize error response");
+
+        assert!(build_set_parameter_notification(&request, &response).is_none());
     }
 }
