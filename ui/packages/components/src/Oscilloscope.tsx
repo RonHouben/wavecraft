@@ -16,9 +16,16 @@ const RIGHT_COLOR = '#3b82f6';
 const GRID_COLOR = '#334155';
 const AXIS_COLOR = '#64748b';
 
-export function Oscilloscope(): React.JSX.Element {
+interface OscilloscopeProps {
+  hideWhenNotInSignalChain?: boolean;
+}
+
+// const OSCILLOSCOPE_ENABLED_PARAM_ID = 'oscilloscope_enabled' as ParameterId;
+
+export function Oscilloscope(_props: Readonly<OscilloscopeProps>): React.JSX.Element | null {
   const { connected } = useConnectionStatus();
   const frame = useOscilloscopeFrame();
+  // const { param: oscilloscopeEnabled } = useParameter(OSCILLOSCOPE_ENABLED_PARAM_ID);
 
   const [channelView, setChannelView] = useState<OscilloscopeChannelView>('overlay');
   const [triggerMode, setTriggerMode] = useState<OscilloscopeTriggerMode>('risingZeroCrossing');
@@ -26,6 +33,10 @@ export function Oscilloscope(): React.JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const frameRef = useRef<OscilloscopeFrame | null>(null);
   const rafRef = useRef<number | null>(null);
+
+  // if (props.hideWhenNotInSignalChain && !oscilloscopeEnabled) {
+  // return null;
+  // }
 
   useEffect(() => {
     frameRef.current = frame;

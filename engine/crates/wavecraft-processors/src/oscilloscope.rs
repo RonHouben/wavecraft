@@ -7,6 +7,10 @@ use wavecraft_protocol::{OscilloscopeFrame, OscilloscopeTriggerMode};
 
 /// Number of points per oscilloscope frame.
 pub const OSCILLOSCOPE_FRAME_POINTS: usize = 1024;
+const OSCILLOSCOPE_HISTORY_FRAMES: usize = 3;
+const OSCILLOSCOPE_HISTORY_POINTS: usize = OSCILLOSCOPE_FRAME_POINTS * OSCILLOSCOPE_HISTORY_FRAMES;
+const OSCILLOSCOPE_HISTORY_TAIL_START: usize =
+    OSCILLOSCOPE_FRAME_POINTS * (OSCILLOSCOPE_HISTORY_FRAMES - 1);
 const DEFAULT_NO_SIGNAL_THRESHOLD: f32 = 1e-4;
 
 /// Internal snapshot format with fixed-size arrays (no heap allocations).
@@ -78,8 +82,11 @@ pub struct OscilloscopeTap {
     sample_rate: f32,
     frame_l: [f32; OSCILLOSCOPE_FRAME_POINTS],
     frame_r: [f32; OSCILLOSCOPE_FRAME_POINTS],
+    history_l: [f32; OSCILLOSCOPE_HISTORY_POINTS],
+    history_r: [f32; OSCILLOSCOPE_HISTORY_POINTS],
     aligned_l: [f32; OSCILLOSCOPE_FRAME_POINTS],
     aligned_r: [f32; OSCILLOSCOPE_FRAME_POINTS],
+    history_frames_filled: usize,
     timestamp: u64,
     no_signal_threshold: f32,
     output: Option<OscilloscopeFrameProducer>,
@@ -91,8 +98,11 @@ impl Default for OscilloscopeTap {
             sample_rate: 44_100.0,
             frame_l: [0.0; OSCILLOSCOPE_FRAME_POINTS],
             frame_r: [0.0; OSCILLOSCOPE_FRAME_POINTS],
+            history_l: [0.0; OSCILLOSCOPE_HISTORY_POINTS],
+            history_r: [0.0; OSCILLOSCOPE_HISTORY_POINTS],
             aligned_l: [0.0; OSCILLOSCOPE_FRAME_POINTS],
             aligned_r: [0.0; OSCILLOSCOPE_FRAME_POINTS],
+            history_frames_filled: 0,
             timestamp: 0,
             no_signal_threshold: DEFAULT_NO_SIGNAL_THRESHOLD,
             output: None,
@@ -151,30 +161,40 @@ impl OscilloscopeTap {
 
         let no_signal = max_abs < self.no_signal_threshold;
 
-        let trigger_start = if no_signal {
-            0
-        } else {
-            self.find_rising_zero_crossing().unwrap_or(0)
+        // Keep a rolling three-frame history so the trigger-aligned frame can
+        // always be extracted as a contiguous 1024-sample window without
+        // wrapping or synthetic tail padding.
+        self.history_l
+            .copy_within(OSCILLOSCOPE_FRAME_POINTS..OSCILLOSCOPE_HISTORY_POINTS, 0);
+        self.history_r
+            .copy_within(OSCILLOSCOPE_FRAME_POINTS..OSCILLOSCOPE_HISTORY_POINTS, 0);
+        self.history_l[OSCILLOSCOPE_HISTORY_TAIL_START..].copy_from_slice(&self.frame_l);
+        self.history_r[OSCILLOSCOPE_HISTORY_TAIL_START..].copy_from_slice(&self.frame_r);
+
+        self.history_frames_filled =
+            (self.history_frames_filled + 1).min(OSCILLOSCOPE_HISTORY_FRAMES);
+
+        let min_trigger_start = match self.history_frames_filled {
+            0 | 1 => None,
+            // Avoid index 1024 during startup while oldest history is still zero-filled.
+            2 => Some(OSCILLOSCOPE_FRAME_POINTS + 1),
+            _ => Some(1),
         };
 
-        if trigger_start == 0 {
-            self.aligned_l.copy_from_slice(&self.frame_l);
-            self.aligned_r.copy_from_slice(&self.frame_r);
+        let trigger_start = if no_signal {
+            OSCILLOSCOPE_HISTORY_TAIL_START
+        } else if let Some(min_start) = min_trigger_start {
+            self.find_rising_zero_crossing_in_history(min_start)
+                .unwrap_or(OSCILLOSCOPE_HISTORY_TAIL_START)
         } else {
-            // Keep the aligned frame contiguous in time from the trigger point.
-            // Do not wrap to the start of the source frame, because that causes
-            // visible right-edge overlap/wiggle artifacts in the UI.
-            let available = OSCILLOSCOPE_FRAME_POINTS - trigger_start;
-            self.aligned_l[..available].copy_from_slice(&self.frame_l[trigger_start..]);
-            self.aligned_r[..available].copy_from_slice(&self.frame_r[trigger_start..]);
+            OSCILLOSCOPE_HISTORY_TAIL_START
+        };
 
-            // Pad the remainder with the last valid sample so the tail remains
-            // visually stable when there are not enough post-trigger samples.
-            let tail_l = self.frame_l[OSCILLOSCOPE_FRAME_POINTS - 1];
-            let tail_r = self.frame_r[OSCILLOSCOPE_FRAME_POINTS - 1];
-            self.aligned_l[available..].fill(tail_l);
-            self.aligned_r[available..].fill(tail_r);
-        }
+        let end = trigger_start + OSCILLOSCOPE_FRAME_POINTS;
+        self.aligned_l
+            .copy_from_slice(&self.history_l[trigger_start..end]);
+        self.aligned_r
+            .copy_from_slice(&self.history_r[trigger_start..end]);
 
         let frame = OscilloscopeFrameSnapshot {
             points_l: self.aligned_l,
@@ -192,15 +212,31 @@ impl OscilloscopeTap {
         }
     }
 
-    fn find_rising_zero_crossing(&self) -> Option<usize> {
-        for index in 1..OSCILLOSCOPE_FRAME_POINTS {
-            let prev = self.frame_l[index - 1];
-            let current = self.frame_l[index];
+    fn find_rising_zero_crossing_in_history(&self, min_start: usize) -> Option<usize> {
+        // Search only starts that can provide a full 1024-point window.
+        // With 3-frame history this allows deterministic trigger lock even
+        // when low frequencies do not provide a crossing in the oldest frame.
+        let max_start = OSCILLOSCOPE_HISTORY_POINTS - OSCILLOSCOPE_FRAME_POINTS;
+        let preferred_start = (min_start + max_start) / 2;
+        let mut best_index: Option<usize> = None;
+        let mut best_distance = usize::MAX;
+
+        for index in min_start..=max_start {
+            let prev = self.history_l[index - 1];
+            let current = self.history_l[index];
             if prev <= 0.0 && current > 0.0 {
-                return Some(index);
+                let distance = index.abs_diff(preferred_start);
+                let prefer_candidate = distance < best_distance
+                    || (distance == best_distance
+                        && best_index.is_none_or(|existing| index > existing));
+                if prefer_candidate {
+                    best_index = Some(index);
+                    best_distance = distance;
+                }
             }
         }
-        None
+
+        best_index
     }
 }
 
@@ -288,39 +324,80 @@ mod tests {
     }
 
     #[test]
-    fn trigger_alignment_does_not_wrap_frame_tail() {
+    fn trigger_alignment_uses_contiguous_window_across_frame_boundary() {
         let (producer, mut consumer) = create_oscilloscope_channel(8);
         let mut tap = OscilloscopeTap::with_output(producer);
 
-        let mut left = [0.5_f32; OSCILLOSCOPE_FRAME_POINTS];
-        let mut right = [0.25_f32; OSCILLOSCOPE_FRAME_POINTS];
+        let mut left_prev = [0.5_f32; OSCILLOSCOPE_FRAME_POINTS];
+        let mut right_prev = [0.25_f32; OSCILLOSCOPE_FRAME_POINTS];
+        left_prev[1000] = -0.1;
+        left_prev[1001] = 0.1;
+        right_prev[1000] = -0.3;
+        right_prev[1001] = -0.2;
 
-        // Force the first rising crossing very near the end of the frame.
-        // This ensures a short post-trigger segment where old behavior would
-        // wrap and pull samples from the start of the frame.
-        left[0] = 0.75;
-        left[1] = 0.9;
-        right[0] = -0.25;
-        right[1] = -0.5;
-        left[1000] = -0.1;
-        left[1001] = 0.1;
-        right[1000] = -0.3;
-        right[1001] = -0.2;
+        let mut left_curr = [0.0_f32; OSCILLOSCOPE_FRAME_POINTS];
+        let mut right_curr = [0.0_f32; OSCILLOSCOPE_FRAME_POINTS];
+        for index in 0..OSCILLOSCOPE_FRAME_POINTS {
+            left_curr[index] = -1.0 + (2.0 * index as f32 / OSCILLOSCOPE_FRAME_POINTS as f32);
+            right_curr[index] = 1.0 - (2.0 * index as f32 / OSCILLOSCOPE_FRAME_POINTS as f32);
+        }
 
-        tap.capture_stereo(&left, &right);
+        tap.capture_stereo(&left_prev, &right_prev);
+        let _first = consumer.read_latest().expect("first frame should exist");
 
-        let frame = consumer.read_latest().expect("frame should exist");
+        tap.capture_stereo(&left_curr, &right_curr);
+        let second = consumer.read_latest().expect("second frame should exist");
 
-        // Aligned frame starts at trigger sample.
-        assert!((frame.points_l[0] - left[1001]).abs() < f32::EPSILON);
+        // Frame starts at the trigger crossing in the previous frame.
+        assert!((second.points_l[0] - left_prev[1001]).abs() < f32::EPSILON);
 
-        // Tail is padded from the last source sample, not wrapped to frame start.
-        let last_source_l = left[OSCILLOSCOPE_FRAME_POINTS - 1];
-        let last_source_r = right[OSCILLOSCOPE_FRAME_POINTS - 1];
-        assert!((frame.points_l[50] - last_source_l).abs() < f32::EPSILON);
-        assert!((frame.points_r[50] - last_source_r).abs() < f32::EPSILON);
-        assert!((frame.points_l[50] - left[0]).abs() > f32::EPSILON);
-        assert!((frame.points_r[50] - right[0]).abs() > f32::EPSILON);
+        // The window remains contiguous through the boundary into current data.
+        assert!((second.points_l[23] - left_curr[0]).abs() < f32::EPSILON);
+        assert!((second.points_r[23] - right_curr[0]).abs() < f32::EPSILON);
+
+        // Right edge is true continuation, not a padded flat tail.
+        assert!((second.points_l[1023] - left_curr[1000]).abs() < f32::EPSILON);
+        assert!((second.points_r[1023] - right_curr[1000]).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn trigger_alignment_finds_low_frequency_crossings_beyond_oldest_frame() {
+        let (producer, mut consumer) = create_oscilloscope_channel(8);
+        let mut tap = OscilloscopeTap::with_output(producer);
+
+        let mut left_prev = [-0.5_f32; OSCILLOSCOPE_FRAME_POINTS];
+        let mut right_prev = [-0.25_f32; OSCILLOSCOPE_FRAME_POINTS];
+        left_prev[200] = 0.5;
+        right_prev[200] = 0.25;
+
+        let left_curr = [-0.5_f32; OSCILLOSCOPE_FRAME_POINTS];
+        let right_curr = [-0.25_f32; OSCILLOSCOPE_FRAME_POINTS];
+
+        tap.capture_stereo(&left_prev, &right_prev);
+        let _first = consumer.read_latest().expect("first frame should exist");
+
+        tap.capture_stereo(&left_curr, &right_curr);
+        let second = consumer.read_latest().expect("second frame should exist");
+
+        // Crossing in the middle history frame at index 1024 + 200 = 1224
+        // should be selected. The previous two-frame implementation searched
+        // only up to index 1024 and would miss this crossing.
+        assert!(
+            (second.points_l[0] - left_prev[200]).abs() < f32::EPSILON,
+            "expected left start {}, got {}",
+            left_prev[200],
+            second.points_l[0]
+        );
+        assert!(
+            (second.points_r[0] - right_prev[200]).abs() < f32::EPSILON,
+            "expected right start {}, got {}",
+            right_prev[200],
+            second.points_r[0]
+        );
+
+        // Window remains contiguous into current frame data.
+        assert!((second.points_l[824] - left_curr[0]).abs() < f32::EPSILON);
+        assert!((second.points_r[824] - right_curr[0]).abs() < f32::EPSILON);
     }
 
     #[test]
