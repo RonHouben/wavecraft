@@ -10,6 +10,18 @@ interface ParameterSliderProps {
   readonly id: ParameterId;
 }
 
+function formatParameterValue(value: number, unit?: string): string {
+  if (!unit) {
+    return value.toFixed(3);
+  }
+
+  if (unit === '%') {
+    return `${(value * 100).toFixed(1)}%`;
+  }
+
+  return `${value.toFixed(1)} ${unit}`;
+}
+
 export function ParameterSlider({ id }: ParameterSliderProps): React.JSX.Element {
   const { param, setValue, isLoading, error } = useParameter(id);
 
@@ -22,34 +34,22 @@ export function ParameterSlider({ id }: ParameterSliderProps): React.JSX.Element
   }
 
   if (error || !param) {
+    const message = error?.message || 'Parameter not found';
+
     return (
       <div className="mb-4 rounded-lg border border-red-400 bg-plugin-surface p-4 text-red-400">
-        Error: {error?.message || 'Parameter not found'}
+        Error: {message}
       </div>
     );
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    const value = Number.parseFloat(e.target.value);
-    setValue(value).catch((err) => {
+    const nextValue = Number.parseFloat(e.currentTarget.value);
+    setValue(nextValue).catch((err) => {
       logger.error('Failed to set parameter', { error: err, parameterId: id });
     });
   };
-
-  // Format display value
-  const formatValue = (): string => {
-    if (!param.unit) {
-      return param.value.toFixed(3);
-    }
-
-    if (param.unit === '%') {
-      return `${(param.value * 100).toFixed(1)}%`;
-    }
-
-    return `${param.value.toFixed(1)} ${param.unit}`;
-  };
-
-  const displayValue = formatValue();
+  const displayValue = formatParameterValue(param.value, param.unit);
 
   return (
     <div

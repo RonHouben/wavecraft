@@ -8,6 +8,16 @@ import { IpcBridge } from '../ipc/IpcBridge';
 import { useConnectionStatus } from './useConnectionStatus';
 import type { ParameterId, ParameterInfo } from '../types/parameters';
 
+const TRANSPORT_NOT_CONNECTED = 'Transport not connected';
+
+function toError(err: unknown): Error {
+  return err instanceof Error ? err : new Error(String(err));
+}
+
+function isTransportNotConnectedError(err: unknown): boolean {
+  return err instanceof Error && err.message.includes(TRANSPORT_NOT_CONNECTED);
+}
+
 export interface UseParameterResult {
   param: ParameterInfo | null;
   setValue: (value: number) => Promise<void>;
@@ -21,17 +31,10 @@ export function useParameter(id: ParameterId): UseParameterResult {
   const [error, setError] = useState<Error | null>(null);
   const { connected } = useConnectionStatus();
 
-  const isTransientTransportError = useCallback((err: unknown): boolean => {
-    if (!(err instanceof Error)) {
-      return false;
-    }
-
-    return err.message.includes('Transport not connected');
-  }, []);
-
   const loadParameter = useCallback(async () => {
     const client = ParameterClient.getInstance();
     const bridge = IpcBridge.getInstance();
+    let keepLoading = false;
 
     try {
       setIsLoading(true);
@@ -48,20 +51,22 @@ export function useParameter(id: ParameterId): UseParameterResult {
         setParam(null);
         setError(new Error(`Parameter not found: ${id}`));
       }
-      setIsLoading(false);
     } catch (err) {
       // Transient disconnect race during initial startup/reconnect.
       // Keep loading and wait for the next connection-established event.
-      if (isTransientTransportError(err) && !bridge.isConnected()) {
+      if (isTransportNotConnectedError(err) && !bridge.isConnected()) {
+        keepLoading = true;
         setError(null);
-        setIsLoading(true);
         return;
       }
 
-      setError(err instanceof Error ? err : new Error(String(err)));
-      setIsLoading(false);
+      setError(toError(err));
+    } finally {
+      if (!keepLoading) {
+        setIsLoading(false);
+      }
     }
-  }, [id, isTransientTransportError]);
+  }, [id]);
 
   // Load initial parameter value
   useEffect(() => {
@@ -72,7 +77,7 @@ export function useParameter(id: ParameterId): UseParameterResult {
 
     // Disconnected: keep stale parameter value if available, but avoid
     // rendering stale transport errors as permanent failures.
-    setError((prev) => (prev?.message.includes('Transport not connected') ? null : prev));
+    setError((prev) => (isTransportNotConnectedError(prev) ? null : prev));
     setIsLoading(true);
   }, [connected, loadParameter]);
 
@@ -100,7 +105,7 @@ export function useParameter(id: ParameterId): UseParameterResult {
         setParam((prev) => (prev ? { ...prev, value: confirmed.value } : prev));
         setError(null);
       } catch (err) {
-        setError(err instanceof Error ? err : new Error(String(err)));
+        setError(toError(err));
         throw err;
       }
     },

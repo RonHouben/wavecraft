@@ -7,6 +7,7 @@ import { logger, useMeterFrame, useParameter } from '@wavecraft/core';
 import { ParameterSlider } from './ParameterSlider';
 
 const SIGNAL_THRESHOLD = 1e-4;
+const OSCILLATOR_ENABLED_PARAM_ID = 'oscillator_enabled' as const;
 
 export function OscillatorControl(): React.JSX.Element {
   const meterFrame = useMeterFrame(100);
@@ -15,11 +16,16 @@ export function OscillatorControl(): React.JSX.Element {
     setValue: setOscillatorEnabled,
     isLoading: isOscillatorLoading,
     error: oscillatorError,
-  } = useParameter('oscillator_enabled');
+  } = useParameter(OSCILLATOR_ENABLED_PARAM_ID);
 
   const oscillatorPeak = Math.max(meterFrame?.peak_l ?? 0, meterFrame?.peak_r ?? 0);
   const isProducing = oscillatorPeak > SIGNAL_THRESHOLD;
   const isOn = (oscillatorEnabled?.value ?? 0) >= 0.5;
+  const signalStatusLabel = isProducing ? 'Producing' : 'No signal';
+  const outputStateLabel = isOn ? 'On' : 'Off';
+  const signalStatusClassName = isProducing
+    ? 'bg-green-900/30 text-green-400'
+    : 'bg-yellow-900/30 text-yellow-400';
 
   const handleToggle = (): void => {
     if (!oscillatorEnabled) {
@@ -30,7 +36,7 @@ export function OscillatorControl(): React.JSX.Element {
     setOscillatorEnabled(newValue).catch((error) => {
       logger.error('Failed to toggle oscillator output', {
         error,
-        parameterId: 'oscillator_enabled',
+        parameterId: OSCILLATOR_ENABLED_PARAM_ID,
       });
     });
   };
@@ -44,17 +50,13 @@ export function OscillatorControl(): React.JSX.Element {
     >
       <div className="mb-2 flex items-center justify-between gap-3">
         <span className="text-sm font-semibold text-gray-200">Oscillator signal</span>
-        <span
-          className={`rounded px-2 py-1 text-xs font-semibold ${
-            isProducing ? 'bg-green-900/30 text-green-400' : 'bg-yellow-900/30 text-yellow-400'
-          }`}
-        >
-          {isProducing ? 'Producing' : 'No signal'}
+        <span className={`rounded px-2 py-1 text-xs font-semibold ${signalStatusClassName}`}>
+          {signalStatusLabel}
         </span>
       </div>
 
       <div className="flex items-center justify-between gap-3">
-        <span className="text-sm text-gray-300">Oscillator output: {isOn ? 'On' : 'Off'}</span>
+        <span className="text-sm text-gray-300">Oscillator output: {outputStateLabel}</span>
         <button
           type="button"
           className={`relative h-[26px] w-[50px] cursor-pointer rounded-full border-none outline-none transition-colors duration-200 ${

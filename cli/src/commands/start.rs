@@ -1114,8 +1114,8 @@ fn wait_for_shutdown(
             Ok(_) => {
                 println!();
                 println!("{} Shutting down servers...", style("→").cyan());
-                let _ = shutdown_tx.send(true);
-                kill_process(&mut ui_server)?;
+                send_shutdown_signal(&shutdown_tx);
+                kill_process(&mut ui_server);
                 println!("{} Servers stopped", style("✓").green());
                 return Ok(ShutdownReason::CtrlC);
             }
@@ -1132,7 +1132,7 @@ fn wait_for_shutdown(
                         status
                     );
                     println!("{} Shutting down servers...", style("→").cyan());
-                    let _ = shutdown_tx.send(true);
+                    send_shutdown_signal(&shutdown_tx);
                     println!("{} Servers stopped", style("✓").green());
                     if let Some(code) = status.code() {
                         return Ok(ShutdownReason::UiExited(code));
@@ -1143,8 +1143,8 @@ fn wait_for_shutdown(
             Err(mpsc::RecvTimeoutError::Disconnected) => {
                 println!();
                 println!("{} Shutting down servers...", style("→").cyan());
-                let _ = shutdown_tx.send(true);
-                kill_process(&mut ui_server)?;
+                send_shutdown_signal(&shutdown_tx);
+                kill_process(&mut ui_server);
                 println!("{} Servers stopped", style("✓").green());
                 return Ok(ShutdownReason::ChannelClosed);
             }
@@ -1152,11 +1152,14 @@ fn wait_for_shutdown(
     }
 }
 
+fn send_shutdown_signal(shutdown_tx: &watch::Sender<bool>) {
+    let _ = shutdown_tx.send(true);
+}
+
 /// Kill a child process group gracefully.
-fn kill_process(child: &mut GroupChild) -> Result<()> {
+fn kill_process(child: &mut GroupChild) {
     let _ = child.kill();
     let _ = child.wait();
-    Ok(())
 }
 
 /// Load parameters from the rebuilt dylib via subprocess isolation.

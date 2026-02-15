@@ -46,12 +46,7 @@ pub struct WsHandle {
 impl WsHandle {
     /// Broadcast a JSON string to all connected browser clients.
     pub async fn broadcast(&self, json: &str) {
-        let clients = self.state.browser_clients.read().await;
-        for client in clients.iter() {
-            if let Err(e) = client.try_send(json.to_owned()) {
-                warn!("Failed to broadcast message to client: {}", e);
-            }
-        }
+        broadcast_to_browser_clients(&self.state, json, None, "broadcast message").await;
     }
 
     /// Broadcast an audioStatusChanged notification to connected clients.
@@ -66,6 +61,27 @@ impl WsHandle {
 
         self.broadcast(&json).await;
         Ok(())
+    }
+}
+
+async fn broadcast_to_browser_clients(
+    state: &Arc<ServerState>,
+    json: &str,
+    exclude_client_index: Option<usize>,
+    warning_context: &str,
+) {
+    let clients = state.browser_clients.read().await;
+    for (index, client) in clients.iter().enumerate() {
+        if exclude_client_index.is_some_and(|excluded| index == excluded) {
+            continue;
+        }
+
+        if let Err(error) = client.try_send(json.to_owned()) {
+            warn!(
+                "Failed to {} (client {}): {}",
+                warning_context, index, error
+            );
+        }
     }
 }
 
@@ -143,15 +159,13 @@ impl<H: ParameterHost + 'static> WsServer<H> {
         let notification = IpcNotification::new("parametersChanged", serde_json::json!({}));
         let json = serde_json::to_string(&notification)?;
 
-        let clients = self.state.browser_clients.read().await;
-        for client in clients.iter() {
-            if let Err(e) = client.try_send(json.clone()) {
-                warn!(
-                    "Failed to send parametersChanged notification to client: {}",
-                    e
-                );
-            }
-        }
+        broadcast_to_browser_clients(
+            &self.state,
+            &json,
+            None,
+            "send parametersChanged notification",
+        )
+        .await;
 
         Ok(())
     }
@@ -294,18 +308,13 @@ async fn handle_connection<H: ParameterHost>(
                     // Handle meterUpdate from audio client
                     if is_audio_client && req.method == "meterUpdate" {
                         // Broadcast to all browser clients
-                        let clients = state.browser_clients.read().await;
-                        for (idx, client) in clients.iter().enumerate() {
-                            if idx != client_index {
-                                // Don't send back to audio client
-                                if let Err(e) = client.try_send(json.clone()) {
-                                    warn!(
-                                        "Failed to broadcast meter update to client {}: {}",
-                                        idx, e
-                                    );
-                                }
-                            }
-                        }
+                        broadcast_to_browser_clients(
+                            &state,
+                            &json,
+                            Some(client_index),
+                            "broadcast meter update",
+                        )
+                        .await;
                         continue;
                     }
                 }
@@ -320,12 +329,13 @@ async fn handle_connection<H: ParameterHost>(
                     && let Some(notification_json) =
                         build_set_parameter_notification(req, &response)
                 {
-                    let clients = state.browser_clients.read().await;
-                    for client in clients.iter() {
-                        if let Err(e) = client.try_send(notification_json.clone()) {
-                            warn!("Failed to send parameterChanged notification: {}", e);
-                        }
-                    }
+                    broadcast_to_browser_clients(
+                        &state,
+                        &notification_json,
+                        None,
+                        "send parameterChanged notification",
+                    )
+                    .await;
                 }
 
                 // Log outgoing response (verbose only)

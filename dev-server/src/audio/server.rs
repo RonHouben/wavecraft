@@ -31,6 +31,39 @@ use wavecraft_protocol::MeterUpdateNotification;
 use super::atomic_params::AtomicParameterBridge;
 use super::ffi_processor::DevAudioProcessor;
 
+const GAIN_MULTIPLIER_MIN: f32 = 0.0;
+const GAIN_MULTIPLIER_MAX: f32 = 2.0;
+// Ordered lookup IDs for runtime compatibility.
+//
+// IMPORTANT: Order is intentional.
+// 1) Prefer current canonical snake_case IDs first.
+// 2) Fall back to legacy compact IDs for backward compatibility.
+const INPUT_GAIN_PARAM_IDS_ORDERED: &[&str] = &[
+    "input_gain_level",
+    "input_gain_gain",
+    "inputgain_level",
+    "inputgain_gain",
+];
+const OUTPUT_GAIN_PARAM_IDS_ORDERED: &[&str] = &[
+    "output_gain_level",
+    "output_gain_gain",
+    "outputgain_level",
+    "outputgain_gain",
+];
+
+#[derive(Debug, Clone, Copy)]
+enum GainRole {
+    Input,
+    Output,
+}
+
+fn gain_param_ids(role: GainRole) -> &'static [&'static str] {
+    match role {
+        GainRole::Input => INPUT_GAIN_PARAM_IDS_ORDERED,
+        GainRole::Output => OUTPUT_GAIN_PARAM_IDS_ORDERED,
+    }
+}
+
 /// Configuration for audio server.
 #[derive(Debug, Clone)]
 pub struct AudioConfig {
@@ -212,12 +245,8 @@ impl AudioServer {
                     let right = &right_buf[..actual_samples];
 
                     // Compute meters from processed output
-                    let peak_left = left.iter().copied().fold(0.0f32, |a, b| a.max(b.abs()));
-                    let rms_left =
-                        (left.iter().map(|x| x * x).sum::<f32>() / left.len() as f32).sqrt();
-                    let peak_right = right.iter().copied().fold(0.0f32, |a, b| a.max(b.abs()));
-                    let rms_right =
-                        (right.iter().map(|x| x * x).sum::<f32>() / right.len() as f32).sqrt();
+                    let (peak_left, rms_left) = compute_peak_and_rms(left);
+                    let (peak_right, rms_right) = compute_peak_and_rms(right);
 
                     // Send meter update approximately every other callback.
                     // At 44100 Hz / 512 samples per buffer ≈ 86 callbacks/sec,
@@ -307,8 +336,7 @@ impl AudioServer {
             .context("Failed to start output stream")?;
         tracing::info!("Output stream started");
 
-        let mode = "full-duplex (input + output)";
-        tracing::info!("Audio server started in {} mode", mode);
+        tracing::info!("Audio server started in full-duplex (input + output) mode");
 
         Ok((
             AudioHandle {
@@ -332,24 +360,8 @@ fn apply_output_modifiers(
     oscillator_phase: &mut f32,
     sample_rate: f32,
 ) {
-    let input_gain = read_gain_multiplier(
-        param_bridge,
-        &[
-            "input_gain_level",
-            "input_gain_gain",
-            "inputgain_level",
-            "inputgain_gain",
-        ],
-    );
-    let output_gain = read_gain_multiplier(
-        param_bridge,
-        &[
-            "output_gain_level",
-            "output_gain_gain",
-            "outputgain_level",
-            "outputgain_gain",
-        ],
-    );
+    let input_gain = read_gain_multiplier_for_role(param_bridge, GainRole::Input);
+    let output_gain = read_gain_multiplier_for_role(param_bridge, GainRole::Output);
     let combined_gain = input_gain * output_gain;
 
     // Temporary dedicated control for sdk-template oscillator source.
@@ -409,16 +421,31 @@ fn apply_output_modifiers(
     apply_gain(left, right, combined_gain);
 }
 
+fn read_gain_multiplier_for_role(param_bridge: &AtomicParameterBridge, role: GainRole) -> f32 {
+    read_gain_multiplier(param_bridge, gain_param_ids(role))
+}
+
 fn read_gain_multiplier(param_bridge: &AtomicParameterBridge, ids: &[&str]) -> f32 {
     for id in ids {
         if let Some(value) = param_bridge.read(id)
             && value.is_finite()
         {
-            return value.clamp(0.0, 2.0);
+            return value.clamp(GAIN_MULTIPLIER_MIN, GAIN_MULTIPLIER_MAX);
         }
     }
 
     1.0
+}
+
+fn compute_peak_and_rms(samples: &[f32]) -> (f32, f32) {
+    let peak = samples
+        .iter()
+        .copied()
+        .fold(0.0f32, |acc, sample| acc.max(sample.abs()));
+    let rms =
+        (samples.iter().map(|sample| sample * sample).sum::<f32>() / samples.len() as f32).sqrt();
+
+    (peak, rms)
 }
 
 fn apply_gain(left: &mut [f32], right: &mut [f32], gain: f32) {
@@ -780,6 +807,56 @@ mod tests {
         apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
 
         let expected = 0.5 * 0.2 * 0.2;
+        assert!(left.iter().all(|sample| (*sample - expected).abs() < 1e-6));
+        assert!(right.iter().all(|sample| (*sample - expected).abs() < 1e-6));
+    }
+
+    #[test]
+    fn output_modifiers_prefer_snake_case_gain_ids_when_both_variants_exist() {
+        let bridge = AtomicParameterBridge::new(&[
+            ParameterInfo {
+                id: "input_gain_level".to_string(),
+                name: "Level".to_string(),
+                param_type: ParameterType::Float,
+                value: 1.6,
+                default: 1.6,
+                unit: Some("x".to_string()),
+                min: 0.0,
+                max: 2.0,
+                group: Some("InputGain".to_string()),
+            },
+            ParameterInfo {
+                id: "inputgain_level".to_string(),
+                name: "Level".to_string(),
+                param_type: ParameterType::Float,
+                value: 0.4,
+                default: 0.4,
+                unit: Some("x".to_string()),
+                min: 0.0,
+                max: 2.0,
+                group: Some("InputGain".to_string()),
+            },
+            ParameterInfo {
+                id: "output_gain_level".to_string(),
+                name: "Level".to_string(),
+                param_type: ParameterType::Float,
+                value: 1.0,
+                default: 1.0,
+                unit: Some("x".to_string()),
+                min: 0.0,
+                max: 2.0,
+                group: Some("OutputGain".to_string()),
+            },
+        ]);
+
+        let mut left = [0.5_f32; 8];
+        let mut right = [0.5_f32; 8];
+        let mut phase = 0.0;
+
+        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
+
+        // Canonical snake_case variant should win over compact legacy fallback.
+        let expected = 0.5 * 1.6;
         assert!(left.iter().all(|sample| (*sample - expected).abs() < 1e-6));
         assert!(right.iter().all(|sample| (*sample - expected).abs() < 1e-6));
     }
