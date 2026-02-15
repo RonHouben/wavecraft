@@ -53,6 +53,11 @@ mod cli_tests {
             #[arg(long)]
             skip_au: bool,
         },
+        #[command(name = "npm-updates")]
+        NpmUpdates {
+            #[arg(long)]
+            allow_updates: bool,
+        },
     }
 
     // Helper to parse CLI args for testing
@@ -353,6 +358,33 @@ mod cli_tests {
                 assert!(skip_au);
             }
             _ => panic!("Expected All command"),
+        }
+    }
+
+    // =========================================================================
+    // Npm Updates Command Tests
+    // =========================================================================
+
+    #[test]
+    fn test_npm_updates_command_default() {
+        let cli = parse_args(&["npm-updates"]).expect("Failed to parse npm-updates command");
+        match cli.command {
+            Some(TestCommands::NpmUpdates { allow_updates }) => {
+                assert!(!allow_updates);
+            }
+            _ => panic!("Expected NpmUpdates command"),
+        }
+    }
+
+    #[test]
+    fn test_npm_updates_command_allow_updates() {
+        let cli = parse_args(&["npm-updates", "--allow-updates"])
+            .expect("Failed to parse npm-updates --allow-updates");
+        match cli.command {
+            Some(TestCommands::NpmUpdates { allow_updates }) => {
+                assert!(allow_updates);
+            }
+            _ => panic!("Expected NpmUpdates command"),
         }
     }
 

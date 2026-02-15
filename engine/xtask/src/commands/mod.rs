@@ -11,6 +11,7 @@ pub mod dev;
 pub mod install;
 pub mod lint;
 pub mod notarize;
+pub mod npm_updates;
 pub mod release;
 pub mod sign;
 pub mod test;

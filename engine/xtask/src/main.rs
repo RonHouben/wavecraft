@@ -16,6 +16,7 @@
 //! - `au` - Build AU wrapper (macOS only)
 //! - `install` - Install plugins to system directories
 //! - `clean` - Clean build artifacts
+//! - `npm-updates` - Check npm package updates in monorepo npm projects
 //! - `all` - Run full build pipeline
 
 use anyhow::Result;
@@ -260,6 +261,17 @@ enum Commands {
         #[arg(long)]
         keep: bool,
     },
+
+    /// Check npm package updates in ui/ and sdk-template/ui/
+    #[command(
+        about = "Check npm package updates across monorepo npm projects",
+        name = "npm-updates"
+    )]
+    NpmUpdates {
+        /// Return success even when outdated packages are found
+        #[arg(long)]
+        allow_updates: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -422,6 +434,13 @@ fn main() -> Result<()> {
                 keep,
             };
             commands::validate_template::run(config)
+        }
+        Some(Commands::NpmUpdates { allow_updates }) => {
+            let config = commands::npm_updates::NpmUpdatesConfig {
+                strict: !allow_updates,
+                verbose: cli.verbose,
+            };
+            commands::npm_updates::run(config)
         }
         None => {
             // Default behavior: run nih_plug_xtask for backward compatibility
