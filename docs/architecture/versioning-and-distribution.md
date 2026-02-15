@@ -27,11 +27,11 @@ Wavecraft uses semantic versioning (SemVer) with automated version management vi
 └────────────┬────────────────────────┬───────────────────┘
              │                        │
              ▼                        ▼
-  ┌─────────────────────┐  ┌─────────────────────┐
-  │ CLI (crates.io)     │  │ npm packages        │
-  │ cargo install       │  │ @wavecraft/core     │
-  │ wavecraft           │  │ @wavecraft/components│
-  └─────────────────────┘  └─────────────────────┘
+  ┌─────────────────────┐  ┌──────────────────────────────────┐
+  │ CLI (crates.io)     │  │ npm cohort (lockstep versioning) │
+  │ cargo install       │  │ @wavecraft/core                  │
+  │ wavecraft           │  │ @wavecraft/components            │
+  └─────────────────────┘  └──────────────────────────────────┘
              │
              ▼
   ┌─────────────────────┐
@@ -78,9 +78,20 @@ The version is defined in `engine/Cargo.toml` under `[workspace.package]` and pr
 ### Packages Auto-Bumped by CI
 
 - CLI (`cli/Cargo.toml`)
-- `@wavecraft/core` (npm)
-- `@wavecraft/components` (npm)
+- npm cohort target for `@wavecraft/core` + `@wavecraft/components` (single lockstep version)
 - `engine/Cargo.toml` workspace version
+
+### npm Cohort Lockstep Policy
+
+The npm SDK packages are published as a single lockstep cohort:
+
+1. CI computes one target version per run for both packages.
+2. `@wavecraft/core` publishes first.
+3. `@wavecraft/components` publishes second at the same version.
+4. Components' internal `@wavecraft/core` dependency range is aligned to `^<target_version>` before publish.
+5. Reruns are idempotent: already-published target versions are detected and skipped.
+
+This prevents split-version drift between core and components.
 
 ### What Developers Should Do
 

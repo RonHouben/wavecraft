@@ -321,16 +321,18 @@ Wavecraft uses automatic continuous deployment for all publishable packages. Whe
 │        ▼                                                                    │
 │  ┌──────────────────────────────────────────────────┐                        │
 │  │ detect-changes                                   │                        │
-│  │ • Skips if author is github-actions[bot]          │                        │
+│  │ • Skips if author is github-actions[bot]         │                        │
 │  │ • Outputs: cli, engine, npm-core, npm-components │                        │
-│  │ • Computes: any_sdk_changed (OR of all four)     │                        │
+│  │ • Computes: npm-cohort + any_sdk_changed         │                        │
 │  └────────┬─────────────────────────────────────────┘                        │
 │           │                                                                 │
-│     ┌─────┼──────────────┬─────────────┐                                    │
-│     ▼     ▼              ▼             ▼                                    │
-│  ┌──────┐ ┌───────────┐ ┌───────────────┐                                   │
-│  │Engine│ │ npm-core  │ │npm-components │                                   │
-│  └──┬───┘ └─────┬─────┘ └──────┬────────┘                                   │
+│     ┌─────┼───────────────────┬───────────────────────┐                      │
+│     ▼     ▼                   ▼                       ▼                      │
+│  ┌──────┐ ┌─────────────────┐ ┌───────────┐ ┌───────────────┐               │
+│  │Engine│ │ npm-cohort-     │ │ npm-core  │ │npm-components │               │
+│  │      │ │ prepare         │ │ (lockstep)│ │ (lockstep)    │               │
+│  └──┬───┘ └────────┬────────┘ └─────┬─────┘ └──────┬────────┘               │
+│     │              └────────────────┴───────────────┘                        │
 │     │           │              │                                            │
 │     └───────────┼──────────────┘                                            │
 │                 │                                                           │
@@ -346,8 +348,7 @@ Wavecraft uses automatic continuous deployment for all publishable packages. Whe
 │                                                                             │
 │  Registry targets:                                                          │
 │    Engine → crates.io (6 crates)                                            │
-│    npm-core → npmjs.org (@wavecraft/core)                                   │
-│    npm-components → npmjs.org (@wavecraft/components)                       │
+│    npm-core + npm-components → npmjs.org (single cohort target version)     │
 │    CLI → crates.io (wavecraft)                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -356,12 +357,13 @@ Wavecraft uses automatic continuous deployment for all publishable packages. Whe
 
 **Trigger:** Push to `main` branch (i.e., PR merge)
 
-| Job                      | Trigger Condition                                 | Publishes To                  |
-| ------------------------ | ------------------------------------------------- | ----------------------------- |
-| `publish-engine`         | `engine` or `cli` changed                         | crates.io (6 crates)          |
-| `publish-npm-core`       | `npm-core` changed                                | npm (`@wavecraft/core`)       |
-| `publish-npm-components` | `npm-components` changed                          | npm (`@wavecraft/components`) |
-| `publish-cli`            | **Any** SDK component changed (`any_sdk_changed`) | crates.io (`wavecraft`)       |
+| Job                          | Trigger Condition                                 | Publishes To                   |
+| ---------------------------- | ------------------------------------------------- | ------------------------------ |
+| `publish-engine`             | `engine` or `cli` changed                         | crates.io (6 crates)           |
+| `publish-npm-cohort-prepare` | npm cohort changed or forced                      | computes single target version |
+| `publish-npm-core`           | `npm-cohort` true                                 | npm (`@wavecraft/core`)        |
+| `publish-npm-components`     | `npm-cohort` true (after core)                    | npm (`@wavecraft/components`)  |
+| `publish-cli`                | **Any** SDK component changed (`any_sdk_changed`) | crates.io (`wavecraft`)        |
 
 **Key difference:** `publish-cli` is a cascade job — it triggers whenever _any_ SDK package (engine, npm-core, npm-components, or CLI itself) changes. This ensures the CLI git tag always points to the latest SDK state, since scaffolded projects depend on that tag.
 
@@ -413,14 +415,15 @@ The CD pipeline operates with two distinct version domains:
 
 ### Auto-Bump Pattern
 
-Each distribution package (CLI, npm-core, npm-components) uses a three-step auto-bump pattern:
+Distribution packages keep CI-managed patch bumps, with npm packages handled as a **single lockstep cohort**:
 
-1. **Determine version** — Compare local version against the published registry version (crates.io or npm)
-2. **Auto-bump** (if needed) — If local version ≤ published, increment patch from published version
-3. **Commit locally** — Commit the version bump locally for publish tooling; version is **not** pushed to `main`
-4. **Push tag only** — After publishing, create a git tag and push it (tags are not subject to branch protection)
+1. **Compute one cohort target** — `publish-npm-cohort-prepare` computes one version for `@wavecraft/core` and `@wavecraft/components` by taking the highest semver across both local and published versions.
+2. **Align manifests locally** — Core and components package manifests are aligned to the cohort target; components also aligns internal `@wavecraft/core` dependency ranges to `^<target>`.
+3. **Publish in order** — Core publishes first, then components.
+4. **Idempotent reruns** — If `@wavecraft/*@<target>` already exists, publish is skipped safely.
+5. **Push tag only** — After publish/skip, tag creation is guarded so existing tags do not fail reruns.
 
-A "set final version" step consolidates the version (whether from determine or bump) for use by downstream steps (publish, git tag).
+For crates.io publish jobs, a "set final version" step consolidates the version (whether from determine or bump) for downstream publish/tag steps. For npm, `publish-npm-cohort-prepare` computes and fans out one shared cohort target version used by both npm publish jobs.
 
 **Why local-only commit?** Branch protection rulesets on `main` prevent direct pushes. The local commit is needed so `cargo publish` / `npm publish` see the correct version in the committed working tree. The published version is recorded in the git tag and the registry — `main` retains the product baseline version.
 
@@ -466,9 +469,20 @@ Since no commits are pushed to `main`, parallel job conflicts for version bumps 
 
 The workflow is **idempotent** — running it multiple times won't cause issues:
 
-1. **Already published?** Auto-bumps to next patch and publishes
+1. **Already published?** npm cohort jobs skip safely per package when target versions already exist
 2. **Publish failed?** Next run detects unpublished version and retries
 3. **No changes?** Jobs skip entirely (path filter returns false)
+
+### Workflow Dispatch Migration (npm)
+
+`workflow_dispatch` now supports `force-publish-npm-cohort` as the canonical npm force input.
+
+Legacy inputs are still accepted for a transition period:
+
+- `force-publish-npm-core` (deprecated)
+- `force-publish-npm-components` (deprecated)
+
+Using legacy inputs emits a warning in the prepare job.
 
 ### Engine Crate Publish Order
 
