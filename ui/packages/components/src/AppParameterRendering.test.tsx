@@ -1,6 +1,15 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { App } from '../../../../sdk-template/ui/src/App';
+import {
+  ConnectionStatus,
+  LatencyMonitor,
+  Meter,
+  OscillatorControl,
+  ParameterGroup,
+  ParameterSlider,
+  VersionBadge,
+} from './index';
+import { useAllParameters, useParameterGroups, useWindowResizeSync } from '@wavecraft/core';
 
 interface TestParameter {
   id: string;
@@ -10,6 +19,35 @@ interface TestParameter {
   default: number | boolean;
   unit?: string;
   group?: string;
+}
+
+const DEDICATED_PARAMETER_IDS = new Set([
+  'oscillator_enabled',
+  'oscillator_frequency',
+  'oscillator_level',
+]);
+
+function TestApp(): JSX.Element {
+  const { params, isLoading } = useAllParameters();
+  const genericParams = params.filter((param) => !DEDICATED_PARAMETER_IDS.has(param.id));
+  const groups = useParameterGroups(genericParams);
+
+  useWindowResizeSync();
+
+  return (
+    <div>
+      <ConnectionStatus />
+      <VersionBadge />
+      <OscillatorControl />
+      {isLoading
+        ? null
+        : groups.length > 0
+          ? groups.map((group) => <ParameterGroup key={group.name} group={group} />)
+          : genericParams.map((p) => <ParameterSlider key={p.id} id={p.id} />)}
+      <Meter />
+      <LatencyMonitor />
+    </div>
+  );
 }
 
 const mockUseAllParameters = vi.hoisted(() => vi.fn());
@@ -80,7 +118,7 @@ describe('App parameter rendering', () => {
   });
 
   it('renders oscillator only through dedicated control, not as generic slider', () => {
-    render(<App />);
+    render(<TestApp />);
 
     expect(screen.getByTestId('oscillator-control')).toBeInTheDocument();
     expect(screen.getByTestId('slider-gain')).toBeInTheDocument();
@@ -100,7 +138,7 @@ describe('App parameter rendering', () => {
       { name: 'Main', parameters },
     ]);
 
-    render(<App />);
+    render(<TestApp />);
 
     expect(screen.getByTestId('group-Main')).toBeInTheDocument();
     expect(screen.queryByTestId('slider-gain')).not.toBeInTheDocument();
