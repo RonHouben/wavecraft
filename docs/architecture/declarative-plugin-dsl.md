@@ -63,7 +63,7 @@ The DSL uses a two-layer macro system:
 
    In addition to the nih-plug `Plugin` implementation, this macro also generates:
    - `nih_export_vst3!()` and `nih_export_clap!()` — Conditionally compiled with `#[cfg(not(feature = "_param-discovery"))]`. This allows `wavecraft start` to load the dylib for parameter discovery without triggering nih-plug's static initializers (which cause macOS `AudioComponentRegistrar` hangs during `dlopen`).
-   - `wavecraft_get_params_json` / `wavecraft_free_string` — FFI exports for parameter discovery (always available)
+   - `wavecraft_get_params_json` / `wavecraft_get_processors_json` / `wavecraft_free_string` — FFI exports for parameter + processor metadata discovery (always available)
    - `wavecraft_dev_create_processor` — FFI vtable export returning a `DevProcessorVTable` for dev audio processing (always available, see [Dev Audio via FFI](./development-workflows.md#dev-audio-via-ffi))
 
    All generated `extern "C"` functions use `catch_unwind` to prevent panics from unwinding across the FFI boundary.
@@ -89,6 +89,8 @@ The DSL uses a two-layer macro system:
 The DSL supports runtime parameter discovery via the `ProcessorParams` trait:
 
 ```
+
+Processor metadata discovery follows the same dev-time extraction pattern (`wavecraft_get_processors_json`) and is used for TypeScript codegen and feature gating, not for introducing a new runtime JSON-RPC endpoint.
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                       RUNTIME PARAMETER DISCOVERY                               │
 ├─────────────────────────────────────────────────────────────────────────────────┤
@@ -171,6 +173,16 @@ export {};
 This augments the `ParameterIdMap` interface in `@wavecraft/core`, causing the `ParameterId` conditional type to resolve to `'inputgain_gain' | 'outputgain_gain'` instead of `string`. The result: IDE autocompletion and compile-time type checking for all `useParameter()` calls, `ParameterClient` methods, and component props — with zero developer effort.
 
 The file is regenerated automatically on Rust source changes during development (via the hot-reload pipeline).
+
+### TypeScript Processor Presence Codegen (v1)
+
+In v1, `wavecraft start` also generates `ui/src/generated/processors.ts`.
+
+- Generates processor-presence metadata and startup registration data in `processors.ts`
+- Augments `WavecraftProcessorIdMap` for type-safe processor ID usage
+- Registers available processors at startup via `registerAvailableProcessors(...)`
+- Powers `@wavecraft/core` hooks `useHasProcessor` and `useAvailableProcessors`
+- Follows a codegen-first v1 contract and does **not** add a runtime processor-presence IPC endpoint
 
 ## UI Parameter Grouping
 

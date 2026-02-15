@@ -1,20 +1,23 @@
 # Test Plan: Oscilloscope v1
 
 ## Overview
+
 - Feature: oscilloscope
 - Spec: docs/feature-specs/oscilloscope/
 - Date: 2026-02-15
 - Tester: Tester Agent
 
 ## Summary
-| Status | Count |
-| --- | ---: |
-| PASS | 8 |
-| FAIL | 0 |
-| BLOCKED | 0 |
-| NOT RUN | 0 |
+
+| Status  | Count |
+| ------- | ----: |
+| PASS    |     8 |
+| FAIL    |     0 |
+| BLOCKED |     0 |
+| NOT RUN |     0 |
 
 ## Test Cases and Results
+
 1. Protocol serialization
    - Command: cargo test --manifest-path engine/Cargo.toml -p wavecraft-protocol oscilloscope
    - Result: PASS
@@ -41,16 +44,21 @@
    - Result: PASS
 
 ## Issues Found
+
 - None
 
 ## Blockers
+
 - None
 
 ## Notes
+
 - Non blocking npm warning observed: Unknown user config NODE_OPTIONS.
 
 ## DocWriter Handoff Record
+
 - Complete test plan content prepared and persisted to this path for handoff workflow continuity.
 
 ## Sign off
+
 - Ready for QA handoff: YES

@@ -424,18 +424,22 @@ Do not merge until all Definition of Done items are checked and both validation 
 ## Risks and Mitigations
 
 ### Risk: RT regression in audio callback
+
 - **Mitigation:** preallocated buffers only, bounded loops, zero blocking operations
 - **Detection:** processor unit tests + code review checklist + focused callback-path scrutiny
 
 ### Risk: IPC/transport overhead at RAF cadence
+
 - **Mitigation:** latest-frame semantics, no unbounded queueing, avoid overlapping requests
 - **Detection:** manual stress in browser-dev and plugin modes
 
 ### Risk: host implementation drift after trait extension
+
 - **Mitigation:** compiler-enforced trait method update across all `ParameterHost` impls
 - **Detection:** workspace build + bridge tests
 
 ### Risk: browser-dev vs plugin behavior divergence
+
 - **Mitigation:** shared method contract + shared core API; only transport differs
 - **Detection:** explicit dual-mode verification in Phase 6
 

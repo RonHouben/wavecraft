@@ -123,9 +123,10 @@ The preflight is fail-fast and logs explicit status lines for each rule (refresh
 - **UI package artifacts** (`ui/packages/core/dist`, `ui/packages/components/dist`)
   - Runs `npm run build:lib` in `ui/` when package source/config files are newer than dist outputs or outputs are missing.
   - Skips when artifacts are up-to-date.
-- **Parameter/typegen startup caches** (`wavecraft-params.json`, `sdk-template/ui/src/generated/parameters.ts`)
-  - Invalidates stale sidecar caches when SDK engine sources or relevant dev tooling files changed.
-  - Removes stale generated parameter typing when sidecars are invalidated, so `wavecraft start` regenerates fresh types during startup.
+- **Metadata/typegen startup caches** (`wavecraft-params.json`, `wavecraft-processors.json`, `sdk-template/ui/src/generated/parameters.ts`, `sdk-template/ui/src/generated/processors.ts`)
+  - Invalidates stale metadata sidecars when SDK engine sources or relevant dev tooling files changed.
+  - Preflight now tracks both parameter and processor generated artifacts in the cache/typegen scope.
+  - Generated TypeScript artifacts are treated as regeneration targets for startup/hot-reload (codegen-first); stale metadata is corrected by regenerating from fresh extraction.
 
 **SDK Mode Detection:**
 
@@ -148,17 +149,19 @@ In SDK mode, `wavecraft start` also injects `tsconfig.json` path overrides so th
 - Performs preflight checks to ensure the WebSocket and UI ports are free before starting any servers.
 - Starts the UI dev server with strict port binding (no auto-switching). If the UI port is in use, startup fails fast with a clear error and no servers are left running.
 
-### TypeScript Parameter Codegen
+### TypeScript Metadata Codegen (codegen-first v1)
 
 When `wavecraft start` launches, it:
 
-1. **Extracts parameter IDs** from the compiled Rust engine via FFI (same as existing parameter discovery)
+1. **Extracts plugin metadata via FFI** from the compiled Rust engine using `wavecraft_get_params_json` and `wavecraft_get_processors_json`
 2. **Generates `ui/src/generated/parameters.ts`** — a module augmentation file that narrows `@wavecraft/core`'s `ParameterId` type to a literal union of the plugin's actual parameter IDs
-3. **Regenerates on hot-reload** — When Rust source files change, the rebuild pipeline re-extracts parameters and regenerates the TypeScript types via the `TsTypesWriterFn` callback in `RebuildCallbacks`
+3. **Generates `ui/src/generated/processors.ts`** — a generated registry/typing artifact used for processor presence (`WavecraftProcessorIdMap` augmentation + startup registration)
+4. **Regenerates on hot-reload** — when Rust source files change, the rebuild pipeline re-extracts metadata and regenerates both TypeScript artifacts via the `TsTypesWriterFn` callback in `RebuildCallbacks`
+5. **Enforces codegen-first scope** — both generated files are canonical startup/hot-reload outputs in SDK mode; stale metadata is corrected by regeneration, not by retaining stale sidecars
 
 This enables IDE autocompletion and compile-time type safety for `useParameter('inputgain_gain')` calls without any developer configuration.
 
-The generated file is a build artifact (gitignored) and should not be checked into source control. In SDK mode, this codegen output is a required contract: if generation fails during startup or hot-reload, the update fails fast and prints actionable diagnostics (root cause + remediation) instead of silently continuing with stale types.
+The generated files are build artifacts (gitignored) and should not be checked into source control. In SDK mode, this codegen output is a required contract: if generation fails during startup or hot-reload, the update fails fast and prints actionable diagnostics (root cause + remediation) instead of silently continuing with stale types.
 
 ### Why Module-Level Detection?
 
@@ -166,12 +169,12 @@ The environment constant is evaluated at module scope (not inside hooks) to comp
 
 ### Dev Audio via FFI
 
-When running `wavecraft start`, the CLI uses a **two-phase approach** for parameter loading:
+When running `wavecraft start`, the CLI uses a **two-phase approach** for plugin metadata loading:
 
-1. **Cached Parameter Discovery** — First checks for a cached `wavecraft-params.json` sidecar file
+1. **Cached Metadata Discovery** — First checks for cached `wavecraft-params.json` and `wavecraft-processors.json` sidecar files
 2. **Feature-Gated Build** — If not cached, builds with `--features _param-discovery` which skips nih-plug's VST3/CLAP static initializers (preventing macOS `AudioComponentRegistrar` hangs during `dlopen`)
-3. **FFI Extraction** — Extracts parameter metadata from this safe dylib via `wavecraft_get_params_json` and caches it for subsequent runs
-4. **Contract Enforcement** — Current SDK parameter-discovery contract is required in SDK mode. Missing/incompatible discovery symbols or feature expectations fail fast with actionable diagnostics.
+3. **FFI Extraction** — Extracts metadata from this safe dylib via `wavecraft_get_params_json` and `wavecraft_get_processors_json` and caches it for subsequent runs
+4. **Contract Enforcement** — Current SDK metadata-discovery contract is required in SDK mode. Missing/incompatible discovery symbols or feature expectations fail fast with actionable diagnostics.
 
 After parameter discovery completes, the CLI also attempts to load an FFI vtable symbol (`wavecraft_dev_create_processor`). This symbol is **not** gated by the `_param-discovery` feature and remains available regardless of which build was used. If found, audio processing runs **in-process** via cpal — no separate binary or subprocess is needed. Users never see or write any audio capture code.
 
