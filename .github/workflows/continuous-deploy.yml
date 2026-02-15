@@ -22,14 +22,6 @@ on:
         description: "Force publish npm cohort (@wavecraft/core + @wavecraft/components) (ignore change detection)"
         type: boolean
         default: false
-      force-publish-npm-core:
-        description: "[DEPRECATED] Force publish @wavecraft/core. Use force-publish-npm-cohort instead."
-        type: boolean
-        default: false
-      force-publish-npm-components:
-        description: "[DEPRECATED] Force publish @wavecraft/components. Use force-publish-npm-cohort instead."
-        type: boolean
-        default: false
 
 concurrency:
   group: continuous-deploy
@@ -51,7 +43,7 @@ jobs:
       npm-cohort: ${{
         steps.filter.outputs.npm-core == 'true' ||
         steps.filter.outputs.npm-components == 'true' ||
-        (github.event_name == 'workflow_dispatch' && (inputs.force-publish-npm-cohort || inputs.force-publish-npm-core || inputs.force-publish-npm-components))
+        (github.event_name == 'workflow_dispatch' && inputs.force-publish-npm-cohort)
         }}
       dev-server: ${{ steps.filter.outputs.dev-server == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force-publish-dev-server) }}
       any_sdk_changed: ${{ steps.aggregate.outputs.any_sdk_changed }}
@@ -92,9 +84,7 @@ jobs:
                 "${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-cli }}" == "true" || \
                 "${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-engine }}" == "true" || \
                 "${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-dev-server }}" == "true" || \
-                "${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-npm-cohort }}" == "true" || \
-                "${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-npm-core }}" == "true" || \
-                "${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-npm-components }}" == "true" ]]; then
+                "${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-npm-cohort }}" == "true" ]]; then
             echo "any_sdk_changed=true" >> $GITHUB_OUTPUT
           else
             echo "any_sdk_changed=false" >> $GITHUB_OUTPUT
@@ -1094,8 +1084,7 @@ jobs:
         id: target
         working-directory: ui
         env:
-          FORCE_COHORT: ${{ github.event_name == 'workflow_dispatch' && (inputs.force-publish-npm-cohort || inputs.force-publish-npm-core || inputs.force-publish-npm-components) }}
-          LEGACY_FORCE: ${{ github.event_name == 'workflow_dispatch' && (inputs.force-publish-npm-core || inputs.force-publish-npm-components) }}
+          FORCE_COHORT: ${{ github.event_name == 'workflow_dispatch' && inputs.force-publish-npm-cohort }}
         run: |
           npm_fetch_version() {
             local package="$1"
@@ -1186,10 +1175,6 @@ jobs:
           echo "Core published:      $CORE_PUBLISHED"
           echo "Components published:$COMPONENTS_PUBLISHED"
           echo "Cohort target:       $TARGET"
-
-          if [ "$LEGACY_FORCE" = "true" ]; then
-            echo "::warning::Deprecated inputs force-publish-npm-core / force-publish-npm-components were used. Migrate to force-publish-npm-cohort."
-          fi
 
           if [ "$FORCE_COHORT" = "true" ]; then
             echo "Cohort force-publish requested"

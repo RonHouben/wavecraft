@@ -473,16 +473,9 @@ The workflow is **idempotent** — running it multiple times won't cause issues:
 2. **Publish failed?** Next run detects unpublished version and retries
 3. **No changes?** Jobs skip entirely (path filter returns false)
 
-### Workflow Dispatch Migration (npm)
+### Workflow Dispatch (npm)
 
-`workflow_dispatch` now supports `force-publish-npm-cohort` as the canonical npm force input.
-
-Legacy inputs are still accepted for a transition period:
-
-- `force-publish-npm-core` (deprecated)
-- `force-publish-npm-components` (deprecated)
-
-Using legacy inputs emits a warning in the prepare job.
+`workflow_dispatch` uses `force-publish-npm-cohort` as the npm force input.
 
 ### Engine Crate Publish Order
 
