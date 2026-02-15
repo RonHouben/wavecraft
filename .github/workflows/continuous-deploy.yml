@@ -615,10 +615,10 @@ jobs:
             /^\[workspace\.package\]/ { in_section=1; next }
             /^\[/ { in_section=0 }
             in_section && /^version = "/ {
-              line=$0
-              sub(/^.*"/, "", line)
-              sub(/".*$/, "", line)
-              print line
+              n = split($0, parts, "\"")
+              if (n >= 2) {
+                print parts[2]
+              }
               exit
             }
           ' engine/Cargo.toml)
