@@ -210,11 +210,39 @@ fn apply_local_dev_overrides(content: &str, vars: &TemplateVariables) -> Result<
         })
         .to_string();
 
+    // Replace npm package dependencies with local file paths in SDK mode.
+    // This ensures generated UI projects validate against local monorepo packages
+    // instead of potentially stale published npm versions.
+    let core_file_dep = json_file_dep_value(&sdk_root.join("ui/packages/core"));
+    let components_file_dep = json_file_dep_value(&sdk_root.join("ui/packages/components"));
+
+    let core_dep_re = Regex::new(r#"\"@wavecraft/core\"\s*:\s*\"[^\"]+\""#)
+        .context("Invalid regex pattern for @wavecraft/core npm dependency")?;
+    result = core_dep_re
+        .replace_all(
+            &result,
+            format!(r#""@wavecraft/core": "{}""#, core_file_dep),
+        )
+        .to_string();
+
+    let components_dep_re = Regex::new(r#"\"@wavecraft/components\"\s*:\s*\"[^\"]+\""#)
+        .context("Invalid regex pattern for @wavecraft/components npm dependency")?;
+    result = components_dep_re
+        .replace_all(
+            &result,
+            format!(r#""@wavecraft/components": "{}""#, components_file_dep),
+        )
+        .to_string();
+
     // Inject TypeScript path mappings for SDK mode so TS language services
     // resolve @wavecraft/* to local monorepo sources (matching Vite aliases).
     result = inject_tsconfig_paths_if_needed(&result)?;
 
     Ok(result)
+}
+
+fn json_file_dep_value(path: &Path) -> String {
+    format!("file:{}", path.display()).replace('\\', "\\\\")
 }
 
 fn inject_tsconfig_paths_if_needed(content: &str) -> Result<String> {
@@ -223,8 +251,8 @@ fn inject_tsconfig_paths_if_needed(content: &str) -> Result<String> {
         return Ok(content.to_string());
     }
 
-    // Idempotent: if paths already exist, do nothing.
-    if content.contains(TSCONFIG_PATHS_MARKER) {
+    // Idempotent only when both paths marker and baseUrl already exist.
+    if content.contains(TSCONFIG_PATHS_MARKER) && content.contains("\"baseUrl\"") {
         return Ok(content.to_string());
     }
 
@@ -236,6 +264,25 @@ fn inject_tsconfig_paths_if_needed(content: &str) -> Result<String> {
 
     let compiler_options_content = &content[compiler_options_start + 1..compiler_options_end];
     if compiler_options_content.contains("\"paths\"") {
+        if compiler_options_content.contains("\"baseUrl\"") {
+            return Ok(content.to_string());
+        }
+
+        if let Some(paths_pos_rel) = compiler_options_content.find("\"paths\"") {
+            let paths_pos = compiler_options_start + 1 + paths_pos_rel;
+            let insertion_point = content[..paths_pos]
+                .rfind('\n')
+                .map_or(paths_pos, |idx| idx + 1);
+            let indent = &content[insertion_point..paths_pos];
+
+            let mut injected = String::with_capacity(content.len() + 32);
+            injected.push_str(&content[..insertion_point]);
+            injected.push_str(indent);
+            injected.push_str("\"baseUrl\": \".\",\n\n");
+            injected.push_str(&content[insertion_point..]);
+            return Ok(injected);
+        }
+
         return Ok(content.to_string());
     }
 
@@ -795,6 +842,110 @@ wavecraft-dev-server = { git = "https://github.com/RonHouben/wavecraft", tag = "
         assert_eq!(
             result, content,
             "Content should be unchanged without local_dev"
+        );
+    }
+
+    #[test]
+    fn test_apply_local_dev_overrides_rewrites_npm_sdk_dependencies() {
+        let content = r#"{
+  "dependencies": {
+    "@wavecraft/core": "^0.7.1",
+    "@wavecraft/components": "^0.7.1",
+    "react": "^18.3.1"
+  }
+}"#;
+
+        let temp = tempdir().unwrap();
+        let sdk_root = temp.path();
+        let sdk_path = sdk_root.join("engine").join("crates");
+        fs::create_dir_all(&sdk_path).unwrap();
+
+        for crate_name in &SDK_CRATES {
+            fs::create_dir_all(sdk_path.join(crate_name)).unwrap();
+        }
+        fs::create_dir_all(sdk_path.join("wavecraft-nih_plug")).unwrap();
+        fs::create_dir_all(sdk_root.join("dev-server")).unwrap();
+        fs::create_dir_all(sdk_root.join("ui/packages/core")).unwrap();
+        fs::create_dir_all(sdk_root.join("ui/packages/components")).unwrap();
+
+        let vars = TemplateVariables::new(
+            "test-plugin".to_string(),
+            "Test Vendor".to_string(),
+            "test@example.com".to_string(),
+            "https://test.com".to_string(),
+            "v0.9.0".to_string(),
+            Some(sdk_path),
+        );
+
+        let result = apply_local_dev_overrides(content, &vars).unwrap();
+
+        assert!(
+            result.contains("\"@wavecraft/core\": \"file:"),
+            "Expected @wavecraft/core to be rewritten as file dependency:\n{}",
+            result
+        );
+        assert!(
+            result.contains("\"@wavecraft/components\": \"file:"),
+            "Expected @wavecraft/components to be rewritten as file dependency:\n{}",
+            result
+        );
+        assert!(
+            !result.contains("\"@wavecraft/core\": \"^"),
+            "Expected @wavecraft/core version dependency to be removed:\n{}",
+            result
+        );
+        assert!(
+            !result.contains("\"@wavecraft/components\": \"^"),
+            "Expected @wavecraft/components version dependency to be removed:\n{}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_apply_local_dev_overrides_adds_base_url_when_paths_exist() {
+        let content = r#"{
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@wavecraft/core": ["../../ui/packages/core/src/index.ts"],
+      "@wavecraft/components": ["../../ui/packages/components/src/index.ts"]
+    }
+  }
+}"#;
+
+        let temp = tempdir().unwrap();
+        let sdk_root = temp.path();
+        let sdk_path = sdk_root.join("engine").join("crates");
+        fs::create_dir_all(&sdk_path).unwrap();
+
+        for crate_name in &SDK_CRATES {
+            fs::create_dir_all(sdk_path.join(crate_name)).unwrap();
+        }
+        fs::create_dir_all(sdk_path.join("wavecraft-nih_plug")).unwrap();
+        fs::create_dir_all(sdk_root.join("dev-server")).unwrap();
+
+        let vars = TemplateVariables::new(
+            "test-plugin".to_string(),
+            "Test Vendor".to_string(),
+            "test@example.com".to_string(),
+            "https://test.com".to_string(),
+            "v0.9.0".to_string(),
+            Some(sdk_path),
+        );
+
+        let result = apply_local_dev_overrides(content, &vars).unwrap();
+
+        assert!(
+            result.contains(r#""baseUrl": ".""#),
+            "Expected baseUrl to be injected when paths already exist:\n{}",
+            result
+        );
+
+        assert_eq!(
+            result.matches("\"baseUrl\"").count(),
+            1,
+            "Expected exactly one baseUrl entry:\n{}",
+            result
         );
     }
 
