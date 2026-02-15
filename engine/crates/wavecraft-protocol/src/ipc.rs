@@ -178,6 +178,13 @@ pub struct ParameterInfo {
     pub group: Option<String>,
 }
 
+/// Information about a discovered processor in the signal chain.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcessorInfo {
+    /// Canonical processor ID (snake_case type-derived identifier).
+    pub id: String,
+}
+
 /// Parameter type discriminator
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   useConnectionStatus,
   useOscilloscopeFrame,
+  useHasProcessor,
   type OscilloscopeChannelView,
   type OscilloscopeFrame,
   type OscilloscopeTriggerMode,
@@ -20,12 +21,10 @@ interface OscilloscopeProps {
   hideWhenNotInSignalChain?: boolean;
 }
 
-// const OSCILLOSCOPE_ENABLED_PARAM_ID = 'oscilloscope_enabled' as ParameterId;
-
-export function Oscilloscope(_props: Readonly<OscilloscopeProps>): React.JSX.Element | null {
+export function Oscilloscope(props: Readonly<OscilloscopeProps>): React.JSX.Element | null {
   const { connected } = useConnectionStatus();
   const frame = useOscilloscopeFrame();
-  // const { param: oscilloscopeEnabled } = useParameter(OSCILLOSCOPE_ENABLED_PARAM_ID);
+  const hasProcessorInSignalChain = useHasProcessor('oscilloscope_tap');
 
   const [channelView, setChannelView] = useState<OscilloscopeChannelView>('overlay');
   const [triggerMode, setTriggerMode] = useState<OscilloscopeTriggerMode>('risingZeroCrossing');
@@ -34,9 +33,9 @@ export function Oscilloscope(_props: Readonly<OscilloscopeProps>): React.JSX.Ele
   const frameRef = useRef<OscilloscopeFrame | null>(null);
   const rafRef = useRef<number | null>(null);
 
-  // if (props.hideWhenNotInSignalChain && !oscilloscopeEnabled) {
-  // return null;
-  // }
+  if (props.hideWhenNotInSignalChain && !hasProcessorInSignalChain) {
+    return null;
+  }
 
   useEffect(() => {
     frameRef.current = frame;

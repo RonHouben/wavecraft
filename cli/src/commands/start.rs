@@ -23,14 +23,12 @@ use walkdir::WalkDir;
 
 use crate::project::{
     find_plugin_dylib, has_node_modules, read_engine_package_name, resolve_debug_dir,
-    ts_codegen::write_parameter_types, ProjectMarkers,
+    ts_codegen::{write_parameter_types, write_processor_types},
+    ProjectMarkers,
 };
 use wavecraft_bridge::IpcHandler;
 use wavecraft_dev_server::{DevServerHost, DevSession, RebuildCallbacks, WsServer};
-use wavecraft_protocol::{AudioDiagnosticCode, AudioRuntimePhase, ParameterInfo};
-
-#[cfg(not(feature = "audio-dev"))]
-use crate::project::param_extract::{extract_params_subprocess, DEFAULT_EXTRACT_TIMEOUT};
+use wavecraft_protocol::{AudioDiagnosticCode, AudioRuntimePhase, ParameterInfo, ProcessorInfo};
 
 /// Re-export PluginParamLoader for audio dev mode
 use wavecraft_bridge::PluginParamLoader as PluginLoader;
@@ -607,9 +605,26 @@ fn install_dependencies(project: &ProjectMarkers) -> Result<()> {
 }
 
 /// Path to the sidecar parameter cache file.
-fn sidecar_json_path(engine_dir: &Path) -> Result<PathBuf> {
+const PARAM_SIDECAR_FILENAME: &str = "wavecraft-params.json";
+const PROCESSOR_SIDECAR_FILENAME: &str = "wavecraft-processors.json";
+
+#[derive(Debug, Clone)]
+struct PluginMetadata {
+    params: Vec<ParameterInfo>,
+    processors: Vec<ProcessorInfo>,
+}
+
+fn sidecar_json_path(engine_dir: &Path, file_name: &str) -> Result<PathBuf> {
     let debug_dir = resolve_debug_dir(engine_dir)?;
-    Ok(debug_dir.join("wavecraft-params.json"))
+    Ok(debug_dir.join(file_name))
+}
+
+fn params_sidecar_json_path(engine_dir: &Path) -> Result<PathBuf> {
+    sidecar_json_path(engine_dir, PARAM_SIDECAR_FILENAME)
+}
+
+fn processors_sidecar_json_path(engine_dir: &Path) -> Result<PathBuf> {
+    sidecar_json_path(engine_dir, PROCESSOR_SIDECAR_FILENAME)
 }
 
 /// Try reading cached parameters from the sidecar JSON file.
@@ -617,7 +632,7 @@ fn sidecar_json_path(engine_dir: &Path) -> Result<PathBuf> {
 /// Returns `Some(params)` if the file exists and is newer than the dylib
 /// (i.e., no source changes since last extraction). Returns `None` otherwise.
 fn try_read_cached_params(engine_dir: &Path) -> Option<Vec<ParameterInfo>> {
-    let sidecar_path = sidecar_json_path(engine_dir).ok()?;
+    let sidecar_path = params_sidecar_json_path(engine_dir).ok()?;
     if !sidecar_path.exists() {
         return None;
     }
@@ -659,6 +674,40 @@ fn try_read_cached_params(engine_dir: &Path) -> Option<Vec<ParameterInfo>> {
     serde_json::from_str(&contents).ok()
 }
 
+/// Try reading cached processors from sidecar JSON file.
+fn try_read_cached_processors(engine_dir: &Path) -> Option<Vec<ProcessorInfo>> {
+    let sidecar_path = processors_sidecar_json_path(engine_dir).ok()?;
+    if !sidecar_path.exists() {
+        return None;
+    }
+
+    let dylib_path = find_plugin_dylib(engine_dir).ok()?;
+    let sidecar_mtime = std::fs::metadata(&sidecar_path).ok()?.modified().ok()?;
+    let dylib_mtime = std::fs::metadata(&dylib_path).ok()?.modified().ok()?;
+
+    if dylib_mtime > sidecar_mtime {
+        println!("  Processor sidecar cache stale (dylib newer), rebuilding...");
+        return None;
+    }
+
+    if let Some(src_mtime) = newest_file_mtime_under(&engine_dir.join("src")) {
+        if src_mtime > sidecar_mtime {
+            println!("  Processor sidecar cache stale (engine source newer), rebuilding...");
+            return None;
+        }
+    }
+
+    if let Some(cli_mtime) = current_exe_mtime() {
+        if cli_mtime > sidecar_mtime {
+            println!("  Processor sidecar cache stale (CLI binary newer), rebuilding...");
+            return None;
+        }
+    }
+
+    let contents = std::fs::read_to_string(&sidecar_path).ok()?;
+    serde_json::from_str(&contents).ok()
+}
+
 fn newest_file_mtime_under(root: &Path) -> Option<SystemTime> {
     if !root.is_dir() {
         return None;
@@ -680,32 +729,40 @@ fn current_exe_mtime() -> Option<SystemTime> {
 
 /// Write parameter metadata to the sidecar JSON cache.
 pub(crate) fn write_sidecar_cache(engine_dir: &Path, params: &[ParameterInfo]) -> Result<()> {
-    let sidecar_path = sidecar_json_path(engine_dir)?;
+    let sidecar_path = params_sidecar_json_path(engine_dir)?;
     let json = serde_json::to_string_pretty(params).context("Failed to serialize parameters")?;
     std::fs::write(&sidecar_path, json).context("Failed to write sidecar cache")?;
     Ok(())
 }
 
-/// Load plugin parameter metadata using cached sidecar or feature-gated build.
-///
-/// Two-phase process:
-/// 1. Try reading from cached sidecar (fast path)
-/// 2. Otherwise: build with _param-discovery, extract params, write sidecar
-async fn load_parameter_metadata(engine_dir: &Path) -> Result<Vec<ParameterInfo>> {
-    // 1. Try cached sidecar
-    if let Some(params) = try_read_cached_params(engine_dir) {
+fn write_processors_sidecar_cache(engine_dir: &Path, processors: &[ProcessorInfo]) -> Result<()> {
+    let sidecar_path = processors_sidecar_json_path(engine_dir)?;
+    let json =
+        serde_json::to_string_pretty(processors).context("Failed to serialize processors")?;
+    std::fs::write(&sidecar_path, json).context("Failed to write processor sidecar cache")?;
+    Ok(())
+}
+
+/// Load plugin metadata (parameters + processors) using cached sidecars or
+/// feature-gated discovery build.
+async fn load_plugin_metadata(engine_dir: &Path) -> Result<PluginMetadata> {
+    // 1. Try cached sidecars
+    if let (Some(params), Some(processors)) = (
+        try_read_cached_params(engine_dir),
+        try_read_cached_processors(engine_dir),
+    ) {
         println!(
-            "{} Loaded {} parameters (cached)",
+            "{} Loaded {} parameters and {} processors (cached)",
             style("✓").green(),
-            params.len()
+            params.len(),
+            processors.len()
         );
-        return Ok(params);
+        return Ok(PluginMetadata { params, processors });
     }
 
     // 2. Build with _param-discovery feature (skip nih-plug exports)
-    println!("{} Building for parameter discovery...", style("→").cyan());
+    println!("{} Building for metadata discovery...", style("→").cyan());
 
-    // Get package name for --package flag (targets correct crate with path deps)
     let mut build_cmd = Command::new("cargo");
     build_cmd.args(["build", "--lib", "--features", "_param-discovery"]);
 
@@ -719,41 +776,57 @@ async fn load_parameter_metadata(engine_dir: &Path) -> Result<Vec<ParameterInfo>
         .stderr(Stdio::inherit())
         .status();
 
-    let status = build_result.context("Failed to run cargo build for parameter discovery")?;
+    let status = build_result.context("Failed to run cargo build for metadata discovery")?;
     if !status.success() {
         anyhow::bail!(
-            "Parameter discovery build failed. This project must support --features _param-discovery in SDK dev mode."
+            "Metadata discovery build failed. This project must support --features _param-discovery in SDK dev mode."
         );
     }
 
-    // Discovery build succeeded — load params from safe dylib
     let dylib_path = find_plugin_dylib(engine_dir)
         .context("Failed to find plugin library after discovery build")?;
 
     println!("  Found dylib: {}", dylib_path.display());
 
-    println!("{} Loading plugin parameters...", style("→").cyan());
+    println!("{} Loading plugin metadata...", style("→").cyan());
     #[cfg(feature = "audio-dev")]
-    let params = {
+    let (params, processors) = {
         let loader = PluginLoader::load(&dylib_path)
-            .context("Failed to load plugin for parameter discovery")?;
-        loader.parameters().to_vec()
+            .context("Failed to load plugin for metadata discovery")?;
+        (loader.parameters().to_vec(), loader.processors().to_vec())
     };
     #[cfg(not(feature = "audio-dev"))]
-    let params = {
-        let params = extract_params_subprocess(&dylib_path, DEFAULT_EXTRACT_TIMEOUT)
-            .await
-            .context("Failed to extract parameters from plugin")?;
-        params
+    let (params, processors) = {
+        let params = crate::project::param_extract::extract_params_subprocess(
+            &dylib_path,
+            crate::project::param_extract::DEFAULT_EXTRACT_TIMEOUT,
+        )
+        .await
+        .context("Failed to extract parameters from plugin")?;
+        let processors = crate::project::param_extract::extract_processors_subprocess(
+            &dylib_path,
+            crate::project::param_extract::DEFAULT_EXTRACT_TIMEOUT,
+        )
+        .await
+        .context("Failed to extract processors from plugin")?;
+        (params, processors)
     };
 
-    // Write sidecar cache for next run
     if let Err(e) = write_sidecar_cache(engine_dir, &params) {
         println!("  Warning: failed to write param cache: {}", e);
     }
+    if let Err(e) = write_processors_sidecar_cache(engine_dir, &processors) {
+        println!("  Warning: failed to write processor cache: {}", e);
+    }
 
-    println!("{} Loaded {} parameters", style("✓").green(), params.len());
-    Ok(params)
+    println!(
+        "{} Loaded {} parameters and {} processors",
+        style("✓").green(),
+        params.len(),
+        processors.len()
+    );
+
+    Ok(PluginMetadata { params, processors })
 }
 
 /// Run both development servers.
@@ -773,10 +846,14 @@ fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u16) -> Resu
     // 1. Build the plugin and load parameters (two-phase or cached)
     // Create tokio runtime for async parameter loading
     let runtime = tokio::runtime::Runtime::new().context("Failed to create async runtime")?;
-    let params = runtime.block_on(load_parameter_metadata(&project.engine_dir))?;
+    let metadata = runtime.block_on(load_plugin_metadata(&project.engine_dir))?;
+    let params = metadata.params;
+    let processors = metadata.processors;
 
     write_parameter_types(&project.ui_dir, &params)
         .context("Failed to generate TypeScript parameter ID types")?;
+    write_processor_types(&project.ui_dir, &processors)
+        .context("Failed to generate TypeScript processor ID types")?;
 
     for param in &params {
         println!(
@@ -831,12 +908,22 @@ fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u16) -> Resu
             let ui_dir = project.ui_dir.clone();
             move |params: &[ParameterInfo]| write_parameter_types(&ui_dir, params)
         })),
+        write_processor_ts_types: Some(std::sync::Arc::new({
+            let ui_dir = project.ui_dir.clone();
+            move |processors: &[ProcessorInfo]| write_processor_types(&ui_dir, processors)
+        })),
         param_loader: std::sync::Arc::new(move |engine_dir: PathBuf| {
             Box::pin(load_parameters_from_dylib(engine_dir))
                 as std::pin::Pin<
                     Box<dyn std::future::Future<Output = Result<Vec<ParameterInfo>>> + Send>,
                 >
         }),
+        processor_loader: Some(std::sync::Arc::new(move |engine_dir: PathBuf| {
+            Box::pin(load_processors_from_dylib(engine_dir))
+                as std::pin::Pin<
+                    Box<dyn std::future::Future<Output = Result<Vec<ProcessorInfo>>> + Send>,
+                >
+        })),
     };
 
     let dev_session = runtime.block_on(async {
@@ -1139,8 +1226,6 @@ fn kill_process(child: &mut GroupChild) {
 /// infrastructure: `find_plugin_dylib`, `extract_params_subprocess`,
 /// and `create_temp_dylib_copy`.
 async fn load_parameters_from_dylib(engine_dir: PathBuf) -> Result<Vec<ParameterInfo>> {
-    use crate::project::param_extract::{extract_params_subprocess, DEFAULT_EXTRACT_TIMEOUT};
-
     println!("  {} Finding plugin dylib...", style("→").dim());
     let lib_path =
         find_plugin_dylib(&engine_dir).context("Failed to find plugin dylib after rebuild")?;
@@ -1154,9 +1239,12 @@ async fn load_parameters_from_dylib(engine_dir: PathBuf) -> Result<Vec<Parameter
         "  {} Loading parameters via subprocess...",
         style("→").dim()
     );
-    let params = extract_params_subprocess(&temp_path, DEFAULT_EXTRACT_TIMEOUT)
-        .await
-        .with_context(|| format!("Failed to extract parameters from: {}", temp_path.display()))?;
+    let params = crate::project::param_extract::extract_params_subprocess(
+        &temp_path,
+        crate::project::param_extract::DEFAULT_EXTRACT_TIMEOUT,
+    )
+    .await
+    .with_context(|| format!("Failed to extract parameters from: {}", temp_path.display()))?;
     println!(
         "  {} Loaded {} parameters via subprocess",
         style("→").dim(),
@@ -1167,6 +1255,39 @@ async fn load_parameters_from_dylib(engine_dir: PathBuf) -> Result<Vec<Parameter
     let _ = std::fs::remove_file(&temp_path);
 
     Ok(params)
+}
+
+/// Load processors from the rebuilt dylib via subprocess isolation.
+async fn load_processors_from_dylib(engine_dir: PathBuf) -> Result<Vec<ProcessorInfo>> {
+    println!("  {} Finding plugin dylib...", style("→").dim());
+    let lib_path =
+        find_plugin_dylib(&engine_dir).context("Failed to find plugin dylib after rebuild")?;
+    println!("  {} Found: {}", style("→").dim(), lib_path.display());
+
+    println!("  {} Copying to temp location...", style("→").dim());
+    let temp_path = create_temp_dylib_copy(&lib_path)?;
+    println!("  {} Temp: {}", style("→").dim(), temp_path.display());
+
+    println!(
+        "  {} Loading processors via subprocess...",
+        style("→").dim()
+    );
+    let processors = crate::project::param_extract::extract_processors_subprocess(
+        &temp_path,
+        crate::project::param_extract::DEFAULT_EXTRACT_TIMEOUT,
+    )
+    .await
+    .with_context(|| format!("Failed to extract processors from: {}", temp_path.display()))?;
+
+    let _ = std::fs::remove_file(&temp_path);
+
+    println!(
+        "  {} Loaded {} processors via subprocess",
+        style("→").dim(),
+        processors.len()
+    );
+
+    Ok(processors)
 }
 
 /// Create a temporary copy of the dylib with a unique name.

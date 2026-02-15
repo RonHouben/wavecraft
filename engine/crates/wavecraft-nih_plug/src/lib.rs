@@ -22,7 +22,7 @@ pub use wavecraft_processors::{
     OSCILLOSCOPE_FRAME_POINTS, Oscillator, OscillatorParams, OscilloscopeFrameConsumer,
     OscilloscopeFrameProducer, OscilloscopeTap, create_oscilloscope_channel,
 };
-pub use wavecraft_protocol::ParameterInfo;
+pub use wavecraft_protocol::{ParameterInfo, ProcessorInfo};
 
 // Re-export the wavecraft_processor! macro from wavecraft_core
 pub use wavecraft_core::wavecraft_processor;
@@ -92,6 +92,7 @@ pub mod __internal {
     pub use serde_json;
     pub use wavecraft_protocol::ParameterInfo;
     pub use wavecraft_protocol::ParameterType;
+    pub use wavecraft_protocol::ProcessorInfo;
 
     // Dev audio FFI types (used by macro-generated vtable export)
     pub use wavecraft_protocol::DEV_PROCESSOR_VTABLE_VERSION;

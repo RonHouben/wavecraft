@@ -81,6 +81,6 @@ pub use plugin_loader::{PluginLoaderError, PluginParamLoader};
 pub use wavecraft_protocol::{
     GetAllParametersResult, GetParameterParams, GetParameterResult, IpcError, IpcNotification,
     IpcRequest, IpcResponse, MeterUpdateNotification, ParameterChangedNotification, ParameterInfo,
-    ParameterType, RegisterAudioParams, RegisterAudioResult, RequestId, SetParameterParams,
-    SetParameterResult,
+    ParameterType, ProcessorInfo, RegisterAudioParams, RegisterAudioResult, RequestId,
+    SetParameterParams, SetParameterResult,
 };

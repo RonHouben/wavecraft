@@ -229,6 +229,10 @@ fn parse_signal_chain_processors(signal: &Expr) -> Result<Vec<Type>> {
     Ok(processors.into_iter().collect())
 }
 
+fn processor_id_from_type(processor_type: &Type) -> String {
+    type_prefix(processor_type)
+}
+
 pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
     let plugin_def = parse_macro_input!(input as PluginDef);
 
@@ -253,6 +257,15 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
                 params.extend(specs
                     .iter()
                     .map(|spec| #krate::__internal::param_spec_to_info(spec, #id_prefix)));
+            }
+        }
+    });
+
+    let processor_info_entries = signal_processors.iter().map(|processor_type| {
+        let processor_id = processor_id_from_type(processor_type);
+        quote! {
+            #krate::__internal::ProcessorInfo {
+                id: #processor_id.to_string(),
             }
         }
     });
@@ -688,6 +701,27 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
                 .unwrap_or(::std::ptr::null_mut())
         }
 
+        /// Returns JSON-serialized processor metadata.
+        ///
+        /// This function is called by `wavecraft start` to discover processor IDs
+        /// from the plugin signal chain at dev/build time.
+        ///
+        /// # Safety
+        /// The returned pointer must be freed with `wavecraft_free_string`.
+        #[unsafe(no_mangle)]
+        pub extern "C" fn wavecraft_get_processors_json() -> *mut ::std::ffi::c_char {
+            let processors: ::std::vec::Vec<#krate::__internal::ProcessorInfo> = vec![
+                #(#processor_info_entries),*
+            ];
+
+            let json = #krate::__internal::serde_json::to_string(&processors)
+                .unwrap_or_else(|_| "[]".to_string());
+
+            ::std::ffi::CString::new(json)
+                .map(|s| s.into_raw())
+                .unwrap_or(::std::ptr::null_mut())
+        }
+
         /// Frees a string returned by `wavecraft_get_params_json`.
         ///
         /// # Safety
@@ -799,4 +833,35 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
     };
 
     TokenStream::from(expanded)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{parse_signal_chain_processors, processor_id_from_type};
+    use syn::{Expr, Type, parse_quote};
+
+    #[test]
+    fn parses_signal_chain_processor_types() {
+        let signal: Expr = parse_quote!(SignalChain![Oscillator, InputGain, OutputGain]);
+
+        let processors = parse_signal_chain_processors(&signal).expect("signal chain should parse");
+
+        assert_eq!(processors.len(), 3);
+    }
+
+    #[test]
+    fn derives_snake_case_processor_id_from_type_name() {
+        let processor_type: Type = parse_quote!(OscilloscopeTap);
+        let id = processor_id_from_type(&processor_type);
+
+        assert_eq!(id, "oscilloscope_tap");
+    }
+
+    #[test]
+    fn derives_id_from_path_terminal_segment() {
+        let processor_type: Type = parse_quote!(my::dsp::InputGain);
+        let id = processor_id_from_type(&processor_type);
+
+        assert_eq!(id, "input_gain");
+    }
 }

@@ -27,6 +27,6 @@ pub use ipc::{
     MeterFrame, MeterUpdateNotification, NOTIFICATION_AUDIO_STATUS_CHANGED,
     NOTIFICATION_METER_UPDATE, NOTIFICATION_PARAMETER_CHANGED, OscilloscopeChannelView,
     OscilloscopeFrame, OscilloscopeTriggerMode, ParameterChangedNotification, ParameterInfo,
-    ParameterType, RegisterAudioParams, RegisterAudioResult, RequestId, RequestResizeParams,
-    RequestResizeResult, SetParameterParams, SetParameterResult,
+    ParameterType, ProcessorInfo, RegisterAudioParams, RegisterAudioResult, RequestId,
+    RequestResizeParams, RequestResizeResult, SetParameterParams, SetParameterResult,
 };

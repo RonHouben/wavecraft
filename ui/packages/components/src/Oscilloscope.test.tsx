@@ -4,10 +4,12 @@ import { Oscilloscope } from './Oscilloscope';
 
 const mockUseConnectionStatus = vi.hoisted(() => vi.fn());
 const mockUseOscilloscopeFrame = vi.hoisted(() => vi.fn());
+const mockUseHasProcessor = vi.hoisted(() => vi.fn());
 
 vi.mock('@wavecraft/core', () => ({
   useConnectionStatus: mockUseConnectionStatus,
   useOscilloscopeFrame: mockUseOscilloscopeFrame,
+  useHasProcessor: mockUseHasProcessor,
 }));
 
 describe('Oscilloscope', () => {
@@ -25,6 +27,7 @@ describe('Oscilloscope', () => {
     } as unknown as CanvasRenderingContext2D);
 
     mockUseConnectionStatus.mockReturnValue({ connected: true, transport: 'websocket' });
+    mockUseHasProcessor.mockReturnValue(true);
     mockUseOscilloscopeFrame.mockReturnValue({
       points_l: new Array(1024).fill(0).map((_, idx) => Math.sin((idx / 1024) * Math.PI * 2)),
       points_r: new Array(1024).fill(0).map((_, idx) => Math.cos((idx / 1024) * Math.PI * 2)),
@@ -42,6 +45,7 @@ describe('Oscilloscope', () => {
   it('defaults to overlay channel view', () => {
     render(<Oscilloscope />);
     expect(screen.getByTestId('osc-channel-view')).toHaveValue('overlay');
+    expect(mockUseHasProcessor).toHaveBeenCalledWith('oscilloscope_tap');
   });
 
   it('supports channel view switching', () => {

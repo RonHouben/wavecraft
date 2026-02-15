@@ -241,7 +241,11 @@ fn refresh_param_codegen_caches_if_needed(
         ));
     }
 
-    let sidecar_candidates = sidecar_cache_candidates(&sdk_engine_dir);
+    let mut sidecar_candidates = sidecar_cache_candidates(&sdk_engine_dir, "wavecraft-params.json");
+    sidecar_candidates.extend(sidecar_cache_candidates(
+        &sdk_engine_dir,
+        "wavecraft-processors.json",
+    ));
     let existing_sidecars: Vec<PathBuf> = sidecar_candidates
         .into_iter()
         .filter(|path| path.is_file())
@@ -350,36 +354,40 @@ fn refresh_param_codegen_caches_if_needed(
         })?;
     }
 
+    let generated_processors = sdk_ui_dir
+        .join("src")
+        .join("generated")
+        .join("processors.ts");
+    if generated_processors.is_file() {
+        if verbose {
+            print_status(&format!(
+                "Preflight: removing stale generated processor types {}",
+                generated_processors.display()
+            ));
+        }
+        fs::remove_file(&generated_processors).with_context(|| {
+            format!(
+                "Failed to remove stale generated processor types {}",
+                generated_processors.display()
+            )
+        })?;
+    }
+
     Ok(PreflightResult::refreshed(format!(
         "invalidated {} stale sidecar cache file(s)",
         removed_sidecars.len()
     )))
 }
 
-fn sidecar_cache_candidates(engine_dir: &Path) -> Vec<PathBuf> {
+fn sidecar_cache_candidates(engine_dir: &Path, file_name: &str) -> Vec<PathBuf> {
     let mut caches = Vec::with_capacity(3);
-    caches.push(
-        engine_dir
-            .join("target")
-            .join("debug")
-            .join("wavecraft-params.json"),
-    );
+    caches.push(engine_dir.join("target").join("debug").join(file_name));
 
     if let Some(parent) = engine_dir.parent() {
-        caches.push(
-            parent
-                .join("target")
-                .join("debug")
-                .join("wavecraft-params.json"),
-        );
+        caches.push(parent.join("target").join("debug").join(file_name));
 
         if let Some(grand_parent) = parent.parent() {
-            caches.push(
-                grand_parent
-                    .join("target")
-                    .join("debug")
-                    .join("wavecraft-params.json"),
-            );
+            caches.push(grand_parent.join("target").join("debug").join(file_name));
         }
     }
 
@@ -570,7 +578,7 @@ mod tests {
     #[test]
     fn sidecar_cache_candidates_cover_all_expected_locations() {
         let engine_dir = PathBuf::from("/tmp/wavecraft/sdk-template/engine");
-        let candidates = sidecar_cache_candidates(&engine_dir);
+        let candidates = sidecar_cache_candidates(&engine_dir, "wavecraft-params.json");
 
         assert_eq!(candidates.len(), 3);
         assert!(candidates[0].ends_with("sdk-template/engine/target/debug/wavecraft-params.json"));

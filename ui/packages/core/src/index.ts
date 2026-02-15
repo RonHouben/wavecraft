@@ -42,6 +42,12 @@ export type {
 } from './types/parameters';
 
 export type {
+  // Processor types
+  ProcessorId,
+  ProcessorIdMap,
+} from './types/processors';
+
+export type {
   // Metering types
   MeterFrame,
   GetMeterFrameResult,
@@ -111,9 +117,14 @@ export { useAudioStatus } from './hooks/useAudioStatus';
 export type { UseAudioStatusResult } from './hooks/useAudioStatus';
 
 export { useRequestResize } from './hooks/useRequestResize';
+export { useHasProcessor } from './hooks/useHasProcessor';
+export { useAvailableProcessors } from './hooks/useAvailableProcessors';
 
 export { requestResize, useWindowResizeSync } from './hooks/useWindowResizeSync';
 export type { RequestResizeParams, RequestResizeResult } from './hooks/useWindowResizeSync';
+
+// Runtime processor registry (used by generated processors module)
+export { registerAvailableProcessors } from './processors/registry';
 
 // =============================================================================
 // Metering API
