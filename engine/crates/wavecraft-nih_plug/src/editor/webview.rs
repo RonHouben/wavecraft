@@ -14,6 +14,8 @@ use nih_plug::prelude::*;
 use wavecraft_bridge::IpcHandler;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use wavecraft_metering::MeterConsumer;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+use wavecraft_processors::OscilloscopeFrameConsumer;
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use super::bridge::PluginEditorBridge;
@@ -56,6 +58,8 @@ pub struct WebViewConfig<P: Params> {
     pub height: u32,
     /// Optional meter consumer for audio metering
     pub meter_consumer: Option<MeterConsumer>,
+    /// Optional oscilloscope consumer for waveform snapshots
+    pub oscilloscope_consumer: Option<OscilloscopeFrameConsumer>,
     /// Shared editor size - updated on resize requests
     pub editor_size: Arc<Mutex<(u32, u32)>>,
 }
@@ -97,9 +101,16 @@ pub fn create_ipc_handler<P: Params>(
     params: Arc<P>,
     context: Arc<dyn GuiContext>,
     meter_consumer: Option<MeterConsumer>,
+    oscilloscope_consumer: Option<OscilloscopeFrameConsumer>,
     editor_size: Arc<Mutex<(u32, u32)>>,
 ) -> IpcHandler<PluginEditorBridge<P>> {
-    let bridge = PluginEditorBridge::new(params, context, meter_consumer, editor_size);
+    let bridge = PluginEditorBridge::new(
+        params,
+        context,
+        meter_consumer,
+        oscilloscope_consumer,
+        editor_size,
+    );
     IpcHandler::new(bridge)
 }
 

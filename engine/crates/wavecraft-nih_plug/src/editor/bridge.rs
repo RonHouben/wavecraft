@@ -13,6 +13,8 @@ use wavecraft_bridge::{BridgeError, ParameterHost};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use wavecraft_metering::MeterConsumer;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
+use wavecraft_processors::OscilloscopeFrameConsumer;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use wavecraft_protocol::{AudioRuntimeStatus, ParameterInfo, ParameterType};
 
 /// Bridge between nih-plug and the IPC handler.
@@ -29,6 +31,8 @@ pub struct PluginEditorBridge<P: Params> {
     context: Arc<dyn GuiContext>,
     /// Optional meter consumer - may be None if metering is disabled
     meter_consumer: Option<Arc<Mutex<MeterConsumer>>>,
+    /// Optional oscilloscope consumer - may be None if oscilloscope is disabled
+    oscilloscope_consumer: Option<Arc<Mutex<OscilloscopeFrameConsumer>>>,
     /// Shared editor size - updated when resize is requested
     editor_size: Arc<Mutex<(u32, u32)>>,
 }
@@ -40,12 +44,14 @@ impl<P: Params> PluginEditorBridge<P> {
         params: Arc<P>,
         context: Arc<dyn GuiContext>,
         meter_consumer: Option<MeterConsumer>,
+        oscilloscope_consumer: Option<OscilloscopeFrameConsumer>,
         editor_size: Arc<Mutex<(u32, u32)>>,
     ) -> Self {
         Self {
             params,
             context,
             meter_consumer: meter_consumer.map(|c| Arc::new(Mutex::new(c))),
+            oscilloscope_consumer: oscilloscope_consumer.map(|c| Arc::new(Mutex::new(c))),
             editor_size,
         }
     }
@@ -140,6 +146,14 @@ impl<P: Params> ParameterHost for PluginEditorBridge<P> {
         let consumer = self.meter_consumer.as_ref()?;
         let mut consumer = consumer.lock().unwrap();
         consumer.read_latest()
+    }
+
+    fn get_oscilloscope_frame(&self) -> Option<wavecraft_protocol::OscilloscopeFrame> {
+        let consumer = self.oscilloscope_consumer.as_ref()?;
+        let mut consumer = consumer.lock().unwrap();
+        consumer
+            .read_latest()
+            .map(|frame| frame.to_protocol_frame())
     }
 
     fn request_resize(&self, width: u32, height: u32) -> bool {
@@ -254,8 +268,13 @@ mod tests {
     fn get_parameter_returns_plain_frequency_range_and_default() {
         let params = Arc::new(TestParams::default());
         let context = Arc::new(MockGuiContext::new(true));
-        let bridge =
-            PluginEditorBridge::new(params, context, None, Arc::new(Mutex::new((800, 600))));
+        let bridge = PluginEditorBridge::new(
+            params,
+            context,
+            None,
+            None,
+            Arc::new(Mutex::new((800, 600))),
+        );
 
         let frequency = bridge
             .get_parameter("freq")
@@ -287,6 +306,7 @@ mod tests {
         let bridge = PluginEditorBridge::new(
             params,
             context.clone(),
+            None,
             None,
             Arc::new(Mutex::new((800, 600))),
         );

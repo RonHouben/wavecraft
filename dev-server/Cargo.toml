@@ -11,6 +11,7 @@ repository = "https://github.com/RonHouben/wavecraft"
 # Engine crates
 wavecraft-bridge = { path = "../engine/crates/wavecraft-bridge", version = "0.12.6" }
 wavecraft-protocol = { path = "../engine/crates/wavecraft-protocol", version = "0.12.6" }
+wavecraft-processors = { path = "../engine/crates/wavecraft-processors", version = "0.12.6", optional = true }
 
 # Serialization
 serde_json = "1.0"
@@ -50,4 +51,4 @@ tempfile = "3.8"
 
 [features]
 default = ["audio"]
-audio = ["cpal", "rtrb"]
+audio = ["cpal", "rtrb", "wavecraft-processors"]

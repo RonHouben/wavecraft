@@ -317,9 +317,12 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
         pub struct __WavecraftPlugin {
             params: ::std::sync::Arc<__WavecraftParams>,
             processor: __ProcessorType,
+            oscilloscope_tap: #krate::OscilloscopeTap,
             meter_producer: #krate::MeterProducer,
             #[cfg(any(target_os = "macos", target_os = "windows"))]
             meter_consumer: ::std::sync::Mutex<::std::option::Option<#krate::MeterConsumer>>,
+            #[cfg(any(target_os = "macos", target_os = "windows"))]
+            oscilloscope_consumer: ::std::sync::Mutex<::std::option::Option<#krate::OscilloscopeFrameConsumer>>,
         }
 
         /// Generated params struct.
@@ -410,12 +413,17 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
             fn default() -> Self {
                 let (meter_producer, _meter_consumer) =
                     #krate::create_meter_channel(64);
+                let (oscilloscope_producer, _oscilloscope_consumer) =
+                    #krate::create_oscilloscope_channel(8);
                 Self {
                     params: ::std::sync::Arc::new(__WavecraftParams::default()),
                     processor: <__ProcessorType as ::std::default::Default>::default(),
+                    oscilloscope_tap: #krate::OscilloscopeTap::with_output(oscilloscope_producer),
                     meter_producer,
                     #[cfg(any(target_os = "macos", target_os = "windows"))]
                     meter_consumer: ::std::sync::Mutex::new(::std::option::Option::Some(_meter_consumer)),
+                    #[cfg(any(target_os = "macos", target_os = "windows"))]
+                    oscilloscope_consumer: ::std::sync::Mutex::new(::std::option::Option::Some(_oscilloscope_consumer)),
                 }
             }
         }
@@ -458,9 +466,15 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
                         .lock()
                         .expect("meter_consumer mutex poisoned - previous panic in editor thread")
                         .take();
+                    let oscilloscope_consumer = self
+                        .oscilloscope_consumer
+                        .lock()
+                        .expect("oscilloscope_consumer mutex poisoned - previous panic in editor thread")
+                        .take();
                     #krate::editor::create_webview_editor(
                         self.params.clone(),
                         meter_consumer,
+                        oscilloscope_consumer,
                         800,
                         600,
                     )
@@ -478,10 +492,19 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
                 _buffer_config: &#krate::__nih::BufferConfig,
                 _context: &mut impl #krate::__nih::InitContext<Self>,
             ) -> bool {
+                #krate::Processor::set_sample_rate(
+                    &mut self.processor,
+                    _buffer_config.sample_rate,
+                );
+                self.oscilloscope_tap
+                    .set_sample_rate_hz(_buffer_config.sample_rate);
                 true
             }
 
-            fn reset(&mut self) {}
+            fn reset(&mut self) {
+                #krate::Processor::reset(&mut self.processor);
+                #krate::Processor::reset(&mut self.oscilloscope_tap);
+            }
 
             fn process(
                 &mut self,
@@ -559,6 +582,18 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
                 }
                 if channels >= 2 {
                     peak_right = buffer.as_slice()[1].iter().map(|&s| s.abs()).fold(0.0, f32::max);
+                }
+
+                if channels >= 1 {
+                    let left_snapshot: ::std::vec::Vec<f32> = buffer.as_slice()[0].to_vec();
+                    let right_snapshot: ::std::vec::Vec<f32> = if channels >= 2 {
+                        buffer.as_slice()[1].to_vec()
+                    } else {
+                        left_snapshot.clone()
+                    };
+
+                    self.oscilloscope_tap
+                        .capture_stereo(&left_snapshot, &right_snapshot);
                 }
 
                 let frame = #krate::MeterFrame {

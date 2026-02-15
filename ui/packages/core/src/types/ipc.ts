@@ -77,6 +77,7 @@ export interface GetAudioStatusResult {
 }
 
 export const METHOD_GET_AUDIO_STATUS = 'getAudioStatus';
+export const METHOD_GET_OSCILLOSCOPE_FRAME = 'getOscilloscopeFrame';
 export const NOTIFICATION_AUDIO_STATUS_CHANGED = 'audioStatusChanged';
 
 // ============================================================================

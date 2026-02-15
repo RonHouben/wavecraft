@@ -105,6 +105,18 @@ export class MockTransport implements Transport {
           },
         };
 
+      case 'getOscilloscopeFrame':
+        return {
+          frame: {
+            points_l: new Array(1024).fill(0),
+            points_r: new Array(1024).fill(0),
+            sample_rate: 44100,
+            timestamp: Date.now(),
+            no_signal: true,
+            trigger_mode: 'risingZeroCrossing',
+          },
+        };
+
       case 'requestResize':
         return { accepted: true };
 

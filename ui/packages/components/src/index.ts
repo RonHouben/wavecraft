@@ -15,6 +15,7 @@ export { VersionBadge } from './VersionBadge';
 export { ConnectionStatus } from './ConnectionStatus';
 export { LatencyMonitor } from './LatencyMonitor';
 export { OscillatorControl } from './OscillatorControl';
+export { Oscilloscope } from './Oscilloscope';
 
 // Resize components
 export { ResizeHandle } from './ResizeHandle';

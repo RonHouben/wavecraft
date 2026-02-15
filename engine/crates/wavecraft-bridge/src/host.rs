@@ -4,7 +4,7 @@
 //! and the actual parameter storage (typically in the plugin or DAW host).
 
 use crate::error::BridgeError;
-use wavecraft_protocol::{AudioRuntimeStatus, MeterFrame, ParameterInfo};
+use wavecraft_protocol::{AudioRuntimeStatus, MeterFrame, OscilloscopeFrame, ParameterInfo};
 
 /// Trait for objects that store and manage parameters.
 ///
@@ -21,7 +21,9 @@ use wavecraft_protocol::{AudioRuntimeStatus, MeterFrame, ParameterInfo};
 ///
 /// ```rust,no_run
 /// use wavecraft_bridge::{BridgeError, ParameterHost};
-/// use wavecraft_protocol::{AudioRuntimeStatus, MeterFrame, ParameterInfo, ParameterType};
+/// use wavecraft_protocol::{
+///     AudioRuntimeStatus, MeterFrame, OscilloscopeFrame, ParameterInfo, ParameterType,
+/// };
 /// use std::sync::{Arc, Mutex};
 ///
 /// struct MyHost {
@@ -65,6 +67,10 @@ use wavecraft_protocol::{AudioRuntimeStatus, MeterFrame, ParameterInfo};
 ///     }
 ///
 ///     fn get_meter_frame(&self) -> Option<MeterFrame> {
+///         None
+///     }
+///
+///     fn get_oscilloscope_frame(&self) -> Option<OscilloscopeFrame> {
 ///         None
 ///     }
 ///
@@ -120,6 +126,15 @@ pub trait ParameterHost: Send + Sync {
     /// The latest meter data, or `None` if metering is not available.
     fn get_meter_frame(&self) -> Option<MeterFrame>;
 
+    /// Get the latest oscilloscope frame for UI visualization.
+    ///
+    /// Returns waveform snapshot data for display in the oscilloscope UI.
+    /// This is typically polled at render cadence (e.g., requestAnimationFrame).
+    ///
+    /// # Returns
+    /// The latest oscilloscope frame, or `None` if no frame is available.
+    fn get_oscilloscope_frame(&self) -> Option<OscilloscopeFrame>;
+
     /// Request resize of the editor window.
     ///
     /// Asks the host (DAW or standalone window manager) to resize the plugin UI.
@@ -160,6 +175,10 @@ impl<T: ParameterHost> ParameterHost for std::sync::Arc<T> {
 
     fn get_meter_frame(&self) -> Option<MeterFrame> {
         (**self).get_meter_frame()
+    }
+
+    fn get_oscilloscope_frame(&self) -> Option<OscilloscopeFrame> {
+        (**self).get_oscilloscope_frame()
     }
 
     fn request_resize(&self, width: u32, height: u32) -> bool {

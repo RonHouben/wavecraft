@@ -64,6 +64,27 @@ describe('IpcBridge with MockTransport', () => {
     expect(result).toEqual({ accepted: true });
   });
 
+  it('should return mock oscilloscope frame', async (): Promise<void> => {
+    interface OscilloscopeFrameResponse {
+      frame: {
+        points_l: number[];
+        points_r: number[];
+        sample_rate: number;
+        timestamp: number;
+        no_signal: boolean;
+        trigger_mode: string;
+      };
+    }
+
+    const bridge = IpcBridge.getInstance();
+    const result = await bridge.invoke<OscilloscopeFrameResponse>('getOscilloscopeFrame');
+
+    expect(result).toHaveProperty('frame');
+    expect(result.frame.points_l).toHaveLength(1024);
+    expect(result.frame.points_r).toHaveLength(1024);
+    expect(result.frame).toHaveProperty('trigger_mode', 'risingZeroCrossing');
+  });
+
   it('should return no-op cleanup function for event listeners', (): void => {
     const bridge = IpcBridge.getInstance();
     const unsubscribe = bridge.on('paramUpdate', (): void => {});

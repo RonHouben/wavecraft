@@ -489,10 +489,10 @@ fn try_start_audio_in_process(
         }
     };
 
-    // Start audio server. Returns a lock-free ring buffer consumer for
-    // meter data (RT-safe: audio thread writes without allocations).
-    let (handle, mut meter_consumer) = match server.start() {
-        Ok((h, c)) => (h, c),
+    // Start audio server. Returns lock-free ring buffer consumers for
+    // meter and oscilloscope data (RT-safe: audio thread writes without allocations).
+    let (handle, mut meter_consumer, mut oscilloscope_consumer) = match server.start() {
+        Ok((h, meter, oscilloscope)) => (h, meter, oscilloscope),
         Err(e) => {
             println!(
                 "{}",
@@ -530,6 +530,10 @@ fn try_start_audio_in_process(
                 )) {
                     ws_handle.broadcast(&json).await;
                 }
+            }
+
+            if let Some(frame) = oscilloscope_consumer.read_latest() {
+                host.set_latest_oscilloscope_frame(frame.to_protocol_frame());
             }
         }
     });

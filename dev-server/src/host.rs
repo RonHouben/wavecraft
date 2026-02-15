@@ -11,7 +11,8 @@ use std::sync::RwLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 use wavecraft_bridge::{BridgeError, InMemoryParameterHost, ParameterHost};
 use wavecraft_protocol::{
-    AudioRuntimePhase, AudioRuntimeStatus, MeterFrame, MeterUpdateNotification, ParameterInfo,
+    AudioRuntimePhase, AudioRuntimeStatus, MeterFrame, MeterUpdateNotification, OscilloscopeFrame,
+    ParameterInfo,
 };
 
 #[cfg(feature = "audio")]
@@ -31,6 +32,7 @@ use crate::audio::atomic_params::AtomicParameterBridge;
 pub struct DevServerHost {
     inner: InMemoryParameterHost,
     latest_meter_frame: Arc<RwLock<Option<MeterFrame>>>,
+    latest_oscilloscope_frame: Arc<RwLock<Option<OscilloscopeFrame>>>,
     audio_status: Arc<RwLock<AudioRuntimeStatus>>,
     #[cfg(feature = "audio")]
     param_bridge: Option<Arc<AtomicParameterBridge>>,
@@ -49,6 +51,7 @@ impl DevServerHost {
     pub fn new(parameters: Vec<ParameterInfo>) -> Self {
         let inner = InMemoryParameterHost::new(parameters);
         let latest_meter_frame = Arc::new(RwLock::new(None));
+        let latest_oscilloscope_frame = Arc::new(RwLock::new(None));
         let audio_status = Arc::new(RwLock::new(AudioRuntimeStatus {
             phase: AudioRuntimePhase::Disabled,
             diagnostic: None,
@@ -60,6 +63,7 @@ impl DevServerHost {
         Self {
             inner,
             latest_meter_frame,
+            latest_oscilloscope_frame,
             audio_status,
             #[cfg(feature = "audio")]
             param_bridge: None,
@@ -77,6 +81,7 @@ impl DevServerHost {
     ) -> Self {
         let inner = InMemoryParameterHost::new(parameters);
         let latest_meter_frame = Arc::new(RwLock::new(None));
+        let latest_oscilloscope_frame = Arc::new(RwLock::new(None));
         let audio_status = Arc::new(RwLock::new(AudioRuntimeStatus {
             phase: AudioRuntimePhase::Disabled,
             diagnostic: None,
@@ -88,6 +93,7 @@ impl DevServerHost {
         Self {
             inner,
             latest_meter_frame,
+            latest_oscilloscope_frame,
             audio_status,
             param_bridge: Some(bridge),
         }
@@ -120,6 +126,15 @@ impl DevServerHost {
             rms_r: update.right_rms,
             timestamp: update.timestamp_us,
         });
+    }
+
+    /// Store the latest oscilloscope frame for polling-based consumers.
+    pub fn set_latest_oscilloscope_frame(&self, frame: OscilloscopeFrame) {
+        let mut oscilloscope = self
+            .latest_oscilloscope_frame
+            .write()
+            .expect("latest_oscilloscope_frame lock poisoned");
+        *oscilloscope = Some(frame);
     }
 
     /// Update the shared audio runtime status.
@@ -159,6 +174,13 @@ impl ParameterHost for DevServerHost {
         self.latest_meter_frame
             .read()
             .expect("latest_meter_frame lock poisoned")
+            .clone()
+    }
+
+    fn get_oscilloscope_frame(&self) -> Option<OscilloscopeFrame> {
+        self.latest_oscilloscope_frame
+            .read()
+            .expect("latest_oscilloscope_frame lock poisoned")
             .clone()
     }
 
@@ -309,6 +331,28 @@ mod tests {
             .expect("audio status should always be present in dev host");
         assert_eq!(stored.phase, status.phase);
         assert_eq!(stored.buffer_size, status.buffer_size);
+    }
+
+    #[test]
+    fn test_get_oscilloscope_frame() {
+        let host = DevServerHost::new(test_params());
+        assert!(host.get_oscilloscope_frame().is_none());
+
+        host.set_latest_oscilloscope_frame(OscilloscopeFrame {
+            points_l: vec![0.1; 1024],
+            points_r: vec![0.2; 1024],
+            sample_rate: 48_000.0,
+            timestamp: 777,
+            no_signal: false,
+            trigger_mode: wavecraft_protocol::OscilloscopeTriggerMode::RisingZeroCrossing,
+        });
+
+        let frame = host
+            .get_oscilloscope_frame()
+            .expect("oscilloscope frame should be populated");
+        assert_eq!(frame.points_l.len(), 1024);
+        assert_eq!(frame.points_r.len(), 1024);
+        assert_eq!(frame.timestamp, 777);
     }
 
     #[tokio::test(flavor = "current_thread")]

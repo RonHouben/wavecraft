@@ -47,6 +47,14 @@ export type {
   GetMeterFrameResult,
 } from './types/metering';
 
+export type {
+  // Oscilloscope types
+  OscilloscopeTriggerMode,
+  OscilloscopeChannelView,
+  OscilloscopeFrame,
+  GetOscilloscopeFrameResult,
+} from './types/oscilloscope';
+
 // IPC error codes
 export {
   ERROR_PARSE,
@@ -57,6 +65,7 @@ export {
   ERROR_PARAM_NOT_FOUND,
   ERROR_PARAM_OUT_OF_RANGE,
   METHOD_GET_AUDIO_STATUS,
+  METHOD_GET_OSCILLOSCOPE_FRAME,
   NOTIFICATION_AUDIO_STATUS_CHANGED,
   isAudioRuntimeStatus,
   isIpcResponse,
@@ -97,6 +106,7 @@ export { useLatencyMonitor } from './hooks/useLatencyMonitor';
 export type { UseLatencyMonitorResult } from './hooks/useLatencyMonitor';
 
 export { useMeterFrame } from './hooks/useMeterFrame';
+export { useOscilloscopeFrame } from './hooks/useOscilloscopeFrame';
 export { useAudioStatus } from './hooks/useAudioStatus';
 export type { UseAudioStatusResult } from './hooks/useAudioStatus';
 
@@ -109,6 +119,7 @@ export type { RequestResizeParams, RequestResizeResult } from './hooks/useWindow
 // Metering API
 // =============================================================================
 export { getMeterFrame } from './meter-ipc';
+export { getOscilloscopeFrame } from './oscilloscope-ipc';
 export { linearToDb, dbToLinear } from './utils/audio-math';
 
 // =============================================================================

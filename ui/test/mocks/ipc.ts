@@ -10,6 +10,7 @@ import type {
   ParameterInfo,
   ParameterValue,
   MeterFrame,
+  OscilloscopeFrame,
   UseParameterResult,
   UseAllParametersResult,
   ConnectionStatus,
@@ -20,6 +21,7 @@ export type {
   ParameterInfo,
   ParameterType,
   MeterFrame,
+  OscilloscopeFrame,
   UseParameterResult,
   UseAllParametersResult,
   ConnectionStatus,
@@ -31,6 +33,7 @@ export type {
 
 const mockParameters = new Map<string, ParameterInfo>();
 let mockMeterFrame: MeterFrame | null = null;
+let mockOscilloscopeFrame: OscilloscopeFrame | null = null;
 
 // ============================================================================
 // Test Control API
@@ -63,6 +66,13 @@ export function setMockMeterFrame(frame: MeterFrame): void {
 }
 
 /**
+ * Set mock oscilloscope frame data for testing
+ */
+export function setMockOscilloscopeFrame(frame: OscilloscopeFrame): void {
+  mockOscilloscopeFrame = frame;
+}
+
+/**
  * Get current mock parameter value
  */
 export function getMockParameter(id: string): ParameterInfo | undefined {
@@ -75,6 +85,7 @@ export function getMockParameter(id: string): ParameterInfo | undefined {
 export function resetMocks(): void {
   mockParameters.clear();
   mockMeterFrame = null;
+  mockOscilloscopeFrame = null;
 }
 
 // ============================================================================
@@ -135,6 +146,21 @@ export function useAllParameters(): UseAllParametersResult {
  */
 export async function getMeterFrame(): Promise<MeterFrame | null> {
   return mockMeterFrame;
+}
+
+/**
+ * Mock implementation of getOscilloscopeFrame
+ */
+export async function getOscilloscopeFrame(): Promise<OscilloscopeFrame | null> {
+  return mockOscilloscopeFrame;
+}
+
+/**
+ * Mock implementation of useOscilloscopeFrame
+ */
+export function useOscilloscopeFrame(): OscilloscopeFrame | null {
+  const [frame] = useState<OscilloscopeFrame | null>(mockOscilloscopeFrame);
+  return frame;
 }
 
 /**

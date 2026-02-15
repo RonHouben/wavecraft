@@ -6,6 +6,7 @@ import {
   ConnectionStatus,
   LatencyMonitor,
   OscillatorControl,
+  Oscilloscope,
 } from '@wavecraft/components';
 
 export function App(): JSX.Element {
@@ -29,6 +30,11 @@ export function App(): JSX.Element {
         <div className="rounded-lg border border-plugin-border bg-plugin-surface p-4">
           <h2 className="mb-3 text-base font-semibold text-gray-200">Output Metering</h2>
           <Meter />
+        </div>
+
+        <div className="rounded-lg border border-plugin-border bg-plugin-surface p-4">
+          <h2 className="mb-3 text-base font-semibold text-gray-200">Oscilloscope</h2>
+          <Oscilloscope />
         </div>
 
         {/* Info Section */}
