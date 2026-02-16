@@ -264,15 +264,15 @@ enum Commands {
 
     /// Check npm package updates in ui/ and sdk-template/ui/
     #[command(
-        about = "Check npm package updates across monorepo npm projects",
+        about = "Check npm package updates (or upgrade them) across monorepo npm projects",
         name = "npm-updates"
     )]
     NpmUpdates {
-        /// Return success even when outdated packages are found (check mode only)
+        /// Return success even when outdated packages are found (check mode only; ignored with --upgrade)
         #[arg(long)]
         allow_updates: bool,
 
-        /// Upgrade npm dependencies in both npm areas instead of checking for outdated packages
+        /// Upgrade npm dependencies in ui/, ui/packages/components/, ui/packages/core/, and sdk-template/ui/
         #[arg(long)]
         upgrade: bool,
     },

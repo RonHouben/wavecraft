@@ -431,6 +431,22 @@ mod cli_tests {
         }
     }
 
+    #[test]
+    fn test_npm_updates_command_allow_updates_with_upgrade_order_swapped() {
+        let cli = parse_args(&["npm-updates", "--allow-updates", "--upgrade"])
+            .expect("Failed to parse npm-updates --allow-updates --upgrade");
+        match cli.command {
+            Some(TestCommands::NpmUpdates {
+                allow_updates,
+                upgrade,
+            }) => {
+                assert!(allow_updates);
+                assert!(upgrade);
+            }
+            _ => panic!("Expected NpmUpdates command"),
+        }
+    }
+
     // =========================================================================
     // Invalid Input Tests
     // =========================================================================
