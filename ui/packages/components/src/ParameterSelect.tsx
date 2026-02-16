@@ -15,7 +15,7 @@ export function ParameterSelect({ id }: Readonly<ParameterSelectProps>): React.J
   const { param, setValue, isLoading, error } = useParameter(id);
 
   useEffect(() => {
-    const hasNoVariants = !param?.variants?.length;
+    const hasNoVariants = !!param && !param.variants?.length;
 
     if (hasNoVariants) {
       logger.warn('Enum parameter has no variants', {
