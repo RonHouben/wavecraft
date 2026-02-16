@@ -413,9 +413,11 @@ jobs:
 
       - name: Create and push git tag
         if: steps.version.outputs.action != 'skip'
+        env:
+          TAG_PUSH_REMOTE: https://x-access-token:${{ secrets.RELEASE_TAG_TOKEN }}@github.com/${{ github.repository }}.git
         run: |
           git tag "wavecraft-cli-v${{ steps.final.outputs.version }}"
-          git push origin "wavecraft-cli-v${{ steps.final.outputs.version }}"
+          git push "$TAG_PUSH_REMOTE" "wavecraft-cli-v${{ steps.final.outputs.version }}"
 
   # ============================================================================
   # Job 3: Publish engine crates to crates.io
@@ -822,7 +824,10 @@ jobs:
 
       - name: Push tags only
         if: steps.version.outputs.action != 'skip'
-        run: git push origin --tags
+        env:
+          TAG_PUSH_REMOTE: https://x-access-token:${{ secrets.RELEASE_TAG_TOKEN }}@github.com/${{ github.repository }}.git
+        run: |
+          git push "$TAG_PUSH_REMOTE" --tags
 
   # ============================================================================
   # Job 3b: Publish dev-server crate to crates.io
@@ -1125,9 +1130,11 @@ jobs:
 
       - name: Create and push git tag
         if: steps.version.outputs.action != 'skip'
+        env:
+          TAG_PUSH_REMOTE: https://x-access-token:${{ secrets.RELEASE_TAG_TOKEN }}@github.com/${{ github.repository }}.git
         run: |
           git tag "wavecraft-dev-server-v${{ steps.final.outputs.version }}"
-          git push origin "wavecraft-dev-server-v${{ steps.final.outputs.version }}"
+          git push "$TAG_PUSH_REMOTE" "wavecraft-dev-server-v${{ steps.final.outputs.version }}"
 
   # ============================================================================
   # Job 4: Prepare npm cohort lockstep target version
@@ -1441,6 +1448,8 @@ jobs:
           exit 1
 
       - name: Create and push git tag (if missing)
+        env:
+          TAG_PUSH_REMOTE: https://x-access-token:${{ secrets.RELEASE_TAG_TOKEN }}@github.com/${{ github.repository }}.git
         run: |
           TARGET="${{ needs.publish-npm-cohort-prepare.outputs.version }}"
           TAG="@wavecraft/core-v$TARGET"
@@ -1449,7 +1458,7 @@ jobs:
             exit 0
           fi
           git tag "$TAG"
-          git push origin "$TAG"
+          git push "$TAG_PUSH_REMOTE" "$TAG"
 
   # ============================================================================
   # Job 6: Publish @wavecraft/components to npm (cohort lockstep)
@@ -1666,6 +1675,8 @@ jobs:
           echo "✅ Cohort verification passed for version $TARGET"
 
       - name: Create and push git tag (if missing)
+        env:
+          TAG_PUSH_REMOTE: https://x-access-token:${{ secrets.RELEASE_TAG_TOKEN }}@github.com/${{ github.repository }}.git
         run: |
           TARGET="${{ needs.publish-npm-cohort-prepare.outputs.version }}"
           TAG="@wavecraft/components-v$TARGET"
@@ -1674,4 +1685,4 @@ jobs:
             exit 0
           fi
           git tag "$TAG"
-          git push origin "$TAG"
+          git push "$TAG_PUSH_REMOTE" "$TAG"
