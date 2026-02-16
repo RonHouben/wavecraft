@@ -78,9 +78,7 @@ pub enum ParamRange {
     /// Enumerated parameter with named variants.
     ///
     /// Index 0 corresponds to the first variant, 1 to the second, etc.
-    Enum {
-        variants: &'static [&'static str],
-    },
+    Enum { variants: &'static [&'static str] },
 }
 
 /// Unit type has no parameters.

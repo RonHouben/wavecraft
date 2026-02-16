@@ -519,7 +519,10 @@ mod tests {
 
         let deserialized: ParameterInfo =
             serde_json::from_str(&json).expect("parameter info should deserialize");
-        assert_eq!(deserialized.variants.expect("variants should exist").len(), 4);
+        assert_eq!(
+            deserialized.variants.expect("variants should exist").len(),
+            4
+        );
     }
 
     #[test]

@@ -107,9 +107,7 @@ pub mod __internal {
     /// ParameterInfo, enabling FFI export of parameter metadata.
     pub fn param_spec_to_info(spec: &ParamSpec, id_prefix: &str) -> ParameterInfo {
         let (min, max, param_type, variants) = match spec.range {
-            ParamRange::Linear { min, max } => {
-                (min as f32, max as f32, ParameterType::Float, None)
-            }
+            ParamRange::Linear { min, max } => (min as f32, max as f32, ParameterType::Float, None),
             ParamRange::Skewed { min, max, .. } => {
                 (min as f32, max as f32, ParameterType::Float, None)
             }

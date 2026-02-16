@@ -325,7 +325,9 @@ mod tests {
                 &test_params_with_waveform(true, waveform_index as f32),
             );
 
-            let peak = left.iter().fold(0.0_f32, |acc, sample| acc.max(sample.abs()));
+            let peak = left
+                .iter()
+                .fold(0.0_f32, |acc, sample| acc.max(sample.abs()));
             assert!(
                 peak > 0.01,
                 "waveform index {waveform_index} should produce signal"
