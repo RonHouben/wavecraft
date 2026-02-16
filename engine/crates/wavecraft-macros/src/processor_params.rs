@@ -6,7 +6,7 @@
 use convert_case::{Case, Casing};
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{Data, DeriveInput, Expr, ExprLit, Fields, Lit, parse_macro_input};
+use syn::{Data, DeriveInput, Expr, ExprLit, Fields, Lit, LitStr, parse_macro_input};
 
 pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
@@ -126,6 +126,7 @@ fn parse_param_attr(field_name: &str, attr: &syn::Attribute) -> syn::Result<Para
     let mut range_min: Option<f64> = None;
     let mut range_max: Option<f64> = None;
     let mut range_factor: Option<f64> = None;
+    let mut variants: Option<Vec<String>> = None;
     let mut default: Option<f64> = None;
     let mut unit: Option<String> = None;
     let mut group: Option<String> = None;
@@ -186,6 +187,30 @@ fn parse_param_attr(field_name: &str, attr: &syn::Attribute) -> syn::Result<Para
                     _ => return Err(meta.error("Expected number for factor")),
                 }
             }
+            "variants" => {
+                let value: Expr = meta.value()?.parse()?;
+                if let Expr::Lit(ExprLit {
+                    lit: Lit::Str(lit_str),
+                    ..
+                }) = value
+                {
+                    let parsed = lit_str
+                        .value()
+                        .split(',')
+                        .map(|value| value.trim())
+                        .filter(|value| !value.is_empty())
+                        .map(|value| value.to_string())
+                        .collect::<Vec<_>>();
+
+                    if parsed.is_empty() {
+                        return Err(meta.error("Variants list cannot be empty"));
+                    }
+
+                    variants = Some(parsed);
+                } else {
+                    return Err(meta.error("Expected string literal for variants"));
+                }
+            }
             "default" => {
                 let value: Expr = meta.value()?.parse()?;
                 match value {
@@ -233,34 +258,92 @@ fn parse_param_attr(field_name: &str, attr: &syn::Attribute) -> syn::Result<Para
         Ok(())
     })?;
 
-    // Validate required fields
-    let min =
-        range_min.ok_or_else(|| syn::Error::new_spanned(attr, "Missing 'range' attribute"))?;
-    let max =
-        range_max.ok_or_else(|| syn::Error::new_spanned(attr, "Missing 'range' attribute"))?;
-    let default_val = default.unwrap_or((min + max) / 2.0);
+    let (range_tokens, default_val) = if let Some(variant_list) = variants {
+        if range_min.is_some() || range_max.is_some() {
+            return Err(syn::Error::new_spanned(
+                attr,
+                "'range' and 'variants' are mutually exclusive",
+            ));
+        }
+
+        if range_factor.is_some() {
+            return Err(syn::Error::new_spanned(
+                attr,
+                "'factor' cannot be used with 'variants'",
+            ));
+        }
+
+        let variant_literals = variant_list
+            .iter()
+            .map(|variant| LitStr::new(variant, proc_macro2::Span::call_site()))
+            .collect::<Vec<_>>();
+
+        let default_val = default.unwrap_or(0.0);
+        if !default_val.is_finite() {
+            return Err(syn::Error::new_spanned(
+                attr,
+                "Enum default must be a finite number",
+            ));
+        }
+
+        let rounded_default = default_val.round();
+        if (default_val - rounded_default).abs() > f64::EPSILON {
+            return Err(syn::Error::new_spanned(
+                attr,
+                "Enum default must be an integer variant index",
+            ));
+        }
+
+        let max_index = variant_list.len().saturating_sub(1) as f64;
+        if rounded_default < 0.0 || rounded_default > max_index {
+            return Err(syn::Error::new_spanned(
+                attr,
+                format!(
+                    "Enum default index out of range: expected 0..={}, got {}",
+                    max_index as usize, rounded_default as i64
+                ),
+            ));
+        }
+
+        (
+            quote! {
+                ::wavecraft::ParamRange::Enum {
+                    variants: &[#(#variant_literals),*],
+                }
+            },
+            rounded_default,
+        )
+    } else {
+        // Validate required fields for non-enum params
+        let min =
+            range_min.ok_or_else(|| syn::Error::new_spanned(attr, "Missing 'range' attribute"))?;
+        let max =
+            range_max.ok_or_else(|| syn::Error::new_spanned(attr, "Missing 'range' attribute"))?;
+
+        let range_tokens = if let Some(factor) = range_factor {
+            quote! {
+                ::wavecraft::ParamRange::Skewed {
+                    min: #min,
+                    max: #max,
+                    factor: #factor,
+                }
+            }
+        } else {
+            quote! {
+                ::wavecraft::ParamRange::Linear {
+                    min: #min,
+                    max: #max,
+                }
+            }
+        };
+
+        (range_tokens, default.unwrap_or((min + max) / 2.0))
+    };
+
     let unit_str = unit.unwrap_or_default();
 
     // Generate display name (Title Case from snake_case)
     let display_name = field_name.to_case(Case::Title);
-
-    // Generate range TokenStream
-    let range_tokens = if let Some(factor) = range_factor {
-        quote! {
-            ::wavecraft::ParamRange::Skewed {
-                min: #min,
-                max: #max,
-                factor: #factor,
-            }
-        }
-    } else {
-        quote! {
-            ::wavecraft::ParamRange::Linear {
-                min: #min,
-                max: #max,
-            }
-        }
-    };
 
     Ok(ParamSpecData {
         name: display_name,
@@ -270,4 +353,41 @@ fn parse_param_attr(field_name: &str, attr: &syn::Attribute) -> syn::Result<Para
         unit: unit_str,
         group,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_param_attr;
+    use syn::parse_quote;
+
+    #[test]
+    fn enum_default_accepts_integer_index_within_bounds() {
+        let attr: syn::Attribute =
+            parse_quote!(#[param(variants = "Sine,Square,Saw", default = 2)]);
+        let spec = parse_param_attr("waveform", &attr).expect("enum attribute should parse");
+
+        assert!((spec.default - 2.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn enum_default_rejects_fractional_value() {
+        let attr: syn::Attribute =
+            parse_quote!(#[param(variants = "Sine,Square,Saw", default = 1.5)]);
+        let err = parse_param_attr("waveform", &attr)
+            .err()
+            .expect("fractional default must fail");
+
+        assert!(err.to_string().contains("must be an integer variant index"));
+    }
+
+    #[test]
+    fn enum_default_rejects_out_of_range_index() {
+        let attr: syn::Attribute =
+            parse_quote!(#[param(variants = "Sine,Square,Saw", default = 3)]);
+        let err = parse_param_attr("waveform", &attr)
+            .err()
+            .expect("out-of-range default must fail");
+
+        assert!(err.to_string().contains("out of range"));
+    }
 }

@@ -20,6 +20,10 @@ vi.mock('./ParameterSlider', () => ({
   ParameterSlider: ({ id }: { id: string }) => <div data-testid={`slider-${id}`} />,
 }));
 
+vi.mock('./ParameterSelect', () => ({
+  ParameterSelect: ({ id }: { id: string }) => <div data-testid={`select-${id}`} />,
+}));
+
 describe('OscillatorControl', () => {
   beforeEach(() => {
     mockUseMeterFrame.mockReturnValue({ peak_l: 0.2, peak_r: 0.1 });
@@ -100,6 +104,7 @@ describe('OscillatorControl', () => {
     render(<OscillatorControl />);
 
     expect(screen.getByTestId('oscillator-control')).toBeInTheDocument();
+    expect(screen.getByTestId('select-oscillator_waveform')).toBeInTheDocument();
     expect(screen.getByTestId('slider-oscillator_frequency')).toBeInTheDocument();
     expect(screen.getByTestId('slider-oscillator_level')).toBeInTheDocument();
   });

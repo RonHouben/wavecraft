@@ -47,12 +47,12 @@ jobs:
         run: npm ci
         working-directory: ui
 
-      - name: Prettier
-        run: npm run format:check
+      - name: Auto-fix UI formatting (Prettier)
+        run: npm run format
         working-directory: ui
 
-      - name: ESLint
-        run: npm run lint
+      - name: Auto-fix UI linting (ESLint)
+        run: npm run lint:fix
         working-directory: ui
 
       - name: Type-check

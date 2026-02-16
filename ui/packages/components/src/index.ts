@@ -9,6 +9,8 @@ export { Meter } from './Meter';
 export { ParameterSlider } from './ParameterSlider';
 export { ParameterGroup } from './ParameterGroup';
 export { ParameterToggle } from './ParameterToggle';
+export { ParameterSelect } from './ParameterSelect';
+export type { ParameterSelectProps } from './ParameterSelect';
 export { VersionBadge } from './VersionBadge';
 
 // Connection and status components

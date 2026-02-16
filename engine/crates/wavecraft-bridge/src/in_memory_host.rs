@@ -149,6 +149,7 @@ impl ParameterHost for InMemoryParameterHost {
             max: param.max,
             unit: param.unit.clone(),
             group: param.group.clone(),
+            variants: param.variants.clone(),
         })
     }
 
@@ -202,6 +203,7 @@ impl ParameterHost for InMemoryParameterHost {
                 max: param.max,
                 unit: param.unit.clone(),
                 group: param.group.clone(),
+                variants: param.variants.clone(),
             })
             .collect()
     }
@@ -264,6 +266,7 @@ mod tests {
                 max: 1.0,
                 unit: Some("dB".to_string()),
                 group: Some("Input".to_string()),
+                variants: None,
             },
             ParameterInfo {
                 id: "mix".to_string(),
@@ -275,6 +278,7 @@ mod tests {
                 max: 1.0,
                 unit: Some("%".to_string()),
                 group: None,
+                variants: None,
             },
         ]
     }
@@ -378,6 +382,7 @@ mod tests {
                 max: 1.0,
                 unit: Some("dB".to_string()),
                 group: Some("Input".to_string()),
+                variants: None,
             },
             ParameterInfo {
                 id: "mix".to_string(),
@@ -389,6 +394,7 @@ mod tests {
                 max: 1.0,
                 unit: Some("%".to_string()),
                 group: None,
+                variants: None,
             },
             ParameterInfo {
                 id: "freq".to_string(),
@@ -400,6 +406,7 @@ mod tests {
                 max: 5_000.0,
                 unit: Some("Hz".to_string()),
                 group: None,
+                variants: None,
             },
         ];
 
@@ -433,6 +440,7 @@ mod tests {
             max: 1.0,
             unit: Some("dB".to_string()),
             group: Some("Input".to_string()),
+            variants: None,
         }];
 
         host.replace_parameters(new_params)
@@ -457,6 +465,7 @@ mod tests {
             max: 5_000.0,
             unit: Some("Hz".to_string()),
             group: Some("Oscillator".to_string()),
+            variants: None,
         }]);
 
         host.set_parameter("oscillator_frequency", 2_000.0)

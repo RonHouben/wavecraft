@@ -392,6 +392,7 @@ mod tests {
             max: 1.0,
             unit: Some("dB".to_string()),
             group: Some("Input".to_string()),
+            variants: None,
         }])
     }
 

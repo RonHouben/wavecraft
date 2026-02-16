@@ -380,6 +380,13 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
                                     max: *max as f32,
                                 }
                             }
+                            ParamRange::Enum { variants } => {
+                                let max = variants.len().saturating_sub(1) as f32;
+                                #krate::__nih::FloatRange::Linear {
+                                    min: 0.0,
+                                    max,
+                                }
+                            }
                         };
 
                         #krate::__nih::FloatParam::new(

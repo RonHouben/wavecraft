@@ -69,6 +69,8 @@ export interface ParameterInfo {
   max: number;
   unit?: string;
   group?: string;
+  /** Variant labels for enum parameters (e.g., ["Sine", "Square", "Saw", "Triangle"]). */
+  variants?: string[];
 }
 
 // getParameter
