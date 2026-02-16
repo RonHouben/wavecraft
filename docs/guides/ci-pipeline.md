@@ -457,9 +457,12 @@ Since no commits are pushed to `main`, parallel job conflicts for version bumps 
 
 ### Secrets Required
 
-| Secret         | Purpose                                    |
-| -------------- | ------------------------------------------ |
-| `GITHUB_TOKEN` | Commit version bumps + git push (built-in) |
+| Secret              | Purpose                                                       |
+| ------------------- | ------------------------------------------------------------- |
+| `GITHUB_TOKEN`      | Commit version bumps + git push (built-in)                    |
+| `RELEASE_TAG_TOKEN` | Fine-grained token used only for tag push commands in CD jobs |
+
+Tag push authentication is performed per command using an authenticated remote URL. No persistent git credential rewrite or git config mutation is used.
 
 **Note:** crates.io publishing uses OIDC trusted publishing (no `CARGO_REGISTRY_TOKEN` required).
 
