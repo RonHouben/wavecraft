@@ -61,6 +61,21 @@ mod cli_tests {
             #[arg(long)]
             upgrade: bool,
         },
+
+        #[command(name = "sync-ui-versions")]
+        SyncUiVersions {
+            #[arg(long, conflicts_with = "apply")]
+            check: bool,
+
+            #[arg(long, conflicts_with = "check")]
+            apply: bool,
+
+            #[arg(long)]
+            allow_minor: bool,
+
+            #[arg(long)]
+            allow_major: bool,
+        },
     }
 
     // Helper to parse CLI args for testing
@@ -445,6 +460,87 @@ mod cli_tests {
             }
             _ => panic!("Expected NpmUpdates command"),
         }
+    }
+
+    // =========================================================================
+    // Sync UI Versions Command Tests
+    // =========================================================================
+
+    #[test]
+    fn test_sync_ui_versions_command_default() {
+        let cli = parse_args(&["sync-ui-versions"]).expect("Failed to parse sync-ui-versions");
+        match cli.command {
+            Some(TestCommands::SyncUiVersions {
+                check,
+                apply,
+                allow_minor,
+                allow_major,
+            }) => {
+                assert!(!check);
+                assert!(!apply);
+                assert!(!allow_minor);
+                assert!(!allow_major);
+            }
+            _ => panic!("Expected SyncUiVersions command"),
+        }
+    }
+
+    #[test]
+    fn test_sync_ui_versions_command_check() {
+        let cli = parse_args(&["sync-ui-versions", "--check"])
+            .expect("Failed to parse sync-ui-versions --check");
+        match cli.command {
+            Some(TestCommands::SyncUiVersions { check, apply, .. }) => {
+                assert!(check);
+                assert!(!apply);
+            }
+            _ => panic!("Expected SyncUiVersions command"),
+        }
+    }
+
+    #[test]
+    fn test_sync_ui_versions_command_apply() {
+        let cli = parse_args(&["sync-ui-versions", "--apply"])
+            .expect("Failed to parse sync-ui-versions --apply");
+        match cli.command {
+            Some(TestCommands::SyncUiVersions { check, apply, .. }) => {
+                assert!(!check);
+                assert!(apply);
+            }
+            _ => panic!("Expected SyncUiVersions command"),
+        }
+    }
+
+    #[test]
+    fn test_sync_ui_versions_command_policy_flags() {
+        let cli = parse_args(&[
+            "sync-ui-versions",
+            "--allow-minor",
+            "--allow-major",
+            "--check",
+        ])
+        .expect("Failed to parse sync-ui-versions policy flags");
+
+        match cli.command {
+            Some(TestCommands::SyncUiVersions {
+                check,
+                apply,
+                allow_minor,
+                allow_major,
+            }) => {
+                assert!(check);
+                assert!(!apply);
+                assert!(allow_minor);
+                assert!(allow_major);
+            }
+            _ => panic!("Expected SyncUiVersions command"),
+        }
+    }
+
+    #[test]
+    fn test_sync_ui_versions_command_mode_flags_conflict() {
+        let result = parse_args(&["sync-ui-versions", "--check", "--apply"]);
+        assert!(result.is_err());
     }
 
     // =========================================================================

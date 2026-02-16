@@ -14,6 +14,7 @@ pub mod notarize;
 pub mod npm_updates;
 pub mod release;
 pub mod sign;
+pub mod sync_ui_versions;
 pub mod test;
 pub mod validate_cli_deps;
 pub mod validate_template;
