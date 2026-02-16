@@ -39,6 +39,7 @@ const GAIN_MULTIPLIER_MAX: f32 = 2.0;
 // Strict runtime policy: canonical IDs only (no alias/legacy fallbacks).
 const INPUT_GAIN_PARAM_ID: &str = "input_gain_level";
 const OUTPUT_GAIN_PARAM_ID: &str = "output_gain_level";
+const OSCILLATOR_WAVEFORM_PARAM_ID: &str = "oscillator_waveform";
 
 /// Configuration for audio server.
 #[derive(Debug, Clone)]
@@ -368,6 +369,9 @@ fn apply_output_modifiers(
     // full generic FFI parameter injection is still being implemented.
     let oscillator_frequency = param_bridge.read("oscillator_frequency");
     let oscillator_level = param_bridge.read("oscillator_level");
+    let oscillator_waveform = param_bridge
+        .read(OSCILLATOR_WAVEFORM_PARAM_ID)
+        .unwrap_or(0.0);
 
     if let (Some(frequency), Some(level)) = (oscillator_frequency, oscillator_level) {
         if !sample_rate.is_finite() || sample_rate <= 0.0 {
@@ -394,7 +398,8 @@ fn apply_output_modifiers(
         };
 
         for (left_sample, right_sample) in left.iter_mut().zip(right.iter_mut()) {
-            let sample = (phase * std::f32::consts::TAU).sin() * clamped_level;
+            let sample =
+                generate_runtime_oscillator_sample(phase, oscillator_waveform) * clamped_level;
             *left_sample = sample;
             *right_sample = sample;
 
@@ -408,6 +413,28 @@ fn apply_output_modifiers(
     }
 
     apply_gain(left, right, combined_gain);
+}
+
+fn generate_runtime_oscillator_sample(phase: f32, waveform_index: f32) -> f32 {
+    match waveform_index.round() as i32 {
+        0 => (phase * std::f32::consts::TAU).sin(),
+        1 => {
+            if phase < 0.5 {
+                1.0
+            } else {
+                -1.0
+            }
+        }
+        2 => 2.0 * phase - 1.0,
+        3 => {
+            if phase < 0.5 {
+                4.0 * phase - 1.0
+            } else {
+                -4.0 * phase + 3.0
+            }
+        }
+        _ => (phase * std::f32::consts::TAU).sin(),
+    }
 }
 
 fn read_gain_multiplier(param_bridge: &AtomicParameterBridge, id: &str) -> f32 {
@@ -459,6 +486,7 @@ mod tests {
             min: 0.0,
             max: 1.0,
             group: Some("Oscillator".to_string()),
+            variants: None,
         }])
     }
 
@@ -492,6 +520,7 @@ mod tests {
     fn oscillator_bridge(
         frequency: f32,
         level: f32,
+        waveform: f32,
         enabled: f32,
         input_gain_level: f32,
         output_gain_level: f32,
@@ -507,6 +536,7 @@ mod tests {
                 min: 0.0,
                 max: 1.0,
                 group: Some("Oscillator".to_string()),
+                variants: None,
             },
             ParameterInfo {
                 id: "oscillator_frequency".to_string(),
@@ -518,6 +548,24 @@ mod tests {
                 max: 5_000.0,
                 unit: Some("Hz".to_string()),
                 group: Some("Oscillator".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "oscillator_waveform".to_string(),
+                name: "Waveform".to_string(),
+                param_type: ParameterType::Enum,
+                value: waveform,
+                default: waveform,
+                min: 0.0,
+                max: 3.0,
+                unit: None,
+                group: Some("Oscillator".to_string()),
+                variants: Some(vec![
+                    "Sine".to_string(),
+                    "Square".to_string(),
+                    "Saw".to_string(),
+                    "Triangle".to_string(),
+                ]),
             },
             ParameterInfo {
                 id: "oscillator_level".to_string(),
@@ -529,6 +577,7 @@ mod tests {
                 min: 0.0,
                 max: 1.0,
                 group: Some("Oscillator".to_string()),
+                variants: None,
             },
             ParameterInfo {
                 id: "input_gain_level".to_string(),
@@ -540,6 +589,7 @@ mod tests {
                 min: 0.0,
                 max: 2.0,
                 group: Some("InputGain".to_string()),
+                variants: None,
             },
             ParameterInfo {
                 id: "output_gain_level".to_string(),
@@ -551,13 +601,14 @@ mod tests {
                 min: 0.0,
                 max: 2.0,
                 group: Some("OutputGain".to_string()),
+                variants: None,
             },
         ])
     }
 
     #[test]
     fn output_modifiers_generate_runtime_oscillator_from_frequency_and_level() {
-        let bridge = oscillator_bridge(880.0, 0.75, 1.0, 1.0, 1.0);
+        let bridge = oscillator_bridge(880.0, 0.75, 0.0, 1.0, 1.0, 1.0);
         let mut left = [0.0_f32; 128];
         let mut right = [0.0_f32; 128];
         let mut phase = 0.0;
@@ -579,7 +630,7 @@ mod tests {
 
     #[test]
     fn output_modifiers_level_zero_produces_silence() {
-        let bridge = oscillator_bridge(440.0, 0.0, 1.0, 1.0, 1.0);
+        let bridge = oscillator_bridge(440.0, 0.0, 0.0, 1.0, 1.0, 1.0);
         let mut left = [0.1_f32; 64];
         let mut right = [0.1_f32; 64];
         let mut phase = 0.0;
@@ -592,8 +643,8 @@ mod tests {
 
     #[test]
     fn output_modifiers_frequency_change_changes_waveform() {
-        let low_freq_bridge = oscillator_bridge(220.0, 0.5, 1.0, 1.0, 1.0);
-        let high_freq_bridge = oscillator_bridge(1760.0, 0.5, 1.0, 1.0, 1.0);
+        let low_freq_bridge = oscillator_bridge(220.0, 0.5, 0.0, 1.0, 1.0, 1.0);
+        let high_freq_bridge = oscillator_bridge(1760.0, 0.5, 0.0, 1.0, 1.0, 1.0);
 
         let mut low_left = [0.0_f32; 256];
         let mut low_right = [0.0_f32; 256];
@@ -628,8 +679,8 @@ mod tests {
 
     #[test]
     fn output_modifiers_apply_input_and_output_gain_levels() {
-        let unity_bridge = oscillator_bridge(880.0, 0.5, 1.0, 1.0, 1.0);
-        let boosted_bridge = oscillator_bridge(880.0, 0.5, 1.0, 1.5, 2.0);
+        let unity_bridge = oscillator_bridge(880.0, 0.5, 0.0, 1.0, 1.0, 1.0);
+        let boosted_bridge = oscillator_bridge(880.0, 0.5, 0.0, 1.0, 1.5, 2.0);
 
         let mut unity_left = [0.0_f32; 256];
         let mut unity_right = [0.0_f32; 256];
@@ -667,6 +718,42 @@ mod tests {
     }
 
     #[test]
+    fn output_modifiers_waveform_change_changes_shape() {
+        let sine_bridge = oscillator_bridge(440.0, 0.5, 0.0, 1.0, 1.0, 1.0);
+        let saw_bridge = oscillator_bridge(440.0, 0.5, 2.0, 1.0, 1.0, 1.0);
+
+        let mut sine_left = [0.0_f32; 256];
+        let mut sine_right = [0.0_f32; 256];
+        let mut saw_left = [0.0_f32; 256];
+        let mut saw_right = [0.0_f32; 256];
+
+        let mut sine_phase = 0.0;
+        let mut saw_phase = 0.0;
+
+        apply_output_modifiers(
+            &mut sine_left,
+            &mut sine_right,
+            &sine_bridge,
+            &mut sine_phase,
+            48_000.0,
+        );
+        apply_output_modifiers(
+            &mut saw_left,
+            &mut saw_right,
+            &saw_bridge,
+            &mut saw_phase,
+            48_000.0,
+        );
+
+        assert_ne!(
+            sine_left, saw_left,
+            "waveform selection should change output shape"
+        );
+        assert_eq!(sine_left, sine_right);
+        assert_eq!(saw_left, saw_right);
+    }
+
+    #[test]
     fn output_modifiers_apply_gain_without_oscillator_params() {
         let bridge = AtomicParameterBridge::new(&[
             ParameterInfo {
@@ -679,6 +766,7 @@ mod tests {
                 min: 0.0,
                 max: 2.0,
                 group: Some("InputGain".to_string()),
+                variants: None,
             },
             ParameterInfo {
                 id: "output_gain_level".to_string(),
@@ -690,6 +778,7 @@ mod tests {
                 min: 0.0,
                 max: 2.0,
                 group: Some("OutputGain".to_string()),
+                variants: None,
             },
         ]);
 
@@ -731,6 +820,7 @@ mod tests {
                 min: 0.0,
                 max: 2.0,
                 group: Some("InputGain".to_string()),
+                variants: None,
             },
             ParameterInfo {
                 id: "outputgain_level".to_string(),
@@ -742,6 +832,7 @@ mod tests {
                 min: 0.0,
                 max: 2.0,
                 group: Some("OutputGain".to_string()),
+                variants: None,
             },
         ]);
 
@@ -770,6 +861,7 @@ mod tests {
                 min: 0.0,
                 max: 2.0,
                 group: Some("InputGain".to_string()),
+                variants: None,
             },
             ParameterInfo {
                 id: "output_gain_gain".to_string(),
@@ -781,6 +873,7 @@ mod tests {
                 min: 0.0,
                 max: 2.0,
                 group: Some("OutputGain".to_string()),
+                variants: None,
             },
         ]);
 
@@ -809,6 +902,7 @@ mod tests {
                 min: 0.0,
                 max: 2.0,
                 group: Some("InputGain".to_string()),
+                variants: None,
             },
             ParameterInfo {
                 id: "inputgain_level".to_string(),
@@ -820,6 +914,7 @@ mod tests {
                 min: 0.0,
                 max: 2.0,
                 group: Some("InputGain".to_string()),
+                variants: None,
             },
             ParameterInfo {
                 id: "output_gain_level".to_string(),
@@ -831,6 +926,7 @@ mod tests {
                 min: 0.0,
                 max: 2.0,
                 group: Some("OutputGain".to_string()),
+                variants: None,
             },
         ]);
 
