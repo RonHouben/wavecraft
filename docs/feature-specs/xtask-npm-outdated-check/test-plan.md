@@ -51,3 +51,32 @@ Validated exit-code contract:
 Feature validation is complete for documented acceptance scope.
 
 **Recommendation:** ✅ Ready for QA.
+
+## Addendum — Re-validation (2026-02-16, QA medium/low follow-up)
+
+- **Date:** 2026-02-16
+- **Branch:** `feature/xtask-npm-outdated-check`
+- **Scope:** Re-run targeted validation after recent fixes for QA medium/low findings.
+- **Environment:** macOS
+
+### Re-validation Matrix
+
+| Command                                            | Expected                                       | Observed                                                             | Exit | Result  |
+| -------------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------- | ---- | ------- |
+| `cargo xtask sync-ui-versions --help`              | Usage/flags displayed                          | Help text printed with `--check`, `--apply`, policy/build flags      | `0`  | ✅ PASS |
+| `cargo xtask sync-ui-versions`                     | Default check mode; aligned state              | `All scoped UI versions are aligned.`                                | `0`  | ✅ PASS |
+| `cargo xtask sync-ui-versions --check`             | Explicit check mode; aligned state             | `All scoped UI versions are aligned.`                                | `0`  | ✅ PASS |
+| `cargo xtask sync-ui-versions --apply`             | Apply mode, no changes when already aligned    | `No changes required. Scoped UI versions are already aligned.`       | `0`  | ✅ PASS |
+| `cargo xtask sync-ui-versions --apply` (run again) | Idempotent no-op                               | Same no-op result as prior apply run                                 | `0`  | ✅ PASS |
+| `cargo xtask sync-ui-versions --check --apply`     | Mutually exclusive flags conflict              | clap error: `the argument '--check' cannot be used with '--apply'`   | `2`  | ✅ PASS |
+| `cargo xtask ci-check`                             | Documentation/Linting/Automated Tests all pass | All phases passed; final output: `All checks passed! Ready to push.` | `0`  | ✅ PASS |
+
+### Additional Notes
+
+- Post-validation git state was clean (`git status --short` returned no file changes).
+- This confirms no behavior drift in `sync-ui-versions` for help/default/check/apply/conflict flows.
+- Apply mode remains idempotent in aligned state.
+
+### Re-validation Verdict
+
+**✅ Ready for QA final sign-off.**
