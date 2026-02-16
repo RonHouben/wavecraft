@@ -5,7 +5,8 @@ model:
   - Claude Opus 4.6 (copilot)
   - Claude Sonnet 4.5 (copilot)
   - GPT-5.3-Codex (copilot)
-tools: ['read', 'search', 'web', 'agent', 'todo', 'memory']
+tools:
+  ['read', 'search', 'web', 'agent', 'todo', 'memory', 'vscode/askQuestions']
 agents: [orchestrator, docwriter, search, coder]
 user-invokable: true
 handoffs:

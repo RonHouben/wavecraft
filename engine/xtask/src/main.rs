@@ -16,6 +16,7 @@
 //! - `au` - Build AU wrapper (macOS only)
 //! - `install` - Install plugins to system directories
 //! - `clean` - Clean build artifacts
+//! - `npm-updates` - Check npm package updates in monorepo npm projects
 //! - `all` - Run full build pipeline
 
 use anyhow::Result;
@@ -260,6 +261,44 @@ enum Commands {
         #[arg(long)]
         keep: bool,
     },
+
+    /// Check npm package updates in ui/ and sdk-template/ui/
+    #[command(
+        about = "Check npm package updates (or upgrade them) across monorepo npm projects",
+        name = "npm-updates"
+    )]
+    NpmUpdates {
+        /// Return success even when outdated packages are found (check mode only; ignored with --upgrade)
+        #[arg(long)]
+        allow_updates: bool,
+
+        /// Upgrade npm dependencies in ui/, ui/packages/components/, ui/packages/core/, and sdk-template/ui/
+        #[arg(long)]
+        upgrade: bool,
+    },
+
+    /// Enforce lockstep UI package versions and template dependency ranges
+    #[command(
+        about = "Check or apply deterministic UI version sync across scoped manifests",
+        name = "sync-ui-versions"
+    )]
+    SyncUiVersions {
+        /// Check mode (non-mutating). This is the default mode.
+        #[arg(long, conflicts_with = "apply")]
+        check: bool,
+
+        /// Apply mode (writes scoped fields to aligned expected values)
+        #[arg(long, conflicts_with = "check")]
+        apply: bool,
+
+        /// Allow minor-version movements in addition to patch updates
+        #[arg(long)]
+        allow_minor: bool,
+
+        /// Allow major-version movements (also allows minor + patch)
+        #[arg(long)]
+        allow_major: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -422,6 +461,46 @@ fn main() -> Result<()> {
                 keep,
             };
             commands::validate_template::run(config)
+        }
+        Some(Commands::NpmUpdates {
+            allow_updates,
+            upgrade,
+        }) => {
+            let config = commands::npm_updates::NpmUpdatesConfig {
+                strict: !allow_updates,
+                upgrade,
+                verbose: cli.verbose,
+            };
+            commands::npm_updates::run(config)
+        }
+        Some(Commands::SyncUiVersions {
+            check,
+            apply,
+            allow_minor,
+            allow_major,
+        }) => {
+            let mode = if apply {
+                commands::sync_ui_versions::SyncMode::Apply
+            } else {
+                // check=true or no mode flag provided => check mode by default
+                let _ = check;
+                commands::sync_ui_versions::SyncMode::Check
+            };
+
+            let config = commands::sync_ui_versions::SyncUiVersionsConfig {
+                mode,
+                allow_minor,
+                allow_major,
+                verbose: cli.verbose,
+            };
+
+            match commands::sync_ui_versions::run(config) {
+                Ok(code) => std::process::exit(code),
+                Err(e) => {
+                    output::print_error(&format!("Error: {:#}", e));
+                    std::process::exit(2);
+                }
+            }
         }
         None => {
             // Default behavior: run nih_plug_xtask for backward compatibility

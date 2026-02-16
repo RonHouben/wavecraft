@@ -40,13 +40,16 @@ Use the following conventions for Rust doc examples:
 
 ### Pre-Push Validation
 
-**Rule:** Always run `cargo xtask ci-check` before pushing changes.
+**Rule:** Always run `cargo xtask ci-check` and `cargo xtask sync-ui-versions --check` before pushing changes.
 
 This command simulates CI checks locally and runs ~26x faster than Docker-based CI:
 
 ```bash
 # Run standard checks (docs, UI build, lint+typecheck, tests — ~1 minute)
 cargo xtask ci-check
+
+# Verify UI workspace dependency/version synchronization
+cargo xtask sync-ui-versions --check
 
 # Run with auto-fix for linting issues
 cargo xtask ci-check --fix
@@ -264,6 +267,7 @@ Linting runs automatically on all PRs via `.github/workflows/lint.yml`:
 
 - Engine linting runs on `macos-latest`
 - UI linting runs on `ubuntu-latest`
+- CI validation includes `cargo xtask sync-ui-versions --check` to enforce UI workspace dependency/version synchronization
 
 ---
 
