@@ -45,7 +45,16 @@ jobs:
         steps.filter.outputs.npm-components == 'true' ||
         (github.event_name == 'workflow_dispatch' && inputs.force-publish-npm-cohort)
         }}
-      dev-server: ${{ steps.filter.outputs.dev-server == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force-publish-dev-server) }}
+      # Compatibility gate: publish dev-server not only on direct dev-server edits,
+      # but also whenever engine/CLI changes can invalidate the published
+      # wavecraft-dev-server ↔ wavecraft-bridge/wavecraft-protocol contract.
+      # Keep force-publish behavior intact.
+      dev-server: ${{
+        steps.filter.outputs.dev-server == 'true' ||
+        steps.filter.outputs.engine == 'true' ||
+        steps.filter.outputs.cli == 'true' ||
+        (github.event_name == 'workflow_dispatch' && inputs.force-publish-dev-server)
+        }}
       any_sdk_changed: ${{ steps.aggregate.outputs.any_sdk_changed }}
     steps:
       - uses: actions/checkout@v4
@@ -804,6 +813,9 @@ jobs:
     needs: [detect-changes, publish-engine]
     if: |
       !cancelled() &&
+      # detect-changes.outputs.dev-server is a compatibility-aware gate (see above):
+      # it is true for direct dev-server edits, engine changes, CLI changes,
+      # or explicit force-publish-dev-server workflow_dispatch runs.
       needs.detect-changes.outputs.dev-server == 'true' &&
       (
         (needs.detect-changes.outputs.engine != 'true' && needs.detect-changes.outputs.cli != 'true') ||
