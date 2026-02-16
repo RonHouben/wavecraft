@@ -21,7 +21,6 @@ export function ParameterSelect({ id }: Readonly<ParameterSelectProps>): React.J
       logger.warn('Enum parameter has no variants', {
         parameterId: id,
       });
-
     }
   }, [param, id]);
 
