@@ -96,4 +96,26 @@ describe('ParameterSelect', () => {
     expect(screen.getByText(/Error:/)).toBeInTheDocument();
     expect(screen.getByText(/Parameter not found/)).toBeInTheDocument();
   });
+
+  it('renders an empty select when enum variants are missing', () => {
+    mockUseParameter.mockReturnValue({
+      param: {
+        id: 'processor_mode',
+        name: 'Mode',
+        type: 'enum',
+        value: 2,
+        default: 1,
+        min: 1,
+        max: 3,
+      } satisfies ParameterInfo,
+      setValue: mockSetValue,
+      isLoading: false,
+      error: null,
+    });
+
+    render(<ParameterSelect id="processor_mode" />);
+
+    const select = screen.getByRole('combobox');
+    expect(select.querySelectorAll('option')).toHaveLength(0);
+  });
 });

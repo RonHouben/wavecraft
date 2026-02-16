@@ -30,7 +30,7 @@ impl Waveform {
 }
 
 /// Generate a single sample for the given waveform at the given phase (0.0–1.0).
-fn generate_sample(waveform: Waveform, phase: f32) -> f32 {
+pub fn generate_waveform_sample(waveform: Waveform, phase: f32) -> f32 {
     match waveform {
         Waveform::Sine => (phase * std::f32::consts::TAU).sin(),
         Waveform::Square => {
@@ -174,7 +174,7 @@ impl Processor for Oscillator {
         for channel in buffer.iter_mut() {
             self.phase = start_phase;
             for sample in channel.iter_mut() {
-                *sample = generate_sample(waveform, self.phase) * params.level;
+                *sample = generate_waveform_sample(waveform, self.phase) * params.level;
 
                 // Advance phase, wrapping at 1.0 to avoid floating-point drift.
                 self.phase += phase_delta;
@@ -237,33 +237,33 @@ mod tests {
 
     #[test]
     fn sine_wave_zero_crossing_and_peak() {
-        assert!((generate_sample(Waveform::Sine, 0.0)).abs() < 1e-5);
-        assert!((generate_sample(Waveform::Sine, 0.25) - 1.0).abs() < 1e-5);
-        assert!((generate_sample(Waveform::Sine, 0.5)).abs() < 1e-5);
-        assert!((generate_sample(Waveform::Sine, 0.75) + 1.0).abs() < 1e-5);
+        assert!((generate_waveform_sample(Waveform::Sine, 0.0)).abs() < 1e-5);
+        assert!((generate_waveform_sample(Waveform::Sine, 0.25) - 1.0).abs() < 1e-5);
+        assert!((generate_waveform_sample(Waveform::Sine, 0.5)).abs() < 1e-5);
+        assert!((generate_waveform_sample(Waveform::Sine, 0.75) + 1.0).abs() < 1e-5);
     }
 
     #[test]
     fn square_wave_values() {
-        assert_eq!(generate_sample(Waveform::Square, 0.0), 1.0);
-        assert_eq!(generate_sample(Waveform::Square, 0.25), 1.0);
-        assert_eq!(generate_sample(Waveform::Square, 0.5), -1.0);
-        assert_eq!(generate_sample(Waveform::Square, 0.75), -1.0);
+        assert_eq!(generate_waveform_sample(Waveform::Square, 0.0), 1.0);
+        assert_eq!(generate_waveform_sample(Waveform::Square, 0.25), 1.0);
+        assert_eq!(generate_waveform_sample(Waveform::Square, 0.5), -1.0);
+        assert_eq!(generate_waveform_sample(Waveform::Square, 0.75), -1.0);
     }
 
     #[test]
     fn saw_wave_values() {
-        assert!((generate_sample(Waveform::Saw, 0.0) + 1.0).abs() < 1e-5);
-        assert!((generate_sample(Waveform::Saw, 0.5)).abs() < 1e-5);
-        assert!((generate_sample(Waveform::Saw, 1.0) - 1.0).abs() < 1e-5);
+        assert!((generate_waveform_sample(Waveform::Saw, 0.0) + 1.0).abs() < 1e-5);
+        assert!((generate_waveform_sample(Waveform::Saw, 0.5)).abs() < 1e-5);
+        assert!((generate_waveform_sample(Waveform::Saw, 1.0) - 1.0).abs() < 1e-5);
     }
 
     #[test]
     fn triangle_wave_values() {
-        assert!((generate_sample(Waveform::Triangle, 0.0) + 1.0).abs() < 1e-5);
-        assert!((generate_sample(Waveform::Triangle, 0.25)).abs() < 1e-5);
-        assert!((generate_sample(Waveform::Triangle, 0.5) - 1.0).abs() < 1e-5);
-        assert!((generate_sample(Waveform::Triangle, 0.75)).abs() < 1e-5);
+        assert!((generate_waveform_sample(Waveform::Triangle, 0.0) + 1.0).abs() < 1e-5);
+        assert!((generate_waveform_sample(Waveform::Triangle, 0.25)).abs() < 1e-5);
+        assert!((generate_waveform_sample(Waveform::Triangle, 0.5) - 1.0).abs() < 1e-5);
+        assert!((generate_waveform_sample(Waveform::Triangle, 0.75)).abs() < 1e-5);
     }
 
     #[test]

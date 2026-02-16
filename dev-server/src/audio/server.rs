@@ -27,7 +27,8 @@ use anyhow::{Context, Result};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, Stream, StreamConfig};
 use wavecraft_processors::{
-    OscilloscopeFrameConsumer, OscilloscopeTap, create_oscilloscope_channel,
+    OscilloscopeFrameConsumer, OscilloscopeTap, Waveform, create_oscilloscope_channel,
+    generate_waveform_sample,
 };
 use wavecraft_protocol::MeterUpdateNotification;
 
@@ -396,10 +397,10 @@ fn apply_output_modifiers(
         } else {
             0.0
         };
+        let waveform = Waveform::from_index(oscillator_waveform);
 
         for (left_sample, right_sample) in left.iter_mut().zip(right.iter_mut()) {
-            let sample =
-                generate_runtime_oscillator_sample(phase, oscillator_waveform) * clamped_level;
+            let sample = generate_waveform_sample(waveform, phase) * clamped_level;
             *left_sample = sample;
             *right_sample = sample;
 
@@ -413,28 +414,6 @@ fn apply_output_modifiers(
     }
 
     apply_gain(left, right, combined_gain);
-}
-
-fn generate_runtime_oscillator_sample(phase: f32, waveform_index: f32) -> f32 {
-    match waveform_index.round() as i32 {
-        0 => (phase * std::f32::consts::TAU).sin(),
-        1 => {
-            if phase < 0.5 {
-                1.0
-            } else {
-                -1.0
-            }
-        }
-        2 => 2.0 * phase - 1.0,
-        3 => {
-            if phase < 0.5 {
-                4.0 * phase - 1.0
-            } else {
-                -4.0 * phase + 3.0
-            }
-        }
-        _ => (phase * std::f32::consts::TAU).sin(),
-    }
 }
 
 fn read_gain_multiplier(param_bridge: &AtomicParameterBridge, id: &str) -> f32 {

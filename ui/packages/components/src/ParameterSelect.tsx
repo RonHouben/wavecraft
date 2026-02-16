@@ -30,8 +30,14 @@ export function ParameterSelect({ id }: Readonly<ParameterSelectProps>): React.J
     );
   }
 
-  const variants = param.variants ?? [];
   const currentIndex = typeof param.value === 'number' ? param.value : 0;
+  const variantOptions = (param.variants ?? []).map((label, index) => ({ value: index, label }));
+
+  if (variantOptions.length === 0) {
+    logger.warn('Enum parameter has no variants', {
+      parameterId: id,
+    });
+  }
 
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>): void => {
     const nextValue = Number(event.currentTarget.value);
@@ -54,9 +60,9 @@ export function ParameterSelect({ id }: Readonly<ParameterSelectProps>): React.J
         onChange={handleChange}
         className="w-full rounded border border-plugin-border bg-plugin-dark px-3 py-2 text-sm text-gray-200 outline-none focus:border-accent"
       >
-        {variants.map((label, index) => (
-          <option key={`${id}-${label}-${index}`} value={index}>
-            {label}
+        {variantOptions.map((option) => (
+          <option key={`${id}-${option.label}-${option.value}`} value={option.value}>
+            {option.label}
           </option>
         ))}
       </select>

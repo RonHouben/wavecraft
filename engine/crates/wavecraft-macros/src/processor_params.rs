@@ -278,13 +278,40 @@ fn parse_param_attr(field_name: &str, attr: &syn::Attribute) -> syn::Result<Para
             .map(|variant| LitStr::new(variant, proc_macro2::Span::call_site()))
             .collect::<Vec<_>>();
 
+        let default_val = default.unwrap_or(0.0);
+        if !default_val.is_finite() {
+            return Err(syn::Error::new_spanned(
+                attr,
+                "Enum default must be a finite number",
+            ));
+        }
+
+        let rounded_default = default_val.round();
+        if (default_val - rounded_default).abs() > f64::EPSILON {
+            return Err(syn::Error::new_spanned(
+                attr,
+                "Enum default must be an integer variant index",
+            ));
+        }
+
+        let max_index = variant_list.len().saturating_sub(1) as f64;
+        if rounded_default < 0.0 || rounded_default > max_index {
+            return Err(syn::Error::new_spanned(
+                attr,
+                format!(
+                    "Enum default index out of range: expected 0..={}, got {}",
+                    max_index as usize, rounded_default as i64
+                ),
+            ));
+        }
+
         (
             quote! {
                 ::wavecraft::ParamRange::Enum {
                     variants: &[#(#variant_literals),*],
                 }
             },
-            default.unwrap_or(0.0),
+            rounded_default,
         )
     } else {
         // Validate required fields for non-enum params
@@ -326,4 +353,41 @@ fn parse_param_attr(field_name: &str, attr: &syn::Attribute) -> syn::Result<Para
         unit: unit_str,
         group,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_param_attr;
+    use syn::parse_quote;
+
+    #[test]
+    fn enum_default_accepts_integer_index_within_bounds() {
+        let attr: syn::Attribute =
+            parse_quote!(#[param(variants = "Sine,Square,Saw", default = 2)]);
+        let spec = parse_param_attr("waveform", &attr).expect("enum attribute should parse");
+
+        assert!((spec.default - 2.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn enum_default_rejects_fractional_value() {
+        let attr: syn::Attribute =
+            parse_quote!(#[param(variants = "Sine,Square,Saw", default = 1.5)]);
+        let err = parse_param_attr("waveform", &attr)
+            .err()
+            .expect("fractional default must fail");
+
+        assert!(err.to_string().contains("must be an integer variant index"));
+    }
+
+    #[test]
+    fn enum_default_rejects_out_of_range_index() {
+        let attr: syn::Attribute =
+            parse_quote!(#[param(variants = "Sine,Square,Saw", default = 3)]);
+        let err = parse_param_attr("waveform", &attr)
+            .err()
+            .expect("out-of-range default must fail");
+
+        assert!(err.to_string().contains("out of range"));
+    }
 }
