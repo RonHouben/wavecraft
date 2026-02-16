@@ -506,7 +506,7 @@ fn parse_semver(raw: &str, path: &Path, key: &str) -> Result<Version> {
 fn parse_caret_baseline(raw: &str, path: &Path, key: &str) -> Result<Version> {
     let Some(without_caret) = raw.strip_prefix('^') else {
         bail!(
-            "Invalid range for {} in {}: '{}' (expected caret baseline like ^0.7.5)",
+            "Invalid range for {} in {}: '{}' (expected caret baseline like ^0.7.29)",
             key,
             path.display(),
             raw

@@ -49,7 +49,7 @@ Safety principles:
 
 Example drift scenario motivating this command:
 
-- `@wavecraft/core` package version: `0.7.5`
+- `@wavecraft/core` package version: `0.7.29`
 - `@wavecraft/components` package version: `0.7.4`
 - `sdk-template/ui/package.json` dependencies still pinned to `^0.7.1`
 
@@ -100,7 +100,7 @@ Invariants:
 ## 9) Version Policy
 
 - Lockstep invariant: `core.version == components.version`.
-- Template dependencies use caret baseline ranges (e.g., `^0.7.5`).
+- Template dependencies use caret baseline ranges (e.g., `^0.7.29`).
 - Default synchronization mode permits patch-only movement.
 - Minor/major transitions require explicit policy flags.
 
@@ -139,7 +139,7 @@ Invariants:
 | Scenario                                         | Expected behavior                                  |                                  Exit code | Notes                                              |
 | ------------------------------------------------ | -------------------------------------------------- | -----------------------------------------: | -------------------------------------------------- |
 | Workspace outdated noise from unrelated packages | Ignore unrelated dependencies                      |                                        0/1 | Drift signal must be limited to strict scoped keys |
-| Semver/range mismatch (`0.7.5` vs `^0.7.4`)      | Normalize by policy in expected state              | 1 in `--check`, 0 in `--apply` after write | Caret handling remains explicit                    |
+| Semver/range mismatch (`0.7.29` vs `^0.7.4`)     | Normalize by policy in expected state              | 1 in `--check`, 0 in `--apply` after write | Caret handling remains explicit                    |
 | Minor/major required but not allowed             | Fail with policy-gating diagnostic                 |                                          2 | User must pass `--allow-minor` / `--allow-major`   |
 | Invalid semver in scoped key                     | Fail fast with key/path detail                     |                                          2 | No writes performed                                |
 | Missing required scoped key                      | Fail fast with manifest path + key                 |                                          2 | Protects deterministic behavior                    |
