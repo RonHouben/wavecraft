@@ -392,6 +392,7 @@ mod tests {
             max: 1.0,
             unit: Some("dB".to_string()),
             group: Some("Main".to_string()),
+            variants: None,
         }];
 
         let json = serde_json::to_string_pretty(&params).unwrap();

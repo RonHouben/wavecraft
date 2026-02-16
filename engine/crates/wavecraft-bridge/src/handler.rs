@@ -226,6 +226,7 @@ mod tests {
                         max: 1.0,
                         unit: Some("dB".to_string()),
                         group: None,
+                        variants: None,
                     },
                     ParameterInfo {
                         id: "bypass".to_string(),
@@ -237,6 +238,7 @@ mod tests {
                         max: 1.0,
                         unit: None,
                         group: None,
+                        variants: None,
                     },
                 ],
             }

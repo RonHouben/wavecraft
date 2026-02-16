@@ -23,6 +23,7 @@ interface TestParameter {
 
 const DEDICATED_PARAMETER_IDS = new Set([
   'oscillator_enabled',
+  'oscillator_waveform',
   'oscillator_frequency',
   'oscillator_level',
 ]);
@@ -98,6 +99,14 @@ describe('App parameter rendering', () => {
       type: 'float',
       value: 0.75,
       default: 0.75,
+      group: 'Oscillator',
+    },
+    {
+      id: 'oscillator_waveform',
+      name: 'Waveform',
+      type: 'enum',
+      value: 0,
+      default: 0,
       group: 'Oscillator',
     },
     {

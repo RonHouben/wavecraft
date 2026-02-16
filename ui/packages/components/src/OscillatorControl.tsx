@@ -5,10 +5,12 @@
 import React from 'react';
 import { logger, useMeterFrame, useParameter, useHasProcessor } from '@wavecraft/core';
 import type { ParameterId } from '@wavecraft/core';
+import { ParameterSelect } from './ParameterSelect';
 import { ParameterSlider } from './ParameterSlider';
 
 const SIGNAL_THRESHOLD = 1e-4;
 const OSCILLATOR_ENABLED_PARAM_ID = 'oscillator_enabled' as ParameterId;
+const OSCILLATOR_WAVEFORM_PARAM_ID = 'oscillator_waveform' as ParameterId;
 const OSCILLATOR_FREQUENCY_PARAM_ID = 'oscillator_frequency' as ParameterId;
 const OSCILLATOR_LEVEL_PARAM_ID = 'oscillator_level' as ParameterId;
 
@@ -93,6 +95,7 @@ export function OscillatorControl(props: Readonly<OscilloscopeProps>): React.JSX
       ) : null}
 
       <div className="mt-3">
+        <ParameterSelect id={OSCILLATOR_WAVEFORM_PARAM_ID} />
         <ParameterSlider id={OSCILLATOR_FREQUENCY_PARAM_ID} />
         <ParameterSlider id={OSCILLATOR_LEVEL_PARAM_ID} />
       </div>

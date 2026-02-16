@@ -239,6 +239,7 @@ mod tests {
             max: 1.0,
             unit: None,
             group: None,
+            variants: None,
         }
     }
 
@@ -334,6 +335,7 @@ mod tests {
                 max: 1.0,
                 unit: None,
                 group: None,
+                variants: None,
             },
             param("level"),
         ];

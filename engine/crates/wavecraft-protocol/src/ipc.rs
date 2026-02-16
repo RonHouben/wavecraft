@@ -176,6 +176,10 @@ pub struct ParameterInfo {
     /// Group name for UI organization (e.g., "Input", "Processing", "Output")
     #[serde(skip_serializing_if = "Option::is_none")]
     pub group: Option<String>,
+    /// Variant labels for enum parameters (e.g., ["Sine", "Square", "Saw", "Triangle"]).
+    /// Only present when `param_type` is `Enum`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub variants: Option<Vec<String>>,
 }
 
 /// Information about a discovered processor in the signal chain.
@@ -488,6 +492,53 @@ mod tests {
         let json = serde_json::to_string(&result).expect("oscilloscope result should serialize");
         assert!(json.contains("\"sample_rate\":44100"));
         assert!(json.contains("\"trigger_mode\":\"risingZeroCrossing\""));
+    }
+
+    #[test]
+    fn parameter_info_with_variants_serializes_correctly() {
+        let info = ParameterInfo {
+            id: "osc_waveform".to_string(),
+            name: "Waveform".to_string(),
+            param_type: ParameterType::Enum,
+            value: 0.0,
+            default: 0.0,
+            min: 0.0,
+            max: 3.0,
+            unit: None,
+            group: None,
+            variants: Some(vec![
+                "Sine".to_string(),
+                "Square".to_string(),
+                "Saw".to_string(),
+                "Triangle".to_string(),
+            ]),
+        };
+
+        let json = serde_json::to_string(&info).expect("parameter info should serialize");
+        assert!(json.contains("\"variants\""));
+
+        let deserialized: ParameterInfo =
+            serde_json::from_str(&json).expect("parameter info should deserialize");
+        assert_eq!(deserialized.variants.expect("variants should exist").len(), 4);
+    }
+
+    #[test]
+    fn parameter_info_without_variants_omits_field() {
+        let info = ParameterInfo {
+            id: "gain".to_string(),
+            name: "Gain".to_string(),
+            param_type: ParameterType::Float,
+            value: 0.5,
+            default: 0.5,
+            min: 0.0,
+            max: 1.0,
+            unit: Some("dB".to_string()),
+            group: None,
+            variants: None,
+        };
+
+        let json = serde_json::to_string(&info).expect("parameter info should serialize");
+        assert!(!json.contains("\"variants\""));
     }
 }
 

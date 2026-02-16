@@ -8,6 +8,7 @@
 import React from 'react';
 import type { ParameterGroup as ParameterGroupType } from '@wavecraft/core';
 import { ParameterSlider } from './ParameterSlider';
+import { ParameterSelect } from './ParameterSelect';
 import { ParameterToggle } from './ParameterToggle';
 
 export interface ParameterGroupProps {
@@ -43,6 +44,8 @@ export function ParameterGroup({ group }: Readonly<ParameterGroupProps>): React.
         {group.parameters.map((param) =>
           param.type === 'bool' ? (
             <ParameterToggle key={param.id} id={param.id} />
+          ) : param.type === 'enum' ? (
+            <ParameterSelect key={param.id} id={param.id} />
           ) : (
             <ParameterSlider key={param.id} id={param.id} />
           )

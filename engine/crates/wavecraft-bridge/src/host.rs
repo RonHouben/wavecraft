@@ -44,6 +44,7 @@ use wavecraft_protocol::{AudioRuntimeStatus, MeterFrame, OscilloscopeFrame, Para
 ///             max: 1.0,
 ///             unit: None,
 ///             group: None,
+///             variants: None,
 ///         })
 ///     }
 ///
