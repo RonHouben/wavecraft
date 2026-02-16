@@ -811,11 +811,11 @@ jobs:
   # ============================================================================
   publish-dev-server:
     needs: [detect-changes, publish-engine]
+    # detect-changes.outputs.dev-server is a compatibility-aware gate (see above):
+    # it is true for direct dev-server edits, engine changes, CLI changes,
+    # or explicit force-publish-dev-server workflow_dispatch runs.
     if: |
       !cancelled() &&
-      # detect-changes.outputs.dev-server is a compatibility-aware gate (see above):
-      # it is true for direct dev-server edits, engine changes, CLI changes,
-      # or explicit force-publish-dev-server workflow_dispatch runs.
       needs.detect-changes.outputs.dev-server == 'true' &&
       (
         (needs.detect-changes.outputs.engine != 'true' && needs.detect-changes.outputs.cli != 'true') ||
