@@ -239,6 +239,7 @@ mod tests {
             max: 1.0,
             unit: None,
             group: None,
+            variants: None,
         }
     }
 
@@ -334,6 +335,7 @@ mod tests {
                 max: 1.0,
                 unit: None,
                 group: None,
+                variants: None,
             },
             param("level"),
         ];
@@ -345,6 +347,37 @@ mod tests {
 
         assert!(output.contains("enabled: boolean;"));
         assert!(output.contains("level: number;"));
+    }
+
+    #[test]
+    fn emits_number_value_type_for_enum_parameters() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let ui_dir = temp.path();
+
+        let params = vec![ParameterInfo {
+            id: "oscillator_waveform".to_string(),
+            name: "Waveform".to_string(),
+            param_type: ParameterType::Enum,
+            value: 0.0,
+            default: 0.0,
+            min: 0.0,
+            max: 3.0,
+            unit: None,
+            group: Some("Oscillator".to_string()),
+            variants: Some(vec![
+                "Sine".to_string(),
+                "Square".to_string(),
+                "Saw".to_string(),
+                "Triangle".to_string(),
+            ]),
+        }];
+
+        write_parameter_types(ui_dir, &params).expect("write should succeed");
+
+        let output_path = ui_dir.join("src/generated/parameters.ts");
+        let output = fs::read_to_string(output_path).expect("generated file should exist");
+
+        assert!(output.contains("oscillator_waveform: number;"));
     }
 
     #[test]

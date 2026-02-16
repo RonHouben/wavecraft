@@ -74,6 +74,11 @@ pub enum ParamRange {
 
     /// Integer stepped range (for enums, switches).
     Stepped { min: i32, max: i32 },
+
+    /// Enumerated parameter with named variants.
+    ///
+    /// Index 0 corresponds to the first variant, 1 to the second, etc.
+    Enum { variants: &'static [&'static str] },
 }
 
 /// Unit type has no parameters.

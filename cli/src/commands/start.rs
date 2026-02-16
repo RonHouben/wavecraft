@@ -1546,6 +1546,7 @@ mod tests {
             max: 5_000.0,
             unit: Some("Hz".to_string()),
             group: Some("Oscillator".to_string()),
+            variants: None,
         }];
 
         super::write_sidecar_cache(&engine_dir, &params).expect("sidecar cache should be written");

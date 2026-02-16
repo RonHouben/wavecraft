@@ -106,16 +106,23 @@ pub mod __internal {
     /// This function bridges the DSP layer's ParamSpec to the protocol's
     /// ParameterInfo, enabling FFI export of parameter metadata.
     pub fn param_spec_to_info(spec: &ParamSpec, id_prefix: &str) -> ParameterInfo {
-        let (min, max, param_type) = match spec.range {
-            ParamRange::Linear { min, max } => (min as f32, max as f32, ParameterType::Float),
-            ParamRange::Skewed { min, max, .. } => (min as f32, max as f32, ParameterType::Float),
+        let (min, max, param_type, variants) = match spec.range {
+            ParamRange::Linear { min, max } => (min as f32, max as f32, ParameterType::Float, None),
+            ParamRange::Skewed { min, max, .. } => {
+                (min as f32, max as f32, ParameterType::Float, None)
+            }
             ParamRange::Stepped { min, max } => {
                 let param_type = if min == 0 && max == 1 {
                     ParameterType::Bool
                 } else {
                     ParameterType::Enum
                 };
-                (min as f32, max as f32, param_type)
+                (min as f32, max as f32, param_type, None)
+            }
+            ParamRange::Enum { variants } => {
+                let max = variants.len().saturating_sub(1) as f32;
+                let variant_labels = variants.iter().map(|variant| variant.to_string()).collect();
+                (0.0, max, ParameterType::Enum, Some(variant_labels))
             }
         };
 
@@ -133,6 +140,7 @@ pub mod __internal {
                 Some(spec.unit.to_string())
             },
             group: spec.group.map(|s| s.to_string()),
+            variants,
         }
     }
 }

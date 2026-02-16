@@ -92,6 +92,7 @@ impl<P: Params> PluginEditorBridge<P> {
             } else {
                 Some(group.to_string())
             },
+            variants: None,
         }
     }
 }

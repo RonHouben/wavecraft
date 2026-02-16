@@ -82,6 +82,7 @@ mod tests {
                 max: 1.0,
                 unit: Some("dB".to_string()),
                 group: Some("Input".to_string()),
+                variants: None,
             },
             ParameterInfo {
                 id: "mix".to_string(),
@@ -93,6 +94,7 @@ mod tests {
                 max: 1.0,
                 unit: Some("%".to_string()),
                 group: None,
+                variants: None,
             },
         ]
     }
