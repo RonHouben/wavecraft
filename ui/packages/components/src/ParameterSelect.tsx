@@ -2,7 +2,7 @@
  * ParameterSelect - Dropdown control for enum parameters.
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useParameter, logger } from '@wavecraft/core';
 import type { ParameterId } from '@wavecraft/core';
 
@@ -13,6 +13,17 @@ export interface ParameterSelectProps {
 
 export function ParameterSelect({ id }: Readonly<ParameterSelectProps>): React.JSX.Element {
   const { param, setValue, isLoading, error } = useParameter(id);
+
+  useEffect(() => {
+    const hasNoVariants = !param?.variants?.length;
+
+    if (hasNoVariants) {
+      logger.warn('Enum parameter has no variants', {
+        parameterId: id,
+      });
+
+    }
+  }, [param, id]);
 
   if (isLoading) {
     return (
@@ -32,12 +43,8 @@ export function ParameterSelect({ id }: Readonly<ParameterSelectProps>): React.J
 
   const currentIndex = typeof param.value === 'number' ? param.value : 0;
   const variantOptions = (param.variants ?? []).map((label, index) => ({ value: index, label }));
-
-  if (variantOptions.length === 0) {
-    logger.warn('Enum parameter has no variants', {
-      parameterId: id,
-    });
-  }
+  const hasNoVariants = variantOptions.length === 0;
+  const helperTextId = hasNoVariants ? `select-${id}-helper` : undefined;
 
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>): void => {
     const nextValue = Number(event.currentTarget.value);
@@ -58,6 +65,8 @@ export function ParameterSelect({ id }: Readonly<ParameterSelectProps>): React.J
         id={`select-${id}`}
         value={currentIndex}
         onChange={handleChange}
+        disabled={hasNoVariants}
+        aria-describedby={helperTextId}
         className="w-full rounded border border-plugin-border bg-plugin-dark px-3 py-2 text-sm text-gray-200 outline-none focus:border-accent"
       >
         {variantOptions.map((option) => (
@@ -66,6 +75,12 @@ export function ParameterSelect({ id }: Readonly<ParameterSelectProps>): React.J
           </option>
         ))}
       </select>
+
+      {hasNoVariants ? (
+        <p id={helperTextId} className="mt-2 text-xs text-gray-400">
+          No variants available
+        </p>
+      ) : null}
     </div>
   );
 }

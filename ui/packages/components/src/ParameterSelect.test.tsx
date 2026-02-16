@@ -9,12 +9,14 @@ import type { ParameterInfo } from '@wavecraft/core';
 
 const mockUseParameter = vi.hoisted(() => vi.fn());
 const mockLoggerError = vi.hoisted(() => vi.fn());
+const mockLoggerWarn = vi.hoisted(() => vi.fn());
 const mockSetValue = vi.hoisted(() => vi.fn());
 
 vi.mock('@wavecraft/core', () => ({
   useParameter: mockUseParameter,
   logger: {
     error: mockLoggerError,
+    warn: mockLoggerWarn,
   },
 }));
 
@@ -35,6 +37,8 @@ describe('ParameterSelect', () => {
   beforeEach(() => {
     mockSetValue.mockReset();
     mockSetValue.mockResolvedValue(undefined);
+    mockLoggerWarn.mockReset();
+    mockLoggerError.mockReset();
 
     mockUseParameter.mockReturnValue({
       param: enumParameter(1),
@@ -97,7 +101,7 @@ describe('ParameterSelect', () => {
     expect(screen.getByText(/Parameter not found/)).toBeInTheDocument();
   });
 
-  it('renders an empty select when enum variants are missing', () => {
+  it('renders a disabled select with helper text when enum variants are missing', () => {
     mockUseParameter.mockReturnValue({
       param: {
         id: 'processor_mode',
@@ -115,7 +119,36 @@ describe('ParameterSelect', () => {
 
     render(<ParameterSelect id="processor_mode" />);
 
-    const select = screen.getByRole('combobox');
+    const select = screen.getByRole('combobox') as HTMLSelectElement;
+    expect(select).toBeDisabled();
     expect(select.querySelectorAll('option')).toHaveLength(0);
+    expect(screen.getByText('No variants available')).toBeInTheDocument();
+    expect(mockLoggerWarn).toHaveBeenCalledWith('Enum parameter has no variants', {
+      parameterId: 'processor_mode',
+    });
+    expect(mockLoggerWarn).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not spam missing-variants warning on rerender', () => {
+    mockUseParameter.mockReturnValue({
+      param: {
+        id: 'processor_mode',
+        name: 'Mode',
+        type: 'enum',
+        value: 2,
+        default: 1,
+        min: 1,
+        max: 3,
+      } satisfies ParameterInfo,
+      setValue: mockSetValue,
+      isLoading: false,
+      error: null,
+    });
+
+    const { rerender } = render(<ParameterSelect id="processor_mode" />);
+    rerender(<ParameterSelect id="processor_mode" />);
+    rerender(<ParameterSelect id="processor_mode" />);
+
+    expect(mockLoggerWarn).toHaveBeenCalledTimes(1);
   });
 });
