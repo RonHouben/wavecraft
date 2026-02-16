@@ -209,6 +209,9 @@ pub mod paths {
     }
 }
 
+/// Shared test fixtures and helpers.
+pub mod test_support;
+
 /// Colored output helpers for consistent terminal UX.
 pub mod output {
     use super::*;

@@ -83,6 +83,13 @@ struct Drift {
     expected: String,
 }
 
+#[derive(Debug, Clone)]
+struct ScopedStringUpdate {
+    pointer: &'static str,
+    current: String,
+    expected: String,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum VersionMovement {
     None,
@@ -174,7 +181,16 @@ fn run_apply_mode(
         "dependencies[@wavecraft/components]",
     );
 
+    let mut core_updates = Vec::new();
+    let mut components_updates = Vec::new();
+    let mut template_updates = Vec::new();
+
     if core_version_drift {
+        core_updates.push(ScopedStringUpdate {
+            pointer: CORE_VERSION_PTR,
+            current: loaded.core_version.to_string(),
+            expected: expected.target_version.to_string(),
+        });
         set_string(
             &mut loaded.core_json,
             CORE_VERSION_PTR,
@@ -182,6 +198,11 @@ fn run_apply_mode(
         )?;
     }
     if components_version_drift {
+        components_updates.push(ScopedStringUpdate {
+            pointer: COMPONENTS_VERSION_PTR,
+            current: loaded.components_version.to_string(),
+            expected: expected.target_version.to_string(),
+        });
         set_string(
             &mut loaded.components_json,
             COMPONENTS_VERSION_PTR,
@@ -189,6 +210,11 @@ fn run_apply_mode(
         )?;
     }
     if components_peer_core_drift {
+        components_updates.push(ScopedStringUpdate {
+            pointer: COMPONENTS_PEER_CORE_PTR,
+            current: format!("^{}", loaded.components_peer_core),
+            expected: expected.target_caret.clone(),
+        });
         set_string(
             &mut loaded.components_json,
             COMPONENTS_PEER_CORE_PTR,
@@ -196,6 +222,11 @@ fn run_apply_mode(
         )?;
     }
     if template_dep_core_drift {
+        template_updates.push(ScopedStringUpdate {
+            pointer: TEMPLATE_DEP_CORE_PTR,
+            current: format!("^{}", loaded.template_dep_core),
+            expected: expected.target_caret.clone(),
+        });
         set_string(
             &mut loaded.template_json,
             TEMPLATE_DEP_CORE_PTR,
@@ -203,6 +234,11 @@ fn run_apply_mode(
         )?;
     }
     if template_dep_components_drift {
+        template_updates.push(ScopedStringUpdate {
+            pointer: TEMPLATE_DEP_COMPONENTS_PTR,
+            current: format!("^{}", loaded.template_dep_components),
+            expected: expected.target_caret.clone(),
+        });
         set_string(
             &mut loaded.template_json,
             TEMPLATE_DEP_COMPONENTS_PTR,
@@ -211,16 +247,26 @@ fn run_apply_mode(
     }
 
     let mut changed_files = Vec::new();
-    if core_version_drift && write_json_if_changed(&scope.core, &loaded.core_json)? {
+    if core_version_drift
+        && write_scoped_string_updates_with_fallback(&scope.core, &core_updates, &loaded.core_json)?
+    {
         changed_files.push(CORE_REL_PATH);
     }
     if (components_version_drift || components_peer_core_drift)
-        && write_json_if_changed(&scope.components, &loaded.components_json)?
+        && write_scoped_string_updates_with_fallback(
+            &scope.components,
+            &components_updates,
+            &loaded.components_json,
+        )?
     {
         changed_files.push(COMPONENTS_REL_PATH);
     }
     if (template_dep_core_drift || template_dep_components_drift)
-        && write_json_if_changed(&scope.template, &loaded.template_json)?
+        && write_scoped_string_updates_with_fallback(
+            &scope.template,
+            &template_updates,
+            &loaded.template_json,
+        )?
     {
         changed_files.push(TEMPLATE_REL_PATH);
     }
@@ -548,10 +594,311 @@ fn write_json_if_changed(path: &Path, json: &Value) -> Result<bool> {
     Ok(true)
 }
 
+fn write_scoped_string_updates_with_fallback(
+    path: &Path,
+    updates: &[ScopedStringUpdate],
+    fallback_json: &Value,
+) -> Result<bool> {
+    if updates.is_empty() {
+        return Ok(false);
+    }
+
+    match write_scoped_string_updates(path, updates) {
+        Ok(changed) => Ok(changed),
+        Err(_) => write_json_if_changed(path, fallback_json),
+    }
+}
+
+fn write_scoped_string_updates(path: &Path, updates: &[ScopedStringUpdate]) -> Result<bool> {
+    let current = fs::read_to_string(path).with_context(|| {
+        format!(
+            "Failed to read file for scoped write comparison: {}",
+            path.display()
+        )
+    })?;
+
+    let mut next = current.clone();
+    for update in updates {
+        apply_scoped_string_update(&mut next, update)?;
+    }
+
+    if current == next {
+        return Ok(false);
+    }
+
+    fs::write(path, next).with_context(|| format!("Failed to write file: {}", path.display()))?;
+    Ok(true)
+}
+
+fn apply_scoped_string_update(content: &mut String, update: &ScopedStringUpdate) -> Result<()> {
+    let segments = decode_json_pointer(update.pointer)?;
+    let (leaf_key, parent_path) = segments
+        .split_last()
+        .ok_or_else(|| anyhow::anyhow!("Invalid empty JSON pointer: {}", update.pointer))?;
+
+    let scope = find_object_scope(content, parent_path)
+        .ok_or_else(|| anyhow::anyhow!("Failed to locate parent object for {}", update.pointer))?;
+
+    let (value_start, value_end) =
+        find_member_value_span(content, scope, leaf_key).ok_or_else(|| {
+            anyhow::anyhow!(
+                "Failed to locate key '{}' while applying scoped update {}",
+                leaf_key,
+                update.pointer
+            )
+        })?;
+
+    let current_token = &content[value_start..value_end];
+    let parsed_current: String = serde_json::from_str(current_token).with_context(|| {
+        format!(
+            "Expected string value at {} but found '{}'",
+            update.pointer, current_token
+        )
+    })?;
+
+    if parsed_current != update.current {
+        bail!(
+            "Scoped update precondition failed at {}: expected current '{}', found '{}'",
+            update.pointer,
+            update.current,
+            parsed_current
+        );
+    }
+
+    let replacement = serde_json::to_string(&update.expected).with_context(|| {
+        format!(
+            "Failed to serialize replacement value for {}",
+            update.pointer
+        )
+    })?;
+    content.replace_range(value_start..value_end, &replacement);
+    Ok(())
+}
+
+fn decode_json_pointer(pointer: &str) -> Result<Vec<String>> {
+    if pointer.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    if !pointer.starts_with('/') {
+        bail!("Invalid JSON pointer '{}': must start with '/'", pointer);
+    }
+
+    Ok(pointer[1..]
+        .split('/')
+        .map(|segment| segment.replace("~1", "/").replace("~0", "~"))
+        .collect())
+}
+
+fn find_object_scope(content: &str, path: &[String]) -> Option<(usize, usize)> {
+    let mut scope = find_root_object_scope(content)?;
+    for segment in path {
+        let (value_start, value_end) = find_member_value_span(content, scope, segment)?;
+        if content.as_bytes().get(value_start) != Some(&b'{') {
+            return None;
+        }
+        scope = (value_start, value_end);
+    }
+    Some(scope)
+}
+
+fn find_root_object_scope(content: &str) -> Option<(usize, usize)> {
+    let mut idx = skip_whitespace(content, 0);
+    if content.as_bytes().get(idx) != Some(&b'{') {
+        return None;
+    }
+    let end = parse_json_value_end(content, idx)?;
+    idx = skip_whitespace(content, end);
+    if idx != content.len() {
+        return None;
+    }
+    Some((content.find('{')?, end))
+}
+
+fn find_member_value_span(
+    content: &str,
+    scope: (usize, usize),
+    target_key: &str,
+) -> Option<(usize, usize)> {
+    let bytes = content.as_bytes();
+    let (start, end) = scope;
+    if bytes.get(start) != Some(&b'{') {
+        return None;
+    }
+
+    let mut idx = skip_whitespace(content, start + 1);
+    if idx >= end {
+        return None;
+    }
+
+    if bytes.get(idx) == Some(&b'}') {
+        return None;
+    }
+
+    loop {
+        if bytes.get(idx) != Some(&b'"') {
+            return None;
+        }
+        let key_end = parse_json_string_end(content, idx)?;
+        let key: String = serde_json::from_str(&content[idx..key_end]).ok()?;
+
+        idx = skip_whitespace(content, key_end);
+        if bytes.get(idx) != Some(&b':') {
+            return None;
+        }
+        idx += 1;
+        idx = skip_whitespace(content, idx);
+
+        let value_start = idx;
+        let value_end = parse_json_value_end(content, value_start)?;
+
+        if key == target_key {
+            return Some((value_start, value_end));
+        }
+
+        idx = skip_whitespace(content, value_end);
+        match bytes.get(idx) {
+            Some(b',') => {
+                idx += 1;
+                idx = skip_whitespace(content, idx);
+            }
+            Some(b'}') => return None,
+            _ => return None,
+        }
+    }
+}
+
+fn parse_json_value_end(content: &str, start: usize) -> Option<usize> {
+    let bytes = content.as_bytes();
+    let ch = *bytes.get(start)?;
+
+    match ch {
+        b'"' => parse_json_string_end(content, start),
+        b'{' => parse_balanced_json_end(content, start, b'{', b'}'),
+        b'[' => parse_balanced_json_end(content, start, b'[', b']'),
+        b't' => content[start..].starts_with("true").then_some(start + 4),
+        b'f' => content[start..].starts_with("false").then_some(start + 5),
+        b'n' => content[start..].starts_with("null").then_some(start + 4),
+        b'-' | b'0'..=b'9' => parse_number_end(content, start),
+        _ => None,
+    }
+}
+
+fn parse_json_string_end(content: &str, start: usize) -> Option<usize> {
+    let bytes = content.as_bytes();
+    if bytes.get(start) != Some(&b'"') {
+        return None;
+    }
+
+    let mut idx = start + 1;
+    while idx < bytes.len() {
+        match bytes[idx] {
+            b'"' => return Some(idx + 1),
+            b'\\' => {
+                idx += 2;
+            }
+            _ => {
+                idx += 1;
+            }
+        }
+    }
+
+    None
+}
+
+fn parse_balanced_json_end(content: &str, start: usize, open: u8, close: u8) -> Option<usize> {
+    let bytes = content.as_bytes();
+    if bytes.get(start) != Some(&open) {
+        return None;
+    }
+
+    let mut idx = start;
+    let mut depth = 0usize;
+    while idx < bytes.len() {
+        match bytes[idx] {
+            b'"' => {
+                idx = parse_json_string_end(content, idx)?;
+            }
+            ch if ch == open => {
+                depth += 1;
+                idx += 1;
+            }
+            ch if ch == close => {
+                depth -= 1;
+                idx += 1;
+                if depth == 0 {
+                    return Some(idx);
+                }
+            }
+            _ => {
+                idx += 1;
+            }
+        }
+    }
+
+    None
+}
+
+fn parse_number_end(content: &str, start: usize) -> Option<usize> {
+    let bytes = content.as_bytes();
+    let mut idx = start;
+
+    if bytes.get(idx) == Some(&b'-') {
+        idx += 1;
+    }
+
+    match bytes.get(idx) {
+        Some(b'0') => {
+            idx += 1;
+        }
+        Some(b'1'..=b'9') => {
+            idx += 1;
+            while matches!(bytes.get(idx), Some(b'0'..=b'9')) {
+                idx += 1;
+            }
+        }
+        _ => return None,
+    }
+
+    if bytes.get(idx) == Some(&b'.') {
+        idx += 1;
+        if !matches!(bytes.get(idx), Some(b'0'..=b'9')) {
+            return None;
+        }
+        while matches!(bytes.get(idx), Some(b'0'..=b'9')) {
+            idx += 1;
+        }
+    }
+
+    if matches!(bytes.get(idx), Some(b'e' | b'E')) {
+        idx += 1;
+        if matches!(bytes.get(idx), Some(b'+' | b'-')) {
+            idx += 1;
+        }
+        if !matches!(bytes.get(idx), Some(b'0'..=b'9')) {
+            return None;
+        }
+        while matches!(bytes.get(idx), Some(b'0'..=b'9')) {
+            idx += 1;
+        }
+    }
+
+    Some(idx)
+}
+
+fn skip_whitespace(content: &str, mut idx: usize) -> usize {
+    let bytes = content.as_bytes();
+    while idx < bytes.len() && bytes[idx].is_ascii_whitespace() {
+        idx += 1;
+    }
+    idx
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use tempfile::TempDir;
+    use xtask::test_support::{SyncUiFixtureVersions, write_sync_ui_fixture_workspace};
 
     fn default_config(mode: SyncMode) -> SyncUiVersionsConfig {
         SyncUiVersionsConfig {
@@ -570,84 +917,17 @@ mod tests {
         template_core_dep: &str,
         template_components_dep: &str,
     ) {
-        let root = dir.path();
-        let core_path = root.join(CORE_REL_PATH);
-        let components_path = root.join(COMPONENTS_REL_PATH);
-        let template_path = root.join(TEMPLATE_REL_PATH);
-
-        fs::create_dir_all(
-            core_path
-                .parent()
-                .expect("core package.json path should have parent"),
+        write_sync_ui_fixture_workspace(
+            dir.path(),
+            SyncUiFixtureVersions {
+                core_version,
+                components_version,
+                components_peer_core,
+                template_core_dep,
+                template_components_dep,
+            },
         )
-        .expect("failed to create core fixture directory");
-        fs::create_dir_all(
-            components_path
-                .parent()
-                .expect("components package.json path should have parent"),
-        )
-        .expect("failed to create components fixture directory");
-        fs::create_dir_all(
-            template_path
-                .parent()
-                .expect("template package.json path should have parent"),
-        )
-        .expect("failed to create template fixture directory");
-
-        let core_manifest = serde_json::json!({
-            "name": "@wavecraft/core",
-            "version": core_version,
-            "description": "fixture"
-        });
-
-        let components_manifest = serde_json::json!({
-            "name": "@wavecraft/components",
-            "version": components_version,
-            "description": "fixture",
-            "peerDependencies": {
-                "@wavecraft/core": components_peer_core,
-                "react": "^18.0.0"
-            }
-        });
-
-        let template_manifest = serde_json::json!({
-            "name": "fixture-template-ui",
-            "private": true,
-            "version": "0.1.0",
-            "dependencies": {
-                "@wavecraft/core": template_core_dep,
-                "@wavecraft/components": template_components_dep,
-                "react": "^18.3.1"
-            }
-        });
-
-        fs::write(
-            &core_path,
-            format!(
-                "{}\n",
-                serde_json::to_string_pretty(&core_manifest)
-                    .expect("failed to serialize core fixture manifest")
-            ),
-        )
-        .expect("failed to write core fixture manifest");
-        fs::write(
-            &components_path,
-            format!(
-                "{}\n",
-                serde_json::to_string_pretty(&components_manifest)
-                    .expect("failed to serialize components fixture manifest")
-            ),
-        )
-        .expect("failed to write components fixture manifest");
-        fs::write(
-            &template_path,
-            format!(
-                "{}\n",
-                serde_json::to_string_pretty(&template_manifest)
-                    .expect("failed to serialize template fixture manifest")
-            ),
-        )
-        .expect("failed to write template fixture manifest");
+        .expect("failed to write sync-ui fixture workspace");
     }
 
     #[test]
@@ -906,5 +1186,67 @@ mod tests {
             .and_then(Value::as_str)
             .expect("custom unrelated key should remain present");
         assert_eq!(value, "must-stay-unchanged");
+    }
+
+    #[test]
+    fn apply_mode_preserves_non_scoped_json_layout_with_scoped_replacements() {
+        let dir = TempDir::new().expect("failed to create temp directory");
+
+        fs::create_dir_all(
+            dir.path()
+                .join(CORE_REL_PATH)
+                .parent()
+                .expect("core package.json path should have parent"),
+        )
+        .expect("failed to create core fixture directory");
+        fs::create_dir_all(
+            dir.path()
+                .join(COMPONENTS_REL_PATH)
+                .parent()
+                .expect("components package.json path should have parent"),
+        )
+        .expect("failed to create components fixture directory");
+        fs::create_dir_all(
+            dir.path()
+                .join(TEMPLATE_REL_PATH)
+                .parent()
+                .expect("template package.json path should have parent"),
+        )
+        .expect("failed to create template fixture directory");
+
+        let core_raw =
+            "{\"name\":\"@wavecraft/core\",\"version\":\"0.7.5\",\"custom\":{\"a\":1,\"b\":2}}\n";
+        let components_raw = "{\"name\":\"@wavecraft/components\",\"version\":\"0.7.4\",\"peerDependencies\":{\"react\":\"^18.0.0\",\"@wavecraft/core\":\"^0.7.0\"},\"custom\":{\"keep\":true,\"arr\":[3,2,1]}}\n";
+        let template_raw = "{\"name\":\"fixture-template-ui\",\"private\":true,\"version\":\"0.1.0\",\"dependencies\":{\"react\":\"^18.3.1\",\"@wavecraft/core\":\"^0.7.1\",\"@wavecraft/components\":\"^0.7.1\"},\"z\":0}\n";
+
+        fs::write(dir.path().join(CORE_REL_PATH), core_raw).expect("failed to write core raw");
+        fs::write(dir.path().join(COMPONENTS_REL_PATH), components_raw)
+            .expect("failed to write components raw");
+        fs::write(dir.path().join(TEMPLATE_REL_PATH), template_raw)
+            .expect("failed to write template raw");
+
+        let code = run_at_root(dir.path(), default_config(SyncMode::Apply))
+            .expect("apply mode should succeed");
+        assert_eq!(code, 0);
+
+        let core_after =
+            fs::read_to_string(dir.path().join(CORE_REL_PATH)).expect("failed to read core");
+        let components_after = fs::read_to_string(dir.path().join(COMPONENTS_REL_PATH))
+            .expect("failed to read components");
+        let template_after = fs::read_to_string(dir.path().join(TEMPLATE_REL_PATH))
+            .expect("failed to read template");
+
+        assert_eq!(
+            core_after,
+            "{\"name\":\"@wavecraft/core\",\"version\":\"0.7.5\",\"custom\":{\"a\":1,\"b\":2}}\n"
+        );
+        assert_eq!(
+            components_after,
+            "{\"name\":\"@wavecraft/components\",\"version\":\"0.7.5\",\"peerDependencies\":{\"react\":\"^18.0.0\",\"@wavecraft/core\":\"^0.7.5\"},\"custom\":{\"keep\":true,\"arr\":[3,2,1]}}\n"
+        );
+        assert_eq!(
+            template_after,
+            "{\"name\":\"fixture-template-ui\",\"private\":true,\"version\":\"0.1.0\",\"dependencies\":{\"react\":\"^18.3.1\",\"@wavecraft/core\":\"^0.7.5\",\"@wavecraft/components\":\"^0.7.5\"},\"z\":0}\n"
+        );
     }
 }

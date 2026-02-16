@@ -1,11 +1,9 @@
-use serde_json::json;
 use std::fs;
 use std::process::Command;
 use tempfile::TempDir;
-
-const CORE_REL_PATH: &str = "ui/packages/core/package.json";
-const COMPONENTS_REL_PATH: &str = "ui/packages/components/package.json";
-const TEMPLATE_REL_PATH: &str = "sdk-template/ui/package.json";
+use xtask::test_support::{
+    SyncUiFixtureVersions, TEMPLATE_REL_PATH, write_sync_ui_fixture_workspace,
+};
 
 fn write_fixture_workspace(
     dir: &TempDir,
@@ -15,84 +13,17 @@ fn write_fixture_workspace(
     template_core_dep: &str,
     template_components_dep: &str,
 ) {
-    let root = dir.path();
-    let core_path = root.join(CORE_REL_PATH);
-    let components_path = root.join(COMPONENTS_REL_PATH);
-    let template_path = root.join(TEMPLATE_REL_PATH);
-
-    fs::create_dir_all(
-        core_path
-            .parent()
-            .expect("core package.json path should have parent"),
+    write_sync_ui_fixture_workspace(
+        dir.path(),
+        SyncUiFixtureVersions {
+            core_version,
+            components_version,
+            components_peer_core,
+            template_core_dep,
+            template_components_dep,
+        },
     )
-    .expect("failed to create core fixture directory");
-    fs::create_dir_all(
-        components_path
-            .parent()
-            .expect("components package.json path should have parent"),
-    )
-    .expect("failed to create components fixture directory");
-    fs::create_dir_all(
-        template_path
-            .parent()
-            .expect("template package.json path should have parent"),
-    )
-    .expect("failed to create template fixture directory");
-
-    let core_manifest = json!({
-        "name": "@wavecraft/core",
-        "version": core_version,
-        "description": "fixture"
-    });
-
-    let components_manifest = json!({
-        "name": "@wavecraft/components",
-        "version": components_version,
-        "description": "fixture",
-        "peerDependencies": {
-            "@wavecraft/core": components_peer_core,
-            "react": "^18.0.0"
-        }
-    });
-
-    let template_manifest = json!({
-        "name": "fixture-template-ui",
-        "private": true,
-        "version": "0.1.0",
-        "dependencies": {
-            "@wavecraft/core": template_core_dep,
-            "@wavecraft/components": template_components_dep,
-            "react": "^18.3.1"
-        }
-    });
-
-    fs::write(
-        &core_path,
-        format!(
-            "{}\n",
-            serde_json::to_string_pretty(&core_manifest)
-                .expect("failed to serialize core fixture manifest")
-        ),
-    )
-    .expect("failed to write core fixture manifest");
-    fs::write(
-        &components_path,
-        format!(
-            "{}\n",
-            serde_json::to_string_pretty(&components_manifest)
-                .expect("failed to serialize components fixture manifest")
-        ),
-    )
-    .expect("failed to write components fixture manifest");
-    fs::write(
-        &template_path,
-        format!(
-            "{}\n",
-            serde_json::to_string_pretty(&template_manifest)
-                .expect("failed to serialize template fixture manifest")
-        ),
-    )
-    .expect("failed to write template fixture manifest");
+    .expect("failed to write sync-ui fixture workspace");
 }
 
 #[test]
