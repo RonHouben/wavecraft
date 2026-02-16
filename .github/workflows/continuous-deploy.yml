@@ -74,6 +74,7 @@ jobs:
               - 'engine/crates/wavecraft-bridge/**'
               - 'engine/crates/wavecraft-metering/**'
               - 'engine/crates/wavecraft-macros/**'
+              - 'engine/crates/wavecraft-processors/**'
               - 'engine/Cargo.toml'
             dev-server:
               - 'dev-server/**'
@@ -175,6 +176,7 @@ jobs:
             bash scripts/ci/wait-for-crate.sh "wavecraft-metering" "$ENGINE_VERSION"
             bash scripts/ci/wait-for-crate.sh "wavecraft-dsp" "$ENGINE_VERSION"
             bash scripts/ci/wait-for-crate.sh "wavecraft-macros" "$ENGINE_VERSION"
+            bash scripts/ci/wait-for-crate.sh "wavecraft-processors" "$ENGINE_VERSION"
           fi
 
           # Force Cargo to refresh its index cache
@@ -474,6 +476,7 @@ jobs:
             wavecraft-metering
             wavecraft-dsp
             wavecraft-macros
+            wavecraft-processors
           )
 
           PUBLISHED_VERSIONS=()
@@ -644,6 +647,7 @@ jobs:
             wavecraft-metering
             wavecraft-dsp
             wavecraft-macros
+            wavecraft-processors
           )
 
           echo "Verifying engine crate versions are aligned to $VERSION..."
@@ -731,6 +735,7 @@ jobs:
             wavecraft-metering
             wavecraft-dsp
             wavecraft-macros
+            wavecraft-processors
           )
 
           echo "╔══════════════════════════════════════════════════════════╗"
@@ -792,6 +797,7 @@ jobs:
             wavecraft-metering
             wavecraft-dsp
             wavecraft-macros
+            wavecraft-processors
           )
 
           echo "Verifying required engine crates are available at version $VERSION..."
@@ -863,6 +869,7 @@ jobs:
           sed -i 's/^version = ".*"/version = "'"$TARGET"'"/' dev-server/Cargo.toml
           sed -i 's/\(wavecraft-bridge = { .*version = \)"[^"]*"/\1"'"$TARGET"'"/' dev-server/Cargo.toml
           sed -i 's/\(wavecraft-protocol = { .*version = \)"[^"]*"/\1"'"$TARGET"'"/' dev-server/Cargo.toml
+          sed -i 's/\(wavecraft-processors = { .*version = \)"[^"]*"/\1"'"$TARGET"'"/' dev-server/Cargo.toml
 
           # ── 2. Replay the engine version bump locally ──
           # publish-engine bumped these in its (now-gone) workspace.
@@ -884,7 +891,7 @@ jobs:
           # ── 3. Verify ──
           echo "=== dev-server/Cargo.toml ==="
           head -3 dev-server/Cargo.toml
-          grep -E 'wavecraft-(bridge|protocol)' dev-server/Cargo.toml
+          grep -E 'wavecraft-(bridge|protocol|processors)' dev-server/Cargo.toml
           echo "=== engine workspace version ==="
           sed -n '/\[workspace\.package\]/,/^\[/{/version/p}' engine/Cargo.toml
           echo "=== engine crate versions ==="
@@ -896,10 +903,11 @@ jobs:
         if: needs.publish-engine.outputs.version != ''
         run: |
           TARGET="${{ needs.publish-engine.outputs.version }}"
-          echo "Waiting for wavecraft-bridge $TARGET and wavecraft-protocol $TARGET on crates.io..."
+          echo "Waiting for wavecraft-protocol $TARGET, wavecraft-bridge $TARGET, and wavecraft-processors $TARGET on crates.io..."
 
           bash scripts/ci/wait-for-crate.sh "wavecraft-protocol" "$TARGET"
           bash scripts/ci/wait-for-crate.sh "wavecraft-bridge" "$TARGET"
+          bash scripts/ci/wait-for-crate.sh "wavecraft-processors" "$TARGET"
 
           # Force Cargo to refresh its index cache
           cargo search wavecraft-bridge --limit 1 > /dev/null 2>&1 || true
@@ -1029,6 +1037,43 @@ jobs:
             exit 1
           fi
           echo "✅ Version $VERSION is not yet on crates.io — safe to publish"
+
+      - name: Preflight verify wavecraft-processors availability
+        if: steps.version.outputs.action != 'skip'
+        run: |
+          TARGET_ENGINE_VERSION="${{ needs.publish-engine.outputs.version }}"
+          if [ -n "$TARGET_ENGINE_VERSION" ]; then
+            REQUIRED_VERSION="$TARGET_ENGINE_VERSION"
+            echo "Using engine publish target for preflight: wavecraft-processors@$REQUIRED_VERSION"
+          else
+            REQUIRED_VERSION="${{ steps.final.outputs.version }}"
+            echo "Using dev-server target for preflight: wavecraft-processors@$REQUIRED_VERSION"
+          fi
+
+          HTTP_CODE=$(curl -s -o /tmp/processors-preflight.json -w "%{http_code}" \
+            -H "User-Agent: wavecraft-ci (https://github.com/RonHouben/wavecraft)" \
+            "https://crates.io/api/v1/crates/wavecraft-processors/$REQUIRED_VERSION")
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Preflight passed: wavecraft-processors@$REQUIRED_VERSION is available"
+            exit 0
+          fi
+
+          if [ "$HTTP_CODE" = "404" ]; then
+            LATEST=$(curl -s \
+              -H "User-Agent: wavecraft-ci (https://github.com/RonHouben/wavecraft)" \
+              "https://crates.io/api/v1/crates/wavecraft-processors" \
+              | jq -r '.crate.max_version // "unknown"' 2>/dev/null)
+
+            echo "❌ Preflight failed: wavecraft-processors@$REQUIRED_VERSION is not available on crates.io (latest: $LATEST)."
+            echo "wavecraft-dev-server enables wavecraft-processors via default feature 'audio', so cargo publish --dry-run requires this crate version in the registry."
+            echo "Action: publish engine crates first (or re-run this workflow with force-publish-engine=true), then retry continuous deploy."
+            exit 1
+          fi
+
+          echo "❌ Preflight failed: unable to verify wavecraft-processors@$REQUIRED_VERSION (HTTP $HTTP_CODE from crates.io API)."
+          echo "Please retry once crates.io API is healthy."
+          exit 1
 
       - name: Verify publishability (dry-run)
         if: steps.version.outputs.action != 'skip'
