@@ -41,7 +41,7 @@ impl BundleCommand {
             )
         })?;
 
-        build_ui_assets(&project.engine_dir)?;
+        build_ui_assets(&project.ui_dir)?;
 
         println!(
             "{} Building plugin package `{}`...",
@@ -79,16 +79,35 @@ impl BundleCommand {
     }
 }
 
-fn build_ui_assets(engine_dir: &Path) -> Result<()> {
+fn build_ui_assets(ui_dir: &Path) -> Result<()> {
     println!("{} Building UI assets...", style("→").cyan());
 
-    let status = Command::new("cargo")
-        .args(["xtask", "build-ui"])
-        .current_dir(engine_dir)
+    if !ui_dir.join("node_modules").is_dir() {
+        let install_status = Command::new("npm")
+            .args(["install"])
+            .current_dir(ui_dir)
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .status()
+            .context("Failed to run `npm install`. Is npm installed and in your PATH?")?;
+
+        if !install_status.success() {
+            let code = install_status.code().map_or_else(
+                || "terminated by signal".to_string(),
+                |value| value.to_string(),
+            );
+
+            bail!("UI dependency install failed (exit: {}).", code);
+        }
+    }
+
+    let status = Command::new("npm")
+        .args(["run", "build"])
+        .current_dir(ui_dir)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .status()
-        .context("Failed to run `cargo xtask build-ui`")?;
+        .context("Failed to run `npm run build`. Is npm installed and in your PATH?")?;
 
     if !status.success() {
         let code = status.code().map_or_else(
@@ -484,15 +503,16 @@ mod tests {
     #[test]
     fn build_ui_assets_reports_failure_exit_code() {
         let temp = TempDir::new().expect("temp dir should be created");
-        let engine_dir = temp.path().join("engine");
-        fs::create_dir_all(&engine_dir).expect("engine dir");
+        let ui_dir = temp.path().join("ui");
+        fs::create_dir_all(&ui_dir).expect("ui dir");
+        fs::create_dir_all(ui_dir.join("node_modules")).expect("node_modules dir");
         fs::write(
-            engine_dir.join("Cargo.toml"),
-            "[package]\nname = \"build-ui-fixture\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+            ui_dir.join("package.json"),
+            "{\"name\":\"build-ui-fixture\",\"scripts\":{\"build\":\"exit 1\"}}\n",
         )
-        .expect("engine cargo");
+        .expect("ui package");
 
-        let error = build_ui_assets(&engine_dir).expect_err("build-ui should fail in fixture");
+        let error = build_ui_assets(&ui_dir).expect_err("build-ui should fail in fixture");
         assert!(error.to_string().contains("UI build failed"));
     }
 
