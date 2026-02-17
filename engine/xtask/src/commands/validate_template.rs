@@ -89,10 +89,10 @@ pub fn run(config: ValidateTemplateConfig) -> Result<()> {
     print_success("UI validation passed");
     println!();
 
-    // Step 5: Validate xtask
-    print_phase("Step 5: Validate xtask Commands");
-    validate_xtask(&test_project_dir, config.verbose)?;
-    print_success("xtask validation passed");
+    // Step 5: Validate CLI bundle/install contract
+    print_phase("Step 5: Validate CLI Bundle Contract");
+    validate_cli_bundle_contract(&cli_binary, &test_project_dir, config.verbose)?;
+    print_success("CLI bundle contract validation passed");
     println!();
 
     // Print summary
@@ -176,12 +176,9 @@ fn create_test_plugin_args(output_dir: &str) -> Vec<&str> {
 
 fn verify_generated_engine_identifiers(project_dir: &Path) -> Result<()> {
     let engine_cargo = project_dir.join("engine/Cargo.toml");
-    let engine_xtask = project_dir.join("engine/xtask/src/main.rs");
 
     let cargo_contents = fs::read_to_string(&engine_cargo)
         .with_context(|| format!("Failed to read {}", engine_cargo.display()))?;
-    let xtask_contents = fs::read_to_string(&engine_xtask)
-        .with_context(|| format!("Failed to read {}", engine_xtask.display()))?;
 
     let package_name_line = format!("name = \"{}\"", TEST_PLUGIN_INTERNAL_ID);
     if !cargo_contents.contains(&package_name_line) {
@@ -195,15 +192,6 @@ fn verify_generated_engine_identifiers(project_dir: &Path) -> Result<()> {
     if !cargo_contents.contains("[lib]") || !cargo_contents.contains(&lib_name_line) {
         bail!(
             "Generated engine/Cargo.toml lib name mismatch: expected '{}'",
-            TEST_PLUGIN_INTERNAL_ID
-        );
-    }
-
-    let xtask_internal_line =
-        format!("const PLUGIN_INTERNAL_ID: &str = \"{}\";", TEST_PLUGIN_INTERNAL_ID);
-    if !xtask_contents.contains(&xtask_internal_line) {
-        bail!(
-            "Generated xtask internal bundle id mismatch: expected '{}'",
             TEST_PLUGIN_INTERNAL_ID
         );
     }
@@ -226,6 +214,14 @@ fn verify_generated_files(project_dir: &Path) -> Result<()> {
         if !path.exists() {
             bail!("Missing expected file: {}", file);
         }
+    }
+
+    let removed_xtask_dir = project_dir.join("engine/xtask");
+    if removed_xtask_dir.exists() {
+        bail!(
+            "Generated project should not include deprecated template xtask directory: {}",
+            removed_xtask_dir.display()
+        );
     }
 
     Ok(())
@@ -348,41 +344,48 @@ fn validate_ui(project_dir: &Path, verbose: bool) -> Result<()> {
     Ok(())
 }
 
-/// Validate xtask commands work.
-fn validate_xtask(project_dir: &Path, verbose: bool) -> Result<()> {
-    let engine_dir = project_dir.join("engine");
-
+/// Validate the CLI-owned bundle command contract.
+fn validate_cli_bundle_contract(
+    cli_binary: &Path,
+    project_dir: &Path,
+    verbose: bool,
+) -> Result<()> {
     if verbose {
-        println!("Validating xtask bundle command contract...");
+        println!("Validating CLI bundle command contract...");
     }
 
-    let help_output = run_command_capture("cargo", &["xtask", "bundle", "--help"], &engine_dir)?;
+    let help_output = run_command_capture(
+        cli_binary
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("Invalid CLI binary path"))?,
+        &["bundle", "--help"],
+        project_dir,
+    )?;
     assert_output_contains(
         &help_output,
         "--install",
-        "Expected generated xtask bundle --help to include --install flag",
+        "Expected `wavecraft bundle --help` to include --install flag",
     )?;
 
-    run_command("cargo", &["xtask", "bundle", "--check"], &engine_dir)?;
-    let check_install_output = run_command_capture(
-        "cargo",
-        &["xtask", "bundle", "--check", "--install"],
-        &engine_dir,
-    )?;
-    assert_output_contains(
-        &check_install_output,
-        "Install",
-        "Expected dry-run bundle --check --install output to mention install validation",
-    )?;
-
-    if verbose {
-        println!("Running generated xtask unit tests...");
-    }
     run_command(
-        "cargo",
-        &["test", "--manifest-path", "engine/xtask/Cargo.toml"],
+        cli_binary
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("Invalid CLI binary path"))?,
+        &["bundle"],
         project_dir,
     )?;
+
+    if cfg!(target_os = "macos") {
+        run_command(
+            cli_binary
+                .to_str()
+                .ok_or_else(|| anyhow::anyhow!("Invalid CLI binary path"))?,
+            &["bundle", "--install"],
+            project_dir,
+        )?;
+    } else if verbose {
+        println!("Skipping `wavecraft bundle --install` validation on non-macOS host");
+    }
 
     Ok(())
 }

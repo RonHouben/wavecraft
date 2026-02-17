@@ -38,7 +38,7 @@ enum Commands {
     /// Create a new plugin project from the Wavecraft template
     #[command(
         long_about = "Scaffold a new audio plugin project with Rust engine and React UI.\n\n\
-        The generated project includes a complete build system (xtask), \
+        The generated project includes a complete build-and-dev workflow, \
         development servers, and example DSP code ready to customize."
     )]
     Create {
@@ -97,7 +97,7 @@ enum Commands {
     #[command(long_about = "Build plugin bundles for DAW testing.\n\n\
         Build-only: `wavecraft bundle`.\n\
         Canonical install workflow: `wavecraft bundle --install`.\n\
-        Delegates to generated-project `cargo xtask bundle` (or `cargo xtask bundle --install`).")]
+        Runs CLI-owned build, bundle, and optional install orchestration.")]
     Bundle {
         /// Build and install bundles to local plugin directories
         #[arg(long)]

@@ -363,7 +363,7 @@ cargo xtask bundle
 wavecraft bundle --install
 
 # Internal/advanced SDK workflow (not canonical user path)
-cargo xtask bundle && cargo xtask install
+cargo xtask bundle
 
 # Build with AU wrapper (macOS)
 cargo xtask all

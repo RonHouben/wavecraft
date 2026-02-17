@@ -17,7 +17,8 @@ while IFS= read -r template_file; do
   output_file="${template_file%.template}"
   cp "$template_file" "$output_file"
   echo "  • generated $(realpath --relative-to="$REPO_ROOT" "$output_file" 2>/dev/null || echo "$output_file")"
-done < <(find "$TEMPLATE_DIR" -type f -name "*.template" | sort)
+done < <(find "$TEMPLATE_DIR" -path "$TEMPLATE_DIR/engine/xtask" -prune -o -type f -name "*.template" -print | sort)
+
 
 CURRENT_YEAR="$(date +%Y)"
 
@@ -25,8 +26,7 @@ CURRENT_YEAR="$(date +%Y)"
 # (all 9 variables are handled, even if some are not currently present)
 for generated_file in \
   "$TEMPLATE_DIR/Cargo.toml" \
-  "$TEMPLATE_DIR/engine/Cargo.toml" \
-  "$TEMPLATE_DIR/engine/xtask/Cargo.toml"
+  "$TEMPLATE_DIR/engine/Cargo.toml"
 do
   if [ -f "$generated_file" ]; then
     sed -i.bak \

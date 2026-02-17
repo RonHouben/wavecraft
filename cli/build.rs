@@ -4,7 +4,7 @@ use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 
-const EXCLUDED_DIRS: &[&str] = &["target", "node_modules", "dist"];
+const EXCLUDED_DIRS: &[&str] = &["target", "node_modules", "dist", "xtask"];
 
 fn main() {
     println!("cargo:rerun-if-changed=../sdk-template");

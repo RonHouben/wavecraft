@@ -86,6 +86,7 @@ jobs:
           test -f /tmp/test-plugin/ui/package.json || exit 1
           test -f /tmp/test-plugin/ui/src/App.tsx || exit 1
           test -f /tmp/test-plugin/README.md || exit 1
+          test ! -d /tmp/test-plugin/engine/xtask || (echo "❌ Deprecated engine/xtask directory should not be generated" && exit 1)
           echo "✅ All expected files present"
 
           # Verify local dev dependencies were applied
@@ -140,16 +141,16 @@ jobs:
         working-directory: /tmp/test-plugin/ui
 
       # ═════════════════════════════════════════════════════════════
-      # Validate xtask Commands
+      # Validate CLI Bundle Contract
       # ═════════════════════════════════════════════════════════════
 
-      - name: Verify xtask bundle --install command surface
-        run: cargo xtask bundle --help | grep -q -- "--install"
-        working-directory: /tmp/test-plugin/engine
+      - name: Verify wavecraft bundle command surface
+        run: wavecraft bundle --help | grep -q -- "--install"
+        working-directory: /tmp/test-plugin
 
-      - name: Test xtask bundle --check --install (dry run)
-        run: cargo xtask bundle --check --install
-        working-directory: /tmp/test-plugin/engine
+      - name: Test wavecraft bundle
+        run: wavecraft bundle
+        working-directory: /tmp/test-plugin
 
       # ═════════════════════════════════════════════════════════════
       # Summary
@@ -161,4 +162,4 @@ jobs:
           echo "  - CLI generated project correctly"
           echo "  - Engine code compiles and passes linting"
           echo "  - UI code compiles and passes linting"
-          echo "  - xtask bundle --install contract validated"
+          echo "  - wavecraft bundle contract validated"

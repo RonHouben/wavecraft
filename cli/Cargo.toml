@@ -30,6 +30,7 @@ notify = "7"
 notify-debouncer-full = "0.4"
 command-group = "5.0"
 which = "7"
+nih_plug_xtask = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28b149ec4d62757d0b448809148a0c3ca6e09a95" }
 
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.29", features = ["signal"] }
