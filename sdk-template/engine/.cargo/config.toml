@@ -1,2 +1,1 @@
-[alias]
-xtask = "run --package xtask --release --"
+# No local cargo aliases are required for generated template projects.

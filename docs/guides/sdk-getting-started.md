@@ -61,7 +61,7 @@ The CLI creates a complete project with:
 
 - Rust engine configured with Wavecraft dependencies
 - React UI with TypeScript and Tailwind CSS
-- xtask build system
+- CLI-owned build/install workflow (`wavecraft bundle`, `wavecraft bundle --install`)
 - Ready-to-build plugin template
 
 > **Tip:** You can customize vendor, email, and URL later by editing `engine/Cargo.toml`
@@ -80,7 +80,7 @@ cd ui && npm install && cd ..
 wavecraft bundle --install
 ```
 
-This command delegates to your generated project’s `cargo xtask bundle --install` workflow,
+This command runs the CLI-owned bundle/install workflow,
 builds bundles, and installs the VST3 into:
 
 - `~/Library/Audio/Plug-Ins/VST3/`
@@ -202,8 +202,6 @@ my-plugin/
 │       └── generated/       # Build artifacts (gitignored, created by `wavecraft start`)
 │           └── parameters.ts # Type-safe parameter IDs (auto-generated)
 │
-└── xtask/                   # Build automation
-    └── src/main.rs          # xtask commands (bundle, dev, install, etc.)
 ```
 
 **Key files:**
@@ -490,7 +488,7 @@ Open `http://localhost:5173` in your browser.
 ### Building for Production
 
 ```bash
-# Build bundles (delegates to generated engine xtask)
+# Build bundles
 wavecraft bundle
 
 # Build and install in one step (recommended for DAW testing)
@@ -512,7 +510,7 @@ wavecraft bundle --install
 
 1. Add to `wavecraft_params!` in your Rust code
 2. Add a `<ParameterSlider id="new-param" />` to your UI
-3. Rebuild: `cargo xtask bundle`
+3. Rebuild: `wavecraft bundle`
 
 ### Adding Metering to DSP
 
@@ -555,18 +553,16 @@ vendor = "Your Company"
 
 ## Build Commands Reference
 
-| Command                        | Description                          |
-| ------------------------------ | ------------------------------------ |
-| `wavecraft bundle`             | Build VST3/CLAP bundles              |
-| `wavecraft bundle --install`   | Build + install VST3 (macOS)         |
-| `cargo xtask dev`              | Start dev servers (WebSocket + Vite) |
-| `cargo xtask bundle`           | Build VST3/CLAP bundles              |
-| `cargo xtask bundle --release` | Build optimized release              |
-| `cargo xtask test`             | Run all tests                        |
-| `cargo xtask lint`             | Run linters                          |
-| `cargo xtask install`          | Advanced/internal install command    |
-| `cargo xtask sign`             | Sign plugins for macOS               |
-| `cargo xtask clean`            | Clean build artifacts                |
+| Command                      | Description                          |
+| ---------------------------- | ------------------------------------ |
+| `wavecraft bundle`           | Build VST3/CLAP bundles              |
+| `wavecraft bundle --install` | Build + install VST3 (macOS)         |
+| `cargo xtask dev`            | Start dev servers (WebSocket + Vite) |
+| `cargo xtask test`           | Run all tests                        |
+| `cargo xtask lint`           | Run linters                          |
+| `cargo xtask install`        | Advanced/internal install command    |
+| `cargo xtask sign`           | Sign plugins for macOS               |
+| `cargo xtask clean`          | Clean build artifacts                |
 
 ---
 

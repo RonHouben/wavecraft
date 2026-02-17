@@ -56,7 +56,7 @@ enum Commands {
     /// Build and bundle VST3/CLAP plugins
     #[command(about = "Build and bundle VST3/CLAP plugins")]
     Bundle {
-        /// Package name to bundle (default: wavecraft)
+        /// Package name to bundle (auto-detected when omitted)
         #[arg(short, long)]
         package: Option<String>,
 

@@ -32,6 +32,12 @@ mod cli_tests {
         Bundle {
             #[arg(short, long)]
             package: Option<String>,
+
+            #[arg(short, long)]
+            features: Option<String>,
+
+            #[arg(short, long)]
+            install: bool,
         },
         Test {
             #[arg(short, long)]
@@ -145,8 +151,14 @@ mod cli_tests {
     fn test_bundle_command_default() {
         let cli = parse_args(&["bundle"]).expect("Failed to parse bundle command");
         match cli.command {
-            Some(TestCommands::Bundle { package }) => {
+            Some(TestCommands::Bundle {
+                package,
+                features,
+                install,
+            }) => {
                 assert!(package.is_none());
+                assert!(features.is_none());
+                assert!(!install);
             }
             _ => panic!("Expected Bundle command"),
         }
@@ -157,7 +169,7 @@ mod cli_tests {
         let cli = parse_args(&["bundle", "--package", "my-plugin"])
             .expect("Failed to parse bundle --package");
         match cli.command {
-            Some(TestCommands::Bundle { package }) => {
+            Some(TestCommands::Bundle { package, .. }) => {
                 assert_eq!(package.as_deref(), Some("my-plugin"));
             }
             _ => panic!("Expected Bundle command"),
@@ -168,8 +180,23 @@ mod cli_tests {
     fn test_bundle_command_with_short_package() {
         let cli = parse_args(&["bundle", "-p", "my-plugin"]).expect("Failed to parse bundle -p");
         match cli.command {
-            Some(TestCommands::Bundle { package }) => {
+            Some(TestCommands::Bundle { package, .. }) => {
                 assert_eq!(package.as_deref(), Some("my-plugin"));
+            }
+            _ => panic!("Expected Bundle command"),
+        }
+    }
+
+    #[test]
+    fn test_bundle_command_with_features_and_install() {
+        let cli = parse_args(&["bundle", "--features", "foo,bar", "--install"])
+            .expect("Failed to parse bundle --features --install");
+        match cli.command {
+            Some(TestCommands::Bundle {
+                features, install, ..
+            }) => {
+                assert_eq!(features.as_deref(), Some("foo,bar"));
+                assert!(install);
             }
             _ => panic!("Expected Bundle command"),
         }

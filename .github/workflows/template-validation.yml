@@ -86,6 +86,7 @@ jobs:
           test -f /tmp/test-plugin/ui/package.json || exit 1
           test -f /tmp/test-plugin/ui/src/App.tsx || exit 1
           test -f /tmp/test-plugin/README.md || exit 1
+          test ! -d /tmp/test-plugin/engine/xtask || (echo "❌ Deprecated engine/xtask directory should not be generated" && exit 1)
           echo "✅ All expected files present"
 
           # Verify local dev dependencies were applied
@@ -100,11 +101,19 @@ jobs:
         run: cargo check --manifest-path engine/Cargo.toml
         working-directory: /tmp/test-plugin
 
-      - name: Run clippy on generated code
+      - name: Auto-fix generated engine linting (Clippy)
+        run: cargo clippy --workspace --all-targets --fix --allow-dirty --allow-staged --allow-no-vcs
+        working-directory: /tmp/test-plugin/engine
+
+      - name: Auto-fix generated engine formatting
+        run: cargo fmt
+        working-directory: /tmp/test-plugin/engine
+
+      - name: Verify generated engine linting (Clippy)
         run: cargo clippy --workspace --all-targets -- -D warnings
         working-directory: /tmp/test-plugin/engine
 
-      - name: Check formatting on generated code
+      - name: Verify generated engine formatting
         run: cargo fmt --check
         working-directory: /tmp/test-plugin/engine
 
@@ -123,11 +132,19 @@ jobs:
         run: npm install
         working-directory: /tmp/test-plugin/ui
 
-      - name: Run UI linting
+      - name: Auto-fix UI linting
+        run: npm run lint:fix
+        working-directory: /tmp/test-plugin/ui
+
+      - name: Auto-fix UI formatting
+        run: npm run format
+        working-directory: /tmp/test-plugin/ui
+
+      - name: Verify UI linting
         run: npm run lint
         working-directory: /tmp/test-plugin/ui
 
-      - name: Check UI formatting
+      - name: Verify UI formatting
         run: npm run format:check
         working-directory: /tmp/test-plugin/ui
 
@@ -140,16 +157,16 @@ jobs:
         working-directory: /tmp/test-plugin/ui
 
       # ═════════════════════════════════════════════════════════════
-      # Validate xtask Commands
+      # Validate CLI Bundle Contract
       # ═════════════════════════════════════════════════════════════
 
-      - name: Verify xtask bundle --install command surface
-        run: cargo xtask bundle --help | grep -q -- "--install"
-        working-directory: /tmp/test-plugin/engine
+      - name: Verify wavecraft bundle command surface
+        run: wavecraft bundle --help | grep -q -- "--install"
+        working-directory: /tmp/test-plugin
 
-      - name: Test xtask bundle --check --install (dry run)
-        run: cargo xtask bundle --check --install
-        working-directory: /tmp/test-plugin/engine
+      - name: Test wavecraft bundle
+        run: wavecraft bundle
+        working-directory: /tmp/test-plugin
 
       # ═════════════════════════════════════════════════════════════
       # Summary
@@ -161,4 +178,4 @@ jobs:
           echo "  - CLI generated project correctly"
           echo "  - Engine code compiles and passes linting"
           echo "  - UI code compiles and passes linting"
-          echo "  - xtask bundle --install contract validated"
+          echo "  - wavecraft bundle contract validated"

@@ -1,5 +1,5 @@
 [workspace]
-members = ["engine", "engine/xtask"]
+members = ["engine"]
 resolver = "2"
 
 [workspace.package]
