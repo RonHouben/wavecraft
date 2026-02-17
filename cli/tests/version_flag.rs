@@ -77,3 +77,20 @@ fn test_start_no_longer_accepts_verbose_flag() {
         "Expected clap to reject removed --verbose flag, got: {stderr}"
     );
 }
+
+#[test]
+fn test_create_help_does_not_panic_on_short_flag_collision() {
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wavecraft"));
+    cmd.args(["create", "--help"]);
+
+    let output = cmd.output().expect("Failed to execute wavecraft binary");
+    assert!(
+        output.status.success(),
+        "Expected create help to succeed, stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("--vendor"));
+    assert!(!stdout.contains("-v, --vendor"));
+}

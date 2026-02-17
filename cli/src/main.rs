@@ -46,7 +46,7 @@ enum Commands {
         name: String,
 
         /// Vendor name for plugin metadata (company or developer name)
-        #[arg(short, long)]
+        #[arg(long)]
         vendor: Option<String>,
 
         /// Contact email for plugin metadata
