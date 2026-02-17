@@ -16,6 +16,9 @@ use std::{env, fs};
 
 use xtask::output::*;
 
+const TEST_PLUGIN_INPUT_NAME: &str = "myPlugin";
+const TEST_PLUGIN_INTERNAL_ID: &str = "my_plugin";
+
 /// Template validation configuration.
 #[derive(Debug, Clone, Default)]
 pub struct ValidateTemplateConfig {
@@ -67,6 +70,7 @@ pub fn run(config: ValidateTemplateConfig) -> Result<()> {
         config.verbose,
     )?;
     verify_generated_files(&test_project_dir)?;
+    verify_generated_engine_identifiers(&test_project_dir)?;
 
     normalize_generated_ui_dependencies(&test_project_dir, &workspace_root)?;
 
@@ -157,7 +161,7 @@ fn generate_test_plugin(
 fn create_test_plugin_args(output_dir: &str) -> Vec<&str> {
     vec![
         "create",
-        "test-plugin",
+        TEST_PLUGIN_INPUT_NAME,
         "--vendor",
         "Test Vendor",
         "--email",
@@ -168,6 +172,43 @@ fn create_test_plugin_args(output_dir: &str) -> Vec<&str> {
         "--output",
         output_dir,
     ]
+}
+
+fn verify_generated_engine_identifiers(project_dir: &Path) -> Result<()> {
+    let engine_cargo = project_dir.join("engine/Cargo.toml");
+    let engine_xtask = project_dir.join("engine/xtask/src/main.rs");
+
+    let cargo_contents = fs::read_to_string(&engine_cargo)
+        .with_context(|| format!("Failed to read {}", engine_cargo.display()))?;
+    let xtask_contents = fs::read_to_string(&engine_xtask)
+        .with_context(|| format!("Failed to read {}", engine_xtask.display()))?;
+
+    let package_name_line = format!("name = \"{}\"", TEST_PLUGIN_INTERNAL_ID);
+    if !cargo_contents.contains(&package_name_line) {
+        bail!(
+            "Generated engine/Cargo.toml package name mismatch: expected '{}'",
+            TEST_PLUGIN_INTERNAL_ID
+        );
+    }
+
+    let lib_name_line = format!("name = \"{}\"", TEST_PLUGIN_INTERNAL_ID);
+    if !cargo_contents.contains("[lib]") || !cargo_contents.contains(&lib_name_line) {
+        bail!(
+            "Generated engine/Cargo.toml lib name mismatch: expected '{}'",
+            TEST_PLUGIN_INTERNAL_ID
+        );
+    }
+
+    let xtask_internal_line =
+        format!("const PLUGIN_INTERNAL_ID: &str = \"{}\";", TEST_PLUGIN_INTERNAL_ID);
+    if !xtask_contents.contains(&xtask_internal_line) {
+        bail!(
+            "Generated xtask internal bundle id mismatch: expected '{}'",
+            TEST_PLUGIN_INTERNAL_ID
+        );
+    }
+
+    Ok(())
 }
 
 /// Verify that all expected files were generated.

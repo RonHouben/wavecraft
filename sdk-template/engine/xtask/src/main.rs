@@ -5,7 +5,8 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-const PLUGIN_PACKAGE: &str = "{{plugin_name}}";
+const PLUGIN_INTERNAL_ID: &str = "{{plugin_name_snake}}";
+const PLUGIN_DISPLAY_NAME: &str = "{{plugin_name}}";
 
 #[derive(Parser)]
 #[command(name = "xtask")]
@@ -62,17 +63,17 @@ fn main() -> Result<()> {
                 return Ok(());
             }
 
-            println!("Building {{plugin_name}} plugin...");
+            println!("Building {} plugin...", PLUGIN_DISPLAY_NAME);
 
             // Build arguments for nih_plug_xtask
-            let mut args = vec!["bundle".to_string(), PLUGIN_PACKAGE.to_string()];
+            let mut args = vec!["bundle".to_string(), PLUGIN_INTERNAL_ID.to_string()];
 
             // Always use release mode for bundles
             args.push("--release".to_string());
 
             // Call nih_plug_xtask with the bundle command
             // This will compile and create VST3/CLAP bundles
-            if let Err(e) = nih_plug_xtask::main_with_args("{{plugin_name_snake}}", args) {
+            if let Err(e) = nih_plug_xtask::main_with_args(PLUGIN_INTERNAL_ID, args) {
                 anyhow::bail!("Bundle command failed: {}", e);
             }
 
@@ -94,7 +95,7 @@ fn bundled_dir() -> Result<PathBuf> {
 }
 
 fn vst3_bundle_path() -> Result<PathBuf> {
-    Ok(bundled_dir()?.join(format!("{}.vst3", PLUGIN_PACKAGE)))
+    Ok(bundled_dir()?.join(format!("{}.vst3", PLUGIN_INTERNAL_ID)))
 }
 
 fn macos_vst3_install_dir() -> Result<PathBuf> {
@@ -307,7 +308,7 @@ mod tests {
     fn install_reports_replace_failure_with_diagnostics() {
         let src = create_fake_bundle();
         let dest_dir = make_unique_temp_path("vst3-install-replace");
-        let dest_bundle = dest_dir.join(format!("{}.vst3", PLUGIN_PACKAGE));
+        let dest_bundle = dest_dir.join(format!("{}.vst3", PLUGIN_INTERNAL_ID));
         fs::create_dir_all(&dest_bundle)
             .expect("failed to create existing destination bundle fixture");
 
@@ -334,7 +335,7 @@ mod tests {
 
     fn create_fake_bundle() -> PathBuf {
         let bundle_dir =
-            make_unique_temp_path("vst3-source-bundle").join(format!("{}.vst3", PLUGIN_PACKAGE));
+            make_unique_temp_path("vst3-source-bundle").join(format!("{}.vst3", PLUGIN_INTERNAL_ID));
         fs::create_dir_all(bundle_dir.join("Contents"))
             .expect("failed to create fake bundle directories");
         fs::write(
