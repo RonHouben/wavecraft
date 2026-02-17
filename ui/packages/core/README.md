@@ -16,7 +16,7 @@ import { useParameter, useMeterFrame, logger } from '@wavecraft/core';
 function MyComponent() {
   const { param, setValue } = useParameter('gain');
   const meterFrame = useMeterFrame();
-  
+
   return (
     <input
       type="range"
@@ -31,23 +31,23 @@ function MyComponent() {
 
 ### Hooks
 
-| Hook | Description |
-|------|-------------|
-| `useParameter(id)` | Get/set a single parameter |
-| `useAllParameters()` | Get all plugin parameters |
-| `useParameterGroups()` | Get parameters organized by group |
-| `useMeterFrame()` | Get current audio meter levels |
-| `useConnectionStatus()` | Monitor IPC connection status |
-| `useRequestResize()` | Request plugin window resize |
-| `useLatencyMonitor()` | Monitor IPC roundtrip latency |
+| Hook                    | Description                       |
+| ----------------------- | --------------------------------- |
+| `useParameter(id)`      | Get/set a single parameter        |
+| `useAllParameters()`    | Get all plugin parameters         |
+| `useParameterGroups()`  | Get parameters organized by group |
+| `useMeterFrame()`       | Get current audio meter levels    |
+| `useConnectionStatus()` | Monitor IPC connection status     |
+| `useRequestResize()`    | Request plugin window resize      |
+| `useLatencyMonitor()`   | Monitor IPC roundtrip latency     |
 
 ### Utilities
 
 ```typescript
 import { linearToDb, dbToLinear } from '@wavecraft/core/meters';
 
-linearToDb(0.5);  // → -6.02 dB
-dbToLinear(-6);   // → 0.501
+linearToDb(0.5); // → -6.02 dB
+dbToLinear(-6); // → 0.501
 ```
 
 ### Advanced: IPC Bridge

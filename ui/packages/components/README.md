@@ -20,7 +20,7 @@ function PluginUI() {
   const { params } = useAllParameters();
 
   return (
-    <div className="p-4 bg-plugin-dark">
+    <div className="bg-plugin-dark p-4">
       <Meter />
       {params?.map((p) => (
         <ParameterSlider key={p.id} id={p.id} />
@@ -36,17 +36,14 @@ Components use TailwindCSS utility classes. Configure your `tailwind.config.js`:
 
 ```javascript
 module.exports = {
-  content: [
-    './src/**/*.{js,ts,jsx,tsx}',
-    './node_modules/@wavecraft/components/dist/**/*.js',
-  ],
+  content: ['./src/**/*.{js,ts,jsx,tsx}', './node_modules/@wavecraft/components/dist/**/*.js'],
   theme: {
     extend: {
       colors: {
         'plugin-dark': '#1a1a1a',
         'plugin-surface': '#2a2a2a',
         'plugin-border': '#444444',
-        'accent': '#4a9eff',
+        accent: '#4a9eff',
         'accent-light': '#6bb0ff',
         'meter-safe': '#4caf50',
         'meter-warning': '#ffeb3b',
@@ -59,17 +56,17 @@ module.exports = {
 
 ## Components
 
-| Component | Description |
-|-----------|-------------|
-| `Meter` | Audio level meter with peak/RMS display |
-| `ParameterSlider` | Slider control for a parameter |
-| `ParameterGroup` | Group of related parameters |
-| `ParameterToggle` | Boolean parameter toggle |
-| `VersionBadge` | Displays plugin version |
-| `ConnectionStatus` | Shows IPC connection state |
-| `LatencyMonitor` | Displays IPC latency stats |
-| `ResizeHandle` | Draggable resize corner |
-| `ResizeControls` | Preset size buttons |
+| Component          | Description                             |
+| ------------------ | --------------------------------------- |
+| `Meter`            | Audio level meter with peak/RMS display |
+| `ParameterSlider`  | Slider control for a parameter          |
+| `ParameterGroup`   | Group of related parameters             |
+| `ParameterToggle`  | Boolean parameter toggle                |
+| `VersionBadge`     | Displays plugin version                 |
+| `ConnectionStatus` | Shows IPC connection state              |
+| `LatencyMonitor`   | Displays IPC latency stats              |
+| `ResizeHandle`     | Draggable resize corner                 |
+| `ResizeControls`   | Preset size buttons                     |
 
 ## Requirements
 
