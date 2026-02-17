@@ -134,8 +134,9 @@ fn test_bundle_install_delegates_successfully_with_expected_command_and_project_
         fs::read_to_string(&captured_cwd).expect("delegated cwd should be captured");
     let delegated_cwd_path =
         fs::canonicalize(delegated_cwd.trim()).expect("canonical delegated cwd");
-    let expected_root = fs::canonicalize(root).expect("canonical expected root");
-    assert_eq!(delegated_cwd_path, expected_root);
+    let expected_engine =
+        fs::canonicalize(root.join("engine")).expect("canonical expected engine cwd");
+    assert_eq!(delegated_cwd_path, expected_engine);
 }
 
 fn make_executable(path: &Path) {
