@@ -143,8 +143,12 @@ jobs:
       # Validate xtask Commands
       # ═════════════════════════════════════════════════════════════
 
-      - name: Test xtask bundle command (dry run)
-        run: cargo xtask bundle --check
+      - name: Verify xtask bundle --install command surface
+        run: cargo xtask bundle --help | grep -q -- "--install"
+        working-directory: /tmp/test-plugin/engine
+
+      - name: Test xtask bundle --check --install (dry run)
+        run: cargo xtask bundle --check --install
         working-directory: /tmp/test-plugin/engine
 
       # ═════════════════════════════════════════════════════════════
@@ -157,4 +161,4 @@ jobs:
           echo "  - CLI generated project correctly"
           echo "  - Engine code compiles and passes linting"
           echo "  - UI code compiles and passes linting"
-          echo "  - xtask commands work"
+          echo "  - xtask bundle --install contract validated"

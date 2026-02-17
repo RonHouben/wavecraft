@@ -73,25 +73,21 @@ The CLI creates a complete project with:
 cd ui && npm install && cd ..
 ```
 
-### 4. Build Your Plugin
+### 4. Build and Install for DAW Testing
 
 ```bash
-# Build VST3 and CLAP bundles
-cargo xtask bundle
-
-# Bundles are created in:
-# target/bundled/my-plugin.vst3/
-# target/bundled/my-plugin.clap
+# Canonical user-facing flow
+wavecraft bundle --install
 ```
+
+This command delegates to your generated project’s `cargo xtask bundle --install` workflow,
+builds bundles, and installs the VST3 into:
+
+- `~/Library/Audio/Plug-Ins/VST3/`
 
 ### 5. Test in Your DAW
 
-Copy the plugin to your DAW's plugin directory:
-
-```bash
-# Install to system directories (macOS)
-cargo xtask install
-```
+Rescan plugins in your DAW and load your plugin.
 
 ---
 
@@ -138,6 +134,16 @@ wavecraft start --install
 **Note:** The UI dev server requires a free port. If the port is already in use,
 `wavecraft start` will exit with an error. Stop the other process or pass
 `--ui-port` to choose a different port.
+
+### Bundling and Installing (Canonical)
+
+```bash
+# Build bundles only
+wavecraft bundle
+
+# Build and install VST3 for DAW testing (recommended)
+wavecraft bundle --install
+```
 
 ### Updating CLI and Dependencies
 
@@ -484,18 +490,18 @@ Open `http://localhost:5173` in your browser.
 ### Building for Production
 
 ```bash
-# Debug build (fast, for testing)
-cargo xtask bundle --debug
+# Build bundles (delegates to generated engine xtask)
+wavecraft bundle
 
-# Release build (optimized)
-cargo xtask bundle --release
+# Build and install in one step (recommended for DAW testing)
+wavecraft bundle --install
 ```
 
 ### Testing in DAW
 
 ```bash
-# Build and install in one step
-cargo xtask bundle && cargo xtask install
+# Canonical build + install flow
+wavecraft bundle --install
 ```
 
 ---
@@ -549,16 +555,18 @@ vendor = "Your Company"
 
 ## Build Commands Reference
 
-| Command                        | Description                           |
-| ------------------------------ | ------------------------------------- |
-| `cargo xtask dev`              | Start dev servers (WebSocket + Vite)  |
-| `cargo xtask bundle`           | Build VST3/CLAP bundles               |
-| `cargo xtask bundle --release` | Build optimized release               |
-| `cargo xtask test`             | Run all tests                         |
-| `cargo xtask lint`             | Run linters                           |
-| `cargo xtask install`          | Install plugins to system directories |
-| `cargo xtask sign`             | Sign plugins for macOS                |
-| `cargo xtask clean`            | Clean build artifacts                 |
+| Command                        | Description                          |
+| ------------------------------ | ------------------------------------ |
+| `wavecraft bundle`             | Build VST3/CLAP bundles              |
+| `wavecraft bundle --install`   | Build + install VST3 (macOS)         |
+| `cargo xtask dev`              | Start dev servers (WebSocket + Vite) |
+| `cargo xtask bundle`           | Build VST3/CLAP bundles              |
+| `cargo xtask bundle --release` | Build optimized release              |
+| `cargo xtask test`             | Run all tests                        |
+| `cargo xtask lint`             | Run linters                          |
+| `cargo xtask install`          | Advanced/internal install command    |
+| `cargo xtask sign`             | Sign plugins for macOS               |
+| `cargo xtask clean`            | Clean build artifacts                |
 
 ---
 
@@ -608,7 +616,7 @@ cargo run -p wavecraft -- create TestPlugin --output target/tmp/test-plugin
 ### Plugin doesn't appear in DAW
 
 1. Verify the bundle was created: `ls target/bundled/`
-2. Check install location: `cargo xtask install --dry-run`
+2. Re-run install flow: `wavecraft bundle --install`
 3. macOS: Rescan plugins in your DAW preferences
 4. Try running the plugin validator: `pluginval /path/to/plugin.vst3`
 
