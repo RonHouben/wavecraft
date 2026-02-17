@@ -1,6 +1,6 @@
 use std::fs;
-use std::process::Command;
 use std::os::unix::fs::PermissionsExt;
+use std::process::Command;
 
 use tempfile::TempDir;
 
