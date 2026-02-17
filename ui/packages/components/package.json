@@ -1,6 +1,6 @@
 {
   "name": "@wavecraft/components",
-  "version": "0.7.30",
+  "version": "0.7.29",
   "description": "Pre-built React components for Wavecraft audio plugins",
   "type": "module",
   "main": "./dist/index.js",
@@ -40,7 +40,7 @@
     "url": "https://github.com/RonHouben/wavecraft/issues"
   },
   "peerDependencies": {
-    "@wavecraft/core": "^0.7.30",
+    "@wavecraft/core": "^0.7.29",
     "react": "^18.0.0",
     "react-dom": "^18.0.0"
   },
