@@ -127,7 +127,11 @@ fn test_bundle_delegates_build_ui_before_bundle() {
     let cargo_invocations =
         fs::read_to_string(cargo_invocations_path).expect("cargo invocations should be captured");
     let lines: Vec<&str> = cargo_invocations.lines().collect();
-    assert_eq!(lines.len(), 2, "expected clean + build invocations, got: {lines:?}");
+    assert_eq!(
+        lines.len(),
+        2,
+        "expected clean + build invocations, got: {lines:?}"
+    );
     assert_eq!(lines[0], "clean -p wavecraft-nih_plug");
     assert!(
         lines[1].starts_with("build --release -p fake-engine"),
@@ -174,7 +178,11 @@ fn test_bundle_install_delegates_build_ui_before_bundle_install() {
     let cargo_invocations =
         fs::read_to_string(cargo_invocations_path).expect("cargo invocations should be captured");
     let lines: Vec<&str> = cargo_invocations.lines().collect();
-    assert_eq!(lines.len(), 2, "expected clean + build invocations, got: {lines:?}");
+    assert_eq!(
+        lines.len(),
+        2,
+        "expected clean + build invocations, got: {lines:?}"
+    );
     assert_eq!(lines[0], "clean -p wavecraft-nih_plug");
     assert!(
         lines[1].starts_with("build --release -p fake-engine"),
