@@ -289,41 +289,23 @@ fn clean_wavecraft_nih_plug(engine_dir: &Path) -> Result<()> {
 }
 
 fn run_nih_plug_bundle(engine_dir: &Path, package_name: &str) -> Result<()> {
-    let original_cwd = env::current_dir().context("Failed to capture current directory")?;
-    let original_manifest_dir = env::var("CARGO_MANIFEST_DIR").ok();
+    let status = Command::new("cargo")
+        .args(["xtask", "bundle", package_name, "--release"])
+        .current_dir(engine_dir)
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()
+        .context("Failed to run `cargo xtask bundle`")?;
 
-    env::set_current_dir(engine_dir)
-        .with_context(|| format!("Failed to enter engine directory: {}", engine_dir.display()))?;
-
-    // `nih_plug_xtask` prefers CARGO_MANIFEST_DIR when set.
-    // When this CLI is launched via Cargo, that env var points at this repo's manifest,
-    // causing bundling to run against the SDK workspace instead of the generated project.
-    // Clear it temporarily so workspace discovery uses the current directory we set above.
-    env::remove_var("CARGO_MANIFEST_DIR");
-
-    let args = vec![
-        "bundle".to_string(),
-        package_name.to_string(),
-        "--release".to_string(),
-    ];
-
-    let bundle_result = nih_plug_xtask::main_with_args("wavecraft", args)
-        .map_err(|error| anyhow::anyhow!("Bundle command failed: {}", error));
-
-    if let Some(value) = original_manifest_dir {
-        env::set_var("CARGO_MANIFEST_DIR", value);
+    if status.success() {
+        Ok(())
     } else {
-        env::remove_var("CARGO_MANIFEST_DIR");
+        let code = status.code().map_or_else(
+            || "terminated by signal".to_string(),
+            |value| value.to_string(),
+        );
+        bail!("Bundle command failed (exit: {}).", code);
     }
-
-    env::set_current_dir(&original_cwd).with_context(|| {
-        format!(
-            "Failed to restore current directory to {}",
-            original_cwd.display()
-        )
-    })?;
-
-    bundle_result
 }
 
 fn bundled_dir_candidates(engine_dir: &Path) -> [PathBuf; 2] {

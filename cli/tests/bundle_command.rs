@@ -116,8 +116,10 @@ fn test_bundle_delegates_build_ui_before_bundle() {
 
     let output = cmd.output().expect("Failed to execute wavecraft binary");
     assert!(
-        !output.status.success(),
-        "bundle command unexpectedly succeeded in fixture"
+        output.status.success(),
+        "bundle command unexpectedly failed in fixture\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
     );
 
     let npm_invocations =
@@ -129,8 +131,8 @@ fn test_bundle_delegates_build_ui_before_bundle() {
     let lines: Vec<&str> = cargo_invocations.lines().collect();
     assert_eq!(
         lines.len(),
-        2,
-        "expected clean + build invocations, got: {lines:?}"
+        3,
+        "expected clean + build + xtask bundle invocations, got: {lines:?}"
     );
     assert_eq!(lines[0], "clean -p wavecraft-nih_plug");
     assert!(
@@ -138,6 +140,7 @@ fn test_bundle_delegates_build_ui_before_bundle() {
         "expected cargo build invocation, got: {:?}",
         lines[1]
     );
+    assert_eq!(lines[2], "xtask bundle fake-engine --release");
 
     let staged_index = fs::read_to_string(
         root.join("fake-wavecraft-nih-plug")
@@ -180,8 +183,8 @@ fn test_bundle_install_delegates_build_ui_before_bundle_install() {
     let lines: Vec<&str> = cargo_invocations.lines().collect();
     assert_eq!(
         lines.len(),
-        2,
-        "expected clean + build invocations, got: {lines:?}"
+        3,
+        "expected clean + build + xtask bundle invocations, got: {lines:?}"
     );
     assert_eq!(lines[0], "clean -p wavecraft-nih_plug");
     assert!(
@@ -189,6 +192,7 @@ fn test_bundle_install_delegates_build_ui_before_bundle_install() {
         "expected cargo build invocation, got: {:?}",
         lines[1]
     );
+    assert_eq!(lines[2], "xtask bundle fake-engine --release");
 
     let staged_index = fs::read_to_string(
         root.join("fake-wavecraft-nih-plug")
