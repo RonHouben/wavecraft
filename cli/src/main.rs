@@ -8,7 +8,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
-use commands::{CreateCommand, StartCommand};
+use commands::{BundleCommand, CreateCommand, StartCommand};
 
 /// SDK version derived from CLI package version at compile time.
 /// Used for git tag dependencies in generated projects.
@@ -93,6 +93,18 @@ enum Commands {
         no_install: bool,
     },
 
+    /// Build and install plugin bundles (macOS-first)
+    #[command(
+        long_about = "Build plugin bundles and install them for DAW testing.\n\n\
+        Canonical install workflow: `wavecraft bundle --install`.\n\
+        This command delegates to generated-project `cargo xtask bundle --install`."
+    )]
+    Bundle {
+        /// Build and install bundles to local plugin directories
+        #[arg(long)]
+        install: bool,
+    },
+
     /// Update the CLI and project dependencies (Rust crates + npm packages)
     #[command(
         long_about = "Update the Wavecraft CLI to the latest version, then update Rust crates \
@@ -158,6 +170,11 @@ fn main() -> Result<()> {
                 install,
                 no_install,
             };
+            cmd.execute()?;
+        }
+
+        Commands::Bundle { install } => {
+            let cmd = BundleCommand { install };
             cmd.execute()?;
         }
 
