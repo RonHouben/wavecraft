@@ -19,7 +19,7 @@ on:
         type: boolean
         default: false
       force-publish-new-version-npm-packages:
-        description: "Force publish npm cohort (@wavecraft/core + @wavecraft/components) (ignore change detection)"
+        description: "Force publish new version of npm packages (@wavecraft/core + @wavecraft/components) (ignore change detection)"
         type: boolean
         default: false
 
