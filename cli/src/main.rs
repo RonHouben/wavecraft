@@ -93,12 +93,11 @@ enum Commands {
         no_install: bool,
     },
 
-    /// Build and install plugin bundles (macOS-first)
-    #[command(
-        long_about = "Build plugin bundles and install them for DAW testing.\n\n\
+    /// Build plugin bundles (macOS-first, optional install)
+    #[command(long_about = "Build plugin bundles for DAW testing.\n\n\
+        Build-only: `wavecraft bundle`.\n\
         Canonical install workflow: `wavecraft bundle --install`.\n\
-        This command delegates to generated-project `cargo xtask bundle --install`."
-    )]
+        Delegates to generated-project `cargo xtask bundle` (or `cargo xtask bundle --install`).")]
     Bundle {
         /// Build and install bundles to local plugin directories
         #[arg(long)]

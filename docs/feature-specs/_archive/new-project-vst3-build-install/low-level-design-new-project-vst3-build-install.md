@@ -21,7 +21,7 @@ This design ensures that a project generated with `wavecraft create myProject` c
 - Generated `xtask` command contract must include:
   - `bundle`
   - `bundle --install`
-- Build outputs are sourced from `engine/target/bundled`.
+- Build outputs are sourced from `target/bundled` (relative to the generated project root).
 - Install target includes macOS user plugin directory:
   - `~/Library/Audio/Plug-Ins/VST3`
 - Optional CLAP installation path support may be included if the generated project emits CLAP bundles.
@@ -90,11 +90,11 @@ Generated projects must expose a stable delegated command contract:
 
 ### 3.2.1 `bundle`
 
-**Goal:** Build plugin bundles into `engine/target/bundled`.  
+**Goal:** Build plugin bundles into `target/bundled` (relative to generated project root).  
 **Behavior:**
 
 - Invokes project build pipeline required to produce VST3 bundle artifacts.
-- Verifies expected VST3 output exists under `engine/target/bundled`.
+- Verifies expected VST3 output exists under `target/bundled`.
 - Returns non-zero with clear error if bundle output is missing.
 
 ### 3.2.2 `bundle --install`
@@ -119,7 +119,7 @@ The generated `xtask` may keep reusable internal install routines (including opt
 
 Primary source root:
 
-- `engine/target/bundled`
+- `target/bundled` (from generated project root)
 
 Expected content model:
 
@@ -143,10 +143,10 @@ Expected content model:
 
 ### 5.1 Missing Bundle Output
 
-**Condition:** Bundle build failed, produced no expected output, or install stage cannot find artifacts under `engine/target/bundled`.  
+**Condition:** Bundle build failed, produced no expected output, or install stage cannot find artifacts under `target/bundled`.  
 **Diagnostic requirements:**
 
-- Explicitly state missing source path under `engine/target/bundled`.
+- Explicitly state missing source path under `target/bundled`.
 - Suggest recovery command:
   - `cargo xtask bundle --install`
 - Exit non-zero.
@@ -206,7 +206,7 @@ Expected updates in generated template `xtask` implementation to provide and enf
 
 - `bundle`
 - `bundle --install`
-- artifact discovery from `engine/target/bundled`
+- artifact discovery from `target/bundled`
 - path-safe install logic and diagnostics
 - internal install routines treated as implementation details, not public contract
 
@@ -257,7 +257,7 @@ Validation pipeline should verify generated projects:
 
 1. `wavecraft bundle --install` resolves/validates project context.
 2. Top-level CLI delegates to generated-project `cargo xtask bundle --install`.
-3. Delegated bundle stage emits bundle(s) to `engine/target/bundled`.
+3. Delegated bundle stage emits bundle(s) to `target/bundled`.
 4. Delegated install stage resolves destination directories.
 5. Delegated install stage copies/replaces bundle(s) into user plugin dirs.
 6. CLI prints/forwards final installed paths and completion status.
@@ -308,7 +308,7 @@ At minimum, verify:
 - [ ] `wavecraft bundle --install` propagates underlying delegated xtask failure diagnostics.
 - [ ] A newly generated project exposes delegated `cargo xtask bundle`.
 - [ ] A newly generated project supports delegated `cargo xtask bundle --install`.
-- [ ] VST3 artifacts are read from `engine/target/bundled`.
+- [ ] VST3 artifacts are read from `target/bundled` (project-root relative).
 - [ ] VST3 installs to `~/Library/Audio/Plug-Ins/VST3` on macOS.
 - [ ] Optional CLAP install path is handled consistently when CLAP artifacts exist.
 - [ ] Missing bundle errors are explicit and include `wavecraft bundle --install` as recovery.

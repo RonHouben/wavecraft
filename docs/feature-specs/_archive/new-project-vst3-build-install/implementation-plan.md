@@ -33,7 +33,7 @@ The following constraints are authoritative and must be preserved through implem
 3. **Standalone `install` and `install --dry-run`:** not required as public contract for generated projects
 4. **Working-directory behavior:** top-level command must validate/resolve project-root context and fail clearly outside valid root
 5. **Platform focus:** macOS-first VST3 workflow
-6. **Artifact source:** install stage reads built artifacts from `engine/target/bundled`
+6. **Artifact source:** install stage reads built artifacts from `target/bundled` (relative to generated project root)
 7. **Install destination (macOS user-level):** `~/Library/Audio/Plug-Ins/VST3`
 8. **Execution ordering:** install stage must not run unless bundle stage succeeds
 9. **Diagnostics quality:** failures must be actionable, include relevant path/operation context, and suggest recovery steps
@@ -93,7 +93,7 @@ The following constraints are authoritative and must be preserved through implem
    - Return non-zero immediately when Stage 1 fails.
 
 3. **Enforce artifact discovery from canonical path**
-   - Resolve source root as `engine/target/bundled` (relative to generated project root).
+   - Resolve source root as `target/bundled` (relative to generated project root).
    - Assert VST3 artifact exists before install copy starts.
 
 4. **Implement macOS-first install destination behavior**
@@ -128,7 +128,7 @@ The following constraints are authoritative and must be preserved through implem
    - Prefer single-step `wavecraft bundle --install`
 2. Remove/replace references that imply standalone `cargo xtask install` is the required public workflow for generated projects.
 3. Add troubleshooting entries aligned to expected diagnostics:
-   - Missing artifact under `engine/target/bundled`
+   - Missing artifact under `target/bundled`
    - Permission/locked-file failure in `~/Library/Audio/Plug-Ins/VST3`
 4. Review `README.md` and update only if it contains conflicting user-facing install guidance.
 5. Confirm wording stays consistent with macOS-first VST3 positioning.
@@ -166,7 +166,7 @@ Implement and validate at least these negative cases end-to-end:
    - Expected: non-zero exit; actionable guidance describing expected project root and rerun steps.
 
 2. **Missing artifact**
-   - Condition: install stage runs with no expected VST3 artifact in `engine/target/bundled`.
+   - Condition: install stage runs with no expected VST3 artifact in `target/bundled`.
    - Expected: non-zero exit; explicit missing-path diagnostic; recovery command shown.
 
 3. **Permission failure / file lock**
@@ -201,7 +201,7 @@ Implement and validate at least these negative cases end-to-end:
    - **Fail:** CLI masks underlying cause with non-actionable wrapper message.
 
 4. `cargo xtask bundle`
-   - **Pass:** bundle succeeds and artifacts are present under `engine/target/bundled`.
+   - **Pass:** bundle succeeds and artifacts are present under `target/bundled`.
    - **Fail:** missing/incorrect output path or non-actionable error.
 
 5. `cargo xtask bundle --install`

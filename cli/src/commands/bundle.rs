@@ -14,13 +14,6 @@ pub struct BundleCommand {
 
 impl BundleCommand {
     pub fn execute(&self) -> Result<()> {
-        if !self.install {
-            bail!(
-                "The canonical install workflow is `wavecraft bundle --install`.\n\
-                 Re-run with --install to build and install plugin bundles."
-            );
-        }
-
         let cwd = std::env::current_dir().context("Failed to get current directory")?;
         let project_root = resolve_project_root(&cwd)?;
 
@@ -37,18 +30,27 @@ impl BundleCommand {
             );
         }
 
+        let delegated_args: &[&str] = if self.install {
+            &["xtask", "bundle", "--install"]
+        } else {
+            &["xtask", "bundle"]
+        };
+
+        let delegated_display = format!("cargo {}", delegated_args.join(" "));
+
         println!(
-            "{} Delegating to generated project: cargo xtask bundle --install",
-            style("→").cyan()
+            "{} Delegating to generated project: {}",
+            style("→").cyan(),
+            delegated_display
         );
 
         let status = Command::new("cargo")
-            .args(["xtask", "bundle", "--install"])
+            .args(delegated_args)
             .current_dir(&project_root)
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .status()
-            .context("Failed to run delegated command `cargo xtask bundle --install`")?;
+            .with_context(|| format!("Failed to run delegated command `{}`", delegated_display))?;
 
         if !status.success() {
             let code = status.code().map_or_else(
@@ -57,12 +59,17 @@ impl BundleCommand {
             );
 
             bail!(
-                "Delegated command failed: `cargo xtask bundle --install` (exit: {}).",
-                code
+                "Delegated command failed: `{}` (exit: {}).",
+                delegated_display,
+                code,
             );
         }
 
-        println!("{} Bundle/install completed", style("✓").green());
+        if self.install {
+            println!("{} Bundle/install completed", style("✓").green());
+        } else {
+            println!("{} Bundle completed", style("✓").green());
+        }
         Ok(())
     }
 }

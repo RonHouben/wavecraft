@@ -323,7 +323,7 @@ Wavecraft uses a Rust-based build system (`xtask`) that provides a unified inter
 | `cargo xtask lint`                     | Run linters for UI and/or engine code                                                                                                            |
 | `cargo xtask desktop`                  | Build and run the desktop POC                                                                                                                    |
 | `cargo xtask au`                       | Build AU wrapper (macOS only)                                                                                                                    |
-| `cargo xtask install`                  | Install plugins to system directories                                                                                                            |
+| `cargo xtask install`                  | Install plugins to system directories (**internal/advanced SDK workflow**; generated projects should use `wavecraft bundle --install`)           |
 | `cargo xtask clean`                    | Clean all build artifacts across workspace (engine/target, cli/target, ui/dist, ui/coverage, target/tmp) with disk space reporting               |
 | `cargo xtask all`                      | Run full build pipeline (test → bundle → au → install)                                                                                           |
 | `cargo xtask sign`                     | Sign plugin bundles for macOS distribution                                                                                                       |
@@ -359,7 +359,10 @@ cargo xtask bundle --debug
 # Full build with React UI
 cargo xtask bundle
 
-# Build and install for DAW testing
+# Build and install for DAW testing (canonical generated-project workflow)
+wavecraft bundle --install
+
+# Internal/advanced SDK workflow (not canonical user path)
 cargo xtask bundle && cargo xtask install
 
 # Build with AU wrapper (macOS)
