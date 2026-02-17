@@ -478,7 +478,9 @@ The workflow is **idempotent** — running it multiple times won't cause issues:
 
 ### Workflow Dispatch (npm)
 
-`workflow_dispatch` uses `force-publish-npm-cohort` as the npm force input.
+`workflow_dispatch` uses `force-publish-new-version-npm-packages` as the npm force input.
+
+When `force-publish-new-version-npm-packages=true`, cohort preparation still computes the normal target (highest of local/published core/components). If that exact target is already published for **both** `@wavecraft/core` and `@wavecraft/components`, CI auto-bumps the target to the next patch version and publishes that new cohort version. If only one package is already published at the computed target, no auto-bump is performed so the missing package can be published to restore alignment.
 
 ### Engine Crate Publish Order
 
