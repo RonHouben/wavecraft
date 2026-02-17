@@ -208,14 +208,13 @@ fn discover_bundleable_packages(engine_dir: &Path) -> Result<Vec<String>> {
             })
             .unwrap_or(false);
 
-        if is_bundleable {
-            if let Some(package_name) = manifest_toml
+        if is_bundleable
+            && let Some(package_name) = manifest_toml
                 .get("package")
                 .and_then(|package| package.get("name"))
                 .and_then(|value| value.as_str())
-            {
-                bundleable_packages.push(package_name.to_string());
-            }
+        {
+            bundleable_packages.push(package_name.to_string());
         }
     }
 

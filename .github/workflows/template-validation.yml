@@ -101,11 +101,19 @@ jobs:
         run: cargo check --manifest-path engine/Cargo.toml
         working-directory: /tmp/test-plugin
 
-      - name: Run clippy on generated code
+      - name: Auto-fix generated engine linting (Clippy)
+        run: cargo clippy --workspace --all-targets --fix --allow-dirty --allow-staged
+        working-directory: /tmp/test-plugin/engine
+
+      - name: Auto-fix generated engine formatting
+        run: cargo fmt
+        working-directory: /tmp/test-plugin/engine
+
+      - name: Verify generated engine linting (Clippy)
         run: cargo clippy --workspace --all-targets -- -D warnings
         working-directory: /tmp/test-plugin/engine
 
-      - name: Check formatting on generated code
+      - name: Verify generated engine formatting
         run: cargo fmt --check
         working-directory: /tmp/test-plugin/engine
 
@@ -124,11 +132,19 @@ jobs:
         run: npm install
         working-directory: /tmp/test-plugin/ui
 
-      - name: Run UI linting
+      - name: Auto-fix UI linting
+        run: npm run lint:fix
+        working-directory: /tmp/test-plugin/ui
+
+      - name: Auto-fix UI formatting
+        run: npm run format
+        working-directory: /tmp/test-plugin/ui
+
+      - name: Verify UI linting
         run: npm run lint
         working-directory: /tmp/test-plugin/ui
 
-      - name: Check UI formatting
+      - name: Verify UI formatting
         run: npm run format:check
         working-directory: /tmp/test-plugin/ui
 

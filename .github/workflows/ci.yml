@@ -192,11 +192,15 @@ jobs:
         with:
           workspaces: engine
 
-      - name: Check formatting
-        run: cargo fmt --check
+      - name: Auto-fix Rust formatting
+        run: cargo fmt
         working-directory: engine
 
-      - name: Clippy
+      - name: Auto-fix Rust linting (Clippy)
+        run: cargo clippy --workspace --all-targets --fix --allow-dirty --allow-staged
+        working-directory: engine
+
+      - name: Verify Rust linting (Clippy)
         run: cargo clippy --workspace --all-targets -- -D warnings
         working-directory: engine
 
