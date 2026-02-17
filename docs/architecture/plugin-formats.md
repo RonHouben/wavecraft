@@ -12,12 +12,12 @@ Wavecraft targets three plugin formats: VST3 (primary), CLAP (secondary), and AU
 
 ## Plugin Format Overview
 
-| Aspect | VST3 | CLAP | AU (via clap-wrapper) |
-|--------|------|------|----------------------|
-| nih-plug support | ✅ Native | ✅ Native | ⚠️ Via clap-wrapper |
-| Primary use | Ableton Live | Cross-platform | Logic Pro, GarageBand |
-| Bundle extension | `.vst3` | `.clap` | `.component` |
-| Platform | macOS, Windows, Linux | macOS, Windows, Linux | macOS only |
+| Aspect           | VST3                  | CLAP                  | AU (via clap-wrapper) |
+| ---------------- | --------------------- | --------------------- | --------------------- |
+| nih-plug support | ✅ Native             | ✅ Native             | ⚠️ Via clap-wrapper   |
+| Primary use      | Ableton Live          | Cross-platform        | Logic Pro, GarageBand |
+| Bundle extension | `.vst3`               | `.clap`               | `.component`          |
+| Platform         | macOS, Windows, Linux | macOS, Windows, Linux | macOS only            |
 
 ---
 
@@ -34,6 +34,7 @@ Audio Units are Apple's native plugin format, required for Logic Pro and GarageB
 The recommended approach for AU support is to use **[clap-wrapper](https://github.com/free-audio/clap-wrapper/)**, which converts CLAP plugins to AUv2. This is the community-endorsed solution for nih-plug projects needing AU compatibility.
 
 **How it works:**
+
 1. nih-plug exports a `.clap` plugin (fully supported)
 2. clap-wrapper (CMake-based) wraps the CLAP binary into an AUv2 `.component` bundle
 3. The resulting AU plugin runs in Logic Pro, GarageBand, and other AU hosts
@@ -61,6 +62,7 @@ The recommended approach for AU support is to use **[clap-wrapper](https://githu
 To convert a nih-plug CLAP plugin to AUv2 using clap-wrapper:
 
 **1. Prerequisites:**
+
 - CMake 3.15+
 - Xcode command-line tools (macOS)
 - The `.clap` plugin built from nih-plug
@@ -95,7 +97,7 @@ add_library(${AUV2_TARGET} MODULE)
 target_add_auv2_wrapper(
     TARGET ${AUV2_TARGET}
     MACOS_EMBEDDED_CLAP_LOCATION ${CLAP_PLUGIN_PATH}
-    
+
     # AU metadata (must match your plugin)
     OUTPUT_NAME "Wavecraft"
     BUNDLE_IDENTIFIER "com.yourcompany.wavecraft"
@@ -110,20 +112,24 @@ target_add_auv2_wrapper(
 **3. Build Commands:**
 
 ```bash
-# Build everything (tests → bundle → AU → install)
+# Canonical generated-project flow (build + install for DAW testing)
+wavecraft bundle --install
+
+# Build everything (tests → bundle → AU → install) — internal/advanced SDK workflow
 cd engine
 cargo xtask all
 
-# Or step-by-step:
+# Or internal/advanced step-by-step:
 cargo xtask bundle --release    # Build VST3/CLAP
 cargo xtask au                  # Build AU wrapper (macOS)
-cargo xtask install             # Install to system directories
+cargo xtask install             # Install to system directories (internal/advanced)
 
 # Preview what would happen without executing
 cargo xtask all --dry-run
 ```
 
 **4. Important Notes:**
+
 - The `.clap` bundle is embedded inside the `.component` bundle
 - Both the inner CLAP and outer AU must be signed for notarization
 - Use `cmake --build build --clean-first` if `auval` doesn't detect updates
@@ -143,17 +149,17 @@ The clap-wrapper approach provides AU compatibility without these architectural 
 
 ### AU vs VST3 vs CLAP Behavioral Differences
 
-| Aspect | VST3 | AU (via clap-wrapper) | CLAP (native) |
-|--------|------|----------------------|---------------|
-| Parameter IDs | 32-bit integers | 32-bit integers (AudioUnitParameterID) | String-based IDs |
-| Parameter ranges | Arbitrary float | Arbitrary float | Arbitrary float |
-| Preset format | `.vstpreset` | `.aupreset` (property list) | Host-dependent |
-| State persistence | Binary blob via `IEditController` | Property list via `kAudioUnitProperty_ClassInfo` | Binary blob |
-| UI hosting | `IPlugView` interface | `AudioUnitCocoaView` protocol | `clap_plugin_gui` |
-| Sidechain | Explicit bus configuration | `kAudioUnitProperty_SupportedChannelLayoutTags` | Audio ports |
-| Latency reporting | `IComponent::getLatencySamples()` | `kAudioUnitProperty_Latency` | `clap_plugin_latency` |
-| Tail time | `IAudioProcessor::getTailSamples()` | `kAudioUnitProperty_TailTime` | `clap_plugin_tail` |
-| nih-plug support | ✅ Native | ⚠️ Via clap-wrapper | ✅ Native |
+| Aspect            | VST3                                | AU (via clap-wrapper)                            | CLAP (native)         |
+| ----------------- | ----------------------------------- | ------------------------------------------------ | --------------------- |
+| Parameter IDs     | 32-bit integers                     | 32-bit integers (AudioUnitParameterID)           | String-based IDs      |
+| Parameter ranges  | Arbitrary float                     | Arbitrary float                                  | Arbitrary float       |
+| Preset format     | `.vstpreset`                        | `.aupreset` (property list)                      | Host-dependent        |
+| State persistence | Binary blob via `IEditController`   | Property list via `kAudioUnitProperty_ClassInfo` | Binary blob           |
+| UI hosting        | `IPlugView` interface               | `AudioUnitCocoaView` protocol                    | `clap_plugin_gui`     |
+| Sidechain         | Explicit bus configuration          | `kAudioUnitProperty_SupportedChannelLayoutTags`  | Audio ports           |
+| Latency reporting | `IComponent::getLatencySamples()`   | `kAudioUnitProperty_Latency`                     | `clap_plugin_latency` |
+| Tail time         | `IAudioProcessor::getTailSamples()` | `kAudioUnitProperty_TailTime`                    | `clap_plugin_tail`    |
+| nih-plug support  | ✅ Native                           | ⚠️ Via clap-wrapper                              | ✅ Native             |
 
 ### AU-Specific Constraints
 
@@ -185,20 +191,23 @@ The clap-wrapper approach provides AU compatibility without these architectural 
 > **Primary target:** macOS + Ableton Live. Other hosts and platforms are deprioritized.
 
 ### Primary (Required)
-	•	**Ableton Live (macOS, VST3)** — primary host, must work flawlessly
-	•	Buffer/CPU tests: low buffer sizes (32/64) and high CPU stress to detect audio dropouts
-	•	Automation tests: host automation read/write roundtrip verified
-	•	UI tests: verify parameter updates from host appear in UI and UI changes are streamed back to host automation
+
+    •	**Ableton Live (macOS, VST3)** — primary host, must work flawlessly
+    •	Buffer/CPU tests: low buffer sizes (32/64) and high CPU stress to detect audio dropouts
+    •	Automation tests: host automation read/write roundtrip verified
+    •	UI tests: verify parameter updates from host appear in UI and UI changes are streamed back to host automation
 
 ### Secondary (Nice-to-Have)
-	•	Logic Pro (macOS, AU) — requires AU via clap-wrapper
-	•	GarageBand (macOS, AU)
-	•	AU validation: `auval -v aufx <subtype> <manufacturer>` must pass with no errors
-	•	AU-specific tests: load in AU Lab, state save/restore, bypass state
+
+    •	Logic Pro (macOS, AU) — requires AU via clap-wrapper
+    •	GarageBand (macOS, AU)
+    •	AU validation: `auval -v aufx <subtype> <manufacturer>` must pass with no errors
+    •	AU-specific tests: load in AU Lab, state save/restore, bypass state
 
 ### Deprioritized (Future Consideration)
-	•	Ableton Live (Windows)
-	•	Reaper (all platforms)
-	•	Cubase, FL Studio
-	•	Linux hosts
-	•	Platform checklists for Windows (WebView2) and Linux (WebKitGTK)
+
+    •	Ableton Live (Windows)
+    •	Reaper (all platforms)
+    •	Cubase, FL Studio
+    •	Linux hosts
+    •	Platform checklists for Windows (WebView2) and Linux (WebKitGTK)

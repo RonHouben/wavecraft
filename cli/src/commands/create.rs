@@ -119,6 +119,7 @@ impl CreateCommand {
         println!();
         println!("Next steps:");
         println!("  cd {}", self.name);
+        println!("  wavecraft bundle --install    # Build + install VST3 for DAW testing");
         println!("  wavecraft start    # Start development servers");
         println!();
         println!("Documentation: https://github.com/RonHouben/wavecraft/tree/main/docs");

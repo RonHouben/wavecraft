@@ -10,7 +10,7 @@
 
 use anyhow::{Context, Result, bail};
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Output};
 use std::time::Instant;
 use std::{env, fs};
 
@@ -312,10 +312,36 @@ fn validate_xtask(project_dir: &Path, verbose: bool) -> Result<()> {
     let engine_dir = project_dir.join("engine");
 
     if verbose {
-        println!("Testing xtask bundle command (dry run)...");
+        println!("Validating xtask bundle command contract...");
     }
 
+    let help_output = run_command_capture("cargo", &["xtask", "bundle", "--help"], &engine_dir)?;
+    assert_output_contains(
+        &help_output,
+        "--install",
+        "Expected generated xtask bundle --help to include --install flag",
+    )?;
+
     run_command("cargo", &["xtask", "bundle", "--check"], &engine_dir)?;
+    let check_install_output = run_command_capture(
+        "cargo",
+        &["xtask", "bundle", "--check", "--install"],
+        &engine_dir,
+    )?;
+    assert_output_contains(
+        &check_install_output,
+        "Install",
+        "Expected dry-run bundle --check --install output to mention install validation",
+    )?;
+
+    if verbose {
+        println!("Running generated xtask unit tests...");
+    }
+    run_command(
+        "cargo",
+        &["test", "--manifest-path", "engine/xtask/Cargo.toml"],
+        project_dir,
+    )?;
 
     Ok(())
 }
@@ -336,6 +362,52 @@ fn run_command(cmd: &str, args: &[&str], cwd: &Path) -> Result<()> {
 
     if !status.success() {
         bail!("Command failed: {} {}", cmd, args.join(" "));
+    }
+
+    Ok(())
+}
+
+/// Run a command, capture stdout/stderr, and require success.
+fn run_command_capture(cmd: &str, args: &[&str], cwd: &Path) -> Result<Output> {
+    let mut command = if cmd == "npm" {
+        xtask::npm_command()
+    } else {
+        Command::new(cmd)
+    };
+
+    let output = command
+        .args(args)
+        .current_dir(cwd)
+        .output()
+        .with_context(|| format!("Failed to execute: {} {}", cmd, args.join(" ")))?;
+
+    if !output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        bail!(
+            "Command failed: {} {}\nstdout:\n{}\nstderr:\n{}",
+            cmd,
+            args.join(" "),
+            stdout,
+            stderr
+        );
+    }
+
+    Ok(output)
+}
+
+fn assert_output_contains(output: &Output, needle: &str, message: &str) -> Result<()> {
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let combined = format!("{}\n{}", stdout, stderr);
+
+    if !combined.contains(needle) {
+        bail!(
+            "{}\nMissing substring: '{}'\nCommand output:\n{}",
+            message,
+            needle,
+            combined
+        );
     }
 
     Ok(())
