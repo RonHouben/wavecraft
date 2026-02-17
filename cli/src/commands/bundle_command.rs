@@ -41,6 +41,8 @@ impl BundleCommand {
             )
         })?;
 
+        build_ui_assets(&project.engine_dir)?;
+
         println!(
             "{} Building plugin package `{}`...",
             style("→").cyan(),
@@ -75,6 +77,29 @@ impl BundleCommand {
         }
         Ok(())
     }
+}
+
+fn build_ui_assets(engine_dir: &Path) -> Result<()> {
+    println!("{} Building UI assets...", style("→").cyan());
+
+    let status = Command::new("cargo")
+        .args(["xtask", "build-ui"])
+        .current_dir(engine_dir)
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()
+        .context("Failed to run `cargo xtask build-ui`")?;
+
+    if !status.success() {
+        let code = status.code().map_or_else(
+            || "terminated by signal".to_string(),
+            |value| value.to_string(),
+        );
+
+        bail!("UI build failed (exit: {}).", code);
+    }
+
+    Ok(())
 }
 
 fn run_nih_plug_bundle(engine_dir: &Path, package_name: &str) -> Result<()> {
@@ -454,6 +479,21 @@ mod tests {
 
         cleanup_temp_path(&src);
         cleanup_temp_path(&dest_dir);
+    }
+
+    #[test]
+    fn build_ui_assets_reports_failure_exit_code() {
+        let temp = TempDir::new().expect("temp dir should be created");
+        let engine_dir = temp.path().join("engine");
+        fs::create_dir_all(&engine_dir).expect("engine dir");
+        fs::write(
+            engine_dir.join("Cargo.toml"),
+            "[package]\nname = \"build-ui-fixture\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+        )
+        .expect("engine cargo");
+
+        let error = build_ui_assets(&engine_dir).expect_err("build-ui should fail in fixture");
+        assert!(error.to_string().contains("UI build failed"));
     }
 
     fn create_fake_bundle(package_name: &str) -> PathBuf {

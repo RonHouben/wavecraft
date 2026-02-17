@@ -102,7 +102,7 @@ jobs:
         working-directory: /tmp/test-plugin
 
       - name: Auto-fix generated engine linting (Clippy)
-        run: cargo clippy --workspace --all-targets --fix --allow-dirty --allow-staged
+        run: cargo clippy --workspace --all-targets --fix --allow-dirty --allow-staged --allow-no-vcs
         working-directory: /tmp/test-plugin/engine
 
       - name: Auto-fix generated engine formatting

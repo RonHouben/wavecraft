@@ -197,7 +197,7 @@ jobs:
         working-directory: engine
 
       - name: Auto-fix Rust linting (Clippy)
-        run: cargo clippy --workspace --all-targets --fix --allow-dirty --allow-staged
+        run: cargo clippy --workspace --all-targets --fix --allow-dirty --allow-staged --allow-no-vcs
         working-directory: engine
 
       - name: Verify Rust linting (Clippy)
