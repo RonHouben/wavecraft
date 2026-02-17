@@ -17,7 +17,7 @@ while IFS= read -r template_file; do
   output_file="${template_file%.template}"
   cp "$template_file" "$output_file"
   echo "  • generated $(realpath --relative-to="$REPO_ROOT" "$output_file" 2>/dev/null || echo "$output_file")"
-done < <(find "$TEMPLATE_DIR" -path "$TEMPLATE_DIR/engine/xtask" -prune -o -type f -name "*.template" -print | sort)
+done < <(find "$TEMPLATE_DIR" -type f -name "*.template" -print | sort)
 
 
 CURRENT_YEAR="$(date +%Y)"

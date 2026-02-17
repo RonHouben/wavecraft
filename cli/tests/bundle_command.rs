@@ -30,14 +30,19 @@ fn test_bundle_help_shows_install_flag() {
 
 #[test]
 fn test_bundle_without_install_invalid_context_has_actionable_message() {
+    let temp = TempDir::new().expect("temp dir should be created");
+
     let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wavecraft"));
+    cmd.current_dir(temp.path());
     cmd.arg("bundle");
 
     let output = cmd.output().expect("Failed to execute wavecraft binary");
     assert!(!output.status.success());
 
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("generated plugin project"));
+    assert!(stderr.contains("Invalid project context"));
+    assert!(stderr.contains("wavecraft bundle"));
+    assert!(!stderr.contains("wavecraft bundle --install"));
 }
 
 #[test]

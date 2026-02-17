@@ -18,7 +18,7 @@ pub struct BundleCommand {
 impl BundleCommand {
     pub fn execute(&self) -> Result<()> {
         let cwd = std::env::current_dir().context("Failed to get current directory")?;
-        let project_root = resolve_project_root(&cwd)?;
+        let project_root = resolve_project_root(&cwd, self.install)?;
 
         let project = ProjectMarkers::detect(&project_root)
             .context("Unable to validate Wavecraft project context")?;
@@ -255,21 +255,25 @@ fn copy_dir_recursive_impl(src: &Path, dest: &Path) -> io::Result<()> {
     Ok(())
 }
 
-fn resolve_project_root(start_dir: &Path) -> Result<PathBuf> {
+fn resolve_project_root(start_dir: &Path, install: bool) -> Result<PathBuf> {
     if let Some(root) = find_wavecraft_project_root(start_dir) {
         return Ok(root);
     }
 
+    let command_suffix = if install { " --install" } else { "" };
+
     bail!(
-        "Invalid project context for `wavecraft bundle --install`.\n\
+        "Invalid project context for `wavecraft bundle{}`.\n\
          Current directory: {}\n\
          Expected a Wavecraft plugin project root containing:\n\
            - ui/package.json\n\
            - engine/Cargo.toml\n\
          Recovery:\n\
            1) cd <your-generated-plugin-root>\n\
-           2) wavecraft bundle --install",
-        start_dir.display()
+           2) wavecraft bundle{}",
+        command_suffix,
+        start_dir.display(),
+        command_suffix
     );
 }
 
@@ -347,7 +351,21 @@ mod tests {
     #[test]
     fn resolve_project_root_returns_actionable_error_when_missing_markers() {
         let temp = TempDir::new().expect("temp dir should be created");
-        let result = resolve_project_root(temp.path());
+        let result = resolve_project_root(temp.path(), false);
+
+        assert!(result.is_err());
+        let message = result.expect_err("should fail").to_string();
+        assert!(message.contains("Invalid project context"));
+        assert!(message.contains("wavecraft bundle`"));
+        assert!(!message.contains("wavecraft bundle --install"));
+        assert!(message.contains("ui/package.json"));
+        assert!(message.contains("engine/Cargo.toml"));
+    }
+
+    #[test]
+    fn resolve_project_root_install_returns_install_specific_error_when_missing_markers() {
+        let temp = TempDir::new().expect("temp dir should be created");
+        let result = resolve_project_root(temp.path(), true);
 
         assert!(result.is_err());
         let message = result.expect_err("should fail").to_string();
