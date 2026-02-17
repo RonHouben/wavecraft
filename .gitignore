@@ -16,6 +16,7 @@
 # SDK template — build artifacts
 /sdk-template/engine/target/
 /sdk-template/ui/node_modules/
+/sdk-template/ui/package-lock.json
 /sdk-template/ui/dist/
 /sdk-template/ui/src/generated/**
 !/sdk-template/ui/src/generated/processors.ts
