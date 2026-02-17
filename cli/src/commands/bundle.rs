@@ -43,10 +43,11 @@ impl BundleCommand {
             style("→").cyan(),
             delegated_display
         );
+        let delegated_cwd = project_root.join("engine");
 
         let status = Command::new("cargo")
             .args(delegated_args)
-            .current_dir(&project_root)
+            .current_dir(&delegated_cwd)
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .status()
