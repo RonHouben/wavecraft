@@ -116,8 +116,10 @@ fn test_bundle_delegates_build_ui_before_bundle() {
 
     let output = cmd.output().expect("Failed to execute wavecraft binary");
     assert!(
-        !output.status.success(),
-        "bundle command unexpectedly succeeded in fixture"
+        output.status.success(),
+        "bundle command unexpectedly failed in fixture\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
     );
 
     let npm_invocations =
@@ -129,8 +131,8 @@ fn test_bundle_delegates_build_ui_before_bundle() {
     let lines: Vec<&str> = cargo_invocations.lines().collect();
     assert_eq!(
         lines.len(),
-        2,
-        "expected clean + build invocations, got: {lines:?}"
+        3,
+        "expected clean + build + helper runner invocations, got: {lines:?}"
     );
     assert_eq!(lines[0], "clean -p wavecraft-nih_plug");
     assert!(
@@ -138,9 +140,22 @@ fn test_bundle_delegates_build_ui_before_bundle() {
         "expected cargo build invocation, got: {:?}",
         lines[1]
     );
+    assert!(
+        lines[2].starts_with("run --manifest-path "),
+        "expected helper cargo run invocation, got: {:?}",
+        lines[2]
+    );
+    assert!(
+        lines[2].contains("wavecraft-nih-plug-bundle-helper/Cargo.toml -- fake-engine"),
+        "expected helper manifest and package args, got: {:?}",
+        lines[2]
+    );
 
     let staged_index = fs::read_to_string(
-        root.join("fake-wavecraft-nih-plug")
+        root.join("fake-sdk")
+            .join("engine")
+            .join("crates")
+            .join("wavecraft-nih-plug")
             .join("assets/ui-dist/index.html"),
     )
     .expect("staged index should exist");
@@ -180,8 +195,8 @@ fn test_bundle_install_delegates_build_ui_before_bundle_install() {
     let lines: Vec<&str> = cargo_invocations.lines().collect();
     assert_eq!(
         lines.len(),
-        2,
-        "expected clean + build invocations, got: {lines:?}"
+        3,
+        "expected clean + build + helper runner invocations, got: {lines:?}"
     );
     assert_eq!(lines[0], "clean -p wavecraft-nih_plug");
     assert!(
@@ -189,9 +204,22 @@ fn test_bundle_install_delegates_build_ui_before_bundle_install() {
         "expected cargo build invocation, got: {:?}",
         lines[1]
     );
+    assert!(
+        lines[2].starts_with("run --manifest-path "),
+        "expected helper cargo run invocation, got: {:?}",
+        lines[2]
+    );
+    assert!(
+        lines[2].contains("wavecraft-nih-plug-bundle-helper/Cargo.toml -- fake-engine"),
+        "expected helper manifest and package args, got: {:?}",
+        lines[2]
+    );
 
     let staged_index = fs::read_to_string(
-        root.join("fake-wavecraft-nih-plug")
+        root.join("fake-sdk")
+            .join("engine")
+            .join("crates")
+            .join("wavecraft-nih-plug")
             .join("assets/ui-dist/index.html"),
     )
     .expect("staged index should exist");
@@ -199,7 +227,11 @@ fn test_bundle_install_delegates_build_ui_before_bundle_install() {
 }
 
 fn create_minimal_project(base: &std::path::Path) -> &std::path::Path {
-    let fake_wavecraft_dep = base.join("fake-wavecraft-nih-plug");
+    let fake_sdk_root = base.join("fake-sdk");
+    let fake_wavecraft_dep = fake_sdk_root
+        .join("engine")
+        .join("crates")
+        .join("wavecraft-nih-plug");
 
     fs::create_dir_all(base.join("ui")).expect("ui dir");
     fs::create_dir_all(base.join("engine")).expect("engine dir");
