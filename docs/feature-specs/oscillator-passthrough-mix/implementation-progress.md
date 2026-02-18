@@ -307,3 +307,87 @@ After prior fixes, manual retest still reported 5 remaining issues:
   - Lint/typecheck: passed
   - Engine tests: passed
   - UI tests: passed (`22` files, `101` tests)
+
+---
+
+## Fifth Follow-up: runtime enum exposure + legacy resize-handle compatibility (2026-02-18)
+
+### New Manual Retest Findings
+
+Two issues remained in Ableton retest:
+
+1. Waveform dropdown showed **"No variants available"**.
+2. Resize handle remained missing in the currently tested generated plugin project.
+
+### Root Causes
+
+1. **Enum params were still generated as float params at runtime in `wavecraft_plugin!`**
+   - In macro-generated runtime param construction, `ParamRange::Enum` and `ParamRange::Stepped` were converted to `FloatParam`/`FloatRange::Linear`.
+   - `FloatParam` reports `step_count()` as `None` in nih-plug, so bridge runtime introspection could not infer enum variants.
+
+2. **Retest project was generated before template `ResizeHandle` update**
+   - `target/tmp/osc-mix-test/ui/src/App.tsx` did not render `ResizeHandle`.
+   - Although `sdk-template/ui/src/App.tsx` was updated, already-generated projects do not auto-rewrite their app UI file.
+
+### Fixes Implemented
+
+- **Macro runtime enum/stepped handling fixed** (`engine/crates/wavecraft-macros/src/plugin.rs`)
+  - Added generated runtime param wrapper supporting mixed param kinds:
+    - `FloatParam` for linear/skewed ranges
+    - `IntParam` for stepped + enum ranges
+  - `ParamRange::Enum` now generates `IntParam` with:
+    - explicit stepped `IntRange::Linear { min: 0, max: N }`
+    - `with_value_to_string(...)` label mapping from enum variants
+    - `with_string_to_value(...)` parsing (label and numeric fallback)
+  - Result: bridge now receives non-`None` `step_count()` and can expose runtime variant labels.
+
+- **Resize-handle compatibility path for existing generated projects** (`ui/packages/core/src/hooks/useWindowResizeSync.ts`)
+  - Added a legacy fallback resize grip mounted by `useWindowResizeSync()` **only when** no modern `[data-testid="resize-handle"]` is present.
+  - This preserves behavior for current templates while making older generated projects resizable without manual `App.tsx` edits.
+
+### Compatibility Tradeoff
+
+- Chosen approach favors minimal-risk backward compatibility for already-generated projects.
+- Legacy fallback handle is intentionally lightweight and only activated when the template handle is absent.
+- Long-term preferred UI remains explicit `ResizeHandle` usage in app templates/components.
+
+### Regression Coverage Added
+
+- `engine/crates/wavecraft-macros/src/plugin.rs`
+  - Strengthened generated-code assertions to ensure runtime emits `IntParam` and enum label formatters.
+
+- `engine/crates/wavecraft-nih_plug/src/editor/bridge.rs`
+  - Added `get_parameter_returns_enum_variants_for_integer_parameter` regression test.
+
+- `ui/packages/core/src/hooks/useWindowResizeSync.test.ts` (new)
+  - Verifies legacy handle mounts when modern handle is missing.
+  - Verifies no duplicate handle when modern handle exists.
+  - Verifies drag path sends `requestResize` calls.
+
+### Verification Performed (Follow-up 5)
+
+- `cargo test --manifest-path engine/Cargo.toml -p wavecraft-macros` ✅
+- `cargo test --manifest-path engine/Cargo.toml -p wavecraft-nih_plug bridge::tests::get_parameter_returns_enum_variants_for_integer_parameter` ✅
+- `npm --prefix ui run test -- useWindowResizeSync.test.ts` ✅
+
+### Exact Ableton Retest Steps
+
+From repository root:
+
+1. Rebuild/install the generated test plugin used in this flow:
+   - `cargo run --manifest-path cli/Cargo.toml -- bundle --install --project target/tmp/osc-mix-test`
+
+2. Ensure DAW/plugin caches are refreshed (macOS host reload hygiene):
+   - Quit Ableton Live.
+   - Remove old plugin instance(s) from project if needed.
+   - Reopen Ableton and rescan plugins if required.
+
+3. In Ableton, load `osc_mix_test` and verify:
+   - Oscillator panel appears.
+   - Waveform dropdown contains variants (e.g., Sine/Square/Saw) and no longer shows "No variants available".
+   - Bottom-right resize handle is visible and drag-resizes plugin window.
+
+4. Functional sanity:
+   - Toggle oscillator ON/OFF.
+   - Change waveform/frequency/level.
+   - Confirm passthrough + oscillator behavior remains correct.

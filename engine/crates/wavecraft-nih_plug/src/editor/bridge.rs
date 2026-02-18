@@ -221,6 +221,9 @@ mod tests {
 
         #[id = "ena"]
         enabled: BoolParam,
+
+        #[id = "waveform"]
+        waveform: IntParam,
     }
 
     impl Default for TestParams {
@@ -238,6 +241,13 @@ mod tests {
                 .with_unit(" Hz"),
                 level: FloatParam::new("Level", 0.5, FloatRange::Linear { min: 0.0, max: 1.0 }),
                 enabled: BoolParam::new("Enabled", true),
+                waveform: IntParam::new("Waveform", 0, IntRange::Linear { min: 0, max: 2 })
+                    .with_value_to_string(std::sync::Arc::new(|value| match value {
+                        0 => "Sine".to_string(),
+                        1 => "Square".to_string(),
+                        2 => "Saw".to_string(),
+                        _ => "Unknown".to_string(),
+                    })),
             }
         }
     }
@@ -341,5 +351,32 @@ mod tests {
         let calls = context.set_calls.lock().expect("set_calls lock poisoned");
         let (_, normalized) = calls.last().expect("expected a set_parameter call");
         assert!((*normalized - expected_normalized).abs() < 1e-5);
+    }
+
+    #[test]
+    fn get_parameter_returns_enum_variants_for_integer_parameter() {
+        let params = Arc::new(TestParams::default());
+        let context = Arc::new(MockGuiContext::new(true));
+        let bridge = PluginEditorBridge::new(
+            params,
+            context,
+            None,
+            None,
+            Arc::new(Mutex::new((800, 600))),
+        );
+
+        let waveform = bridge
+            .get_parameter("waveform")
+            .expect("waveform parameter should exist");
+
+        assert_eq!(waveform.param_type, ParameterType::Enum);
+        assert_eq!(
+            waveform.variants,
+            Some(vec![
+                "Sine".to_string(),
+                "Square".to_string(),
+                "Saw".to_string(),
+            ])
+        );
     }
 }

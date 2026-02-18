@@ -281,40 +281,91 @@ fn expand_wavecraft_plugin(plugin_def: PluginDef) -> Result<proc_macro2::TokenSt
                 let specs = <<#processor_type as #krate::Processor>::Params as #krate::ProcessorParams>::param_specs();
 
                 for spec in specs.iter() {
-                    let range = match &spec.range {
+                    match &spec.range {
                         ParamRange::Linear { min, max } => {
-                            #krate::__nih::FloatRange::Linear {
+                            let range = #krate::__nih::FloatRange::Linear {
                                 min: *min as f32,
                                 max: *max as f32,
-                            }
+                            };
+                            params.push(
+                                __WavecraftRuntimeParam::Float(
+                                    #krate::__nih::FloatParam::new(spec.name, spec.default as f32, range)
+                                        .with_unit(spec.unit)
+                                )
+                            );
                         }
                         ParamRange::Skewed { min, max, factor } => {
-                            #krate::__nih::FloatRange::Skewed {
+                            let range = #krate::__nih::FloatRange::Skewed {
                                 min: *min as f32,
                                 max: *max as f32,
                                 factor: *factor as f32,
-                            }
+                            };
+                            params.push(
+                                __WavecraftRuntimeParam::Float(
+                                    #krate::__nih::FloatParam::new(spec.name, spec.default as f32, range)
+                                        .with_unit(spec.unit)
+                                )
+                            );
                         }
                         ParamRange::Stepped { min, max } => {
-                            // Convert stepped range to linear for now
-                            #krate::__nih::FloatRange::Linear {
-                                min: *min as f32,
-                                max: *max as f32,
-                            }
+                            let default = (spec.default as i32).clamp(*min, *max);
+                            params.push(
+                                __WavecraftRuntimeParam::Int(
+                                    #krate::__nih::IntParam::new(
+                                        spec.name,
+                                        default,
+                                        #krate::__nih::IntRange::Linear {
+                                            min: *min,
+                                            max: *max,
+                                        },
+                                    )
+                                    .with_unit(spec.unit)
+                                )
+                            );
                         }
                         ParamRange::Enum { variants } => {
-                            let max = variants.len().saturating_sub(1) as f32;
-                            #krate::__nih::FloatRange::Linear {
-                                min: 0.0,
-                                max,
-                            }
-                        }
-                    };
+                            let enum_max = variants.len().saturating_sub(1) as i32;
+                            let default = (spec.default as i32).clamp(0, enum_max);
+                            let labels_for_display = *variants;
+                            let labels_for_parse = *variants;
 
-                    params.push(
-                        #krate::__nih::FloatParam::new(spec.name, spec.default as f32, range)
-                            .with_unit(spec.unit),
-                    );
+                            params.push(
+                                __WavecraftRuntimeParam::Int(
+                                    #krate::__nih::IntParam::new(
+                                        spec.name,
+                                        default,
+                                        #krate::__nih::IntRange::Linear {
+                                            min: 0,
+                                            max: enum_max,
+                                        },
+                                    )
+                                    .with_value_to_string(::std::sync::Arc::new(move |value| {
+                                        labels_for_display
+                                            .get(value as usize)
+                                            .copied()
+                                            .unwrap_or("")
+                                            .to_string()
+                                    }))
+                                    .with_string_to_value(::std::sync::Arc::new(move |input| {
+                                        let trimmed = input.trim();
+
+                                        if let Some(index) = labels_for_parse
+                                            .iter()
+                                            .position(|label| label.eq_ignore_ascii_case(trimmed))
+                                        {
+                                            return Some(index as i32);
+                                        }
+
+                                        trimmed
+                                            .parse::<i32>()
+                                            .ok()
+                                            .filter(|value| (0..=enum_max).contains(value))
+                                    }))
+                                    .with_unit(spec.unit)
+                                )
+                            );
+                        }
+                    }
 
                     ids.push(format!("{}_{}", #id_prefix, spec.id_suffix));
                     groups.push(spec.group.unwrap_or_default().to_string());
@@ -395,9 +446,31 @@ fn expand_wavecraft_plugin(plugin_def: PluginDef) -> Result<proc_macro2::TokenSt
         ///
         /// This struct bridges wavecraft-dsp ProcessorParams to nih-plug's Params trait.
         /// Parameters are discovered at runtime from the processor's param_specs().
+        enum __WavecraftRuntimeParam {
+            Float(#krate::__nih::FloatParam),
+            Int(#krate::__nih::IntParam),
+        }
+
+        impl __WavecraftRuntimeParam {
+            fn as_ptr(&self) -> #krate::__nih::ParamPtr {
+                use #krate::__nih::Param;
+
+                match self {
+                    Self::Float(param) => param.as_ptr(),
+                    Self::Int(param) => param.as_ptr(),
+                }
+            }
+
+            fn modulated_plain_value(&self) -> f32 {
+                let ptr = self.as_ptr();
+                // SAFETY: ParamPtr originates from `self` and remains valid for this call.
+                unsafe { ptr.modulated_plain_value() }
+            }
+        }
+
         pub struct __WavecraftParams {
             // Store parameters as a vector for dynamic discovery
-            params: ::std::vec::Vec<#krate::__nih::FloatParam>,
+            params: ::std::vec::Vec<__WavecraftRuntimeParam>,
             // Runtime IDs aligned with FFI-generated contract IDs (e.g. oscillator_enabled)
             ids: ::std::vec::Vec<::std::string::String>,
             // Optional parameter group names (empty string when none)
@@ -434,8 +507,6 @@ fn expand_wavecraft_plugin(plugin_def: PluginDef) -> Result<proc_macro2::TokenSt
                 #krate::__nih::ParamPtr,
                 ::std::string::String,
             )> {
-                use #krate::__nih::Param; // Import trait for as_ptr()
-
                 self.params
                     .iter()
                     .zip(self.ids.iter())
@@ -664,20 +735,13 @@ fn expand_wavecraft_plugin(plugin_def: PluginDef) -> Result<proc_macro2::TokenSt
             /// params is implemented by applying plain host values in the same
             /// order as `ProcessorParams::param_specs()`.
             fn build_processor_params(&self) -> <__ProcessorType as #krate::Processor>::Params {
-                use #krate::__nih::Param;
-
                 let mut params =
                     <<__ProcessorType as #krate::Processor>::Params as #krate::ProcessorParams>::from_param_defaults();
                 let values: ::std::vec::Vec<f32> = self
                     .params
                     .params
                     .iter()
-                    .map(|param| {
-                        let ptr = param.as_ptr();
-                        // SAFETY: ParamPtr originates from `self.params` and remains valid while
-                        // `self.params` is alive.
-                        unsafe { ptr.modulated_plain_value() }
-                    })
+                    .map(|param| param.modulated_plain_value())
                     .collect();
 
                 <<__ProcessorType as #krate::Processor>::Params as #krate::ProcessorParams>::apply_plain_values(
@@ -938,6 +1002,15 @@ mod tests {
         assert!(
             normalized.contains("apply_plain_values("),
             "generated code should apply live plain values when building processor params"
+        );
+        assert!(
+            normalized.contains("__WavecraftRuntimeParam::Int(")
+                && normalized.contains("IntParam::new(spec.name"),
+            "generated code should use IntParam for stepped/enum params to expose step_count"
+        );
+        assert!(
+            normalized.contains("with_value_to_string(::std::sync::Arc::new(move|value|"),
+            "generated enum params should expose display labels through value_to_string"
         );
     }
 }
