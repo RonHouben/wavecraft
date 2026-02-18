@@ -106,10 +106,26 @@ mod tests {
 
     #[test]
     fn test_required_fallback_assets_exist() {
-        // Keep this list in sync with engine/crates/wavecraft-nih_plug/assets/ui-dist.
+        // Distribution contract: embedded fallback UI includes index.html and at
+        // least one CSS + JS bundle under assets/ (typically hashed filenames).
         assert_required_asset("index.html");
-        assert_required_asset("assets/fallback.css");
-        assert_required_asset("assets/fallback.js");
+
+        let assets = list_assets();
+        let has_css = assets
+            .iter()
+            .any(|path| path.starts_with("assets/") && path.ends_with(".css"));
+        let has_js = assets
+            .iter()
+            .any(|path| path.starts_with("assets/") && path.ends_with(".js"));
+
+        assert!(
+            has_css,
+            "required fallback asset should include at least one CSS file under assets/"
+        );
+        assert!(
+            has_js,
+            "required fallback asset should include at least one JS file under assets/"
+        );
     }
 
     #[test]
