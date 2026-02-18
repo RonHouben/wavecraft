@@ -8,6 +8,12 @@ use std::process::{Command, Stdio};
 
 use crate::project::{read_engine_package_name, ProjectMarkers};
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum WavecraftNihPlugDependencyMode {
+    LocalPath(PathBuf),
+    ExternalSource,
+}
+
 /// Options for the `bundle` command.
 #[derive(Debug)]
 pub struct BundleCommand {
@@ -139,22 +145,38 @@ fn sync_ui_dist_into_wavecraft_nih_plug(
         );
     }
 
-    let wavecraft_nih_plug_dir = resolve_wavecraft_nih_plug_path(engine_cargo_toml)?;
-    let assets_dir = wavecraft_nih_plug_dir.join("assets").join("ui-dist");
+    match detect_wavecraft_nih_plug_dependency_mode(engine_cargo_toml)? {
+        WavecraftNihPlugDependencyMode::LocalPath(wavecraft_nih_plug_dir) => {
+            let assets_dir = wavecraft_nih_plug_dir.join("assets").join("ui-dist");
 
-    stage_ui_dist(&ui_dist, &assets_dir)?;
+            stage_ui_dist(&ui_dist, &assets_dir)?;
 
-    println!(
-        "{} Staged UI dist into {}",
-        style("→").cyan(),
-        assets_dir.display()
-    );
+            println!(
+                "{} Staged UI dist into {}",
+                style("→").cyan(),
+                assets_dir.display()
+            );
 
-    clean_wavecraft_nih_plug(engine_dir)?;
+            clean_wavecraft_nih_plug(engine_dir)?;
+        }
+        WavecraftNihPlugDependencyMode::ExternalSource => {
+            println!(
+                "{} `wavecraft-nih_plug` is not a local path dependency; skipping local UI asset staging.",
+                style("→").cyan()
+            );
+            println!(
+                "{} Continuing with bundle using dependency-provided embedded assets.",
+                style("→").cyan()
+            );
+        }
+    }
+
     Ok(())
 }
 
-fn resolve_wavecraft_nih_plug_path(engine_cargo_toml: &Path) -> Result<PathBuf> {
+fn detect_wavecraft_nih_plug_dependency_mode(
+    engine_cargo_toml: &Path,
+) -> Result<WavecraftNihPlugDependencyMode> {
     let contents = fs::read_to_string(engine_cargo_toml).with_context(|| {
         format!(
             "Failed to read engine manifest while resolving Wavecraft dependency: {}",
@@ -196,11 +218,7 @@ fn resolve_wavecraft_nih_plug_path(engine_cargo_toml: &Path) -> Result<PathBuf> 
 
         let path_value = table.get("path").and_then(toml::Value::as_str);
         let Some(path_value) = path_value else {
-            bail!(
-                "`wavecraft bundle --install` requires a local SDK path dependency for `wavecraft-nih_plug`, but `{}` in {} does not define `path`.\nRecovery: generate the project in local SDK mode (`wavecraft create --local-sdk`) or update engine/Cargo.toml to use a local `path` dependency for `wavecraft-nih_plug`.",
-                dependency_name,
-                engine_cargo_toml.display()
-            );
+            return Ok(WavecraftNihPlugDependencyMode::ExternalSource);
         };
 
         let base_dir = engine_cargo_toml.parent().ok_or_else(|| {
@@ -223,11 +241,11 @@ fn resolve_wavecraft_nih_plug_path(engine_cargo_toml: &Path) -> Result<PathBuf> 
             );
         }
 
-        return Ok(resolved);
+        return Ok(WavecraftNihPlugDependencyMode::LocalPath(resolved));
     }
 
     bail!(
-        "Unable to find a dependency entry for package `wavecraft-nih_plug` in {}.\nRecovery: generate the project in local SDK mode (`wavecraft create --local-sdk`) or add `wavecraft = {{ package = \"wavecraft-nih_plug\", path = \"/path/to/wavecraft/engine/crates/wavecraft-nih_plug\" }}` to engine/Cargo.toml.",
+        "Unable to find a dependency entry for package `wavecraft-nih_plug` in {}.\nRecovery: ensure engine/Cargo.toml includes `wavecraft = {{ package = \"wavecraft-nih_plug\", git = \"https://github.com/RonHouben/wavecraft\", tag = \"<version>\" }}` or a local `path` dependency.",
         engine_cargo_toml.display()
     )
 }
@@ -717,7 +735,7 @@ mod tests {
     }
 
     #[test]
-    fn resolve_wavecraft_nih_plug_path_accepts_local_path_dependency() {
+    fn detect_wavecraft_nih_plug_dependency_mode_accepts_local_path_dependency() {
         let temp = TempDir::new().expect("temp dir should be created");
         let engine_dir = temp.path().join("engine");
         let dep_dir = temp.path().join("wavecraft-nih-plug");
@@ -734,13 +752,16 @@ mod tests {
         )
         .expect("engine cargo");
 
-        let resolved = resolve_wavecraft_nih_plug_path(&engine_dir.join("Cargo.toml"))
-            .expect("path should resolve");
-        assert_eq!(resolved, dep_dir);
+        let resolved = detect_wavecraft_nih_plug_dependency_mode(&engine_dir.join("Cargo.toml"))
+            .expect("mode should resolve");
+        assert_eq!(
+            resolved,
+            WavecraftNihPlugDependencyMode::LocalPath(dep_dir)
+        );
     }
 
     #[test]
-    fn resolve_wavecraft_nih_plug_path_rejects_non_path_dependency() {
+    fn detect_wavecraft_nih_plug_dependency_mode_accepts_non_path_dependency() {
         let temp = TempDir::new().expect("temp dir should be created");
         let engine_dir = temp.path().join("engine");
         fs::create_dir_all(&engine_dir).expect("engine dir");
@@ -751,11 +772,9 @@ mod tests {
         )
         .expect("engine cargo");
 
-        let error = resolve_wavecraft_nih_plug_path(&engine_dir.join("Cargo.toml"))
-            .expect_err("non-path dependency should fail");
-        let message = error.to_string();
-        assert!(message.contains("requires a local SDK path dependency"));
-        assert!(message.contains("wavecraft create --local-sdk"));
+        let resolved = detect_wavecraft_nih_plug_dependency_mode(&engine_dir.join("Cargo.toml"))
+            .expect("non-path dependency should be supported");
+        assert_eq!(resolved, WavecraftNihPlugDependencyMode::ExternalSource);
     }
 
     #[test]

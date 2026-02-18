@@ -226,6 +226,64 @@ fn test_bundle_install_delegates_build_ui_before_bundle_install() {
     assert!(staged_index.contains("generated-ui"));
 }
 
+#[test]
+fn test_bundle_with_git_dependency_skips_local_ui_staging() {
+    let temp = TempDir::new().expect("temp dir should be created");
+    let root = create_minimal_project_with_git_dep(temp.path());
+    let fake_bin_dir = root.join("fake-bin");
+    fs::create_dir_all(&fake_bin_dir).expect("fake bin dir");
+
+    let npm_invocations_path = root.join("npm-invocations.log");
+    create_fake_npm_runner(&fake_bin_dir.join("npm"), &npm_invocations_path, root);
+
+    let cargo_invocations_path = root.join("cargo-invocations.log");
+    create_fake_runner(&fake_bin_dir.join("cargo"), &cargo_invocations_path);
+
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wavecraft"));
+    cmd.current_dir(root);
+    cmd.arg("bundle");
+    cmd.env("PATH", prepend_path(&fake_bin_dir));
+
+    let output = cmd.output().expect("Failed to execute wavecraft binary");
+    assert!(
+        output.status.success(),
+        "bundle command unexpectedly failed in git dependency fixture\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("skipping local UI asset staging"));
+
+    let npm_invocations =
+        fs::read_to_string(npm_invocations_path).expect("npm invocations should be captured");
+    assert_eq!(npm_invocations, "run build\n");
+
+    let cargo_invocations =
+        fs::read_to_string(cargo_invocations_path).expect("cargo invocations should be captured");
+    let lines: Vec<&str> = cargo_invocations.lines().collect();
+    assert_eq!(
+        lines.len(),
+        2,
+        "expected build + helper runner invocations (no clean for non-path dependency), got: {lines:?}"
+    );
+    assert!(
+        lines[0].starts_with("build --release -p fake-engine"),
+        "expected cargo build invocation, got: {:?}",
+        lines[0]
+    );
+    assert!(
+        lines[1].starts_with("run --manifest-path "),
+        "expected helper cargo run invocation, got: {:?}",
+        lines[1]
+    );
+    assert!(
+        lines[1].contains("wavecraft-nih-plug-bundle-helper/Cargo.toml -- fake-engine"),
+        "expected helper manifest and package args, got: {:?}",
+        lines[1]
+    );
+}
+
 fn create_minimal_project(base: &std::path::Path) -> &std::path::Path {
     let fake_sdk_root = base.join("fake-sdk");
     let fake_wavecraft_dep = fake_sdk_root
@@ -249,6 +307,19 @@ fn create_minimal_project(base: &std::path::Path) -> &std::path::Path {
             "[package]\nname = \"fake-engine\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\nwavecraft = {{ package = \"wavecraft-nih_plug\", path = \"{}\" }}\n",
             fake_wavecraft_dep.display()
         ),
+    )
+    .expect("engine cargo");
+    base
+}
+
+fn create_minimal_project_with_git_dep(base: &std::path::Path) -> &std::path::Path {
+    fs::create_dir_all(base.join("ui")).expect("ui dir");
+    fs::create_dir_all(base.join("engine")).expect("engine dir");
+    fs::create_dir_all(base.join("ui/node_modules")).expect("ui node_modules dir");
+    fs::write(base.join("ui/package.json"), "{}\n").expect("ui package");
+    fs::write(
+        base.join("engine/Cargo.toml"),
+        "[package]\nname = \"fake-engine\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\nwavecraft = { package = \"wavecraft-nih_plug\", git = \"https://github.com/RonHouben/wavecraft\", tag = \"wavecraft-cli-v0.0.0\" }\n",
     )
     .expect("engine cargo");
     base
