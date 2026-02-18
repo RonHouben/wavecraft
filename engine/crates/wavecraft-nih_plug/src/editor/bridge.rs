@@ -59,7 +59,7 @@ impl<P: Params> PluginEditorBridge<P> {
     fn parameter_info_from_ptr(param_id: &str, param_ptr: ParamPtr, group: &str) -> ParameterInfo {
         // SAFETY: ParamPtr values come from `self.params.param_map()`, and `self.params` is
         // kept alive by `Arc<P>` on this struct for the full bridge lifetime.
-        let (name, unit_str, value, default, mut min, mut max) = unsafe {
+        let (name, unit_str, value, default, mut min, mut max, step_count) = unsafe {
             (
                 param_ptr.name(),
                 param_ptr.unit(),
@@ -67,6 +67,7 @@ impl<P: Params> PluginEditorBridge<P> {
                 param_ptr.default_plain_value(),
                 param_ptr.preview_plain(0.0),
                 param_ptr.preview_plain(1.0),
+                param_ptr.step_count(),
             )
         };
 
@@ -74,10 +75,31 @@ impl<P: Params> PluginEditorBridge<P> {
             std::mem::swap(&mut min, &mut max);
         }
 
+        let (param_type, variants) = if let Some(step_count) = step_count {
+            if step_count == 1 && min == 0.0 && max == 1.0 {
+                (ParameterType::Bool, None)
+            } else {
+                let labels = (0..=step_count)
+                    .map(|idx| {
+                        let normalized = if step_count == 0 {
+                            0.0
+                        } else {
+                            idx as f32 / step_count as f32
+                        };
+                        // SAFETY: `param_ptr` is valid while `self.params` is alive.
+                        unsafe { param_ptr.normalized_value_to_string(normalized, false) }
+                    })
+                    .collect::<Vec<_>>();
+                (ParameterType::Enum, Some(labels))
+            }
+        } else {
+            (ParameterType::Float, None)
+        };
+
         ParameterInfo {
             id: param_id.to_string(),
             name: name.to_string(),
-            param_type: ParameterType::Float,
+            param_type,
             value,
             default,
             min,
@@ -92,7 +114,7 @@ impl<P: Params> PluginEditorBridge<P> {
             } else {
                 Some(group.to_string())
             },
-            variants: None,
+            variants,
         }
     }
 }

@@ -212,3 +212,98 @@ Previous bundle-sidecar freshness fixes were necessary but insufficient because 
 
 - `ui/packages/components/src/TemplateApp.test.tsx`
   - Ensures template app renders both oscillator control and resize handle.
+
+---
+
+## Fourth Follow-up: parameter plumbing + enum metadata + UI semantics polish (2026-02-18)
+
+### New Manual Retest Issues (Ableton)
+
+After prior fixes, manual retest still reported 5 remaining issues:
+
+1. Oscillator toggle set to ON did not produce audible tone.
+2. Waveform dropdown rendered empty.
+3. Frequency slider values were unstable and occasionally snapped toward 0 Hz.
+4. Signal badge could show active signal while oscillator toggle was OFF, which was misleading.
+5. Resize handle remained hard to see/use in bottom-right corner.
+
+### Root Causes
+
+1. **Processor params were rebuilt from defaults, not live host/UI values**
+   - Macro-generated plugin code used `ProcessorParams::from_param_defaults()` without applying current nih-plug parameter values.
+   - Result: DSP oscillator processor received default params regardless of UI toggle/controls.
+
+2. **Runtime bridge metadata did not expose enum variants**
+   - Runtime parameter introspection hardcoded `param_type: Float` and `variants: None`.
+   - Result: enum-backed `oscillator_waveform` had no options in `ParameterSelect`.
+
+3. **Host callback forwarded normalized values to UI as-if plain values**
+   - `param_value_changed()` used normalized values directly in JS notifications.
+   - Result: UI slider state drift/snap behavior when round-tripping values.
+
+4. **Signal badge wording implied oscillator-only signal source**
+   - Component displayed generic output metering as “Oscillator signal.”
+   - Result: badge could appear contradictory when oscillator was OFF but passthrough signal existed.
+
+5. **Resize handle contrast/hit-area were too subtle for host embedding context**
+   - Lightweight transparent styling reduced discoverability and interaction confidence.
+
+### Fixes Implemented
+
+- **Live param application path added end-to-end**
+  - Added `ProcessorParams::apply_plain_values(&mut self, values: &[f32])` (default no-op).
+  - Implemented for:
+    - `GainParams`
+    - `ChainParams<PA, PB>` (recursive split by child param counts)
+    - `OscillatorParams`
+  - Updated derive macro (`#[derive(ProcessorParams)]`) to auto-generate field mapping in param order.
+  - Updated plugin macro `build_processor_params()` to collect current plain values from nih params and apply them before DSP processing.
+
+- **Runtime enum/bool metadata restored for UI controls**
+  - Bridge now inspects `step_count()` and `normalized_value_to_string()` to infer:
+    - bool-like stepped params (`param_type: Bool`)
+    - enum variants for stepped params (`param_type: Enum`, `variants: Some([...])`)
+
+- **Normalized -> plain conversion fixed for host->UI param updates**
+  - `param_value_changed()` now converts callback normalized values via `preview_plain()` before notifying UI.
+
+- **Frequency max range set to full audible spectrum**
+  - Oscillator frequency parameter max raised to `20_000.0` Hz.
+
+- **Signal badge semantics clarified**
+  - Label changed to **“Output signal (post-chain)”**.
+  - Status logic now prioritizes oscillator state:
+    - OFF -> `Off`
+    - ON + output -> `Signal at output`
+    - ON + no output -> `On (no output)`
+
+- **Resize handle visibility improved**
+  - Stronger anchored styling (`bottom-2 right-2`), larger hit area, persistent contrast background/border, and clearer icon state.
+
+### Regression Coverage Added/Updated
+
+- `engine/crates/wavecraft-dsp/src/combinators/chain.rs`
+  - `test_chain_apply_plain_values_splits_by_child_param_count`
+
+- `engine/crates/wavecraft-processors/src/oscillator.rs`
+  - `apply_plain_values_updates_all_fields`
+  - `frequency_param_uses_full_audible_range`
+
+- `engine/crates/wavecraft-macros/src/plugin.rs`
+  - Strengthened generated-code assertion to ensure live-value application call is present.
+
+- `ui/packages/components/src/OscillatorControl.test.tsx`
+  - Updated semantics expectations for output signal labeling.
+  - Added explicit OFF-state regression check when output meter has signal.
+
+- `ui/packages/components/src/ResizeHandle.test.tsx` (new)
+  - Verifies visible anchored styling classes.
+  - Verifies drag path triggers `requestResize` with minimum bounds.
+
+### Verification Performed
+
+- `cargo xtask ci-check --fix` ✅
+  - Documentation links: passed
+  - Lint/typecheck: passed
+  - Engine tests: passed
+  - UI tests: passed (`22` files, `101` tests)

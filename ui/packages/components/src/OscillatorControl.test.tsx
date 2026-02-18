@@ -53,8 +53,8 @@ describe('OscillatorControl', () => {
   it('reflects oscillator enabled value changes in visual state', () => {
     const { rerender } = render(<OscillatorControl />);
 
-    expect(screen.getByText('Oscillator signal')).toBeInTheDocument();
-    expect(screen.getByText('Producing')).toBeInTheDocument();
+    expect(screen.getByText('Output signal (post-chain)')).toBeInTheDocument();
+    expect(screen.getByText('Signal at output')).toBeInTheDocument();
     expect(screen.getByText('Oscillator output: On')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Toggle oscillator output' })).toHaveAttribute(
       'aria-pressed',
@@ -71,10 +71,27 @@ describe('OscillatorControl', () => {
     rerender(<OscillatorControl />);
 
     expect(screen.getByText('Oscillator output: Off')).toBeInTheDocument();
+    expect(screen.getByText('Off')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Toggle oscillator output' })).toHaveAttribute(
       'aria-pressed',
       'false'
     );
+  });
+
+  it('shows Off signal status when oscillator is disabled even if output meter has signal', () => {
+    mockUseMeterFrame.mockReturnValue({ peak_l: 0.8, peak_r: 0.7 });
+    mockUseParameter.mockReturnValue({
+      param: { id: 'oscillator_enabled', name: 'Oscillator Enabled', value: false },
+      setValue: mockSetOscillatorEnabled,
+      isLoading: false,
+      error: undefined,
+    });
+
+    render(<OscillatorControl />);
+
+    expect(screen.getByText('Off')).toBeInTheDocument();
+    expect(screen.getByText('Oscillator output: Off')).toBeInTheDocument();
+    expect(screen.queryByText('Signal at output')).not.toBeInTheDocument();
   });
 
   it('can toggle oscillator off and back on', () => {

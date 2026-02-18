@@ -661,13 +661,31 @@ fn expand_wavecraft_plugin(plugin_def: PluginDef) -> Result<proc_macro2::TokenSt
             /// # Known Limitation
             ///
             /// Full bidirectional parameter sync between nih-plug and processor
-            /// params is not yet implemented. For now this initializes processor
-            /// params from `ProcessorParams::from_param_defaults()`.
-            ///
-            /// For custom parameter behavior, implement the `Plugin` trait directly
-            /// instead of using the `wavecraft_plugin!` macro.
+            /// params is implemented by applying plain host values in the same
+            /// order as `ProcessorParams::param_specs()`.
             fn build_processor_params(&self) -> <__ProcessorType as #krate::Processor>::Params {
-                <<__ProcessorType as #krate::Processor>::Params as #krate::ProcessorParams>::from_param_defaults()
+                use #krate::__nih::Param;
+
+                let mut params =
+                    <<__ProcessorType as #krate::Processor>::Params as #krate::ProcessorParams>::from_param_defaults();
+                let values: ::std::vec::Vec<f32> = self
+                    .params
+                    .params
+                    .iter()
+                    .map(|param| {
+                        let ptr = param.as_ptr();
+                        // SAFETY: ParamPtr originates from `self.params` and remains valid while
+                        // `self.params` is alive.
+                        unsafe { ptr.modulated_plain_value() }
+                    })
+                    .collect();
+
+                <<__ProcessorType as #krate::Processor>::Params as #krate::ProcessorParams>::apply_plain_values(
+                    &mut params,
+                    &values,
+                );
+
+                params
             }
         }
 
@@ -916,6 +934,10 @@ mod tests {
         assert!(
             normalized.contains("format!(\"{}_{}\",\"oscillator\",spec.id_suffix)"),
             "generated code should derive runtime IDs from processor prefix + param suffix"
+        );
+        assert!(
+            normalized.contains("apply_plain_values("),
+            "generated code should apply live plain values when building processor params"
         );
     }
 }

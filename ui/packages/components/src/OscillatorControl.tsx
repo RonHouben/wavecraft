@@ -121,13 +121,15 @@ export function OscillatorControl(props: Readonly<OscilloscopeProps>): React.JSX
   }
 
   const oscillatorPeak = Math.max(meterFrame?.peak_l ?? 0, meterFrame?.peak_r ?? 0);
-  const isProducing = oscillatorPeak > SIGNAL_THRESHOLD;
+  const hasOutputSignal = oscillatorPeak > SIGNAL_THRESHOLD;
   const isOn = Boolean(oscillatorEnabled?.value ?? false);
-  const signalStatusLabel = isProducing ? 'Producing' : 'No signal';
+  const signalStatusLabel = !isOn ? 'Off' : hasOutputSignal ? 'Signal at output' : 'On (no output)';
   const outputStateLabel = isOn ? 'On' : 'Off';
-  const signalStatusClassName = isProducing
-    ? 'bg-green-900/30 text-green-400'
-    : 'bg-yellow-900/30 text-yellow-400';
+  const signalStatusClassName = !isOn
+    ? 'bg-gray-700/50 text-gray-300'
+    : hasOutputSignal
+      ? 'bg-green-900/30 text-green-400'
+      : 'bg-yellow-900/30 text-yellow-400';
 
   const handleToggle = (): void => {
     if (!oscillatorEnabled) {
@@ -151,7 +153,7 @@ export function OscillatorControl(props: Readonly<OscilloscopeProps>): React.JSX
       data-testid="oscillator-control"
     >
       <div className="mb-2 flex items-center justify-between gap-3">
-        <span className="text-sm font-semibold text-gray-200">Oscillator signal</span>
+        <span className="text-sm font-semibold text-gray-200">Output signal (post-chain)</span>
         <span className={`rounded px-2 py-1 text-xs font-semibold ${signalStatusClassName}`}>
           {signalStatusLabel}
         </span>

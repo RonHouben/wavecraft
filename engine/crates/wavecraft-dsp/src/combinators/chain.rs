@@ -106,6 +106,15 @@ where
             second: PB::from_param_defaults(),
         }
     }
+
+    fn apply_plain_values(&mut self, values: &[f32]) {
+        let first_count = PA::param_specs().len();
+        let split_at = first_count.min(values.len());
+        let (first_values, second_values) = values.split_at(split_at);
+
+        self.first.apply_plain_values(first_values);
+        self.second.apply_plain_values(second_values);
+    }
 }
 
 impl<A, B> Processor for Chain<A, B>
@@ -265,6 +274,15 @@ mod tests {
         let defaults = <ChainParams<GainParams, GainParams>>::from_param_defaults();
         assert!((defaults.first.level - 1.0).abs() < 1e-6);
         assert!((defaults.second.level - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_chain_apply_plain_values_splits_by_child_param_count() {
+        let mut params = <ChainParams<GainParams, GainParams>>::from_param_defaults();
+        params.apply_plain_values(&[0.25, 1.75]);
+
+        assert!((params.first.level - 0.25).abs() < 1e-6);
+        assert!((params.second.level - 1.75).abs() < 1e-6);
     }
 
     #[test]

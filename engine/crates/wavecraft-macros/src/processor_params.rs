@@ -42,6 +42,8 @@ fn expand_derive(input: &DeriveInput) -> syn::Result<TokenStream> {
     // Extract parameter specifications from fields
     let mut param_specs = Vec::new();
     let mut default_initializers = Vec::new();
+    let mut runtime_value_updates = Vec::new();
+    let mut param_index = 0usize;
 
     for field in fields {
         let field_name = field.ident.as_ref().expect("named fields");
@@ -59,6 +61,13 @@ fn expand_derive(input: &DeriveInput) -> syn::Result<TokenStream> {
             default_initializers.push(quote! {
                 #field_name: #default as _
             });
+            let current_index = param_index;
+            runtime_value_updates.push(quote! {
+                if let Some(value) = values.get(#current_index) {
+                    self.#field_name = *value as _;
+                }
+            });
+            param_index += 1;
             param_specs.push(spec);
         } else {
             default_initializers.push(quote! {
@@ -108,6 +117,10 @@ fn expand_derive(input: &DeriveInput) -> syn::Result<TokenStream> {
                 Self {
                     #(#default_initializers),*
                 }
+            }
+
+            fn apply_plain_values(&mut self, values: &[f32]) {
+                #(#runtime_value_updates)*
             }
         }
     })

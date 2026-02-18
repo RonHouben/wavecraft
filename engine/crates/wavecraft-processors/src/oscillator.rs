@@ -104,7 +104,7 @@ impl ProcessorParams for OscillatorParams {
                 id_suffix: "frequency",
                 range: ParamRange::Skewed {
                     min: 20.0,
-                    max: 5000.0,
+                    max: 20_000.0,
                     factor: 2.5,
                 },
                 default: 440.0,
@@ -126,6 +126,21 @@ impl ProcessorParams for OscillatorParams {
 
     fn from_param_defaults() -> Self {
         Self::default()
+    }
+
+    fn apply_plain_values(&mut self, values: &[f32]) {
+        if let Some(enabled) = values.first() {
+            self.enabled = *enabled >= 0.5;
+        }
+        if let Some(waveform) = values.get(1) {
+            self.waveform = *waveform;
+        }
+        if let Some(frequency) = values.get(2) {
+            self.frequency = *frequency;
+        }
+        if let Some(level) = values.get(3) {
+            self.level = *level;
+        }
     }
 }
 
@@ -371,6 +386,34 @@ mod tests {
                 peak > 0.01,
                 "waveform index {waveform_index} should produce signal"
             );
+        }
+    }
+
+    #[test]
+    fn apply_plain_values_updates_all_fields() {
+        let mut params = OscillatorParams::default();
+        params.apply_plain_values(&[1.0, 2.0, 1760.0, 0.9]);
+
+        assert!(params.enabled);
+        assert!((params.waveform - 2.0).abs() < f32::EPSILON);
+        assert!((params.frequency - 1760.0).abs() < f32::EPSILON);
+        assert!((params.level - 0.9).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn frequency_param_uses_full_audible_range() {
+        let specs = OscillatorParams::param_specs();
+        let frequency = specs
+            .iter()
+            .find(|spec| spec.id_suffix == "frequency")
+            .expect("frequency spec should exist");
+
+        match frequency.range {
+            ParamRange::Skewed { min, max, .. } => {
+                assert!((min - 20.0).abs() < f64::EPSILON);
+                assert!((max - 20_000.0).abs() < f64::EPSILON);
+            }
+            _ => panic!("frequency should use a skewed range"),
         }
     }
 }
