@@ -80,10 +80,16 @@ cd ui && npm install && cd ..
 wavecraft bundle --install
 ```
 
-This command runs the CLI-owned bundle/install workflow,
-builds bundles, and installs the VST3 into:
+This command is **CLI-owned** — do not run `cargo xtask bundle` or `cargo xtask install` inside the generated project. `wavecraft bundle` and `wavecraft bundle --install` are the only supported build/install entry points for plugin authors.
+
+The command builds bundles and installs the VST3 into:
 
 - `~/Library/Audio/Plug-Ins/VST3/`
+
+**Dependency mode behavior:** `wavecraft bundle` detects how `wavecraft-nih_plug` is referenced in the generated project's `engine/Cargo.toml`:
+
+- **Local `path` dependency** (SDK dev mode, `--local-sdk`): UI packages are staged locally before bundling. The engine is always cleaned and rebuilt from source.
+- **External `git`/`tag` dependency** (normal installs): Local UI staging is skipped; bundling proceeds directly using published artifacts. No `path`-only failure occurs.
 
 ### 5. Test in Your DAW
 
@@ -144,6 +150,8 @@ wavecraft bundle
 # Build and install VST3 for DAW testing (recommended)
 wavecraft bundle --install
 ```
+
+> **Note:** `wavecraft bundle` and `wavecraft bundle --install` are CLI-owned commands. Do not invoke `cargo xtask bundle` or `cargo xtask install` directly inside a generated plugin project — those are internal SDK workflow commands.
 
 ### Updating CLI and Dependencies
 
@@ -555,14 +563,14 @@ vendor = "Your Company"
 
 | Command                      | Description                          |
 | ---------------------------- | ------------------------------------ |
-| `wavecraft bundle`           | Build VST3/CLAP bundles              |
-| `wavecraft bundle --install` | Build + install VST3 (macOS)         |
-| `cargo xtask dev`            | Start dev servers (WebSocket + Vite) |
-| `cargo xtask test`           | Run all tests                        |
-| `cargo xtask lint`           | Run linters                          |
-| `cargo xtask install`        | Advanced/internal install command    |
-| `cargo xtask sign`           | Sign plugins for macOS               |
-| `cargo xtask clean`          | Clean build artifacts                |
+| `wavecraft bundle`           | Build VST3/CLAP bundles (CLI-owned)             |
+| `wavecraft bundle --install` | Build + install VST3 — macOS (CLI-owned)        |
+| `cargo xtask dev`            | Start dev servers (WebSocket + Vite) — SDK only |
+| `cargo xtask test`           | Run all tests                                   |
+| `cargo xtask lint`           | Run linters                                     |
+| `cargo xtask install`        | Advanced/internal SDK install command           |
+| `cargo xtask sign`           | Sign plugins for macOS                          |
+| `cargo xtask clean`          | Clean build artifacts                           |
 
 ---
 

@@ -374,6 +374,8 @@ The `publish-cli` job validates CLI dependencies before publishing using `cargo 
 1. **Version field** — Each `wavecraft-*` dependency must have a `version` field (required for `cargo publish` to crates.io)
 2. **Publishability** — The corresponding crate at `engine/crates/{name}/Cargo.toml` must not have `publish = false`
 
+> **Note:** `wavecraft-nih_plug` is intentionally **not** listed as a direct dependency in `cli/Cargo.toml`. It is only used by generated plugin projects (via git/tag deps in `engine/Cargo.toml`). Removing it from the CLI's publish-facing dependency graph was required to make the CLI crate publishable to crates.io, since `wavecraft-nih_plug` is `publish = false` (it requires `nih-plug` via git and cannot be published to crates.io).
+
 Dependencies are **discovered dynamically** from `cli/Cargo.toml` — adding or removing engine crate dependencies does not require updating the workflow file.
 
 The command can also be run locally:
