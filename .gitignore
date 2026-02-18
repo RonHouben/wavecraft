@@ -3,6 +3,7 @@
 /engine/crates/wavecraft-core/tests/trybuild/minimal/target/
 /engine/crates/wavecraft-core/tests/trybuild/full/target/
 /engine/crates/wavecraft-core/tests/trybuild/full/target/
+/engine/crates/wavecraft-nih_plug/assets/ui-dist/
 /cli/target/
 /packaging/macos/au-wrapper/build
 /ui/node_modules

@@ -289,13 +289,22 @@ fn clean_wavecraft_nih_plug(engine_dir: &Path) -> Result<()> {
 }
 
 fn run_nih_plug_bundle(engine_dir: &Path, package_name: &str) -> Result<()> {
-    let status = Command::new("cargo")
-        .args(["xtask", "bundle", package_name, "--release"])
+    let xtask_manifest = resolve_sdk_xtask_manifest(engine_dir)?;
+    let xtask_binary = ensure_sdk_xtask_binary(&xtask_manifest)?;
+
+    let status = Command::new(&xtask_binary)
+        .args(["bundle", "--package", package_name, "--release"])
+        .env("CARGO_MANIFEST_DIR", engine_dir)
         .current_dir(engine_dir)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .status()
-        .context("Failed to run `cargo xtask bundle`")?;
+        .with_context(|| {
+            format!(
+                "Failed to run SDK bundle runner at {}",
+                xtask_binary.display()
+            )
+        })?;
 
     if status.success() {
         Ok(())
@@ -306,6 +315,83 @@ fn run_nih_plug_bundle(engine_dir: &Path, package_name: &str) -> Result<()> {
         );
         bail!("Bundle command failed (exit: {}).", code);
     }
+}
+
+fn resolve_sdk_xtask_manifest(engine_dir: &Path) -> Result<PathBuf> {
+    let engine_manifest = engine_dir.join("Cargo.toml");
+    let wavecraft_nih_plug_dir = resolve_wavecraft_nih_plug_path(&engine_manifest)?;
+
+    let sdk_engine_dir = wavecraft_nih_plug_dir
+        .ancestors()
+        .find(|path| path.file_name().is_some_and(|name| name == "engine"))
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "Failed to derive SDK engine directory from `{}`",
+                wavecraft_nih_plug_dir.display()
+            )
+        })?;
+
+    Ok(sdk_engine_dir.join("xtask").join("Cargo.toml"))
+}
+
+fn ensure_sdk_xtask_binary(xtask_manifest: &Path) -> Result<PathBuf> {
+    let xtask_binary = sdk_xtask_binary_path(xtask_manifest)?;
+    if xtask_binary.exists() {
+        return Ok(xtask_binary);
+    }
+
+    println!("{} Building SDK bundle runner...", style("→").cyan());
+
+    let status = Command::new("cargo")
+        .args([
+            "build",
+            "--manifest-path",
+            xtask_manifest.to_string_lossy().as_ref(),
+        ])
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()
+        .context("Failed to build SDK bundle runner")?;
+
+    if !status.success() {
+        let code = status.code().map_or_else(
+            || "terminated by signal".to_string(),
+            |value| value.to_string(),
+        );
+        bail!("Failed to build SDK bundle runner (exit: {}).", code);
+    }
+
+    if !xtask_binary.exists() {
+        bail!(
+            "SDK bundle runner build finished but binary was not found at {}.",
+            xtask_binary.display()
+        );
+    }
+
+    Ok(xtask_binary)
+}
+
+fn sdk_xtask_binary_path(xtask_manifest: &Path) -> Result<PathBuf> {
+    let sdk_engine_dir = xtask_manifest
+        .parent()
+        .and_then(Path::parent)
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "Failed to derive SDK engine directory from xtask manifest path `{}`",
+                xtask_manifest.display()
+            )
+        })?;
+
+    let binary_name = if cfg!(target_os = "windows") {
+        "xtask.exe"
+    } else {
+        "xtask"
+    };
+
+    Ok(sdk_engine_dir
+        .join("target")
+        .join("debug")
+        .join(binary_name))
 }
 
 fn bundled_dir_candidates(engine_dir: &Path) -> [PathBuf; 2] {
