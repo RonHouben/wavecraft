@@ -152,9 +152,6 @@ impl Processor for Oscillator {
         params: &Self::Params,
     ) {
         if !params.enabled {
-            for channel in buffer.iter_mut() {
-                channel.fill(0.0);
-            }
             return;
         }
 
@@ -174,7 +171,7 @@ impl Processor for Oscillator {
         for channel in buffer.iter_mut() {
             self.phase = start_phase;
             for sample in channel.iter_mut() {
-                *sample = generate_waveform_sample(waveform, self.phase) * params.level;
+                *sample += generate_waveform_sample(waveform, self.phase) * params.level;
 
                 // Advance phase, wrapping at 1.0 to avoid floating-point drift.
                 self.phase += phase_delta;
@@ -267,22 +264,29 @@ mod tests {
     }
 
     #[test]
-    fn oscillator_outputs_silence_when_disabled() {
+    fn oscillator_preserves_passthrough_when_disabled() {
         let mut osc = Oscillator::default();
         osc.set_sample_rate(48_000.0);
 
-        let mut left = [1.0_f32; 64];
-        let mut right = [1.0_f32; 64];
+        let mut left = [0.25_f32; 64];
+        let mut right = [-0.5_f32; 64];
+        let left_in = left;
+        let right_in = right;
         let mut buffer = [&mut left[..], &mut right[..]];
 
         osc.process(&mut buffer, &Transport::default(), &test_params(false));
 
-        assert!(left.iter().all(|s| s.abs() <= f32::EPSILON));
-        assert!(right.iter().all(|s| s.abs() <= f32::EPSILON));
+        for (actual, expected) in left.iter().zip(left_in.iter()) {
+            assert!((actual - expected).abs() <= f32::EPSILON);
+        }
+
+        for (actual, expected) in right.iter().zip(right_in.iter()) {
+            assert!((actual - expected).abs() <= f32::EPSILON);
+        }
     }
 
     #[test]
-    fn oscillator_outputs_signal_when_enabled() {
+    fn oscillator_generates_signal_when_enabled_on_silent_input() {
         let mut osc = Oscillator::default();
         osc.set_sample_rate(48_000.0);
 
@@ -307,6 +311,41 @@ mod tests {
             peak_right > 0.01,
             "expected audible oscillator output on right"
         );
+    }
+
+    #[test]
+    fn oscillator_enabled_adds_signal_without_removing_input() {
+        let mut osc_mixed = Oscillator::default();
+        osc_mixed.set_sample_rate(48_000.0);
+
+        let mut left_mixed = [0.2_f32; 128];
+        let mut right_mixed = [-0.15_f32; 128];
+        let left_input = left_mixed;
+        let right_input = right_mixed;
+        let mut mixed_buffer = [&mut left_mixed[..], &mut right_mixed[..]];
+
+        osc_mixed.process(&mut mixed_buffer, &Transport::default(), &test_params(true));
+
+        let mut osc_only = Oscillator::default();
+        osc_only.set_sample_rate(48_000.0);
+
+        let mut left_osc_only = [0.0_f32; 128];
+        let mut right_osc_only = [0.0_f32; 128];
+        let mut osc_only_buffer = [&mut left_osc_only[..], &mut right_osc_only[..]];
+
+        osc_only.process(
+            &mut osc_only_buffer,
+            &Transport::default(),
+            &test_params(true),
+        );
+
+        for i in 0..left_mixed.len() {
+            let additive_component_left = left_mixed[i] - left_input[i];
+            let additive_component_right = right_mixed[i] - right_input[i];
+
+            assert!((additive_component_left - left_osc_only[i]).abs() < 1e-6);
+            assert!((additive_component_right - right_osc_only[i]).abs() < 1e-6);
+        }
     }
 
     #[test]

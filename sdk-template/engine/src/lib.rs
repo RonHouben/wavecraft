@@ -24,6 +24,7 @@ wavecraft_processor!(OutputGain => Gain);
 wavecraft_plugin! {
     name: "My First Plugin",
     signal: SignalChain![
+        // Generator semantics: additive when enabled, passthrough no-op when disabled.
         Oscillator,
         ExampleProcessor,
         OscilloscopeTap,

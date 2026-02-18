@@ -8,15 +8,16 @@ This document tracks implementation progress against the milestones defined in t
 
 ```
 ┌──────────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP          v0.13.0 | 100%  │
+│  WAVECRAFT ROADMAP          v0.13.0 | 96%   │
 ├──────────────────────────────────────────────┤
 │  ✅ M1-M18.7 Foundation → UI Race Fix       │
 │  ✅ M18.8    Agent Search Delegation        │
 │  ✅ M18.9    Rust Hot-Reload for Dev        │
 │  ✅ M18.10   TS Param Autocomplete          │
+│  ⏳ M18.11   Oscillator Passthrough Mix Bug │
 │  ✅ M1-M18.10 Foundation → TS Autocomplete │
 ├──────────────────────────────────────────────┤
-│  [████████████████████████] 24/24          │
+│  [███████████████████████░] 24/25          │
 └──────────────────────────────────────────────┘
 ```
 
@@ -1617,6 +1618,37 @@ const { param, setValue } = useParameter('oscillator_frequency');
 
 ---
 
+## Milestone 18.11: Oscillator Must Not Block DAW Passthrough ⏳
+
+> **Goal:** Fix generated project signal-chain behavior so enabling `Oscillator` does not mute incoming DAW signal in Ableton; oscillator and passthrough audio must be audible simultaneously.
+
+**Status:** ⏳ Not Started
+
+| Task                                  | Status | Notes                                                                   |
+| ------------------------------------- | ------ | ----------------------------------------------------------------------- |
+| Create user stories                   | ✅     | `docs/feature-specs/oscillator-passthrough-mix/user-stories.md`         |
+| Architect low-level design            | ⏳     | Define canonical mix/routing behavior for generator + input coexistence |
+| Implementation plan                   | ⏳     | Scope expected changes across template/engine/runtime layers as needed  |
+| Implement fix                         | ⏳     | Ensure oscillator augments audio path instead of replacing passthrough  |
+| Regression testing in Ableton (macOS) | ⏳     | Verify both DAW input and oscillator remain audible                     |
+| Add automated regression coverage     | ⏳     | Prevent future reintroduction in generated-project defaults             |
+
+**Problem Statement:**
+
+In newly created Wavecraft projects, enabling `Oscillator` in the signal chain can cause incoming DAW signal to disappear in Ableton. Removing `Oscillator` restores passthrough. This breaks expected first-run behavior.
+
+**Expected Behavior:**
+
+- Oscillator output is audible when enabled
+- Incoming DAW audio is still audible at the same time
+- Enabling oscillator must not block passthrough
+
+**Priority:** High (first-run DX + core audio correctness)
+
+**User Stories:** [docs/feature-specs/oscillator-passthrough-mix/user-stories.md](feature-specs/oscillator-passthrough-mix/user-stories.md)
+
+---
+
 ## Pre-M19 Initiative: CLI Update UX Quick Wins + Optional Dev Build Profile Spike ✅
 
 > **Goal:** Land two high-impact CLI polish items before/alongside M19, plus an optional low-risk Rust dev build optimization spike that must not delay M19.
@@ -1665,6 +1697,7 @@ const { param, setValue } = useParameter('oscillator_frequency');
 
 | Date       | Update                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-02-18 | **Milestone 18.11 added (High-priority bug): Oscillator passthrough mix behavior.** Added a roadmap item for generated projects where enabling `Oscillator` can mute incoming DAW signal in Ableton. Defined expected behavior (oscillator + DAW signal simultaneously audible), linked user stories at `docs/feature-specs/oscillator-passthrough-mix/user-stories.md`, and set next handoff to Architect for canonical signal-path design. Progress updated to **24/25 (96%)** to reflect new open work.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | 2026-02-17 | **PO closure finalization: `new-project-vst3-build-install`** — canonical archive contents confirmed complete (`implementation-plan.md`, `test-plan.md`, `QA-report.md`, `PR-summary.md`) and active feature-spec duplicate cleaned up for historical consistency.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | 2026-02-17 | **Feature closeout complete: `new-project-vst3-build-install`** — roadmap finalized after implementation validation, tester PASS, QA re-review APPROVED, and architecture docs aligned. Feature-spec documentation archived to `docs/feature-specs/_archive/new-project-vst3-build-install/` with no edits to already archived specs.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 2026-02-16 | **Feature closeout complete: `oscillator-waveform-selector`** — PO archival/finalization done; feature-spec documentation moved to `docs/feature-specs/_archive/oscillator-waveform-selector/` with no content edits beyond the archive move. Active PR: [#83](https://github.com/RonHouben/wavecraft/pull/83).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
@@ -1808,11 +1841,11 @@ const { param, setValue } = useParameter('oscillator_frequency');
 
 ### Up Next
 
-- ✅ No active upcoming milestones currently listed
+1. ⏳ **Milestone 18.11** — Oscillator must not block DAW passthrough (High-priority bugfix)
 
 ### Immediate Tasks
 
-1. ✅ ~~Execute **Pre-M19 Initiative** (Item #2 → Item #1) under strict 2-day guardrail~~ — Completed 2026-02-14
+1. ⏳ **Handoff to Architect:** define canonical signal-flow/mix behavior for oscillator + DAW passthrough (Milestone 18.11)
 2. 📝 **Pre-release validation:** MT4 (native plugin DAW testing) deferred from M18.7 — smoke test in Ableton before final release window
 3. 📝 **Architecture-doc sync follow-up (`processor-presence-hook`)**: apply Architect-identified updates in `docs/architecture/development-workflows.md`, `docs/architecture/sdk-architecture.md`, `docs/architecture/high-level-design.md`, and `docs/architecture/declarative-plugin-dsl.md` (post-archival follow-up)
 
