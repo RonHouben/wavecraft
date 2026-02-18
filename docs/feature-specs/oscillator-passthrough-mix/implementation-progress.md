@@ -56,3 +56,159 @@ No routing framework expansion or chain architecture changes were introduced.
 
 Confirmed scope remained limited to Milestone 18.11 bugfix.
 No mixer/multi-bus/routing framework work was introduced.
+
+---
+
+## Follow-up Regression Fix (2026-02-18)
+
+### Regression Report
+
+During manual Ableton validation, UI showed:
+
+- `Error: Parameter not found: oscillator_enabled`
+- `Error: Parameter not found: oscillator_waveform`
+- `Error: Parameter not found: oscillator_frequency`
+- `Error: Parameter not found: oscillator_level`
+
+and the oscillator toggle was non-interactive.
+
+### Root Cause
+
+`wavecraft bundle` did not refresh generated TypeScript contract files (`ui/src/generated/parameters.ts` and `ui/src/generated/processors.ts`) before building and embedding UI assets.
+
+This allowed stale generated metadata to be packaged, creating a UI↔runtime contract mismatch when processor/parameter sets diverged across builds.
+
+### Fix Implemented
+
+- Updated CLI bundle flow in `cli/src/commands/bundle_command.rs` to refresh generated parameter/processor typings before UI build:
+  - Sidecar-first metadata load (`wavecraft-params.json`, `wavecraft-processors.json`) when available.
+  - Automatic fallback to discovery build (`cargo build --lib --features _param-discovery -p <engine_package>`) plus subprocess extraction (`extract-params` / `extract-processors`) when sidecars are missing.
+  - Regenerates:
+    - `ui/src/generated/parameters.ts`
+    - `ui/src/generated/processors.ts`
+
+### Regression Tests Added/Updated
+
+- Added integration regression coverage in `cli/tests/bundle_command.rs`:
+  - `test_bundle_refreshes_generated_contract_types_from_sidecars`
+    - Seeds stale generated files + sidecar metadata
+    - Verifies `wavecraft bundle` rewrites generated contract files from sidecars before UI build
+- Updated bundle command fixture setup to seed realistic sidecar metadata used by bundle tests.
+
+### Verification Performed
+
+- `cargo test --manifest-path cli/Cargo.toml --test bundle_command` ✅
+- `cargo fmt --manifest-path cli/Cargo.toml` ✅
+- `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` ✅
+- `cargo test --manifest-path cli/Cargo.toml` ✅
+- `cargo xtask ci-check --fix` ✅
+- Generated project workflow validation:
+  - `cargo run --manifest-path cli/Cargo.toml -- bundle --install` from `target/tmp/osc-mix-test` ✅
+  - Confirmed contract refresh path executed (`sidecars missing -> discovery build -> generated types synced`) and bundle/install completed.
+
+---
+
+## Second Follow-up: stale sidecar cache path in manual Ableton retest (2026-02-18)
+
+### New Manual Failure Report
+
+Manual Ableton retest still showed:
+
+- `Error: Parameter not found: oscillator_enabled`
+- `Error: Parameter not found: oscillator_waveform`
+- `Error: Parameter not found: oscillator_frequency`
+- `Error: Parameter not found: oscillator_level`
+
+with oscillator UI controls non-reactive, despite audio passthrough working.
+
+### Root Cause (why first follow-up was insufficient)
+
+The first follow-up ensured `wavecraft bundle` regenerates `ui/src/generated/*.ts` from metadata sidecars. However, `bundle` accepted existing sidecars (`target/debug/wavecraft-params.json` and `wavecraft-processors.json`) without validating freshness.
+
+For older generated projects (e.g., long-lived manual test projects), sidecars can be stale relative to newer `engine/src` changes. In that case, bundle regenerated TypeScript contracts from stale sidecars, preserving the UI↔runtime mismatch.
+
+### Additional Fix Implemented
+
+`cli/src/commands/bundle_command.rs` now validates sidecar freshness before using cache:
+
+- Treats sidecars as stale when either sidecar is older than:
+  - plugin dylib
+  - newest file under `engine/src`
+  - currently running CLI binary
+- On stale cache, bundle logs reason and falls back to discovery build (`--features _param-discovery`) + subprocess metadata extraction.
+
+This prevents silently shipping/installing stale parameter contracts from outdated sidecar caches.
+
+### Regression Coverage Added
+
+Added unit-level regression tests in bundle command module:
+
+- `stale_sidecars_are_ignored_when_engine_source_is_newer`
+  - Reproduces exact stale cache condition and asserts sidecars are ignored.
+- `fresh_sidecars_are_used_for_contract_refresh`
+  - Confirms fresh sidecars are still used (no unnecessary discovery build).
+
+### Verification Performed
+
+- `cargo test --manifest-path cli/Cargo.toml --test bundle_command` ✅
+- `cargo xtask ci-check --fix` ✅
+
+---
+
+## Third Follow-up: runtime parameter ID mismatch + missing resize handle (2026-02-18)
+
+### New Manual Failure Report
+
+Manual Ableton retest (after rebuild/install + host restart) still showed:
+
+- Audio passthrough works.
+- Oscillator UI errors:
+  - `Parameter not found: oscillator_enabled`
+  - `Parameter not found: oscillator_waveform`
+  - `Parameter not found: oscillator_frequency`
+  - `Parameter not found: oscillator_level`
+- Oscillator toggle remained non-reactive.
+- Resize handle was missing from bottom-right (regression).
+
+### Root Cause (why previous bundle fixes still failed)
+
+There were two distinct issues:
+
+1. **Runtime ID mismatch in macro-generated plugin params**
+   - `wavecraft_plugin!` generated nih-plug `param_map()` IDs as `param_0`, `param_1`, ...
+   - UI/generated contracts expected canonical IDs like `oscillator_enabled`.
+   - Result: runtime bridge could not resolve oscillator IDs, so controls rendered `Parameter not found`.
+
+2. **Template UI regression for resize affordance**
+   - `sdk-template/ui/src/App.tsx` rendered oscillator/meter/latency panels but did not render `ResizeHandle`, so the resize grip disappeared in generated plugin UIs.
+
+Previous bundle-sidecar freshness fixes were necessary but insufficient because they only affected how generated TS contract files are refreshed; they did **not** change runtime IDs exposed by the plugin.
+
+### Additional Fixes Implemented
+
+- **Macro/runtime fix** (`engine/crates/wavecraft-macros/src/plugin.rs`):
+  - `__WavecraftParams` now stores canonical runtime IDs and groups alongside param pointers.
+  - Generated `param_map()` now emits those canonical IDs (e.g. `oscillator_enabled`) instead of `param_N` placeholders.
+  - This aligns runtime bridge IDs with generated TS contract IDs.
+
+- **UI compatibility hardening** (`ui/packages/components/src/OscillatorControl.tsx`):
+  - Added ID resolution fallback logic for oscillator controls:
+    - canonical ID match first
+    - explicit legacy aliases (`param_0..param_3`)
+    - suffix-based fallback (`*_enabled`, etc.)
+  - Prevents brittle failures when older runtime variants are encountered.
+
+- **Resize handle restoration** (`sdk-template/ui/src/App.tsx`):
+  - Re-added `ResizeHandle` component rendering in generated template app layout.
+
+### Regression Coverage Added
+
+- `engine/crates/wavecraft-macros/src/plugin.rs`
+  - `generated_param_map_uses_prefixed_runtime_ids_instead_of_param_indexes`
+  - Guards against reintroducing `param_N` runtime IDs.
+
+- `ui/packages/components/src/OscillatorControl.test.tsx`
+  - Added fallback coverage for legacy runtime IDs (`param_0..param_3`).
+
+- `ui/packages/components/src/TemplateApp.test.tsx`
+  - Ensures template app renders both oscillator control and resize handle.

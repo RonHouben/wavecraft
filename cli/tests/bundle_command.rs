@@ -284,6 +284,55 @@ fn test_bundle_with_git_dependency_skips_local_ui_staging() {
     );
 }
 
+#[test]
+fn test_bundle_refreshes_generated_contract_types_from_sidecars() {
+    let temp = TempDir::new().expect("temp dir should be created");
+    let root = create_minimal_project(temp.path());
+    let fake_bin_dir = root.join("fake-bin");
+    fs::create_dir_all(&fake_bin_dir).expect("fake bin dir");
+
+    let npm_invocations_path = root.join("npm-invocations.log");
+    create_fake_npm_runner(&fake_bin_dir.join("npm"), &npm_invocations_path, root);
+
+    let cargo_invocations_path = root.join("cargo-invocations.log");
+    create_fake_runner(&fake_bin_dir.join("cargo"), &cargo_invocations_path);
+
+    fs::create_dir_all(root.join("ui/src/generated")).expect("generated dir");
+    fs::write(
+        root.join("ui/src/generated/parameters.ts"),
+        "declare module '@wavecraft/core' { interface ParameterIdMap { stale_param: number; } }\n",
+    )
+    .expect("stale parameters");
+    fs::write(
+        root.join("ui/src/generated/processors.ts"),
+        "declare global { interface WavecraftProcessorIdMap { stale_processor: true; } }\n",
+    )
+    .expect("stale processors");
+
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wavecraft"));
+    cmd.current_dir(root);
+    cmd.arg("bundle");
+    cmd.env("PATH", prepend_path(&fake_bin_dir));
+
+    let output = cmd.output().expect("Failed to execute wavecraft binary");
+    assert!(
+        output.status.success(),
+        "bundle command unexpectedly failed in fixture\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let generated_params = fs::read_to_string(root.join("ui/src/generated/parameters.ts"))
+        .expect("generated parameter types should exist");
+    assert!(generated_params.contains("oscillator_enabled: boolean;"));
+    assert!(generated_params.contains("oscillator_waveform: number;"));
+
+    let generated_processors = fs::read_to_string(root.join("ui/src/generated/processors.ts"))
+        .expect("generated processor types should exist");
+    assert!(generated_processors.contains("oscillator: true;"));
+    assert!(generated_processors.contains("registerAvailableProcessors(PROCESSOR_IDS);"));
+}
+
 fn create_minimal_project(base: &std::path::Path) -> &std::path::Path {
     let fake_sdk_root = base.join("fake-sdk");
     let fake_wavecraft_dep = fake_sdk_root
@@ -309,6 +358,7 @@ fn create_minimal_project(base: &std::path::Path) -> &std::path::Path {
         ),
     )
     .expect("engine cargo");
+    seed_metadata_sidecars(base);
     base
 }
 
@@ -322,7 +372,53 @@ fn create_minimal_project_with_git_dep(base: &std::path::Path) -> &std::path::Pa
         "[package]\nname = \"fake-engine\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\nwavecraft = { package = \"wavecraft-nih_plug\", git = \"https://github.com/RonHouben/wavecraft\", tag = \"wavecraft-cli-v0.0.0\" }\n",
     )
     .expect("engine cargo");
+    seed_metadata_sidecars(base);
     base
+}
+
+fn seed_metadata_sidecars(base: &std::path::Path) {
+    let debug_dir = base.join("target/debug");
+    fs::create_dir_all(&debug_dir).expect("debug sidecar dir");
+
+    fs::write(
+        debug_dir.join("wavecraft-params.json"),
+        r#"[
+    {
+        "id": "oscillator_enabled",
+        "name": "Oscillator Enabled",
+        "type": "bool",
+        "value": 1.0,
+        "default": 1.0,
+        "min": 0.0,
+        "max": 1.0,
+        "unit": null,
+        "group": "Oscillator",
+        "variants": null
+    },
+    {
+        "id": "oscillator_waveform",
+        "name": "Oscillator Waveform",
+        "type": "enum",
+        "value": 0.0,
+        "default": 0.0,
+        "min": 0.0,
+        "max": 3.0,
+        "unit": null,
+        "group": "Oscillator",
+        "variants": ["Sine", "Square", "Saw", "Triangle"]
+    }
+]"#,
+    )
+    .expect("write parameter sidecar");
+
+    fs::write(
+        debug_dir.join("wavecraft-processors.json"),
+        r#"[
+    { "id": "oscillator" },
+    { "id": "output_gain" }
+]"#,
+    )
+    .expect("write processor sidecar");
 }
 
 fn create_fake_runner(fake_path: &std::path::Path, invocations_path: &std::path::Path) {

@@ -3,16 +3,97 @@
  */
 
 import React from 'react';
-import { logger, useMeterFrame, useParameter, useHasProcessor } from '@wavecraft/core';
+import {
+  logger,
+  useMeterFrame,
+  useParameter,
+  useHasProcessor,
+  useAllParameters,
+} from '@wavecraft/core';
 import type { ParameterId } from '@wavecraft/core';
 import { ParameterSelect } from './ParameterSelect';
 import { ParameterSlider } from './ParameterSlider';
 
 const SIGNAL_THRESHOLD = 1e-4;
-const OSCILLATOR_ENABLED_PARAM_ID = 'oscillator_enabled' as ParameterId;
-const OSCILLATOR_WAVEFORM_PARAM_ID = 'oscillator_waveform' as ParameterId;
-const OSCILLATOR_FREQUENCY_PARAM_ID = 'oscillator_frequency' as ParameterId;
-const OSCILLATOR_LEVEL_PARAM_ID = 'oscillator_level' as ParameterId;
+const OSCILLATOR_ENABLED_PARAM_ID = 'oscillator_enabled' as const;
+const OSCILLATOR_WAVEFORM_PARAM_ID = 'oscillator_waveform' as const;
+const OSCILLATOR_FREQUENCY_PARAM_ID = 'oscillator_frequency' as const;
+const OSCILLATOR_LEVEL_PARAM_ID = 'oscillator_level' as const;
+
+interface OscillatorParamIdSet {
+  enabled: ParameterId;
+  waveform: ParameterId;
+  frequency: ParameterId;
+  level: ParameterId;
+}
+
+const CANONICAL_OSCILLATOR_PARAM_IDS: OscillatorParamIdSet = {
+  enabled: OSCILLATOR_ENABLED_PARAM_ID,
+  waveform: OSCILLATOR_WAVEFORM_PARAM_ID,
+  frequency: OSCILLATOR_FREQUENCY_PARAM_ID,
+  level: OSCILLATOR_LEVEL_PARAM_ID,
+};
+
+const LEGACY_OSCILLATOR_PARAM_ALIASES: Record<keyof OscillatorParamIdSet, readonly string[]> = {
+  enabled: ['param_0'],
+  waveform: ['param_1'],
+  frequency: ['param_2'],
+  level: ['param_3'],
+};
+
+function suffixFromCanonicalId(id: string): string {
+  return id.startsWith('oscillator_') ? id.slice('oscillator_'.length) : id;
+}
+
+function resolveOscillatorParamId(
+  availableIds: ReadonlySet<string>,
+  canonicalId: string,
+  legacyAliases: readonly string[]
+): ParameterId {
+  if (availableIds.has(canonicalId)) {
+    return canonicalId as ParameterId;
+  }
+
+  const explicitAlias = legacyAliases.find((alias) => availableIds.has(alias));
+  if (explicitAlias) {
+    return explicitAlias as ParameterId;
+  }
+
+  const suffix = suffixFromCanonicalId(canonicalId);
+  const suffixMatch = Array.from(availableIds).find((id) => id.endsWith(`_${suffix}`));
+  if (suffixMatch) {
+    return suffixMatch as ParameterId;
+  }
+
+  return canonicalId as ParameterId;
+}
+
+function resolveOscillatorParamIds(parameterIds: readonly string[]): OscillatorParamIdSet {
+  const availableIds = new Set(parameterIds);
+
+  return {
+    enabled: resolveOscillatorParamId(
+      availableIds,
+      CANONICAL_OSCILLATOR_PARAM_IDS.enabled,
+      LEGACY_OSCILLATOR_PARAM_ALIASES.enabled
+    ),
+    waveform: resolveOscillatorParamId(
+      availableIds,
+      CANONICAL_OSCILLATOR_PARAM_IDS.waveform,
+      LEGACY_OSCILLATOR_PARAM_ALIASES.waveform
+    ),
+    frequency: resolveOscillatorParamId(
+      availableIds,
+      CANONICAL_OSCILLATOR_PARAM_IDS.frequency,
+      LEGACY_OSCILLATOR_PARAM_ALIASES.frequency
+    ),
+    level: resolveOscillatorParamId(
+      availableIds,
+      CANONICAL_OSCILLATOR_PARAM_IDS.level,
+      LEGACY_OSCILLATOR_PARAM_ALIASES.level
+    ),
+  };
+}
 
 interface OscilloscopeProps {
   hideWhenNotInSignalChain?: boolean;
@@ -20,12 +101,18 @@ interface OscilloscopeProps {
 
 export function OscillatorControl(props: Readonly<OscilloscopeProps>): React.JSX.Element | null {
   const meterFrame = useMeterFrame(100);
+  const { params: allParameters } = useAllParameters();
+  const oscillatorParamIds = React.useMemo(
+    () => resolveOscillatorParamIds(allParameters.map((param) => param.id)),
+    [allParameters]
+  );
+
   const {
     param: oscillatorEnabled,
     setValue: setOscillatorEnabled,
     isLoading: isOscillatorLoading,
     error: oscillatorError,
-  } = useParameter(OSCILLATOR_ENABLED_PARAM_ID);
+  } = useParameter(oscillatorParamIds.enabled);
 
   const hasProcessorInSignalChain = useHasProcessor('oscillator');
 
@@ -51,7 +138,7 @@ export function OscillatorControl(props: Readonly<OscilloscopeProps>): React.JSX
     setOscillatorEnabled(newValue).catch((error) => {
       logger.error('Failed to toggle oscillator output', {
         error,
-        parameterId: OSCILLATOR_ENABLED_PARAM_ID,
+        parameterId: oscillatorParamIds.enabled,
       });
     });
   };
@@ -95,9 +182,9 @@ export function OscillatorControl(props: Readonly<OscilloscopeProps>): React.JSX
       ) : null}
 
       <div className="mt-3">
-        <ParameterSelect id={OSCILLATOR_WAVEFORM_PARAM_ID} />
-        <ParameterSlider id={OSCILLATOR_FREQUENCY_PARAM_ID} />
-        <ParameterSlider id={OSCILLATOR_LEVEL_PARAM_ID} />
+        <ParameterSelect id={oscillatorParamIds.waveform} />
+        <ParameterSlider id={oscillatorParamIds.frequency} />
+        <ParameterSlider id={oscillatorParamIds.level} />
       </div>
     </div>
   );

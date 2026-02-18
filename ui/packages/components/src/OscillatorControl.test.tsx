@@ -6,6 +6,7 @@ const mockUseMeterFrame = vi.hoisted(() => vi.fn());
 const mockUseParameter = vi.hoisted(() => vi.fn());
 const mockSetOscillatorEnabled = vi.hoisted(() => vi.fn());
 const mockUseHasProcessor = vi.hoisted(() => vi.fn());
+const mockUseAllParameters = vi.hoisted(() => vi.fn());
 
 vi.mock('@wavecraft/core', () => ({
   logger: {
@@ -14,6 +15,7 @@ vi.mock('@wavecraft/core', () => ({
   useMeterFrame: mockUseMeterFrame,
   useParameter: mockUseParameter,
   useHasProcessor: mockUseHasProcessor,
+  useAllParameters: mockUseAllParameters,
 }));
 
 vi.mock('./ParameterSlider', () => ({
@@ -28,6 +30,17 @@ describe('OscillatorControl', () => {
   beforeEach(() => {
     mockUseMeterFrame.mockReturnValue({ peak_l: 0.2, peak_r: 0.1 });
     mockSetOscillatorEnabled.mockReset();
+    mockUseAllParameters.mockReturnValue({
+      params: [
+        { id: 'oscillator_enabled' },
+        { id: 'oscillator_waveform' },
+        { id: 'oscillator_frequency' },
+        { id: 'oscillator_level' },
+      ],
+      isLoading: false,
+      error: null,
+      reload: vi.fn(),
+    });
     mockUseParameter.mockReturnValue({
       param: { id: 'oscillator_enabled', name: 'Oscillator Enabled', value: true },
       setValue: mockSetOscillatorEnabled,
@@ -137,5 +150,28 @@ describe('OscillatorControl', () => {
       'aria-pressed',
       'true'
     );
+  });
+
+  it('resolves legacy param_N IDs when canonical oscillator IDs are unavailable', () => {
+    mockUseAllParameters.mockReturnValue({
+      params: [{ id: 'param_0' }, { id: 'param_1' }, { id: 'param_2' }, { id: 'param_3' }],
+      isLoading: false,
+      error: null,
+      reload: vi.fn(),
+    });
+
+    mockUseParameter.mockImplementation((id: string) => ({
+      param: { id, name: 'Oscillator Enabled', value: true },
+      setValue: mockSetOscillatorEnabled,
+      isLoading: false,
+      error: undefined,
+    }));
+
+    render(<OscillatorControl />);
+
+    expect(mockUseParameter).toHaveBeenCalledWith('param_0');
+    expect(screen.getByTestId('select-param_1')).toBeInTheDocument();
+    expect(screen.getByTestId('slider-param_2')).toBeInTheDocument();
+    expect(screen.getByTestId('slider-param_3')).toBeInTheDocument();
   });
 });

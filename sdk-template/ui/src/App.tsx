@@ -7,6 +7,7 @@ import {
   LatencyMonitor,
   OscillatorControl,
   Oscilloscope,
+  ResizeHandle,
 } from '@wavecraft/components';
 
 export function App(): JSX.Element {
@@ -41,6 +42,8 @@ export function App(): JSX.Element {
           <LatencyMonitor />
         </div>
       </div>
+
+      <ResizeHandle />
     </div>
   );
 }
