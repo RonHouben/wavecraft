@@ -21,6 +21,7 @@ Fixes the oscillator passthrough/additive mix feature and resolves a cascade of 
 ### UI
 
 - Improved `ResizeHandle` compatibility — corrected pointer-event and cursor handling to work reliably across WKWebView and browser dev mode
+- Fixed CI-only UI typecheck regression where `ui` workspace tests import `sdk-template/ui/src/App.tsx`: added explicit React module type path mappings in `ui/tsconfig.json` so TypeScript resolves `react` and `react/jsx-runtime` without requiring `sdk-template/ui/node_modules`
 
 ---
 
@@ -40,6 +41,7 @@ Fixes the oscillator passthrough/additive mix feature and resolves a cascade of 
 ## Testing
 
 - `cargo xtask ci-check` passes (docs, UI build, lint + typecheck, Rust + Vitest tests)
+- CI failure reproduced locally in CI-like mode (with `sdk-template/ui/node_modules` temporarily hidden), then verified fixed via `npm run typecheck` in `ui`
 - QA review completed — all findings resolved (see `QA-report.md`)
 - Manual validation performed in Ableton Live (see below)
 
