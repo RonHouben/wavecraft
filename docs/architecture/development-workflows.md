@@ -158,8 +158,11 @@ When `wavecraft start` launches, it:
 3. **Generates `ui/src/generated/processors.ts`** — a generated registry/typing artifact used for processor presence (`WavecraftProcessorIdMap` augmentation + startup registration)
 4. **Regenerates on hot-reload** — when Rust source files change, the rebuild pipeline re-extracts metadata and regenerates both TypeScript artifacts via the `TsTypesWriterFn` callback in `RebuildCallbacks`
 5. **Enforces codegen-first scope** — both generated files are canonical startup/hot-reload outputs in SDK mode; stale metadata is corrected by regeneration, not by retaining stale sidecars
+6. **`wavecraft bundle` refresh** — before the UI build and embedding step, `wavecraft bundle` also refreshes `ui/src/generated/parameters.ts` and `ui/src/generated/processors.ts` using fresh sidecars when available, or falling back to a discovery build+extraction if sidecars are missing or stale
 
-This enables IDE autocompletion and compile-time type safety for `useParameter('inputgain_gain')` calls without any developer configuration.
+> **Sidecar freshness:** Freshness checks consider newer files in `engine/src/`, plugin build artifacts, and a newer CLI binary. Any of these conditions marks the sidecars as stale and triggers re-extraction.
+
+This enables IDE autocompletion and compile-time type safety for `useParameter('oscillator_enabled')` calls without any developer configuration.
 
 The generated files are build artifacts (gitignored) and should not be checked into source control. In SDK mode, this codegen output is a required contract: if generation fails during startup or hot-reload, the update fails fast and prints actionable diagnostics (root cause + remediation) instead of silently continuing with stale types.
 
@@ -316,7 +319,7 @@ Wavecraft uses a Rust-based build system (`xtask`) that provides a unified inter
 | `cargo xtask ci-check -F`              | **Full validation** — All 6 phases including template validation and CD dry-run                                                                  |
 | `cargo xtask validate-template`        | Validate CLI template generation (replicates CI `template-validation.yml`)                                                                       |
 | `cargo xtask dev`                      | Run preflight refresh (UI package artifacts + param/typegen cache invalidation) then start WebSocket + Vite dev servers                          |
-| `cargo xtask bundle`                   | Build and bundle VST3/CLAP plugins (**internal/advanced SDK workflow**; generated projects should use `wavecraft bundle`)                         |
+| `cargo xtask bundle`                   | Build and bundle VST3/CLAP plugins (**internal/advanced SDK workflow**; generated projects should use `wavecraft bundle`)                        |
 | `cargo xtask test`                     | Run all tests (Engine + UI)                                                                                                                      |
 | `cargo xtask test --ui`                | Run UI tests only (Vitest)                                                                                                                       |
 | `cargo xtask test --engine`            | Run Engine tests only (cargo test)                                                                                                               |

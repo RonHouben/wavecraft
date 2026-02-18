@@ -104,7 +104,7 @@ impl ProcessorParams for OscillatorParams {
                 id_suffix: "frequency",
                 range: ParamRange::Skewed {
                     min: 20.0,
-                    max: 5000.0,
+                    max: 20_000.0,
                     factor: 2.5,
                 },
                 default: 440.0,
@@ -126,6 +126,21 @@ impl ProcessorParams for OscillatorParams {
 
     fn from_param_defaults() -> Self {
         Self::default()
+    }
+
+    fn apply_plain_values(&mut self, values: &[f32]) {
+        if let Some(enabled) = values.first() {
+            self.enabled = *enabled >= 0.5;
+        }
+        if let Some(waveform) = values.get(1) {
+            self.waveform = *waveform;
+        }
+        if let Some(frequency) = values.get(2) {
+            self.frequency = *frequency;
+        }
+        if let Some(level) = values.get(3) {
+            self.level = *level;
+        }
     }
 }
 
@@ -152,9 +167,6 @@ impl Processor for Oscillator {
         params: &Self::Params,
     ) {
         if !params.enabled {
-            for channel in buffer.iter_mut() {
-                channel.fill(0.0);
-            }
             return;
         }
 
@@ -174,7 +186,7 @@ impl Processor for Oscillator {
         for channel in buffer.iter_mut() {
             self.phase = start_phase;
             for sample in channel.iter_mut() {
-                *sample = generate_waveform_sample(waveform, self.phase) * params.level;
+                *sample += generate_waveform_sample(waveform, self.phase) * params.level;
 
                 // Advance phase, wrapping at 1.0 to avoid floating-point drift.
                 self.phase += phase_delta;
@@ -267,22 +279,29 @@ mod tests {
     }
 
     #[test]
-    fn oscillator_outputs_silence_when_disabled() {
+    fn oscillator_preserves_passthrough_when_disabled() {
         let mut osc = Oscillator::default();
         osc.set_sample_rate(48_000.0);
 
-        let mut left = [1.0_f32; 64];
-        let mut right = [1.0_f32; 64];
+        let mut left = [0.25_f32; 64];
+        let mut right = [-0.5_f32; 64];
+        let left_in = left;
+        let right_in = right;
         let mut buffer = [&mut left[..], &mut right[..]];
 
         osc.process(&mut buffer, &Transport::default(), &test_params(false));
 
-        assert!(left.iter().all(|s| s.abs() <= f32::EPSILON));
-        assert!(right.iter().all(|s| s.abs() <= f32::EPSILON));
+        for (actual, expected) in left.iter().zip(left_in.iter()) {
+            assert!((actual - expected).abs() <= f32::EPSILON);
+        }
+
+        for (actual, expected) in right.iter().zip(right_in.iter()) {
+            assert!((actual - expected).abs() <= f32::EPSILON);
+        }
     }
 
     #[test]
-    fn oscillator_outputs_signal_when_enabled() {
+    fn oscillator_generates_signal_when_enabled_on_silent_input() {
         let mut osc = Oscillator::default();
         osc.set_sample_rate(48_000.0);
 
@@ -310,6 +329,41 @@ mod tests {
     }
 
     #[test]
+    fn oscillator_enabled_adds_signal_without_removing_input() {
+        let mut osc_mixed = Oscillator::default();
+        osc_mixed.set_sample_rate(48_000.0);
+
+        let mut left_mixed = [0.2_f32; 128];
+        let mut right_mixed = [-0.15_f32; 128];
+        let left_input = left_mixed;
+        let right_input = right_mixed;
+        let mut mixed_buffer = [&mut left_mixed[..], &mut right_mixed[..]];
+
+        osc_mixed.process(&mut mixed_buffer, &Transport::default(), &test_params(true));
+
+        let mut osc_only = Oscillator::default();
+        osc_only.set_sample_rate(48_000.0);
+
+        let mut left_osc_only = [0.0_f32; 128];
+        let mut right_osc_only = [0.0_f32; 128];
+        let mut osc_only_buffer = [&mut left_osc_only[..], &mut right_osc_only[..]];
+
+        osc_only.process(
+            &mut osc_only_buffer,
+            &Transport::default(),
+            &test_params(true),
+        );
+
+        for i in 0..left_mixed.len() {
+            let additive_component_left = left_mixed[i] - left_input[i];
+            let additive_component_right = right_mixed[i] - right_input[i];
+
+            assert!((additive_component_left - left_osc_only[i]).abs() < 1e-6);
+            assert!((additive_component_right - right_osc_only[i]).abs() < 1e-6);
+        }
+    }
+
+    #[test]
     fn all_waveforms_produce_signal_when_enabled() {
         for waveform_index in 0..4 {
             let mut osc = Oscillator::default();
@@ -332,6 +386,34 @@ mod tests {
                 peak > 0.01,
                 "waveform index {waveform_index} should produce signal"
             );
+        }
+    }
+
+    #[test]
+    fn apply_plain_values_updates_all_fields() {
+        let mut params = OscillatorParams::default();
+        params.apply_plain_values(&[1.0, 2.0, 1760.0, 0.9]);
+
+        assert!(params.enabled);
+        assert!((params.waveform - 2.0).abs() < f32::EPSILON);
+        assert!((params.frequency - 1760.0).abs() < f32::EPSILON);
+        assert!((params.level - 0.9).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn frequency_param_uses_full_audible_range() {
+        let specs = OscillatorParams::param_specs();
+        let frequency = specs
+            .iter()
+            .find(|spec| spec.id_suffix == "frequency")
+            .expect("frequency spec should exist");
+
+        match frequency.range {
+            ParamRange::Skewed { min, max, .. } => {
+                assert!((min - 20.0).abs() < f64::EPSILON);
+                assert!((max - 20_000.0).abs() < f64::EPSILON);
+            }
+            _ => panic!("frequency should use a skewed range"),
         }
     }
 }

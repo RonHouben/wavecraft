@@ -122,11 +122,24 @@ impl<P: Params> Editor for WavecraftEditor<P> {
     }
 
     fn param_value_changed(&self, id: &str, normalized_value: f32) {
+        let plain_value = self
+            .params
+            .param_map()
+            .iter()
+            .find(|(param_id, _, _)| param_id == id)
+            .map(|(_, param_ptr, _)| {
+                // SAFETY: ParamPtr values come from `self.params.param_map()` and remain valid
+                // for the lifetime of `self.params` (held by Arc on this editor).
+                unsafe { param_ptr.preview_plain(normalized_value) }
+            })
+            .unwrap_or(normalized_value);
+
         // Log for debugging automation updates
         nih_log!(
-            "param_value_changed called: id={}, value={}",
+            "param_value_changed called: id={}, normalized={}, plain={}",
             id,
-            normalized_value
+            normalized_value,
+            plain_value
         );
 
         // Push parameter update to WebView via JavaScript evaluation
@@ -142,7 +155,7 @@ impl<P: Params> Editor for WavecraftEditor<P> {
                             params: {{ id: \"{}\", value: {} }} \
                         }}); \
                     }}",
-                    id_escaped, normalized_value
+                    id_escaped, plain_value
                 );
 
                 if let Err(e) = webview.evaluate_script(&js) {

@@ -37,6 +37,13 @@ pub trait ProcessorParams: Default + Send + Sync + 'static {
     fn from_param_defaults() -> Self {
         Self::default()
     }
+
+    /// Applies plain parameter values in `param_specs()` order.
+    ///
+    /// This is used by host/plugin bridges to populate runtime processor params
+    /// from external automation/UI state. Implementations may ignore unknown or
+    /// missing values.
+    fn apply_plain_values(&mut self, _values: &[f32]) {}
 }
 
 /// Specification for a single parameter.

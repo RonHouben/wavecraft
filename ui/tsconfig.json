@@ -28,6 +28,9 @@
     "paths": {
       "*": ["./*"],
       "@test/*": ["./test/*"],
+      "react": ["./node_modules/@types/react"],
+      "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime"],
+      "react-dom": ["./node_modules/@types/react-dom"],
       "@wavecraft/core": ["./packages/core/src/index.ts"],
       "@wavecraft/core/*": ["./packages/core/src/*"],
       "@wavecraft/core/meters": ["./packages/core/src/meters"],

@@ -86,6 +86,8 @@ The command builds bundles and installs the VST3 into:
 
 - `~/Library/Audio/Plug-Ins/VST3/`
 
+**Generated contracts refresh:** Before the UI build, `wavecraft bundle` refreshes `ui/src/generated/parameters.ts` and `ui/src/generated/processors.ts` from fresh sidecars, or falls back to a discovery build+extraction if sidecars are missing or stale.
+
 **Dependency mode behavior:** `wavecraft bundle` detects how `wavecraft-nih_plug` is referenced in the generated project's `engine/Cargo.toml`:
 
 - **Local `path` dependency** (SDK dev mode, `--local-sdk`): UI packages are staged locally before bundling. The engine is always cleaned and rebuilt from source.
@@ -561,8 +563,8 @@ vendor = "Your Company"
 
 ## Build Commands Reference
 
-| Command                      | Description                          |
-| ---------------------------- | ------------------------------------ |
+| Command                      | Description                                     |
+| ---------------------------- | ----------------------------------------------- |
 | `wavecraft bundle`           | Build VST3/CLAP bundles (CLI-owned)             |
 | `wavecraft bundle --install` | Build + install VST3 — macOS (CLI-owned)        |
 | `cargo xtask dev`            | Start dev servers (WebSocket + Vite) — SDK only |

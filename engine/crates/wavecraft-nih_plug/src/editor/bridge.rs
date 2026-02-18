@@ -59,7 +59,7 @@ impl<P: Params> PluginEditorBridge<P> {
     fn parameter_info_from_ptr(param_id: &str, param_ptr: ParamPtr, group: &str) -> ParameterInfo {
         // SAFETY: ParamPtr values come from `self.params.param_map()`, and `self.params` is
         // kept alive by `Arc<P>` on this struct for the full bridge lifetime.
-        let (name, unit_str, value, default, mut min, mut max) = unsafe {
+        let (name, unit_str, value, default, mut min, mut max, step_count) = unsafe {
             (
                 param_ptr.name(),
                 param_ptr.unit(),
@@ -67,6 +67,7 @@ impl<P: Params> PluginEditorBridge<P> {
                 param_ptr.default_plain_value(),
                 param_ptr.preview_plain(0.0),
                 param_ptr.preview_plain(1.0),
+                param_ptr.step_count(),
             )
         };
 
@@ -74,10 +75,31 @@ impl<P: Params> PluginEditorBridge<P> {
             std::mem::swap(&mut min, &mut max);
         }
 
+        let (param_type, variants) = if let Some(step_count) = step_count {
+            if step_count == 1 && min == 0.0 && max == 1.0 {
+                (ParameterType::Bool, None)
+            } else {
+                let labels = (0..=step_count)
+                    .map(|idx| {
+                        let normalized = if step_count == 0 {
+                            0.0
+                        } else {
+                            idx as f32 / step_count as f32
+                        };
+                        // SAFETY: `param_ptr` is valid while `self.params` is alive.
+                        unsafe { param_ptr.normalized_value_to_string(normalized, false) }
+                    })
+                    .collect::<Vec<_>>();
+                (ParameterType::Enum, Some(labels))
+            }
+        } else {
+            (ParameterType::Float, None)
+        };
+
         ParameterInfo {
             id: param_id.to_string(),
             name: name.to_string(),
-            param_type: ParameterType::Float,
+            param_type,
             value,
             default,
             min,
@@ -92,7 +114,7 @@ impl<P: Params> PluginEditorBridge<P> {
             } else {
                 Some(group.to_string())
             },
-            variants: None,
+            variants,
         }
     }
 }
@@ -199,6 +221,9 @@ mod tests {
 
         #[id = "ena"]
         enabled: BoolParam,
+
+        #[id = "waveform"]
+        waveform: IntParam,
     }
 
     impl Default for TestParams {
@@ -216,6 +241,13 @@ mod tests {
                 .with_unit(" Hz"),
                 level: FloatParam::new("Level", 0.5, FloatRange::Linear { min: 0.0, max: 1.0 }),
                 enabled: BoolParam::new("Enabled", true),
+                waveform: IntParam::new("Waveform", 0, IntRange::Linear { min: 0, max: 2 })
+                    .with_value_to_string(std::sync::Arc::new(|value| match value {
+                        0 => "Sine".to_string(),
+                        1 => "Square".to_string(),
+                        2 => "Saw".to_string(),
+                        _ => "Unknown".to_string(),
+                    })),
             }
         }
     }
@@ -319,5 +351,32 @@ mod tests {
         let calls = context.set_calls.lock().expect("set_calls lock poisoned");
         let (_, normalized) = calls.last().expect("expected a set_parameter call");
         assert!((*normalized - expected_normalized).abs() < 1e-5);
+    }
+
+    #[test]
+    fn get_parameter_returns_enum_variants_for_integer_parameter() {
+        let params = Arc::new(TestParams::default());
+        let context = Arc::new(MockGuiContext::new(true));
+        let bridge = PluginEditorBridge::new(
+            params,
+            context,
+            None,
+            None,
+            Arc::new(Mutex::new((800, 600))),
+        );
+
+        let waveform = bridge
+            .get_parameter("waveform")
+            .expect("waveform parameter should exist");
+
+        assert_eq!(waveform.param_type, ParameterType::Enum);
+        assert_eq!(
+            waveform.variants,
+            Some(vec![
+                "Sine".to_string(),
+                "Square".to_string(),
+                "Saw".to_string(),
+            ])
+        );
     }
 }

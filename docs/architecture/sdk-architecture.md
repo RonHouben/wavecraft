@@ -142,6 +142,17 @@ function MyPluginUI() {
 
 Processor presence in v1 is codegen-first and local: `wavecraft start` generates `ui/src/generated/processors.ts`, which registers and types available processors at startup for `@wavecraft/core` hooks (`useHasProcessor`, `useAvailableProcessors`). No new runtime JSON-RPC endpoint is introduced for processor presence in v1.
 
+### Parameter metadata contract (runtime)
+
+- Runtime parameter IDs are canonical prefixed IDs: snake_case processor-type prefix + `id_suffix` (for example, `oscillator_enabled`, `oscillator_waveform`, `output_gain_level`).
+- Placeholder indexed IDs such as `param_0..param_n` are not used.
+- Stepped/enum parameters are surfaced as `ParameterType::Enum` with `variants` labels so UI enum controls can render meaningful option text.
+
+### UI resize compatibility contract
+
+- **Preferred path:** render `ResizeHandle` (or `ResizeControls`) from `@wavecraft/components` — provides the canonical `[data-testid="resize-handle"]` element.
+- **Backward compatibility:** `useWindowResizeSync()` in `@wavecraft/core` mounts a lightweight legacy resize grip only when no modern `[data-testid="resize-handle"]` element is present in the DOM, ensuring existing UIs without the component continue to work without modification.
+
 ## Public API Surface (Rust)
 
 The SDK exposes a minimal, stable API through the `wavecraft::prelude` module (where `wavecraft` is the Cargo rename for `wavecraft-nih_plug`):

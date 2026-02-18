@@ -31,6 +31,12 @@ impl ProcessorParams for GainParams {
     fn from_param_defaults() -> Self {
         Self { level: 1.0 }
     }
+
+    fn apply_plain_values(&mut self, values: &[f32]) {
+        if let Some(level) = values.first() {
+            self.level = *level;
+        }
+    }
 }
 
 /// Gain processor - applies amplitude scaling to audio.
