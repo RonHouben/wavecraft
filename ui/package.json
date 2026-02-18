@@ -20,6 +20,7 @@
     "playwright:install": "playwright install chromium"
   },
   "dependencies": {
+    "@wavecraft/core": "0.7.31",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
