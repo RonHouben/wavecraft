@@ -1,10 +1,9 @@
-# Archived
+# Implementation Plan: Oscillator Passthrough Mix (Milestone 18.11)
 
-This feature spec has been archived.
+## Overview
 
-Canonical file: `docs/feature-specs/_archive/oscillator-passthrough-mix/implementation-plan.md`
-
-Please read/update the archived file only.
+This plan implements a **targeted bug fix** for Milestone 18.11: enabling `Oscillator` in generated projects must not mute DAW passthrough.  
+The fix is scoped to oscillator processing semantics and regression coverage, avoiding architecture changes (no routing graph/multi-bus redesign).  
 Implementation follows the in-place serial DSP model and real-time safety constraints.
 
 ## Requirements

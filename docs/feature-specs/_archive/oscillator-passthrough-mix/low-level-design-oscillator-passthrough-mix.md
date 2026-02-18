@@ -1,10 +1,9 @@
-# Archived
+# Low-Level Design: Oscillator Passthrough Mix
 
-This feature spec has been archived.
-
-Canonical file: `docs/feature-specs/_archive/oscillator-passthrough-mix/low-level-design-oscillator-passthrough-mix.md`
-
-Please read/update the archived file only.
+**Feature:** `oscillator-passthrough-mix`  
+**Date:** 2026-02-18  
+**Status:** Proposed (Architect)  
+**Milestone:** 18.11 — Oscillator Must Not Block DAW Passthrough
 
 ## Related Documents
 

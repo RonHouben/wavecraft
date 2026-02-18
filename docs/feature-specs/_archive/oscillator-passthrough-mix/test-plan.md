@@ -1,11 +1,9 @@
-# Archived
+# Test Plan: Oscillator Passthrough Mix
 
-This feature spec has been archived.
+## Overview
 
-Canonical file: `docs/feature-specs/_archive/oscillator-passthrough-mix/test-plan.md`
-
-Please read/update the archived file only.
-
+- **Feature**: oscillator-passthrough-mix
+- **Spec Location**: `docs/feature-specs/oscillator-passthrough-mix/`
 - **Date**: 2026-02-18
 - **Tester**: Tester Agent
 - **Branch Observed During Test Run**: `bugfix/oscillator-passthrough-mix`
