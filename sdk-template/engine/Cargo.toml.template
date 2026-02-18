@@ -33,4 +33,4 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros"], optional = tr
 
 [features]
 default = []
-_param-discovery = []   # Internal: used by `wavecraft start` for fast param loading
+_param-discovery = ["wavecraft/_param-discovery"]   # Internal: used by `wavecraft start` for fast param loading

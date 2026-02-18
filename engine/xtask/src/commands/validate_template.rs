@@ -10,14 +10,18 @@
 
 use anyhow::{Context, Result, bail};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::{Command, Output, Stdio};
 use std::time::Instant;
 use std::{env, fs};
+use std::{thread, time::Duration};
 
 use xtask::output::*;
 
 const TEST_PLUGIN_INPUT_NAME: &str = "myPlugin";
 const TEST_PLUGIN_INTERNAL_ID: &str = "my_plugin";
+const START_SMOKE_TIMEOUT_SECS: u64 = 180;
+const START_SMOKE_WS_PORT: u16 = 39091;
+const START_SMOKE_UI_PORT: u16 = 39092;
 
 /// Template validation configuration.
 #[derive(Debug, Clone, Default)]
@@ -41,18 +45,26 @@ pub fn run(config: ValidateTemplateConfig) -> Result<()> {
     let workspace_root = xtask::paths::project_root()?;
     let cli_dir = workspace_root.join("cli");
     let parent_dir = env::temp_dir();
-    let test_project_dir = parent_dir.join("test-plugin");
+    let validation_root_dir = parent_dir.join("wavecraft-template-validation");
+    let local_sdk_project_dir = validation_root_dir.join("test-plugin-local-sdk");
+    let git_source_project_dir = validation_root_dir.join("test-plugin-git-source");
+    let installed_cli_dir = validation_root_dir.join("installed-cli");
+    let installed_like_cli_binary = installed_cli_dir.join("wavecraft");
 
-    // Clean up any existing test project
-    if test_project_dir.exists() {
+    // Clean up any existing validation directory
+    if validation_root_dir.exists() {
         if config.verbose {
-            println!("Cleaning up existing test project...");
+            println!("Cleaning up existing validation workspace...");
         }
-        fs::remove_dir_all(&test_project_dir).context("Failed to remove existing test project")?;
+        fs::remove_dir_all(&validation_root_dir)
+            .context("Failed to remove existing validation workspace")?;
     }
 
+    fs::create_dir_all(&validation_root_dir)
+        .context("Failed to create validation workspace directory")?;
+
     // Ensure cleanup happens even on error (unless --keep is specified)
-    let cleanup_guard = CleanupGuard::new(test_project_dir.clone(), config.keep, config.verbose);
+    let cleanup_guard = CleanupGuard::new(validation_root_dir.clone(), config.keep, config.verbose);
 
     // Step 1: Build CLI
     print_phase("Step 1: Build Wavecraft CLI");
@@ -60,39 +72,63 @@ pub fn run(config: ValidateTemplateConfig) -> Result<()> {
     print_success("CLI built successfully");
     println!();
 
-    // Step 2: Generate test project
-    print_phase("Step 2: Generate Test Plugin");
+    // Step 2: Generate local-sdk validation project
+    print_phase("Step 2: Generate Local-SDK Test Plugin");
     let cli_binary = cli_dir.join("target/release/wavecraft");
     generate_test_plugin(
         &cli_binary,
         &workspace_root,
-        &test_project_dir,
+        &local_sdk_project_dir,
+        true,
         config.verbose,
     )?;
-    verify_generated_files(&test_project_dir)?;
-    verify_generated_engine_identifiers(&test_project_dir)?;
+    verify_generated_files(&local_sdk_project_dir)?;
+    verify_generated_engine_identifiers(&local_sdk_project_dir)?;
 
-    normalize_generated_ui_dependencies(&test_project_dir, &workspace_root)?;
+    normalize_generated_ui_dependencies(&local_sdk_project_dir, &workspace_root)?;
 
-    print_success("Test plugin generated successfully");
+    print_success("Local-SDK test plugin generated successfully");
     println!();
 
-    // Step 3: Validate Engine
-    print_phase("Step 3: Validate Engine Code");
-    validate_engine(&test_project_dir, config.verbose)?;
-    print_success("Engine validation passed");
+    // Step 3: Generate git-source validation project (installed-CLI simulation)
+    print_phase("Step 3: Generate Git-Source Test Plugin");
+    copy_cli_binary_for_git_source(&cli_binary, &installed_like_cli_binary)?;
+    generate_test_plugin(
+        &installed_like_cli_binary,
+        &workspace_root,
+        &git_source_project_dir,
+        false,
+        config.verbose,
+    )?;
+    verify_generated_files(&git_source_project_dir)?;
+    verify_generated_engine_identifiers(&git_source_project_dir)?;
+
+    print_success("Git-source test plugin generated successfully");
     println!();
 
-    // Step 4: Validate UI
-    print_phase("Step 4: Validate UI Code");
-    validate_ui(&test_project_dir, config.verbose)?;
-    print_success("UI validation passed");
+    // Step 4: Validate local-sdk engine/UI/bundle path
+    print_phase("Step 4: Validate Local-SDK Engine + UI + Bundle");
+    validate_engine(&local_sdk_project_dir, config.verbose)?;
+    validate_ui(&local_sdk_project_dir, config.verbose)?;
+    validate_cli_bundle_contract(&cli_binary, &local_sdk_project_dir, config.verbose)?;
+
+    print_success("Local-SDK validation passed");
     println!();
 
-    // Step 5: Validate CLI bundle/install contract
-    print_phase("Step 5: Validate CLI Bundle Contract");
-    validate_cli_bundle_contract(&cli_binary, &test_project_dir, config.verbose)?;
-    print_success("CLI bundle contract validation passed");
+    // Step 5: Validate git-source startup path
+    print_phase("Step 5: Validate Git-Source Startup Path");
+    apply_git_source_validation_overrides(&git_source_project_dir, &workspace_root)?;
+    validate_git_source_engine_modes(&git_source_project_dir, config.verbose)?;
+    install_ui_dependencies(&git_source_project_dir, config.verbose)?;
+    validate_git_source_start_smoke(
+        &installed_like_cli_binary,
+        &git_source_project_dir,
+        START_SMOKE_WS_PORT,
+        START_SMOKE_UI_PORT,
+        config.verbose,
+    )?;
+
+    print_success("Git-source startup validation passed");
     println!();
 
     // Print summary
@@ -104,6 +140,10 @@ pub fn run(config: ValidateTemplateConfig) -> Result<()> {
         "✅ All validation checks passed ({:.1}s)",
         duration.as_secs_f64()
     ));
+    print_success_item("✅ Local-SDK generated project validated (engine/ui/bundle)");
+    print_success_item(
+        "✅ Git-source generated project validated (_param-discovery/default/start)",
+    );
     println!();
     print_success("Template validation successful!");
 
@@ -137,6 +177,7 @@ fn generate_test_plugin(
     cli_binary: &Path,
     workspace_root: &Path,
     output_dir: &Path,
+    local_sdk: bool,
     verbose: bool,
 ) -> Result<()> {
     if verbose {
@@ -145,8 +186,9 @@ fn generate_test_plugin(
 
     let output_dir_arg = output_dir.display().to_string();
 
+    let args = create_test_plugin_args(&output_dir_arg, local_sdk);
     let status = Command::new(cli_binary)
-        .args(create_test_plugin_args(&output_dir_arg))
+        .args(args.iter().map(String::as_str))
         .current_dir(workspace_root)
         .status()
         .context("Failed to run wavecraft create")?;
@@ -158,20 +200,66 @@ fn generate_test_plugin(
     Ok(())
 }
 
-fn create_test_plugin_args(output_dir: &str) -> Vec<&str> {
-    vec![
-        "create",
-        TEST_PLUGIN_INPUT_NAME,
-        "--vendor",
-        "Test Vendor",
-        "--email",
-        "test@example.com",
-        "--url",
-        "https://example.com",
-        "--no-git",
-        "--output",
-        output_dir,
-    ]
+fn create_test_plugin_args(output_dir: &str, local_sdk: bool) -> Vec<String> {
+    let mut args = vec![
+        "create".to_string(),
+        TEST_PLUGIN_INPUT_NAME.to_string(),
+        "--vendor".to_string(),
+        "Test Vendor".to_string(),
+        "--email".to_string(),
+        "test@example.com".to_string(),
+        "--url".to_string(),
+        "https://example.com".to_string(),
+        "--no-git".to_string(),
+        "--output".to_string(),
+        output_dir.to_string(),
+    ];
+
+    if local_sdk {
+        args.push("--local-sdk".to_string());
+    }
+
+    args
+}
+
+fn copy_cli_binary_for_git_source(
+    cli_binary: &Path,
+    installed_like_cli_binary: &Path,
+) -> Result<()> {
+    if let Some(parent) = installed_like_cli_binary.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("Failed to create {}", parent.display()))?;
+    }
+
+    fs::copy(cli_binary, installed_like_cli_binary).with_context(|| {
+        format!(
+            "Failed to copy CLI binary from {} to {}",
+            cli_binary.display(),
+            installed_like_cli_binary.display()
+        )
+    })?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(installed_like_cli_binary)
+            .with_context(|| {
+                format!(
+                    "Failed to read metadata for {}",
+                    installed_like_cli_binary.display()
+                )
+            })?
+            .permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(installed_like_cli_binary, perms).with_context(|| {
+            format!(
+                "Failed to set executable permission on {}",
+                installed_like_cli_binary.display()
+            )
+        })?;
+    }
+
+    Ok(())
 }
 
 fn verify_generated_engine_identifiers(project_dir: &Path) -> Result<()> {
@@ -267,6 +355,41 @@ fn normalize_generated_ui_dependencies(project_dir: &Path, workspace_root: &Path
     Ok(())
 }
 
+/// Apply local patch overrides for git-source simulation validation.
+///
+/// Generated projects in git-source mode reference published git tags, which may
+/// not include unreleased changes under test. For local/CI template validation we
+/// keep git-source declarations in place but add `[patch]` overrides to current
+/// workspace crates so startup-path checks are deterministic and release-independent.
+fn apply_git_source_validation_overrides(project_dir: &Path, workspace_root: &Path) -> Result<()> {
+    let workspace_cargo = project_dir.join("Cargo.toml");
+
+    let mut cargo_contents = fs::read_to_string(&workspace_cargo)
+        .with_context(|| format!("Failed to read {}", workspace_cargo.display()))?;
+
+    let patch_header = "[patch.\"https://github.com/RonHouben/wavecraft\"]";
+    if cargo_contents.contains(patch_header) {
+        return Ok(());
+    }
+
+    let nih_plug_path = workspace_root.join("engine/crates/wavecraft-nih_plug");
+    let dsp_path = workspace_root.join("engine/crates/wavecraft-dsp");
+    let dev_server_path = workspace_root.join("dev-server");
+
+    let patch_block = format!(
+        "\n\n{patch_header}\nwavecraft-nih_plug = {{ path = \"{}\" }}\nwavecraft-dsp = {{ path = \"{}\" }}\nwavecraft-dev-server = {{ path = \"{}\" }}\n",
+        nih_plug_path.display(),
+        dsp_path.display(),
+        dev_server_path.display(),
+    );
+
+    cargo_contents.push_str(&patch_block);
+    fs::write(&workspace_cargo, cargo_contents)
+        .with_context(|| format!("Failed to update {}", workspace_cargo.display()))?;
+
+    Ok(())
+}
+
 /// Validate engine code compilation and linting.
 fn validate_engine(project_dir: &Path, verbose: bool) -> Result<()> {
     let engine_dir = project_dir.join("engine");
@@ -342,6 +465,181 @@ fn validate_ui(project_dir: &Path, verbose: bool) -> Result<()> {
     run_command("npm", &["run", "build"], &ui_dir)?;
 
     Ok(())
+}
+
+fn install_ui_dependencies(project_dir: &Path, verbose: bool) -> Result<()> {
+    let ui_dir = project_dir.join("ui");
+
+    if verbose {
+        println!("Installing UI dependencies for startup smoke...");
+    }
+
+    run_command("npm", &["install"], &ui_dir)
+}
+
+fn validate_git_source_engine_modes(project_dir: &Path, verbose: bool) -> Result<()> {
+    if verbose {
+        println!("Running discovery-mode compile check...");
+    }
+    run_command(
+        "cargo",
+        &[
+            "build",
+            "--manifest-path",
+            "engine/Cargo.toml",
+            "--lib",
+            "--features",
+            "_param-discovery",
+        ],
+        project_dir,
+    )?;
+
+    if verbose {
+        println!("Running default-mode compile check...");
+    }
+    run_command(
+        "cargo",
+        &["build", "--manifest-path", "engine/Cargo.toml", "--lib"],
+        project_dir,
+    )
+}
+
+fn output_contains_asset_regression_signature(output: &str) -> bool {
+    output.contains("include_dir!(\"$CARGO_MANIFEST_DIR/assets/ui-dist\")")
+        || output.contains("assets/ui-dist") && output.contains("No such file or directory")
+}
+
+fn cleanup_start_smoke_ports(ws_port: u16, ui_port: u16, verbose: bool) {
+    for port in [ws_port, ui_port] {
+        let lsof_output = Command::new("lsof")
+            .args(["-t", &format!("-iTCP:{}", port), "-sTCP:LISTEN"])
+            .output();
+
+        let Ok(output) = lsof_output else {
+            continue;
+        };
+
+        if !output.status.success() {
+            continue;
+        }
+
+        let pids = String::from_utf8_lossy(&output.stdout);
+        for pid in pids.lines().map(str::trim).filter(|line| !line.is_empty()) {
+            if verbose {
+                println!(
+                    "Cleaning up lingering process on port {} (pid {})",
+                    port, pid
+                );
+            }
+
+            let _ = Command::new("kill").args(["-9", pid]).status();
+        }
+    }
+}
+
+fn validate_git_source_start_smoke(
+    cli_binary: &Path,
+    project_dir: &Path,
+    ws_port: u16,
+    ui_port: u16,
+    verbose: bool,
+) -> Result<()> {
+    if verbose {
+        println!(
+            "Running bounded startup smoke: wavecraft start --no-install --port {} --ui-port {}",
+            ws_port, ui_port
+        );
+    }
+
+    let mut child = Command::new(cli_binary)
+        .args([
+            "start",
+            "--no-install",
+            "--port",
+            &ws_port.to_string(),
+            "--ui-port",
+            &ui_port.to_string(),
+        ])
+        .current_dir(project_dir)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .context("Failed to spawn `wavecraft start` for startup smoke")?;
+
+    let start_time = Instant::now();
+
+    loop {
+        if let Some(status) = child
+            .try_wait()
+            .context("Failed to poll startup smoke process")?
+        {
+            let output = child
+                .wait_with_output()
+                .context("Failed to capture startup smoke output")?;
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let combined = format!("{}\n{}", stdout, stderr);
+
+            cleanup_start_smoke_ports(ws_port, ui_port, verbose);
+
+            if !status.success() {
+                bail!(
+                    "`wavecraft start` exited early with status {}\nstdout:\n{}\nstderr:\n{}",
+                    status,
+                    stdout,
+                    stderr
+                );
+            }
+
+            if output_contains_asset_regression_signature(&combined) {
+                bail!(
+                    "Detected fallback asset regression signature in startup smoke output:\n{}",
+                    combined
+                );
+            }
+
+            if !combined.contains("All servers running") {
+                bail!(
+                    "`wavecraft start` exited without reaching ready state marker\nstdout:\n{}\nstderr:\n{}",
+                    stdout,
+                    stderr
+                );
+            }
+
+            return Ok(());
+        }
+
+        if start_time.elapsed() >= Duration::from_secs(START_SMOKE_TIMEOUT_SECS) {
+            let _ = child.kill();
+            let output = child
+                .wait_with_output()
+                .context("Failed to capture timed startup smoke output")?;
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let combined = format!("{}\n{}", stdout, stderr);
+
+            cleanup_start_smoke_ports(ws_port, ui_port, verbose);
+
+            if output_contains_asset_regression_signature(&combined) {
+                bail!(
+                    "Detected fallback asset regression signature in startup smoke output:\n{}",
+                    combined
+                );
+            }
+
+            if !combined.contains("All servers running") {
+                bail!(
+                    "Startup smoke timed out before ready marker ({START_SMOKE_TIMEOUT_SECS}s)\nstdout:\n{}\nstderr:\n{}",
+                    stdout,
+                    stderr
+                );
+            }
+
+            return Ok(());
+        }
+
+        thread::sleep(Duration::from_millis(200));
+    }
 }
 
 /// Validate the CLI-owned bundle command contract.
@@ -512,14 +810,29 @@ mod tests {
 
     #[test]
     fn test_create_test_plugin_args_include_output_mode() {
-        let args = create_test_plugin_args("/tmp/test-plugin");
+        let args = create_test_plugin_args("/tmp/test-plugin", false);
 
-        assert!(args.contains(&"--output"));
+        assert!(args.iter().any(|arg| arg == "--output"));
 
         let output_idx = args
             .iter()
-            .position(|arg| *arg == "--output")
+            .position(|arg| arg == "--output")
             .expect("--output flag missing");
-        assert_eq!(args.get(output_idx + 1), Some(&"/tmp/test-plugin"));
+        assert_eq!(
+            args.get(output_idx + 1),
+            Some(&"/tmp/test-plugin".to_string())
+        );
+    }
+
+    #[test]
+    fn test_create_test_plugin_args_local_sdk_mode() {
+        let args = create_test_plugin_args("/tmp/test-plugin", true);
+        assert!(args.iter().any(|arg| arg == "--local-sdk"));
+    }
+
+    #[test]
+    fn test_create_test_plugin_args_git_source_mode() {
+        let args = create_test_plugin_args("/tmp/test-plugin", false);
+        assert!(!args.iter().any(|arg| arg == "--local-sdk"));
     }
 }

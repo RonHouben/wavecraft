@@ -26,7 +26,10 @@ pub use wavecraft_protocol::{ParamId, ParameterInfo, ParameterType, db_to_linear
 pub use wavecraft_metering::{MeterConsumer, MeterFrame, MeterProducer, create_meter_channel};
 
 // Re-export editor (platform-dependent)
-#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[cfg(all(
+    any(target_os = "macos", target_os = "windows"),
+    not(feature = "_param-discovery")
+))]
 pub use crate::editor::WavecraftEditor;
 
 // Re-export utility functions

@@ -169,6 +169,75 @@ jobs:
         working-directory: /tmp/test-plugin
 
       # ═════════════════════════════════════════════════════════════
+      # Validate Git-Source Startup Path (installed-CLI simulation)
+      # ═════════════════════════════════════════════════════════════
+
+      - name: Stage installed-like CLI binary
+        run: |
+          mkdir -p /tmp/wavecraft-installed-cli
+          cp "${{ github.workspace }}/cli/target/release/wavecraft" /tmp/wavecraft-installed-cli/wavecraft
+          chmod +x /tmp/wavecraft-installed-cli/wavecraft
+
+      - name: Generate test plugin (git-source mode)
+        run: |
+          /tmp/wavecraft-installed-cli/wavecraft create test-plugin-git \
+            --no-git \
+            --output /tmp/test-plugin-git
+
+      - name: Verify generated git-source engine dependencies
+        run: |
+          grep -q 'git = "https://github.com/RonHouben/wavecraft"' /tmp/test-plugin-git/engine/Cargo.toml
+
+      - name: Apply local patch overrides for git-source simulation
+        run: |
+          cat <<EOF >> /tmp/test-plugin-git/Cargo.toml
+
+          [patch."https://github.com/RonHouben/wavecraft"]
+          wavecraft-nih_plug = { path = "${{ github.workspace }}/engine/crates/wavecraft-nih_plug" }
+          wavecraft-dsp = { path = "${{ github.workspace }}/engine/crates/wavecraft-dsp" }
+          wavecraft-dev-server = { path = "${{ github.workspace }}/dev-server" }
+          EOF
+
+      - name: Validate git-source engine compile paths
+        run: |
+          cargo build --manifest-path engine/Cargo.toml --lib --features _param-discovery
+          cargo build --manifest-path engine/Cargo.toml --lib
+        working-directory: /tmp/test-plugin-git
+
+      - name: Install git-source UI dependencies
+        run: npm install
+        working-directory: /tmp/test-plugin-git/ui
+
+      - name: Bounded wavecraft start smoke (git-source mode)
+        run: |
+          set +e
+          timeout 180s /tmp/wavecraft-installed-cli/wavecraft start --no-install --port 39091 --ui-port 39092 > /tmp/test-plugin-git/start-smoke.log 2>&1
+          STATUS=$?
+          set -e
+
+          cat /tmp/test-plugin-git/start-smoke.log
+
+          if grep -q 'include_dir!("\$CARGO_MANIFEST_DIR/assets/ui-dist")' /tmp/test-plugin-git/start-smoke.log; then
+            echo "❌ Regressed include_dir fallback asset panic detected"
+            exit 1
+          fi
+
+          if grep -q 'No such file or directory' /tmp/test-plugin-git/start-smoke.log && grep -q 'assets/ui-dist' /tmp/test-plugin-git/start-smoke.log; then
+            echo "❌ Missing fallback assets regression detected"
+            exit 1
+          fi
+
+          if ! grep -q 'All servers running' /tmp/test-plugin-git/start-smoke.log; then
+            echo "❌ wavecraft start did not reach ready state"
+            exit 1
+          fi
+
+          if [ "$STATUS" -ne 0 ] && [ "$STATUS" -ne 124 ]; then
+            echo "❌ wavecraft start exited unexpectedly with status $STATUS"
+            exit 1
+          fi
+
+      # ═════════════════════════════════════════════════════════════
       # Summary
       # ═════════════════════════════════════════════════════════════
 

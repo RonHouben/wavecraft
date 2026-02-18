@@ -2,6 +2,11 @@
 //!
 //! This module conditionally embeds the built React UI assets at compile time.
 //! The embedded fallback assets live in `assets/ui-dist/` within the crate.
+//!
+//! Distribution contract:
+//! - Non-discovery builds embed fallback UI assets from `assets/ui-dist/`.
+//! - Those files must be tracked in git so git-tag/source consumers compile
+//!   without requiring a local UI build step.
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use include_dir::{Dir, include_dir};
@@ -84,14 +89,27 @@ fn guess_mime_type(path: &str) -> &'static str {
 mod tests {
     use super::*;
 
+    fn assert_required_asset(path: &str) {
+        let asset = get_asset(path);
+        assert!(
+            asset.is_some(),
+            "required fallback asset should exist in embedded assets: {}",
+            path
+        );
+    }
+
     #[test]
     fn test_index_html_exists() {
         // The fallback embedded index should always exist.
-        let asset = get_asset("index.html");
-        assert!(
-            asset.is_some(),
-            "index.html should exist in embedded assets"
-        );
+        assert_required_asset("index.html");
+    }
+
+    #[test]
+    fn test_required_fallback_assets_exist() {
+        // Keep this list in sync with engine/crates/wavecraft-nih_plug/assets/ui-dist.
+        assert_required_asset("index.html");
+        assert_required_asset("assets/fallback.css");
+        assert_required_asset("assets/fallback.js");
     }
 
     #[test]

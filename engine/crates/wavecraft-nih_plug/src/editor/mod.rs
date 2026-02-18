@@ -3,29 +3,61 @@
 //! This module provides the nih-plug Editor implementation, bridging
 //! the WebView UI with the plugin's parameter system and metering.
 
-#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[cfg(all(
+    any(target_os = "macos", target_os = "windows"),
+    not(feature = "_param-discovery")
+))]
 use std::any::Any;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[cfg(all(
+    any(target_os = "macos", target_os = "windows"),
+    not(feature = "_param-discovery")
+))]
 use std::sync::{Arc, Mutex};
 
-#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[cfg(all(
+    any(target_os = "macos", target_os = "windows"),
+    not(feature = "_param-discovery")
+))]
 use nih_plug::prelude::*;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[cfg(all(
+    any(target_os = "macos", target_os = "windows"),
+    not(feature = "_param-discovery")
+))]
 use wavecraft_metering::MeterConsumer;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[cfg(all(
+    any(target_os = "macos", target_os = "windows"),
+    not(feature = "_param-discovery")
+))]
 use wavecraft_processors::OscilloscopeFrameConsumer;
 
+#[cfg(all(
+    any(target_os = "macos", target_os = "windows"),
+    not(feature = "_param-discovery")
+))]
 mod assets;
+#[cfg(all(
+    any(target_os = "macos", target_os = "windows"),
+    not(feature = "_param-discovery")
+))]
 mod bridge;
+#[cfg(all(
+    any(target_os = "macos", target_os = "windows"),
+    not(feature = "_param-discovery")
+))]
 mod webview;
 
 #[cfg(target_os = "macos")]
+#[cfg(not(feature = "_param-discovery"))]
 mod macos;
 
 #[cfg(target_os = "windows")]
+#[cfg(not(feature = "_param-discovery"))]
 mod windows;
 
-#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[cfg(all(
+    any(target_os = "macos", target_os = "windows"),
+    not(feature = "_param-discovery")
+))]
 pub use webview::{WebViewConfig, WebViewHandle, create_webview};
 
 /// WebView-based editor for the plugin.
@@ -34,7 +66,10 @@ pub use webview::{WebViewConfig, WebViewHandle, create_webview};
 /// bidirectional parameter synchronization and metering.
 ///
 /// Generic over `P` which must implement nih-plug's `Params` trait.
-#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[cfg(all(
+    any(target_os = "macos", target_os = "windows"),
+    not(feature = "_param-discovery")
+))]
 pub struct WavecraftEditor<P: Params> {
     params: Arc<P>,
     /// Meter consumer for audio metering - taken on first editor spawn
@@ -46,7 +81,10 @@ pub struct WavecraftEditor<P: Params> {
     webview_handle: Arc<Mutex<Option<Box<dyn WebViewHandle>>>>,
 }
 
-#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[cfg(all(
+    any(target_os = "macos", target_os = "windows"),
+    not(feature = "_param-discovery")
+))]
 impl<P: Params> WavecraftEditor<P> {
     /// Create a new WebView editor with specified dimensions.
     ///
@@ -73,7 +111,10 @@ impl<P: Params> WavecraftEditor<P> {
     }
 }
 
-#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[cfg(all(
+    any(target_os = "macos", target_os = "windows"),
+    not(feature = "_param-discovery")
+))]
 impl<P: Params> Editor for WavecraftEditor<P> {
     fn spawn(
         &self,
@@ -200,7 +241,10 @@ impl<P: Params> Editor for WavecraftEditor<P> {
 /// Create a WebView editor.
 ///
 /// Generic over `P` which must implement nih-plug's `Params` trait.
-#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[cfg(all(
+    any(target_os = "macos", target_os = "windows"),
+    not(feature = "_param-discovery")
+))]
 pub fn create_webview_editor<P: Params + 'static>(
     params: Arc<P>,
     meter_consumer: Option<MeterConsumer>,
@@ -215,4 +259,22 @@ pub fn create_webview_editor<P: Params + 'static>(
         width,
         height,
     )))
+}
+
+/// Discovery-mode stub editor creator.
+///
+/// `_param-discovery` builds intentionally skip compiling the WebView/editor
+/// module tree so metadata extraction does not depend on embedded UI assets.
+#[cfg(all(
+    any(target_os = "macos", target_os = "windows"),
+    feature = "_param-discovery"
+))]
+pub fn create_webview_editor<P>(
+    _params: std::sync::Arc<P>,
+    _meter_consumer: Option<wavecraft_metering::MeterConsumer>,
+    _oscilloscope_consumer: Option<wavecraft_processors::OscilloscopeFrameConsumer>,
+    _width: u32,
+    _height: u32,
+) -> Option<Box<dyn nih_plug::prelude::Editor>> {
+    None
 }
