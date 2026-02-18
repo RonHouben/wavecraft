@@ -754,10 +754,7 @@ mod tests {
 
         let resolved = detect_wavecraft_nih_plug_dependency_mode(&engine_dir.join("Cargo.toml"))
             .expect("mode should resolve");
-        assert_eq!(
-            resolved,
-            WavecraftNihPlugDependencyMode::LocalPath(dep_dir)
-        );
+        assert_eq!(resolved, WavecraftNihPlugDependencyMode::LocalPath(dep_dir));
     }
 
     #[test]

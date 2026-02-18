@@ -316,7 +316,7 @@ Wavecraft uses a Rust-based build system (`xtask`) that provides a unified inter
 | `cargo xtask ci-check -F`              | **Full validation** — All 6 phases including template validation and CD dry-run                                                                  |
 | `cargo xtask validate-template`        | Validate CLI template generation (replicates CI `template-validation.yml`)                                                                       |
 | `cargo xtask dev`                      | Run preflight refresh (UI package artifacts + param/typegen cache invalidation) then start WebSocket + Vite dev servers                          |
-| `cargo xtask bundle`                   | Build and bundle VST3/CLAP plugins                                                                                                               |
+| `cargo xtask bundle`                   | Build and bundle VST3/CLAP plugins (**internal/advanced SDK workflow**; generated projects should use `wavecraft bundle`)                         |
 | `cargo xtask test`                     | Run all tests (Engine + UI)                                                                                                                      |
 | `cargo xtask test --ui`                | Run UI tests only (Vitest)                                                                                                                       |
 | `cargo xtask test --engine`            | Run Engine tests only (cargo test)                                                                                                               |
@@ -353,17 +353,17 @@ cargo xtask dev --verbose    # With detailed IPC logging
 # Plugin project development (embedded server + FFI parameter/audio discovery)
 wavecraft start
 
-# Fast iteration (debug build, no signing)
+# Fast iteration (debug build, no signing) — SDK internal
 cargo xtask bundle --debug
 
-# Full build with React UI
+# Full build with React UI — SDK internal
 cargo xtask bundle
 
 # Build and install for DAW testing (canonical generated-project workflow)
+# wavecraft bundle / wavecraft bundle --install are CLI-owned:
+# - path dependency (SDK dev mode): stages UI locally, clean rebuilds engine
+# - git/tag dependency (normal install): skips local staging, bundles directly
 wavecraft bundle --install
-
-# Internal/advanced SDK workflow (not canonical user path)
-cargo xtask bundle
 
 # Build with AU wrapper (macOS)
 cargo xtask all
