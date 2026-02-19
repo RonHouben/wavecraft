@@ -2,7 +2,7 @@ use anyhow::{bail, Context, Result};
 use console::style;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::{Command, ExitStatus, Stdio};
 
 use super::install::copy_dir_recursive_impl;
 
@@ -10,6 +10,29 @@ use super::install::copy_dir_recursive_impl;
 pub(super) enum WavecraftNihPlugDependencyMode {
     LocalPath(PathBuf),
     ExternalSource,
+}
+
+fn format_exit_code(status: ExitStatus) -> String {
+    status.code().map_or_else(
+        || "terminated by signal".to_string(),
+        |value| value.to_string(),
+    )
+}
+
+fn ensure_command_success(status: ExitStatus, failure_message: &str) -> Result<()> {
+    if status.success() {
+        return Ok(());
+    }
+
+    bail!("{} (exit: {}).", failure_message, format_exit_code(status));
+}
+
+fn resolve_dependency_path(base_dir: &Path, path_value: &str) -> PathBuf {
+    if Path::new(path_value).is_absolute() {
+        PathBuf::from(path_value)
+    } else {
+        base_dir.join(path_value)
+    }
 }
 
 pub(super) fn build_ui_assets(ui_dir: &Path) -> Result<()> {
@@ -24,14 +47,7 @@ pub(super) fn build_ui_assets(ui_dir: &Path) -> Result<()> {
             .status()
             .context("Failed to run `npm install`. Is npm installed and in your PATH?")?;
 
-        if !install_status.success() {
-            let code = install_status.code().map_or_else(
-                || "terminated by signal".to_string(),
-                |value| value.to_string(),
-            );
-
-            bail!("UI dependency install failed (exit: {}).", code);
-        }
+        ensure_command_success(install_status, "UI dependency install failed")?;
     }
 
     let status = Command::new("npm")
@@ -42,14 +58,7 @@ pub(super) fn build_ui_assets(ui_dir: &Path) -> Result<()> {
         .status()
         .context("Failed to run `npm run build`. Is npm installed and in your PATH?")?;
 
-    if !status.success() {
-        let code = status.code().map_or_else(
-            || "terminated by signal".to_string(),
-            |value| value.to_string(),
-        );
-
-        bail!("UI build failed (exit: {}).", code);
-    }
+    ensure_command_success(status, "UI build failed")?;
 
     Ok(())
 }
@@ -150,11 +159,7 @@ pub(super) fn detect_wavecraft_nih_plug_dependency_mode(
             )
         })?;
 
-        let resolved = if Path::new(path_value).is_absolute() {
-            PathBuf::from(path_value)
-        } else {
-            base_dir.join(path_value)
-        };
+        let resolved = resolve_dependency_path(base_dir, path_value);
 
         if !resolved.is_dir() {
             bail!(
@@ -214,16 +219,10 @@ fn clean_wavecraft_nih_plug(engine_dir: &Path) -> Result<()> {
         .status()
         .context("Failed to run `cargo clean -p wavecraft-nih_plug`")?;
 
-    if !status.success() {
-        let code = status.code().map_or_else(
-            || "terminated by signal".to_string(),
-            |value| value.to_string(),
-        );
-        bail!(
-            "Failed to clean `wavecraft-nih_plug` before rebuild (exit: {}).",
-            code
-        );
-    }
+    ensure_command_success(
+        status,
+        "Failed to clean `wavecraft-nih_plug` before rebuild",
+    )?;
 
     Ok(())
 }

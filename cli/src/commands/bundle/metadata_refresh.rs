@@ -20,6 +20,12 @@ use crate::project::{
 const PARAM_SIDECAR_FILENAME: &str = "wavecraft-params.json";
 const PROCESSOR_SIDECAR_FILENAME: &str = "wavecraft-processors.json";
 
+enum SidecarDecision {
+    Missing,
+    Stale(&'static str),
+    Fresh,
+}
+
 pub(super) fn refresh_generated_types(project: &ProjectMarkers, package_name: &str) -> Result<()> {
     println!(
         "{} Refreshing generated parameter/processor types...",
@@ -57,32 +63,21 @@ fn try_load_metadata_sidecars(
     let params_path = debug_dir.join(PARAM_SIDECAR_FILENAME);
     let processors_path = debug_dir.join(PROCESSOR_SIDECAR_FILENAME);
 
-    if !params_path.is_file() || !processors_path.is_file() {
-        return Ok(None);
+    match decide_sidecar_usage(engine_dir, &params_path, &processors_path) {
+        SidecarDecision::Missing => return Ok(None),
+        SidecarDecision::Stale(reason) => {
+            println!(
+                "{} Metadata sidecars stale ({}); running discovery build...",
+                style("→").cyan(),
+                reason
+            );
+            return Ok(None);
+        }
+        SidecarDecision::Fresh => {}
     }
 
-    if let Some(reason) = metadata_sidecars_stale_reason(engine_dir, &params_path, &processors_path)
-    {
-        println!(
-            "{} Metadata sidecars stale ({}); running discovery build...",
-            style("→").cyan(),
-            reason
-        );
-        return Ok(None);
-    }
-
-    let params_contents = fs::read_to_string(&params_path).with_context(|| {
-        format!(
-            "Failed to read parameter sidecar at {}",
-            params_path.display()
-        )
-    })?;
-    let processors_contents = fs::read_to_string(&processors_path).with_context(|| {
-        format!(
-            "Failed to read processor sidecar at {}",
-            processors_path.display()
-        )
-    })?;
+    let params_contents = read_sidecar_contents(&params_path, "parameter")?;
+    let processors_contents = read_sidecar_contents(&processors_path, "processor")?;
 
     let params: Vec<ParameterInfo> = serde_json::from_str(&params_contents).with_context(|| {
         format!(
@@ -90,6 +85,7 @@ fn try_load_metadata_sidecars(
             params_path.display()
         )
     })?;
+
     let processors: Vec<ProcessorInfo> =
         serde_json::from_str(&processors_contents).with_context(|| {
             format!(
@@ -105,6 +101,31 @@ fn try_load_metadata_sidecars(
     );
 
     Ok(Some((params, processors)))
+}
+
+fn decide_sidecar_usage(
+    engine_dir: &Path,
+    params_path: &Path,
+    processors_path: &Path,
+) -> SidecarDecision {
+    if !params_path.is_file() || !processors_path.is_file() {
+        return SidecarDecision::Missing;
+    }
+
+    match metadata_sidecars_stale_reason(engine_dir, params_path, processors_path) {
+        Some(reason) => SidecarDecision::Stale(reason),
+        None => SidecarDecision::Fresh,
+    }
+}
+
+fn read_sidecar_contents(path: &Path, sidecar_kind: &str) -> Result<String> {
+    fs::read_to_string(path).with_context(|| {
+        format!(
+            "Failed to read {} sidecar at {}",
+            sidecar_kind,
+            path.display()
+        )
+    })
 }
 
 fn metadata_sidecars_stale_reason(

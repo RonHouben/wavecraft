@@ -2590,3 +2590,64 @@
 - **Architect escalation: NO**
   - Reason: the cleanup boundaries were explicit and local; no ownership ambiguity or architectural tradeoff appeared while implementing Batch 5.
 
+---
+
+## Tier 2 — Batch 6 quick-scan cleanup
+
+### Scope
+
+- Tier: **Tier 2 (quick scan)**
+- Batch: **Batch 6**
+- Goal: Bounded cleanup only (small helper extraction, duplication reduction, readability-only guard/path handling cleanup) with **no behavior/API/architecture changes**.
+
+### Files Touched
+
+- `cli/src/project/ts_codegen.rs`
+  - Extracted shared generated-directory creation helper (`ensure_generated_types_dir(...)`).
+  - Extracted shared TypeScript file header writer (`append_generated_header(...)`).
+  - Extracted write-if-changed helper (`write_generated_file_if_changed(...)`) and interface-line emission helper (`append_interface_entry(...)`).
+  - Preserved generated output shape/order/escaping and reserved-marker checks.
+
+- `cli/src/commands/bundle/metadata_refresh.rs`
+  - Extracted sidecar usage decision helper (`decide_sidecar_usage(...)`) with explicit `SidecarDecision` states.
+  - Extracted shared sidecar read helper (`read_sidecar_contents(...)`) to dedupe read-path error contexts.
+  - Preserved stale-sidecar diagnostics and discovery-build fallback behavior.
+
+- `cli/src/commands/bundle/ui_assets.rs`
+  - Extracted repeated command-exit formatting and success checks (`format_exit_code(...)`, `ensure_command_success(...)`).
+  - Extracted dependency path resolution helper (`resolve_dependency_path(...)`) for local/external dependency readability.
+  - Preserved npm build/install and `cargo clean -p wavecraft-nih_plug` failure semantics/messages.
+
+- `dev-server/src/audio/ffi_processor.rs`
+  - Extracted callback guard helper (`process_dimensions(...)`) and pointer prep helper (`prepare_channel_ptrs(...)`).
+  - Added behavior-preserving debug assertions for instance validity and channel-length consistency.
+  - Preserved FFI call sequencing, stereo guard behavior, and real-time-safe stack-only pointer preparation.
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Appended Tier 2 Batch 6 progress record.
+
+### Bounded-Change Invariants
+
+- [x] No behavior changes introduced.
+- [x] No public API surface changes introduced.
+- [x] No architecture changes introduced.
+- [x] Cleanup remained local to the Batch 6 target files (+ this ledger entry).
+- [x] FFI behavior preserved (`create/process/set_sample_rate/reset/drop` dispatch unchanged).
+- [x] Dev-server audio safety preserved (no new allocations/locks/blocking added in audio callback path).
+- [x] No roadmap or archived spec files were modified.
+
+### Validation
+
+- `cargo fmt --manifest-path cli/Cargo.toml --all` — **PASSED**
+- `cargo fmt --manifest-path dev-server/Cargo.toml --all` — **PASSED**
+- `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo clippy --manifest-path dev-server/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path cli/Cargo.toml` — **PASSED**
+- `cargo test --manifest-path dev-server/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**
+
+### Escalation
+
+- **Architect escalation: NO**
+  - Reason: all changes were bounded helper/readability refactors with explicit local scope and no ownership or architecture ambiguity.
+
