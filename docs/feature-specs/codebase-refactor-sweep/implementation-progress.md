@@ -865,3 +865,715 @@
 - **No Architect escalation required for Slice 3 (bundle hotspot).**
   - Module ownership boundary was clear and cohesive (UI build/staging/sync cluster).
   - No ambiguous cross-module ownership or architectural decision point was encountered during extraction.
+
+---
+
+## Slice 4 — Install/filesystem seam extraction (`bundle_command.rs`)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `cli/src/commands/bundle_command.rs`
+- Slice goal: Extract install-target resolution, bundled artifact resolution, install flow, and filesystem seam (`FileSystemOps` + real impl + recursive copy helper) into a dedicated module under `cli/src/commands/bundle/` while preserving orchestration and diagnostics.
+
+### Files Touched
+
+- `cli/src/commands/bundle_command.rs`
+  - Added module wiring: `#[path = "bundle/install.rs"] mod install;`
+  - Kept bundle command orchestration in place and routed install call through extracted module:
+    - `install::install_vst3_bundle(...)`
+  - Removed in-file install/filesystem seam implementation and install-specific test block now owned by extracted module.
+
+- `cli/src/commands/bundle/install.rs`
+  - New module owning extracted install/filesystem seam concern:
+    - bundled artifact path candidate resolution
+    - macOS VST3 install target resolution
+    - install flow + diagnostics
+    - `FileSystemOps` trait, `RealFileSystem`, recursive copy helper (`copy_dir_recursive_impl`)
+  - Co-located install diagnostics tests with the extracted ownership boundary.
+
+- `cli/src/commands/bundle/ui_assets.rs`
+  - Updated shared recursive copy helper import to new ownership location:
+    - `use super::install::copy_dir_recursive_impl;`
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added Slice 4 checkpoint entry for bundle hotspot.
+
+### Invariants (Behavior Preservation)
+
+- [x] Bundle command orchestration order preserved.
+- [x] Install diagnostics/error/recovery text preserved.
+- [x] macOS-only install guard and HOME-based destination resolution preserved.
+- [x] Bundled VST3 artifact candidate lookup behavior preserved.
+- [x] Filesystem seam behavior preserved (`create_dir_all` / replace existing bundle / recursive copy semantics).
+- [x] Existing install-focused tests preserved and moved with ownership.
+- [x] Refactor-only scope preserved (no feature or contract changes).
+
+### Validation
+
+- `cargo fmt --manifest-path cli/Cargo.toml` — **PASSED**
+- `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path cli/Cargo.toml` — **PASSED**
+  - Unit tests: **105 passed, 0 failed**
+  - Integration tests: **18 passed, 0 failed**
+- `cargo xtask ci-check` — **PASSED**
+  - Documentation: passed
+  - Lint/type-check: passed
+  - Engine + UI tests: passed
+
+### Escalation Log (Mandatory)
+
+- **No Architect escalation required for Slice 4 (bundle hotspot).**
+  - Ownership boundary was clear and cohesive (install flow + filesystem seam).
+  - No ambiguous module ownership split or architectural decision point was encountered.
+
+---
+
+## Slice 5 — Bundle helper runner extraction (`bundle_command.rs`)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `cli/src/commands/bundle_command.rs`
+- Slice goal: Extract bundle helper execution concern into a dedicated module under `cli/src/commands/bundle/` while preserving command orchestration and diagnostics.
+
+### Files Touched
+
+- `cli/src/commands/bundle_command.rs`
+  - Added module wiring: `#[path = "bundle/bundle_runner.rs"] mod bundle_runner;`
+  - Kept `BundleCommand::execute` orchestration unchanged and routed bundle helper invocation through:
+    - `bundle_runner::run_nih_plug_bundle(...)`
+  - Removed in-file bundle helper execution functions now owned by extracted module.
+
+- `cli/src/commands/bundle/bundle_runner.rs`
+  - New module owning extracted bundle helper execution concern:
+    - `run_nih_plug_bundle(...)`
+    - `ensure_nih_plug_bundle_helper_manifest(...)`
+  - Preserved helper manifest/source materialization and cargo helper invocation behavior.
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added Slice 5 checkpoint entry for bundle hotspot.
+
+### Invariants (Behavior Preservation)
+
+- [x] `BundleCommand::execute` orchestration order preserved (build → bundle helper → optional install).
+- [x] Bundle helper manifest/source generation behavior preserved.
+- [x] Bundle helper invocation and exit-code diagnostics preserved.
+- [x] Error context strings for helper setup/invocation preserved.
+- [x] Refactor-only scope preserved (no feature or contract changes).
+
+### Validation
+
+- `cargo fmt --manifest-path cli/Cargo.toml` — **PASSED**
+- `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path cli/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log (Mandatory)
+
+- **No Architect escalation required for Slice 5 (bundle hotspot).**
+  - The extraction boundary was explicit in the slice request (`run_nih_plug_bundle` + helper-manifest generation concern).
+  - No ambiguous ownership split or architectural tradeoff was encountered.
+
+---
+
+## Slice 6 — Orchestrator finalization + release-build extraction (`bundle_command.rs`)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `cli/src/commands/bundle_command.rs`
+- Slice goal: Perform finalization pass by extracting the last cohesive concern (release package build execution) and co-locating remaining tests into owning modules so `bundle_command.rs` is orchestration/wiring-focused.
+
+### Files Touched
+
+- `cli/src/commands/bundle_command.rs`
+  - Added module wiring: `#[path = "bundle/engine_build.rs"] mod engine_build;`
+  - Routed release build execution through extracted module:
+    - `engine_build::build_release_package(...)`
+  - Removed in-file release build command implementation.
+  - Removed mixed concern `#[cfg(test)]` block from orchestrator file.
+
+- `cli/src/commands/bundle/engine_build.rs`
+  - New module owning extracted release build concern:
+    - `build_release_package(...)`
+  - Preserved release build invocation behavior and diagnostics (`Failed to run \`cargo build --release\``, `Build failed (exit: ...)`).
+
+- `cli/src/commands/bundle/project_root.rs`
+  - Co-located project-root ownership tests moved from `bundle_command.rs`:
+    - nested root detection
+    - install/non-install invalid-context diagnostics
+
+- `cli/src/commands/bundle/ui_assets.rs`
+  - Co-located UI-assets ownership tests moved from `bundle_command.rs`:
+    - UI build failure exit handling
+    - `wavecraft-nih_plug` dependency mode detection (local path/external)
+    - staged UI dist replacement behavior
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added Slice 6 completion entry for bundle hotspot.
+
+### Invariants (Behavior Preservation)
+
+- [x] `BundleCommand::execute` orchestration order preserved.
+- [x] Release build execution semantics and diagnostics preserved exactly.
+- [x] Bundle helper/install call sequence and success messaging preserved.
+- [x] Test coverage intent preserved; ownership moved to concern modules only.
+- [x] Refactor-only scope preserved (no feature or contract changes).
+
+### Validation
+
+- `cargo fmt --manifest-path cli/Cargo.toml` — **PASSED**
+- `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path cli/Cargo.toml` — **PASSED**
+  - Unit tests: **105 passed, 0 failed**
+  - Integration tests: **18 passed, 0 failed**
+- `cargo xtask ci-check` — **PASSED**
+  - Documentation: passed
+  - Lint/type-check: passed
+  - Engine + UI tests: passed
+
+### Escalation Log (Mandatory)
+
+- **No Architect escalation required for Slice 6 (bundle hotspot).**
+  - Final boundary was clear: release build execution remained as a cohesive concern, and residual tests had unambiguous owning modules.
+  - No ambiguous architectural ownership decision was encountered.
+
+### Hotspot Completion Status
+
+- Bundle hotspot (`cli/src/commands/bundle_command.rs`) status: **COMPLETE** (Slices 1–6 complete and validation green).
+
+---
+
+## Slice 1 — Self-update flow extraction (`update.rs`)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `cli/src/commands/update.rs`
+- Slice goal: Extract CLI self-update concern into a dedicated module while keeping `update.rs` as orchestration/wiring for phase coordination, project dependency updates, and summary outcome handling.
+
+### Files Touched
+
+- `cli/src/commands/update.rs`
+  - Added module wiring: `mod self_update;`
+  - Kept orchestration in `run(...)` and routed self-update phase through:
+    - `self_update::update_cli()`
+    - `self_update::reexec_with_new_binary()`
+  - Retained project dependency update flow and summary decision logic in orchestrator file.
+  - Removed self-update helper implementation/test cluster now owned by extracted module.
+
+- `cli/src/commands/update/self_update.rs`
+  - New module owning extracted self-update concern:
+    - `SelfUpdateResult`
+    - `update_cli(...)`
+    - `reexec_with_new_binary(...)`
+    - install progress parsing helpers and version parsing helpers
+  - Co-located self-update parsing/progress tests with ownership boundary.
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added Slice 1 checkpoint entry for update hotspot.
+
+### Invariants (Behavior Preservation)
+
+- [x] Runtime self-update behavior preserved (`cargo install wavecraft` spawn/wait + stderr capture/parsing).
+- [x] Re-exec semantics preserved (`wavecraft update --skip-self` after successful binary update).
+- [x] Progress diagnostics preserved (download/compile progress output and failure guidance text).
+- [x] Installed-version parsing and "already installed" detection behavior preserved.
+- [x] Project dependency update flow and summary/exit semantics preserved in orchestrator.
+- [x] Refactor-only scope preserved (no feature or contract changes).
+
+### Validation
+
+- `cargo fmt --manifest-path cli/Cargo.toml` — **PASSED**
+- `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path cli/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log (Mandatory)
+
+- **Architect escalation: NO**
+  - Reason: The extraction boundary was explicit and cohesive (self-update flow cluster), with no ambiguous cross-module ownership or behavioral decision point encountered.
+
+---
+
+## Slice 2 — Project dependency update flow extraction (`update.rs`)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `cli/src/commands/update.rs`
+- Slice goal: Extract project dependency update flow concern into a dedicated module while keeping `update.rs` as orchestration/wiring for phase coordination and summary/exit handling.
+
+### Files Touched
+
+- `cli/src/commands/update.rs`
+  - Added module wiring: `mod project_update;`
+  - Kept orchestration in `run(...)` and summary/exit logic in place.
+  - Routed project dependency update phase through:
+    - `project_update::update_project_deps()`
+  - Removed in-file project update implementation block and rewired summary logic type references to extracted module ownership.
+
+- `cli/src/commands/update/project_update.rs`
+  - New module owning extracted project dependency update concern:
+    - `ProjectUpdateResult`
+    - `update_project_deps(...)`
+    - `detect_project(...)`
+    - `update_rust_deps(...)`
+    - `update_npm_deps(...)`
+  - Co-located project marker detection tests with concern ownership.
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added Slice 2 checkpoint entry for update hotspot.
+
+### Invariants (Behavior Preservation)
+
+- [x] `update.rs` remains orchestration/wiring (phase order preserved).
+- [x] Project detection semantics preserved (`engine/Cargo.toml`, `ui/package.json`).
+- [x] Project update diagnostics preserved for:
+  - non-project skip message
+  - Rust update success/failure
+  - npm update success/failure
+- [x] Summary/exit semantics preserved (project error aggregation still controls failure path).
+- [x] Refactor-only scope preserved (no feature or contract changes).
+
+### Validation
+
+- `cargo fmt --manifest-path cli/Cargo.toml` — **PASSED**
+- `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path cli/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log (Mandatory)
+
+- **Architect escalation: NO**
+  - Reason: The extraction boundary was clear and cohesive (`project_update` concern only), and no ambiguous ownership split or architectural decision point was encountered.
+
+---
+
+## Slice 3 — Summary/exit finalization extraction (`update.rs`)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `cli/src/commands/update.rs`
+- Slice goal: Finalization pass for remaining cohesive summary/exit concern; extract summary decision + summary print/exit behavior into dedicated module and keep `update.rs` lean orchestration/wiring.
+
+### Files Touched
+
+- `cli/src/commands/update.rs`
+  - Added module wiring: `mod summary;`
+  - Kept phase orchestration in `run(...)` and routed final summary/exit handling through:
+    - `summary::print_summary(&self_update_result, &project_result)`
+  - Removed in-file summary outcome enum, summary decision logic, summary print/exit logic, and summary tests (moved to owning module).
+
+- `cli/src/commands/update/summary.rs`
+  - New module owning extracted summary/exit concern:
+    - `SummaryOutcome`
+    - `determine_summary(...)`
+    - `print_summary(...)`
+  - Co-located summary decision tests (QA-L-003) with ownership boundary.
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added Slice 3 finalization entry for update hotspot.
+
+### Invariants (Behavior Preservation)
+
+- [x] Update phase order preserved exactly (self-update/re-exec gate → project deps → summary).
+- [x] Summary diagnostics/log text preserved exactly:
+  - `✨ All updates complete`
+  - `✨ Project dependencies updated (CLI self-update skipped)`
+- [x] Error aggregation + failure semantics preserved exactly:
+  - `Failed to update some dependencies:\n  ...` via `bail!`
+- [x] `NoAction` semantics preserved (no extra summary output when CLI self-update failed outside project context).
+- [x] Refactor-only scope preserved (no feature/contract changes).
+
+### Validation
+
+- `cargo fmt --manifest-path cli/Cargo.toml` — **PASSED**
+- `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path cli/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log (Mandatory)
+
+- **Architect escalation: NO**
+  - Reason: Remaining boundary was clear and cohesive (summary/exit concern only); no ambiguous ownership split or architectural decision point was encountered.
+
+### Hotspot Completion Status
+
+- Update hotspot (`cli/src/commands/update.rs`) status: **COMPLETE** (Slices 1–3 complete and validation green).
+
+---
+
+## Slice 1 — Parse concern extraction (`plugin.rs`)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `engine/crates/wavecraft-macros/src/plugin.rs`
+- Slice goal: Extract parse-related structures/helpers into `engine/crates/wavecraft-macros/src/plugin/parse.rs` while preserving macro expansion output and contract behavior.
+
+### Files Touched
+
+- `engine/crates/wavecraft-macros/src/plugin.rs`
+  - Added parse submodule wiring: `#[path = "plugin/parse.rs"] mod parse;`
+  - Kept orchestration/expansion flow in place.
+  - Routed parsing of signal processors through extracted helper:
+    - `parse::parse_signal_chain_processors(...)`
+  - Updated local tests to reference extracted parse ownership boundary.
+
+- `engine/crates/wavecraft-macros/src/plugin/parse.rs`
+  - New module owning parse concern:
+    - `PluginDef` input parse structure + `Parse` implementation
+    - `parse_signal_chain_processors(...)`
+  - Preserved all existing parse diagnostics and validation semantics (`name`, `signal`, optional `crate`, `SignalChain![]` constraints).
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added Slice 1 checkpoint entry for macros hotspot.
+
+### Invariants (Behavior Preservation)
+
+- [x] Macro DSL parse contract preserved (`name`, `signal`, optional `crate`).
+- [x] Parse error diagnostics preserved verbatim for unknown/missing fields and invalid `signal` syntax.
+- [x] `SignalChain![]` parsing/validation behavior preserved.
+- [x] Macro output behavior preserved (no expansion/contract changes).
+- [x] `plugin.rs` remains orchestration/wiring for macro expansion.
+- [x] Refactor-only scope preserved (no feature additions).
+
+### Validation
+
+- Required cadence executed:
+  - `cargo fmt --manifest-path engine/Cargo.toml --all` — **PASSED**
+    - Note: initial run with exact command form (`cargo fmt --manifest-path engine/Cargo.toml`) reported `Failed to find targets`; reran as workspace format with `--all`.
+  - `cargo clippy --manifest-path engine/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+  - `cargo test --manifest-path engine/Cargo.toml` — **PASSED**
+  - `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log (Mandatory)
+
+- **Architect escalation: NO**
+  - Reason: boundary was clear and cohesive (`parse` concern extraction only), with no ambiguous ownership split or behavior tradeoff requiring architectural guidance.
+
+---
+
+## Slice 2 — Naming/identifier normalization extraction (`plugin.rs`)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `engine/crates/wavecraft-macros/src/plugin.rs`
+- Slice goal: Extract naming/identifier normalization helpers into `engine/crates/wavecraft-macros/src/plugin/naming.rs` while preserving macro expansion output exactly and keeping `plugin.rs` as orchestration/wiring.
+
+### Files Touched
+
+- `engine/crates/wavecraft-macros/src/plugin.rs`
+  - Added naming submodule wiring: `#[path = "plugin/naming.rs"] mod naming;`
+  - Routed naming-dependent calls through extracted ownership:
+    - `naming::type_prefix(...)`
+    - `naming::processor_id_from_type(...)`
+  - Removed inlined naming helper implementations from orchestrator file.
+  - Updated local tests to target extracted naming module ownership.
+
+- `engine/crates/wavecraft-macros/src/plugin/naming.rs`
+  - New module owning naming/identifier normalization concern:
+    - `to_snake_case_identifier(...)`
+    - `type_prefix(...)`
+    - `processor_id_from_type(...)`
+  - Preserved existing snake-case conversion and type-path terminal-segment behavior.
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added Slice 2 checkpoint entry for macros hotspot.
+
+### Invariants (Behavior Preservation)
+
+- [x] Macro output compatibility preserved (no changes to emitted plugin code shape/contracts).
+- [x] `plugin.rs` remains orchestration/wiring for expansion flow.
+- [x] Identifier normalization semantics preserved:
+  - same snake_case conversion behavior
+  - same path terminal-segment selection for processor IDs/prefixes
+  - same non-path fallback token-to-string normalization behavior
+- [x] Refactor-only scope preserved (no feature additions, no contract changes).
+
+### Validation
+
+- Required cadence executed:
+  - `cargo fmt --manifest-path engine/Cargo.toml` — **FAILED** (`Failed to find targets`)
+  - `cargo fmt --manifest-path engine/Cargo.toml --all` — **PASSED** (workspace-correct variant)
+  - `cargo clippy --manifest-path engine/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+  - `cargo test --manifest-path engine/Cargo.toml` — **PASSED**
+  - `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log (Mandatory)
+
+- **Architect escalation: NO**
+  - Reason: extraction boundary/ownership was explicit (naming/identifier normalization helpers only), and no ambiguous ownership split or architecture decision point was encountered.
+
+---
+
+## Slice 3 — Metadata/codegen-adjacent helper extraction (`plugin.rs`)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `engine/crates/wavecraft-macros/src/plugin.rs`
+- Slice goal: Extract metadata derivation + metadata-oriented codegen helper cluster into a dedicated module while preserving macro expansion output and generated contract behavior exactly.
+
+### Files Touched
+
+- `engine/crates/wavecraft-macros/src/plugin.rs`
+  - Added metadata submodule wiring: `#[path = "plugin/metadata.rs"] mod metadata;`
+  - Kept orchestration in place and routed metadata/codegen-adjacent calls through extracted helpers:
+    - `metadata::derive_vendor()`
+    - `metadata::derive_url()`
+    - `metadata::derive_clap_id()`
+    - `metadata::generate_vst3_id(...)`
+    - `metadata::processor_param_mappings(...)`
+    - `metadata::processor_info_entries(...)`
+  - Removed in-file helper implementations now owned by metadata module.
+
+- `engine/crates/wavecraft-macros/src/plugin/metadata.rs`
+  - New module owning metadata/codegen-adjacent helper cluster:
+    - Cargo-derived plugin metadata helpers (vendor/url/CLAP ID)
+    - deterministic VST3 ID generation helper
+    - FFI metadata token generation helpers for parameter mappings and processor info entries
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added Slice 3 checkpoint entry for macros hotspot.
+
+### Invariants (Behavior Preservation)
+
+- [x] Macro output compatibility preserved (no changes to emitted plugin code shape/contracts).
+- [x] Generated FFI contract behavior preserved (`wavecraft_get_params_json`, `wavecraft_get_processors_json` generation paths unchanged semantically).
+- [x] Cargo metadata derivation semantics preserved exactly (vendor/url/CLAP ID source logic unchanged).
+- [x] Deterministic VST3 ID generation semantics preserved exactly (same hash input + byte layout).
+- [x] `plugin.rs` remains orchestration/wiring for macro expansion.
+- [x] Refactor-only scope preserved (no feature additions, no contract changes).
+
+### Validation
+
+- Required cadence executed:
+  - `cargo fmt --manifest-path engine/Cargo.toml` — **FAILED** (`Failed to find targets`)
+  - `cargo fmt --manifest-path engine/Cargo.toml --all` — **PASSED** (workspace-correct variant)
+  - `cargo clippy --manifest-path engine/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+  - `cargo test --manifest-path engine/Cargo.toml` — **PASSED**
+  - `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log (Mandatory)
+
+- **Architect escalation: NO**
+  - Reason: extraction boundary was clear and low-risk (metadata derivation + metadata-oriented codegen helpers), with no ambiguous ownership split or architectural tradeoff requiring escalation.
+
+---
+
+## Slice 4 — Runtime parameter codegen block extraction (`plugin.rs`)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `engine/crates/wavecraft-macros/src/plugin.rs`
+- Slice goal: Extract runtime parameter codegen block generation into a dedicated module while preserving macro expansion output exactly and keeping `plugin.rs` as orchestration/wiring.
+
+### Files Touched
+
+- `engine/crates/wavecraft-macros/src/plugin.rs`
+  - Added runtime-params submodule wiring: `#[path = "plugin/runtime_params.rs"] mod runtime_params;`
+  - Replaced inlined runtime parameter block token construction with module-owned call:
+    - `runtime_params::runtime_param_blocks(&signal_processors, &krate)`
+  - Kept expansion/orchestration flow in `expand_wavecraft_plugin(...)` unchanged.
+
+- `engine/crates/wavecraft-macros/src/plugin/runtime_params.rs`
+  - New module owning extracted runtime parameter codegen block generation:
+    - `runtime_param_blocks(...)`
+  - Preserved all emitted token semantics for `ParamRange` variants (`Linear`, `Skewed`, `Stepped`, `Enum`), runtime ID construction, group handling, and enum label parse/display behavior.
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added Slice 4 checkpoint entry for macros hotspot.
+
+### Invariants (Behavior Preservation)
+
+- [x] Macro output compatibility preserved exactly (token generation behavior unchanged).
+- [x] `plugin.rs` remains orchestration/wiring for macro expansion.
+- [x] Runtime parameter generation semantics preserved:
+  - same `ParamRange` → nih-plug param mapping (`FloatParam`/`IntParam`)
+  - same enum label display/parse closures
+  - same runtime ID format (`"{processor_prefix}_{id_suffix}"`)
+  - same group defaulting behavior
+- [x] Refactor-only scope preserved (no feature additions, no contract changes).
+
+### Validation
+
+- Required cadence executed:
+  - `cargo fmt --manifest-path engine/Cargo.toml` — **FAILED** (`Failed to find targets`)
+  - `cargo fmt --manifest-path engine/Cargo.toml --all` — **PASSED** (workspace-correct variant)
+  - `cargo clippy --manifest-path engine/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+  - `cargo test --manifest-path engine/Cargo.toml` — **PASSED**
+  - `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log (Mandatory)
+
+- **Architect escalation: NO**
+  - Reason: boundary was clear and low-risk (runtime parameter codegen block cluster), with no ambiguity in ownership split or behavior semantics.
+
+---
+
+## Slice 5 — Finalization/codegen cluster extraction (`plugin.rs`)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `engine/crates/wavecraft-macros/src/plugin.rs`
+- Slice goal: Finalization pass for remaining cohesive concern by extracting the monolithic expansion/codegen cluster into a dedicated module and leaving `plugin.rs` as lean orchestration/wiring.
+
+### Files Touched
+
+- `engine/crates/wavecraft-macros/src/plugin.rs`
+  - Added codegen submodule wiring: `#[path = "plugin/codegen.rs"] mod codegen;`
+  - Removed in-file monolithic `quote!` expansion block.
+  - Routed expansion generation through:
+    - `codegen::generate_plugin_code(codegen::CodegenInput { ... })`
+  - Retained orchestration responsibilities (parse → metadata/runtime prep → codegen invocation → error wrapping).
+
+- `engine/crates/wavecraft-macros/src/plugin/codegen.rs`
+  - New module owning extracted expansion/codegen concern:
+    - `CodegenInput<'a>`
+    - `generate_plugin_code(...)`
+  - Contains moved plugin expansion `quote!` body verbatim in behavior, including:
+    - generated plugin/params/runtime-param structs and trait impls
+    - FFI exports (`wavecraft_get_params_json`, `wavecraft_get_processors_json`, `wavecraft_free_string`, `wavecraft_dev_create_processor`)
+    - CLAP/VST3 exports and compile-time trait assertions.
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added Slice 5 finalization entry for macros hotspot.
+
+### Invariants (Behavior Preservation)
+
+- [x] Macro output compatibility preserved exactly (no semantic/codegen contract changes).
+- [x] Generated FFI/export surface preserved exactly.
+- [x] `plugin.rs` ownership finalized to lean orchestration/wiring.
+- [x] Existing macro tests preserved and still passing.
+- [x] Refactor-only scope preserved (no feature additions).
+
+### Validation
+
+- Required cadence executed:
+  - `cargo fmt --manifest-path engine/Cargo.toml` — **FAILED** (`Failed to find targets`)
+  - `cargo fmt --manifest-path engine/Cargo.toml --all` — **PASSED** (workspace-correct variant)
+  - `cargo clippy --manifest-path engine/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+  - `cargo test --manifest-path engine/Cargo.toml` — **PASSED**
+  - `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log (Mandatory)
+
+- **Architect escalation: NO**
+  - Reason: The remaining boundary was unambiguous and cohesive (single codegen cluster), and extraction required no architectural tradeoff or contract reinterpretation.
+
+### Hotspot Completion Status
+
+- Macros hotspot (`engine/crates/wavecraft-macros/src/plugin.rs`) status: **COMPLETE** (Slices 1–5 complete and validation green).
+
+---
+
+## Slice 1 — Envelope extraction boundary (`ipc.rs`)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `engine/crates/wavecraft-protocol/src/ipc.rs`
+- Slice goal: Extract JSON-RPC envelope-level types/helpers into a dedicated module while preserving wire format compatibility exactly and keeping `ipc.rs` as orchestration/wiring.
+
+### Files Touched
+
+- `engine/crates/wavecraft-protocol/src/ipc.rs`
+  - Added submodule wiring:
+    - `#[path = "ipc/envelope.rs"] mod envelope;`
+    - `pub use envelope::{IpcNotification, IpcRequest, IpcResponse, RequestId};`
+  - Removed in-file envelope type/helper implementations and retained non-envelope orchestration/contracts in `ipc.rs`.
+
+- `engine/crates/wavecraft-protocol/src/ipc/envelope.rs`
+  - New module owning extracted envelope concern:
+    - `IpcRequest`, `IpcResponse`, `IpcNotification`, `RequestId`
+    - constructor helpers `IpcRequest::new`, `IpcResponse::{success,error}`, `IpcNotification::new`
+  - Preserved all serde attributes/field names/optionality and constructor behavior.
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added Slice 1 checkpoint entry for `ipc.rs` hotspot.
+
+### Invariants (Behavior Preservation)
+
+- [x] JSON-RPC wire format compatibility preserved exactly:
+  - envelope fields unchanged (`jsonrpc`, `id`, `method`, `params`, `result`, `error`)
+  - `RequestId` remains `#[serde(untagged)]` (string/number compatibility preserved)
+  - optional fields keep same `skip_serializing_if = "Option::is_none"` behavior.
+- [x] Public API behavior preserved via `pub use` re-exports from `ipc.rs`.
+- [x] `ipc.rs` retained as orchestration/wiring module for broader IPC contracts.
+- [x] Refactor-only scope preserved (no feature additions, no contract changes).
+
+### Validation
+
+- Required cadence executed:
+  - `cargo fmt --manifest-path engine/Cargo.toml` — **FAILED** (`Failed to find targets`)
+  - `cargo fmt --manifest-path engine/Cargo.toml --all` — **PASSED** (workspace-correct variant)
+  - `cargo clippy --manifest-path engine/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+  - `cargo test --manifest-path engine/Cargo.toml` — **PASSED**
+  - `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log
+
+- **Architect escalation: NO**
+  - Reason: The envelope boundary is explicit, cohesive, and low-risk (pure extraction of JSON-RPC envelope definitions/helpers), with no ambiguous ownership split requiring architectural input.
+
+---
+
+## Slice 2 — Error contract extraction (`ipc.rs`)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `engine/crates/wavecraft-protocol/src/ipc.rs`
+- Slice goal: Extract JSON-RPC/application error contract types/constants/helpers into `ipc/errors.rs` while preserving wire compatibility and keeping `ipc.rs` as orchestration/wiring with stable public exports.
+
+### Files Touched
+
+- `engine/crates/wavecraft-protocol/src/ipc.rs`
+  - Added submodule wiring:
+    - `#[path = "ipc/errors.rs"] mod errors;`
+    - `pub use errors::{ ... , IpcError };`
+  - Removed in-file error contract block now owned by extracted module:
+    - `IpcError` type
+    - JSON-RPC/application error code constants
+    - `impl IpcError` helper constructors/factories
+  - Retained `ipc.rs` orchestration/wiring role and existing envelope + method/type contract definitions.
+
+- `engine/crates/wavecraft-protocol/src/ipc/errors.rs`
+  - New module owning extracted error contract concern:
+    - `IpcError`
+    - `ERROR_PARSE`, `ERROR_INVALID_REQUEST`, `ERROR_METHOD_NOT_FOUND`, `ERROR_INVALID_PARAMS`, `ERROR_INTERNAL`, `ERROR_PARAM_NOT_FOUND`, `ERROR_PARAM_OUT_OF_RANGE`
+    - `IpcError::{new, with_data, parse_error, invalid_request, method_not_found, invalid_params, internal_error, param_not_found, param_out_of_range}`
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added Slice 2 checkpoint entry for `ipc.rs` hotspot.
+
+### Invariants (Behavior Preservation)
+
+- [x] JSON-RPC wire compatibility preserved exactly:
+  - `IpcError` serde field names/shape unchanged (`code`, `message`, optional `data`).
+  - `#[serde(skip_serializing_if = "Option::is_none")]` on `data` preserved.
+- [x] Error code values and helper output strings preserved exactly.
+- [x] `ipc.rs` public API stability preserved via re-exports (`pub use errors::{...}`), so downstream imports from `wavecraft_protocol::ipc` remain stable.
+- [x] `ipc.rs` retained orchestration/wiring responsibility; no feature additions.
+- [x] Refactor-only scope preserved (no contract changes, no behavior changes).
+
+### Validation
+
+- Required cadence executed:
+  - `cargo fmt --manifest-path engine/Cargo.toml` — **FAILED** (`Failed to find targets`)
+  - `cargo fmt --manifest-path engine/Cargo.toml --all` — **PASSED** (workspace-correct variant)
+  - `cargo clippy --manifest-path engine/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+  - `cargo test --manifest-path engine/Cargo.toml` — **PASSED**
+  - `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log
+
+- **Architect escalation: NO**
+  - Reason: the requested boundary was explicit (`ipc/errors.rs` for error contract extraction), and no ambiguous ownership split or architecture tradeoff was encountered.

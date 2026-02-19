@@ -4,7 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-use super::copy_dir_recursive_impl;
+use super::install::copy_dir_recursive_impl;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) enum WavecraftNihPlugDependencyMode {
@@ -226,4 +226,89 @@ fn clean_wavecraft_nih_plug(engine_dir: &Path) -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::TempDir;
+
+    #[test]
+    fn build_ui_assets_reports_failure_exit_code() {
+        let temp = TempDir::new().expect("temp dir should be created");
+        let ui_dir = temp.path().join("ui");
+        fs::create_dir_all(&ui_dir).expect("ui dir");
+        fs::create_dir_all(ui_dir.join("node_modules")).expect("node_modules dir");
+        fs::write(
+            ui_dir.join("package.json"),
+            "{\"name\":\"build-ui-fixture\",\"scripts\":{\"build\":\"exit 1\"}}\n",
+        )
+        .expect("ui package");
+
+        let error = build_ui_assets(&ui_dir).expect_err("build-ui should fail in fixture");
+        assert!(error.to_string().contains("UI build failed"));
+    }
+
+    #[test]
+    fn detect_wavecraft_nih_plug_dependency_mode_accepts_local_path_dependency() {
+        let temp = TempDir::new().expect("temp dir should be created");
+        let engine_dir = temp.path().join("engine");
+        let dep_dir = temp.path().join("wavecraft-nih-plug");
+
+        fs::create_dir_all(&engine_dir).expect("engine dir");
+        fs::create_dir_all(&dep_dir).expect("dep dir");
+
+        fs::write(
+            engine_dir.join("Cargo.toml"),
+            format!(
+                "[package]\nname = \"fixture\"\nversion = \"0.1.0\"\n\n[dependencies]\nwavecraft = {{ package = \"wavecraft-nih_plug\", path = \"{}\" }}\n",
+                dep_dir.display()
+            ),
+        )
+        .expect("engine cargo");
+
+        let resolved = detect_wavecraft_nih_plug_dependency_mode(&engine_dir.join("Cargo.toml"))
+            .expect("mode should resolve");
+        assert_eq!(resolved, WavecraftNihPlugDependencyMode::LocalPath(dep_dir));
+    }
+
+    #[test]
+    fn detect_wavecraft_nih_plug_dependency_mode_accepts_non_path_dependency() {
+        let temp = TempDir::new().expect("temp dir should be created");
+        let engine_dir = temp.path().join("engine");
+        fs::create_dir_all(&engine_dir).expect("engine dir");
+
+        fs::write(
+            engine_dir.join("Cargo.toml"),
+            "[package]\nname = \"fixture\"\nversion = \"0.1.0\"\n\n[dependencies]\nwavecraft = { package = \"wavecraft-nih_plug\", git = \"https://example.com/repo.git\" }\n",
+        )
+        .expect("engine cargo");
+
+        let resolved = detect_wavecraft_nih_plug_dependency_mode(&engine_dir.join("Cargo.toml"))
+            .expect("non-path dependency should be supported");
+        assert_eq!(resolved, WavecraftNihPlugDependencyMode::ExternalSource);
+    }
+
+    #[test]
+    fn stage_ui_dist_replaces_previous_assets() {
+        let temp = TempDir::new().expect("temp dir should be created");
+        let ui_dist = temp.path().join("ui/dist");
+        let assets_dir = temp.path().join("wavecraft-nih-plug/assets/ui-dist");
+
+        fs::create_dir_all(ui_dist.join("assets")).expect("ui dist assets");
+        fs::write(ui_dist.join("index.html"), "<html>generated</html>").expect("index");
+        fs::write(ui_dist.join("assets/app.js"), "console.log('generated')").expect("asset");
+
+        fs::create_dir_all(&assets_dir).expect("stale assets dir");
+        fs::write(assets_dir.join("old.txt"), "stale").expect("stale file");
+
+        stage_ui_dist(&ui_dist, &assets_dir).expect("staging should succeed");
+
+        assert!(assets_dir.join("index.html").is_file());
+        assert!(assets_dir.join("assets/app.js").is_file());
+        assert!(!assets_dir.join("old.txt").exists());
+        let index = fs::read_to_string(assets_dir.join("index.html")).expect("read index");
+        assert!(index.contains("generated"));
+    }
 }

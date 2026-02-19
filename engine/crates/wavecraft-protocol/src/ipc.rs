@@ -18,87 +18,16 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Request message sent from UI to Rust
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IpcRequest {
-    /// JSON-RPC version (always "2.0")
-    pub jsonrpc: String,
-    /// Unique request identifier for matching responses
-    pub id: RequestId,
-    /// Method name to invoke
-    pub method: String,
-    /// Method parameters (method-specific)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub params: Option<serde_json::Value>,
-}
+#[path = "ipc/envelope.rs"]
+mod envelope;
+#[path = "ipc/errors.rs"]
+mod errors;
 
-/// Response message sent from Rust to UI
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IpcResponse {
-    /// JSON-RPC version (always "2.0")
-    pub jsonrpc: String,
-    /// Request ID this response corresponds to
-    pub id: RequestId,
-    /// Success result (mutually exclusive with error)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub result: Option<serde_json::Value>,
-    /// Error result (mutually exclusive with result)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<IpcError>,
-}
-
-/// Notification message sent from Rust to UI (no response expected)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IpcNotification {
-    /// JSON-RPC version (always "2.0")
-    pub jsonrpc: String,
-    /// Event type
-    pub method: String,
-    /// Event data
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub params: Option<serde_json::Value>,
-}
-
-/// Request ID can be string or number
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum RequestId {
-    String(String),
-    Number(i64),
-}
-
-/// Error returned in IpcResponse
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IpcError {
-    /// Error code (see error code constants)
-    pub code: i32,
-    /// Human-readable error message
-    pub message: String,
-    /// Additional error data (optional)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub data: Option<serde_json::Value>,
-}
-
-// ============================================================================
-// Error Codes (JSON-RPC 2.0 standard codes + custom extensions)
-// ============================================================================
-
-/// JSON-RPC parse error (invalid JSON)
-pub const ERROR_PARSE: i32 = -32700;
-/// JSON-RPC invalid request (malformed structure)
-pub const ERROR_INVALID_REQUEST: i32 = -32600;
-/// JSON-RPC method not found
-pub const ERROR_METHOD_NOT_FOUND: i32 = -32601;
-/// JSON-RPC invalid method parameters
-pub const ERROR_INVALID_PARAMS: i32 = -32602;
-/// JSON-RPC internal error
-pub const ERROR_INTERNAL: i32 = -32603;
-
-// Custom application error codes (start at -32000)
-/// Parameter not found
-pub const ERROR_PARAM_NOT_FOUND: i32 = -32000;
-/// Parameter value out of valid range
-pub const ERROR_PARAM_OUT_OF_RANGE: i32 = -32001;
+pub use envelope::{IpcNotification, IpcRequest, IpcResponse, RequestId};
+pub use errors::{
+    ERROR_INTERNAL, ERROR_INVALID_PARAMS, ERROR_INVALID_REQUEST, ERROR_METHOD_NOT_FOUND,
+    ERROR_PARAM_NOT_FOUND, ERROR_PARAM_OUT_OF_RANGE, ERROR_PARSE, IpcError,
+};
 
 // ============================================================================
 // Method-Specific Types
@@ -237,129 +166,6 @@ pub const NOTIFICATION_PARAMETER_CHANGED: &str = "parameterChanged";
 pub const NOTIFICATION_METER_UPDATE: &str = "meterUpdate";
 /// Notification: Audio runtime status changed
 pub const NOTIFICATION_AUDIO_STATUS_CHANGED: &str = "audioStatusChanged";
-
-// ============================================================================
-// Helper Constructors
-// ============================================================================
-
-impl IpcRequest {
-    /// Create a new request
-    pub fn new(
-        id: RequestId,
-        method: impl Into<String>,
-        params: Option<serde_json::Value>,
-    ) -> Self {
-        Self {
-            jsonrpc: "2.0".to_string(),
-            id,
-            method: method.into(),
-            params,
-        }
-    }
-}
-
-impl IpcResponse {
-    /// Create a success response
-    pub fn success(id: RequestId, result: impl Serialize) -> Self {
-        Self {
-            jsonrpc: "2.0".to_string(),
-            id,
-            result: Some(serde_json::to_value(result).unwrap()),
-            error: None,
-        }
-    }
-
-    /// Create an error response
-    pub fn error(id: RequestId, error: IpcError) -> Self {
-        Self {
-            jsonrpc: "2.0".to_string(),
-            id,
-            result: None,
-            error: Some(error),
-        }
-    }
-}
-
-impl IpcNotification {
-    /// Create a new notification
-    pub fn new(method: impl Into<String>, params: impl Serialize) -> Self {
-        Self {
-            jsonrpc: "2.0".to_string(),
-            method: method.into(),
-            params: Some(serde_json::to_value(params).unwrap()),
-        }
-    }
-}
-
-impl IpcError {
-    /// Create a new error
-    pub fn new(code: i32, message: impl Into<String>) -> Self {
-        Self {
-            code,
-            message: message.into(),
-            data: None,
-        }
-    }
-
-    /// Create an error with additional data
-    pub fn with_data(code: i32, message: impl Into<String>, data: impl Serialize) -> Self {
-        Self {
-            code,
-            message: message.into(),
-            data: Some(serde_json::to_value(data).unwrap()),
-        }
-    }
-
-    /// Parse error
-    pub fn parse_error() -> Self {
-        Self::new(ERROR_PARSE, "Parse error")
-    }
-
-    /// Invalid request error
-    pub fn invalid_request(reason: impl Into<String>) -> Self {
-        Self::new(
-            ERROR_INVALID_REQUEST,
-            format!("Invalid request: {}", reason.into()),
-        )
-    }
-
-    /// Method not found error
-    pub fn method_not_found(method: impl AsRef<str>) -> Self {
-        Self::new(
-            ERROR_METHOD_NOT_FOUND,
-            format!("Method not found: {}", method.as_ref()),
-        )
-    }
-
-    /// Invalid params error
-    pub fn invalid_params(reason: impl Into<String>) -> Self {
-        Self::new(
-            ERROR_INVALID_PARAMS,
-            format!("Invalid params: {}", reason.into()),
-        )
-    }
-
-    /// Internal error
-    pub fn internal_error(reason: impl Into<String>) -> Self {
-        Self::new(ERROR_INTERNAL, format!("Internal error: {}", reason.into()))
-    }
-
-    /// Parameter not found error
-    pub fn param_not_found(id: impl AsRef<str>) -> Self {
-        Self::new(
-            ERROR_PARAM_NOT_FOUND,
-            format!("Parameter not found: {}", id.as_ref()),
-        )
-    }
-
-    /// Parameter out of range error
-    pub fn param_out_of_range(id: impl AsRef<str>, value: f32) -> Self {
-        Self::new(
-            ERROR_PARAM_OUT_OF_RANGE,
-            format!("Parameter '{}' value {} out of range", id.as_ref(), value),
-        )
-    }
-}
 
 #[cfg(test)]
 mod tests {
