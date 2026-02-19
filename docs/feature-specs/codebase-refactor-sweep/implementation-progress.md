@@ -2332,3 +2332,69 @@
 - **Architect escalation: NO**
   - Reason: all changes stayed within bounded Tier 2 quick-scan cleanup scope; no redesign or ownership ambiguity required architectural input.
 
+---
+
+## Tier 2 — Batch 2 quick-scan cleanup
+
+### Scope
+
+- Tier: **Tier 2 (quick scan)**
+- Batch: **Batch 2**
+- Goal: Bounded cleanup only (naming consistency, dead/unused cleanup, obvious local helper extraction, error-message consistency) with **no behavior/API/architecture changes**.
+
+### Files Touched
+
+- `cli/src/project/detection.rs`
+  - Introduced shared `PROJECT_CONTEXT_HINT` constant to remove duplicated guidance text.
+  - Standardized missing-marker diagnostics by appending the same guidance hint to missing `ui/package.json` and `engine/Cargo.toml` errors.
+
+- `cli/src/project/dylib.rs`
+  - Extracted duplicated debug-directory rendering into local helper `format_debug_dirs(...)`.
+  - Reused helper for both "build output directory not found" error paths for message consistency.
+
+- `dev-server/src/host.rs`
+  - Extracted duplicated constructor state initialization into local helper `initialize_shared_state()`.
+  - Applied small naming consistency cleanup in `request_resize(...)` argument names (`width`, `height`).
+
+- `engine/crates/wavecraft-processors/src/oscillator.rs`
+  - Extracted phase-advance/wrap logic into local helper `advance_phase(...)` to remove inline duplication.
+  - Aligned `level` parameter doc wording with actual normalized range (`0.0 – 1.0`).
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Appended Tier 2 Batch 2 record.
+
+### Bounded-Change Invariants
+
+- [x] No behavior changes introduced.
+- [x] No public API surface changes introduced.
+- [x] No architecture changes introduced.
+- [x] Cleanup remained local to naming/consistency/helper extraction scope.
+- [x] No roadmap or archived spec files were modified.
+
+### Validation
+
+- `cargo fmt --manifest-path cli/Cargo.toml` — **PASSED**
+- `cargo test --manifest-path cli/Cargo.toml` — **PASSED**
+- `cargo fmt --manifest-path dev-server/Cargo.toml` — **PASSED**
+- `cargo clippy --manifest-path dev-server/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+  - Note: one intermediate clippy failure (`clippy::type_complexity`) from newly introduced helper return tuple was fixed by switching to a small private `SharedState` struct; rerun passed.
+- `cargo test --manifest-path dev-server/Cargo.toml` — **PASSED**
+- `cargo fmt --manifest-path engine/Cargo.toml` — **FAILED** (`Failed to find targets`)
+- `cargo fmt --manifest-path engine/Cargo.toml --all` — **PASSED** (required fallback)
+- `cargo clippy --manifest-path engine/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path engine/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**
+
+### Deferred Follow-ups
+
+- **Candidate:** consolidate repeated project-structure validation checks in `cli/src/project/detection.rs` into explicit small validators (`require_dir`, `require_file`) if additional detection branches are added.
+  - Deferred to avoid broadening quick-scan scope beyond bounded cleanup.
+
+- **Candidate:** consider replacing `f32` waveform index in `OscillatorParams` with an enum-backed parameter abstraction at processor boundary.
+  - Deferred because this would be a behavior/contract redesign (outside Tier 2 bounded cleanup).
+
+### Escalation Decision
+
+- **Architect escalation: NO**
+  - Reason: changes were strictly local cleanups with no ownership ambiguity and no architectural redesign.
+

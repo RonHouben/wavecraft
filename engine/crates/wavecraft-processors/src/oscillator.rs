@@ -51,6 +51,15 @@ pub fn generate_waveform_sample(waveform: Waveform, phase: f32) -> f32 {
     }
 }
 
+#[inline]
+fn advance_phase(phase: &mut f32, phase_delta: f32) {
+    // Advance phase, wrapping at 1.0 to avoid floating-point drift.
+    *phase += phase_delta;
+    if *phase >= 1.0 {
+        *phase -= 1.0;
+    }
+}
+
 /// Oscillator parameters.
 #[derive(Clone)]
 pub struct OscillatorParams {
@@ -63,7 +72,7 @@ pub struct OscillatorParams {
     /// Frequency in Hz. `factor = 2.5` gives a logarithmic feel in the UI.
     pub frequency: f32,
 
-    /// Output level (0 % – 100 %).
+    /// Output level as normalized amplitude (0.0 – 1.0).
     pub level: f32,
 }
 
@@ -187,12 +196,7 @@ impl Processor for Oscillator {
             self.phase = start_phase;
             for sample in channel.iter_mut() {
                 *sample += generate_waveform_sample(waveform, self.phase) * params.level;
-
-                // Advance phase, wrapping at 1.0 to avoid floating-point drift.
-                self.phase += phase_delta;
-                if self.phase >= 1.0 {
-                    self.phase -= 1.0;
-                }
+                advance_phase(&mut self.phase, phase_delta);
             }
         }
     }

@@ -6,6 +6,9 @@
 use anyhow::{bail, Result};
 use std::path::{Path, PathBuf};
 
+const PROJECT_CONTEXT_HINT: &str =
+    "Run this command from a plugin project created with `wavecraft create`.";
+
 /// Markers that identify a Wavecraft plugin project.
 #[derive(Debug)]
 #[allow(dead_code)] // Fields retained for future use (e.g., version detection)
@@ -40,24 +43,30 @@ impl ProjectMarkers {
         if !ui_dir.is_dir() {
             bail!(
                 "Not a Wavecraft project: missing 'ui/' directory.\n\
-                 Run this command from a plugin project created with `wavecraft create`."
+                 {PROJECT_CONTEXT_HINT}"
             );
         }
 
         if !engine_dir.is_dir() {
             bail!(
                 "Not a Wavecraft project: missing 'engine/' directory.\n\
-                 Run this command from a plugin project created with `wavecraft create`."
+                 {PROJECT_CONTEXT_HINT}"
             );
         }
 
         // Check required files
         if !ui_package_json.is_file() {
-            bail!("Invalid project structure: missing 'ui/package.json'");
+            bail!(
+                "Invalid project structure: missing 'ui/package.json'.\n\
+                 {PROJECT_CONTEXT_HINT}"
+            );
         }
 
         if !engine_cargo_toml.is_file() {
-            bail!("Invalid project structure: missing 'engine/Cargo.toml'");
+            bail!(
+                "Invalid project structure: missing 'engine/Cargo.toml'.\n\
+                 {PROJECT_CONTEXT_HINT}"
+            );
         }
 
         // Check if this is the SDK workspace (has [workspace] in engine/Cargo.toml)

@@ -38,7 +38,31 @@ pub struct DevServerHost {
     param_bridge: Option<Arc<AtomicParameterBridge>>,
 }
 
+struct SharedState {
+    latest_meter_frame: Arc<RwLock<Option<MeterFrame>>>,
+    latest_oscilloscope_frame: Arc<RwLock<Option<OscilloscopeFrame>>>,
+    audio_status: Arc<RwLock<AudioRuntimeStatus>>,
+}
+
 impl DevServerHost {
+    fn initialize_shared_state() -> SharedState {
+        let latest_meter_frame = Arc::new(RwLock::new(None));
+        let latest_oscilloscope_frame = Arc::new(RwLock::new(None));
+        let audio_status = Arc::new(RwLock::new(AudioRuntimeStatus {
+            phase: AudioRuntimePhase::Disabled,
+            diagnostic: None,
+            sample_rate: None,
+            buffer_size: None,
+            updated_at_ms: now_millis(),
+        }));
+
+        SharedState {
+            latest_meter_frame,
+            latest_oscilloscope_frame,
+            audio_status,
+        }
+    }
+
     /// Create a new dev server host with parameter metadata.
     ///
     /// # Arguments
@@ -50,21 +74,13 @@ impl DevServerHost {
     #[cfg_attr(feature = "audio", allow(dead_code))]
     pub fn new(parameters: Vec<ParameterInfo>) -> Self {
         let inner = InMemoryParameterHost::new(parameters);
-        let latest_meter_frame = Arc::new(RwLock::new(None));
-        let latest_oscilloscope_frame = Arc::new(RwLock::new(None));
-        let audio_status = Arc::new(RwLock::new(AudioRuntimeStatus {
-            phase: AudioRuntimePhase::Disabled,
-            diagnostic: None,
-            sample_rate: None,
-            buffer_size: None,
-            updated_at_ms: now_millis(),
-        }));
+        let shared_state = Self::initialize_shared_state();
 
         Self {
             inner,
-            latest_meter_frame,
-            latest_oscilloscope_frame,
-            audio_status,
+            latest_meter_frame: shared_state.latest_meter_frame,
+            latest_oscilloscope_frame: shared_state.latest_oscilloscope_frame,
+            audio_status: shared_state.audio_status,
             #[cfg(feature = "audio")]
             param_bridge: None,
         }
@@ -80,21 +96,13 @@ impl DevServerHost {
         bridge: Arc<AtomicParameterBridge>,
     ) -> Self {
         let inner = InMemoryParameterHost::new(parameters);
-        let latest_meter_frame = Arc::new(RwLock::new(None));
-        let latest_oscilloscope_frame = Arc::new(RwLock::new(None));
-        let audio_status = Arc::new(RwLock::new(AudioRuntimeStatus {
-            phase: AudioRuntimePhase::Disabled,
-            diagnostic: None,
-            sample_rate: None,
-            buffer_size: None,
-            updated_at_ms: now_millis(),
-        }));
+        let shared_state = Self::initialize_shared_state();
 
         Self {
             inner,
-            latest_meter_frame,
-            latest_oscilloscope_frame,
-            audio_status,
+            latest_meter_frame: shared_state.latest_meter_frame,
+            latest_oscilloscope_frame: shared_state.latest_oscilloscope_frame,
+            audio_status: shared_state.audio_status,
             param_bridge: Some(bridge),
         }
     }
@@ -184,8 +192,8 @@ impl ParameterHost for DevServerHost {
             .clone()
     }
 
-    fn request_resize(&self, _width: u32, _height: u32) -> bool {
-        self.inner.request_resize(_width, _height)
+    fn request_resize(&self, width: u32, height: u32) -> bool {
+        self.inner.request_resize(width, height)
     }
 
     fn get_audio_status(&self) -> Option<AudioRuntimeStatus> {
