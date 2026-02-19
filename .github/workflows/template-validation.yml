@@ -210,6 +210,8 @@ jobs:
 
       - name: Bounded wavecraft start smoke (git-source mode)
         working-directory: /tmp/test-plugin-git
+        env:
+          WAVECRAFT_ALLOW_NO_AUDIO: "1"
         run: |
           if [ ! -f engine/Cargo.toml ] || [ -d sdk-template ]; then
             echo "❌ Expected generated plugin root (with engine/Cargo.toml and no sdk-template/) but current directory is: $(pwd)"

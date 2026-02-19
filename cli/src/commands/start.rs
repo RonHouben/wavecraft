@@ -48,6 +48,7 @@ pub struct StartCommand {
 
 const SDK_TSCONFIG_PATHS_MARKER: &str =
     r#""@wavecraft/core": ["../../ui/packages/core/src/index.ts"]"#;
+const ALLOW_NO_AUDIO_ENV: &str = "WAVECRAFT_ALLOW_NO_AUDIO";
 const SDK_TSCONFIG_PATHS_SNIPPET: &str = r#"    /* SDK development — resolve @wavecraft packages from monorepo source */
     "baseUrl": ".",
     "paths": {
@@ -351,6 +352,19 @@ fn prompt_install() -> Result<bool> {
     Ok(response.is_empty() || response == "y" || response == "yes")
 }
 
+fn parse_allow_no_audio_env(value: &str) -> bool {
+    matches!(
+        value.trim().to_ascii_lowercase().as_str(),
+        "1" | "true" | "yes" | "on"
+    )
+}
+
+fn allow_no_audio_runtime_fallback() -> bool {
+    std::env::var(ALLOW_NO_AUDIO_ENV)
+        .map(|value| parse_allow_no_audio_env(&value))
+        .unwrap_or(false)
+}
+
 /// Try to start audio processing in-process via FFI vtable.
 ///
 /// - If successful, returns the started audio handle and mode details.
@@ -449,7 +463,10 @@ fn try_start_audio_in_process(
                 "{}",
                 style("⚠ Failed to create audio processor (create returned null)").yellow()
             );
-            println!("  Aborting startup: audio runtime is required in SDK dev mode.");
+            println!(
+                "  Audio runtime startup failed (strict mode aborts; set {}=1 to continue without audio).",
+                ALLOW_NO_AUDIO_ENV
+            );
             println!();
             return Err(AudioStartupFailure {
                 code: AudioDiagnosticCode::ProcessorCreateFailed,
@@ -477,7 +494,10 @@ fn try_start_audio_in_process(
                 style(format!("⚠ Audio init failed: {:#}", e)).yellow()
             );
 
-            println!("  Aborting startup: audio runtime is required in SDK dev mode.");
+            println!(
+                "  Audio runtime startup failed (strict mode aborts; set {}=1 to continue without audio).",
+                ALLOW_NO_AUDIO_ENV
+            );
 
             return Err(AudioStartupFailure {
                 code,
@@ -496,7 +516,10 @@ fn try_start_audio_in_process(
                 "{}",
                 style(format!("⚠ Failed to start audio: {}", e)).yellow()
             );
-            println!("  Aborting startup: audio runtime is required in SDK dev mode.");
+            println!(
+                "  Audio runtime startup failed (strict mode aborts; set {}=1 to continue without audio).",
+                ALLOW_NO_AUDIO_ENV
+            );
 
             return Err(AudioStartupFailure {
                 code: AudioDiagnosticCode::StreamStartFailed,
@@ -956,6 +979,7 @@ fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u16) -> Resu
     #[cfg(feature = "audio-dev")]
     let (audio_handle, _runtime_loader) = {
         let ws_handle = server.handle();
+        let allow_no_audio = allow_no_audio_runtime_fallback();
 
         let initializing_status =
             wavecraft_dev_server::audio_status(AudioRuntimePhase::Initializing, None, None);
@@ -976,7 +1000,7 @@ fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u16) -> Resu
         }
 
         let runtime_loader = match load_runtime_plugin_loader(&project.engine_dir) {
-            Ok(loader) => loader,
+            Ok(loader) => Some(loader),
             Err(error) => {
                 let message = error.to_string();
                 let (code, hint) = classify_runtime_loader_error(&message);
@@ -1003,57 +1027,85 @@ fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u16) -> Resu
                     );
                 }
 
-                anyhow::bail!("Audio startup failed ({:?}): {}", code, message);
+                if allow_no_audio {
+                    println!(
+                        "{}",
+                        style(format!(
+                            "⚠ Audio runtime disabled ({:?}): {}. Continuing in degraded mode because {}=1.",
+                            code, message, ALLOW_NO_AUDIO_ENV
+                        ))
+                        .yellow()
+                    );
+                    None
+                } else {
+                    anyhow::bail!("Audio startup failed ({:?}): {}", code, message);
+                }
             }
         };
 
-        let audio_handle = match runtime.block_on(async {
-            try_start_audio_in_process(
-                &runtime_loader,
-                host.clone(),
-                ws_handle.clone(),
-                param_bridge.clone(),
-            )
-        }) {
-            Ok(started) => {
-                let status = status_for_running_audio(started.sample_rate, started.buffer_size);
-                host.set_audio_status(status.clone());
-                if let Err(error) =
-                    runtime.block_on(ws_handle.broadcast_audio_status_changed(&status))
-                {
-                    println!(
-                        "{}",
-                        style(format!("⚠ Failed to broadcast audio status: {}", error)).yellow()
-                    );
-                }
+        let audio_handle = if let Some(runtime_loader) = runtime_loader.as_ref() {
+            match runtime.block_on(async {
+                try_start_audio_in_process(
+                    runtime_loader,
+                    host.clone(),
+                    ws_handle.clone(),
+                    param_bridge.clone(),
+                )
+            }) {
+                Ok(started) => {
+                    let status = status_for_running_audio(started.sample_rate, started.buffer_size);
+                    host.set_audio_status(status.clone());
+                    if let Err(error) =
+                        runtime.block_on(ws_handle.broadcast_audio_status_changed(&status))
+                    {
+                        println!(
+                            "{}",
+                            style(format!("⚠ Failed to broadcast audio status: {}", error)).yellow()
+                        );
+                    }
 
-                Some(started.handle)
-            }
-            Err(failure) => {
-                let status = wavecraft_dev_server::audio_status_with_diagnostic(
-                    AudioRuntimePhase::Failed,
-                    failure.code,
-                    failure.message.clone(),
-                    failure.hint,
-                    None,
-                    None,
-                );
-                host.set_audio_status(status.clone());
-                if let Err(error) =
-                    runtime.block_on(ws_handle.broadcast_audio_status_changed(&status))
-                {
-                    println!(
-                        "{}",
-                        style(format!("⚠ Failed to broadcast audio status: {}", error)).yellow()
-                    );
+                    Some(started.handle)
                 }
+                Err(failure) => {
+                    let status = wavecraft_dev_server::audio_status_with_diagnostic(
+                        AudioRuntimePhase::Failed,
+                        failure.code,
+                        failure.message.clone(),
+                        failure.hint,
+                        None,
+                        None,
+                    );
+                    host.set_audio_status(status.clone());
+                    if let Err(error) =
+                        runtime.block_on(ws_handle.broadcast_audio_status_changed(&status))
+                    {
+                        println!(
+                            "{}",
+                            style(format!("⚠ Failed to broadcast audio status: {}", error)).yellow()
+                        );
+                    }
 
-                anyhow::bail!(
-                    "Audio startup failed ({:?}): {}",
-                    failure.code,
-                    failure.message
-                );
+                    if allow_no_audio {
+                        println!(
+                            "{}",
+                            style(format!(
+                                "⚠ Audio runtime disabled ({:?}): {}. Continuing in degraded mode because {}=1.",
+                                failure.code, failure.message, ALLOW_NO_AUDIO_ENV
+                            ))
+                            .yellow()
+                        );
+                        None
+                    } else {
+                        anyhow::bail!(
+                            "Audio startup failed ({:?}): {}",
+                            failure.code,
+                            failure.message
+                        );
+                    }
+                }
             }
+        } else {
+            None
         };
 
         (audio_handle, runtime_loader)
@@ -1096,6 +1148,11 @@ fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u16) -> Resu
     println!("  UI:        http://localhost:{}", ui_port);
     if has_audio {
         println!("  Audio:     Real-time OS input (in-process FFI)");
+    } else if allow_no_audio_runtime_fallback() {
+        println!(
+            "  Audio:     Disabled (degraded mode via {}=1)",
+            ALLOW_NO_AUDIO_ENV
+        );
     }
     println!();
     println!("{}", style("Press Ctrl+C to stop").dim());
@@ -1325,7 +1382,7 @@ fn create_temp_dylib_copy(dylib_path: &Path) -> Result<PathBuf> {
 mod tests {
     use std::fs;
 
-    use super::{apply_sdk_tsconfig_paths, TsconfigPathsInjection};
+    use super::{apply_sdk_tsconfig_paths, parse_allow_no_audio_env, TsconfigPathsInjection};
 
     #[cfg(feature = "audio-dev")]
     use super::classify_audio_init_error;
@@ -1353,6 +1410,21 @@ mod tests {
         assert!(output.contains(r#""@wavecraft/core": ["../../ui/packages/core/src/index.ts"]"#));
         assert!(output
             .contains(r#""@wavecraft/components": ["../../ui/packages/components/src/index.ts"]"#));
+    }
+
+    #[test]
+    fn parse_allow_no_audio_env_accepts_opt_in_values() {
+        assert!(parse_allow_no_audio_env("1"));
+        assert!(parse_allow_no_audio_env("true"));
+        assert!(parse_allow_no_audio_env("YES"));
+        assert!(parse_allow_no_audio_env(" on "));
+    }
+
+    #[test]
+    fn parse_allow_no_audio_env_rejects_non_opt_in_values() {
+        assert!(!parse_allow_no_audio_env("0"));
+        assert!(!parse_allow_no_audio_env("false"));
+        assert!(!parse_allow_no_audio_env(""));
     }
 
     #[test]
