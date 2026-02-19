@@ -117,16 +117,53 @@ Files in this range across all crates and packages. Focus areas:
 
 ---
 
+## User Story 5: Lessons Learned — Coding Guidelines Updates
+
+**As a** Wavecraft SDK maintainer
+**I want** common patterns, anti-patterns, and improvement opportunities discovered during the refactor captured as coding guideline updates
+**So that** the same issues don't recur in new code and contributors have clear guidance to follow
+
+### Process
+
+During each tier of the refactor, the Coder should track recurring issues and patterns that should be codified. At the end of the sweep, these are distilled into updates to the coding standards.
+
+### What to Capture
+
+- **Recurring anti-patterns** — What mistakes kept appearing? (e.g., "functions over 100 lines", "error messages without context")
+- **Effective abstractions** — What extractions worked well? (e.g., "builder pattern for complex setup", "trait extraction for platform code")
+- **File organization rules** — Size thresholds, module splitting conventions, when to create a new file vs. extend existing
+- **Error handling patterns** — Consistent Result types, error context chains, actionable messages
+- **Naming conventions** — Any gaps or ambiguities discovered in current naming standards
+- **Testing patterns** — How structural changes affected tests; what test organization works best
+
+### Acceptance Criteria
+
+- [ ] A `lessons-learned.md` document is created in the feature-spec folder capturing all findings
+- [ ] At least the top 5 most impactful patterns are identified with before/after examples
+- [ ] Concrete PRs or items are proposed for updating `docs/architecture/coding-standards*.md` files
+- [ ] Each proposed guideline update includes rationale (why) and enforcement method (how — lint rule, code review checklist, etc.)
+- [ ] DocWriter agent is invoked to apply approved updates to the coding standards documents
+
+### Notes
+
+- This is a **passive output** of the refactoring work — the Coder tracks findings during Tiers 1-3, not a separate pass
+- Focus on patterns that are **actionable and enforceable**, not vague advice
+- Language-specific findings go to the relevant coding standards doc (Rust, TypeScript, CSS, Testing)
+- Cross-cutting findings go to the main `coding-standards.md`
+
+---
+
 ## Prioritization
 
-| Story                     | Priority   | Estimated Effort | Risk                                      |
-| ------------------------- | ---------- | ---------------- | ----------------------------------------- |
-| US1: Tier 1 Deep Refactor | **High**   | Large            | Medium (structural changes in core files) |
-| US2: Tier 2 Quick Scan    | **Medium** | Medium           | Low (focused improvements)                |
-| US3: Tier 3 Lint Pass     | **Low**    | Small            | Very Low (automated tooling)              |
-| US4: QoL Improvements     | **Medium** | Small            | Low (additive improvements)               |
+| Story                             | Priority   | Estimated Effort | Risk                                      |
+| --------------------------------- | ---------- | ---------------- | ----------------------------------------- |
+| US1: Tier 1 Deep Refactor         | **High**   | Large            | Medium (structural changes in core files) |
+| US2: Tier 2 Quick Scan            | **Medium** | Medium           | Low (focused improvements)                |
+| US3: Tier 3 Lint Pass             | **Low**    | Small            | Very Low (automated tooling)              |
+| US4: QoL Improvements             | **Medium** | Small            | Low (additive improvements)               |
+| US5: Lessons Learned / Guidelines | **Medium** | Small            | Very Low (documentation output)           |
 
-**Execution order:** US3 (lint baseline) → US1 (deep refactor) → US2 (quick scan) → US4 (QoL) → US3 again (final lint pass)
+**Execution order:** US3 (lint baseline) → US1 (deep refactor) → US2 (quick scan) → US4 (QoL) → US3 again (final lint pass) → US5 (distill findings into guidelines)
 
 ---
 
@@ -159,6 +196,8 @@ Files in this range across all crates and packages. Focus areas:
 - [ ] `cargo xtask ci-check` passes
 - [ ] QoL improvements applied where found
 - [ ] No behavior changes beyond documented minor improvements
+- [ ] `lessons-learned.md` created with top patterns and proposed coding guideline updates
+- [ ] Coding standards updates proposed (with before/after examples)
 
 ---
 
