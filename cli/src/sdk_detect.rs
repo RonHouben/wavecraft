@@ -15,6 +15,7 @@ use std::path::{Path, PathBuf};
 
 /// Marker file that identifies the wavecraft SDK repository root.
 const SDK_MARKER: &str = "engine/crates/wavecraft-nih_plug/Cargo.toml";
+const SDK_CRATES_RELATIVE: &str = "engine/crates";
 
 /// Attempts to detect whether the CLI is running from a source checkout
 /// of the wavecraft SDK (i.e., via `cargo run`).
@@ -35,7 +36,7 @@ pub fn detect_sdk_repo() -> Option<PathBuf> {
 
     // Walk up from the binary to find the monorepo root
     let root = find_monorepo_root(&exe_path)?;
-    let crates_dir = root.join("engine").join("crates");
+    let crates_dir = join_repo_path(&root, SDK_CRATES_RELATIVE);
 
     // Final validation: ensure the crates directory actually exists
     if crates_dir.is_dir() {
@@ -60,12 +61,20 @@ fn is_cargo_run_binary(exe_path: &Path) -> bool {
 fn find_monorepo_root(start: &Path) -> Option<PathBuf> {
     let mut current = start.parent();
     while let Some(dir) = current {
-        if dir.join(SDK_MARKER).is_file() {
+        if has_sdk_marker(dir) {
             return Some(dir.to_path_buf());
         }
         current = dir.parent();
     }
     None
+}
+
+fn join_repo_path(root: &Path, relative: &str) -> PathBuf {
+    root.join(relative)
+}
+
+fn has_sdk_marker(dir: &Path) -> bool {
+    join_repo_path(dir, SDK_MARKER).is_file()
 }
 
 #[cfg(test)]

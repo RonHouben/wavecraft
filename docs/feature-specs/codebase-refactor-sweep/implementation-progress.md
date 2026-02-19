@@ -1947,6 +1947,72 @@
 
 ---
 
+## Tier 2 — Batch 7 quick-scan cleanup
+
+### Scope
+
+- Tier: **Tier 2 (quick-scan cleanup)**
+- Batch: **7**
+- Goal: Apply bounded, behavior-preserving readability/maintainability cleanups only (no architecture shifts, no cross-crate API changes).
+
+### Files
+
+1. `cli/src/commands/create.rs`
+   - Extracted small local helpers for:
+     - output directory resolution
+     - default author metadata resolution
+     - git init command execution + success check
+   - Preserved command flow and all CLI UX text/output.
+
+2. `cli/src/sdk_detect.rs`
+   - Extracted minor path/marker helpers for repeated join/marker checks:
+     - `join_repo_path(...)`
+     - `has_sdk_marker(...)`
+   - Added constant reuse for `engine/crates` relative path.
+   - Preserved detection semantics.
+
+3. `dev-server/src/audio/atomic_params.rs`
+   - Added local ordering constant reuse (`PARAM_ORDERING`) and lookup helper (`lookup_param(...)`).
+   - Preserved lock-free semantics (`AtomicF32`, relaxed ordering, immutable map ownership).
+
+4. `engine/crates/wavecraft-processors/src/oscilloscope.rs`
+   - Extracted small internal helpers to flatten capture flow:
+     - frame sample capture
+     - history update
+     - trigger-start resolution
+     - aligned window copy
+     - frame publication
+   - Preserved capture/trigger/publication behavior and test expectations.
+
+### Invariants
+
+- [x] Behavior-preserving cleanup only.
+- [x] No architecture or cross-crate API changes.
+- [x] Changes bounded to Batch 7 target files + this ledger update.
+- [x] User-facing CLI text/flow unchanged for `create` command.
+- [x] Lock-free semantics preserved in atomic parameter bridge.
+- [x] Oscilloscope output semantics preserved (triggering/history/alignment/publication).
+
+### Validation
+
+- `cargo fmt --manifest-path cli/Cargo.toml --all` — **PASSED**
+- `cargo fmt --manifest-path dev-server/Cargo.toml --all` — **PASSED**
+- `cargo fmt --manifest-path engine/Cargo.toml --all` — **PASSED**
+- `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo clippy --manifest-path dev-server/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo clippy --manifest-path engine/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path cli/Cargo.toml` — **PASSED**
+- `cargo test --manifest-path dev-server/Cargo.toml` — **PASSED**
+- `cargo test --manifest-path engine/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**
+
+### Escalation
+
+- **Architect escalation: NO**
+  - Rationale: all changes are local helper extractions/constant reuse within existing file boundaries, with no ambiguous ownership split or design tradeoffs.
+
+---
+
 ## Slice 6 — Start-time stream/ring setup orchestration decomposition (audio/server.rs)
 
 ### Scope
