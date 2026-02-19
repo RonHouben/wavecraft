@@ -2,6 +2,11 @@
 //!
 //! This module conditionally embeds the built React UI assets at compile time.
 //! The embedded fallback assets live in `assets/ui-dist/` within the crate.
+//!
+//! Distribution contract:
+//! - Non-discovery builds embed fallback UI assets from `assets/ui-dist/`.
+//! - Those files must be tracked in git so git-tag/source consumers compile
+//!   without requiring a local UI build step.
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use include_dir::{Dir, include_dir};
@@ -84,13 +89,42 @@ fn guess_mime_type(path: &str) -> &'static str {
 mod tests {
     use super::*;
 
+    fn assert_required_asset(path: &str) {
+        let asset = get_asset(path);
+        assert!(
+            asset.is_some(),
+            "required fallback asset should exist in embedded assets: {}",
+            path
+        );
+    }
+
     #[test]
     fn test_index_html_exists() {
         // The fallback embedded index should always exist.
-        let asset = get_asset("index.html");
+        assert_required_asset("index.html");
+    }
+
+    #[test]
+    fn test_required_fallback_assets_exist() {
+        // Distribution contract: embedded fallback UI includes index.html and at
+        // least one CSS + JS bundle under assets/ (typically hashed filenames).
+        assert_required_asset("index.html");
+
+        let assets = list_assets();
+        let has_css = assets
+            .iter()
+            .any(|path| path.starts_with("assets/") && path.ends_with(".css"));
+        let has_js = assets
+            .iter()
+            .any(|path| path.starts_with("assets/") && path.ends_with(".js"));
+
         assert!(
-            asset.is_some(),
-            "index.html should exist in embedded assets"
+            has_css,
+            "required fallback asset should include at least one CSS file under assets/"
+        );
+        assert!(
+            has_js,
+            "required fallback asset should include at least one JS file under assets/"
         );
     }
 
