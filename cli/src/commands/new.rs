@@ -108,13 +108,13 @@ impl NewCommand {
         );
         pb.set_message("Initializing git repository...");
 
-        let status = Command::new("git")
+        let init_status = Command::new("git")
             .args(["init"])
             .current_dir(dir)
             .output()
             .context("Failed to run git init")?;
 
-        if !status.status.success() {
+        if !init_status.status.success() {
             pb.finish_with_message("Git initialization failed (continuing...)");
             eprintln!(
                 "{}",
@@ -122,7 +122,41 @@ impl NewCommand {
                     .yellow()
             );
         } else {
-            pb.finish_with_message("Git repository initialized");
+            pb.set_message("Creating initial git commit...");
+
+            let add_status = Command::new("git")
+                .args(["add", "."])
+                .current_dir(dir)
+                .output()
+                .context("Failed to run git add")?;
+
+            if !add_status.status.success() {
+                pb.finish_with_message("Git staging failed (continuing...)");
+                eprintln!(
+                    "{}",
+                    style("Warning: git add failed. You can stage files manually.").yellow()
+                );
+                return Ok(());
+            }
+
+            let commit_status = Command::new("git")
+                .args(["commit", "-m", "Initial commit"])
+                .current_dir(dir)
+                .output()
+                .context("Failed to run git commit")?;
+
+            if !commit_status.status.success() {
+                pb.finish_with_message("Initial commit failed (continuing...)");
+                eprintln!(
+                    "{}",
+                    style(
+                        "Warning: git commit failed. Configure git (name/email) or commit manually."
+                    )
+                    .yellow()
+                );
+            } else {
+                pb.finish_with_message("Git repository initialized with initial commit");
+            }
         }
 
         Ok(())
