@@ -209,7 +209,13 @@ jobs:
         working-directory: /tmp/test-plugin-git/ui
 
       - name: Bounded wavecraft start smoke (git-source mode)
+        working-directory: /tmp/test-plugin-git
         run: |
+          if [ ! -f engine/Cargo.toml ] || [ -d sdk-template ]; then
+            echo "❌ Expected generated plugin root (with engine/Cargo.toml and no sdk-template/) but current directory is: $(pwd)"
+            exit 1
+          fi
+
           set +e
           timeout 180s /tmp/wavecraft-installed-cli/wavecraft start --no-install --port 39091 --ui-port 39092 > /tmp/test-plugin-git/start-smoke.log 2>&1
           STATUS=$?
