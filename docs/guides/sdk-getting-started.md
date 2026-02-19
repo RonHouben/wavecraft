@@ -64,6 +64,9 @@ The CLI creates a complete project with:
 - CLI-owned build/install workflow (`wavecraft bundle`, `wavecraft bundle --install`)
 - Ready-to-build plugin template
 
+By default, `wavecraft create` initializes a git repository and creates an initial commit so the generated project starts in a clean state.
+Use `--no-git` if you prefer to skip git initialization.
+
 > **Tip:** You can customize vendor, email, and URL later by editing `engine/Cargo.toml`
 
 ### 3. Install Dependencies
@@ -189,7 +192,7 @@ When the CLI is updated, it automatically re-executes the new binary to run Phas
 | `--email, -e`  | Contact email (optional)  | —                 |
 | `--url, -u`    | Website URL (optional)    | —                 |
 | `--output, -o` | Output directory          | `./<plugin-name>` |
-| `--no-git`     | Skip git initialization   | false             |
+| `--no-git`     | Skip git init + initial commit | false        |
 
 ---
 
