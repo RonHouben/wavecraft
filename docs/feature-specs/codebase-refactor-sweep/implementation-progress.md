@@ -2823,3 +2823,70 @@
 - **Architect escalation: NO**
   - Rationale: all edits remained within explicit Tier 2 quick-scan cleanup bounds with no ownership or architecture ambiguity.
 
+---
+
+## Tier 2 — Batch 10 quick-scan cleanup
+
+### Scope
+
+- Tier: **Tier 2 (quick-scan cleanup)**
+- Batch: **10**
+- Goal: Apply bounded, behavior-preserving readability/duplication cleanup only (no architecture shifts, no cross-crate API changes).
+
+### Files
+
+1. `cli/src/commands/new.rs`
+   - Extracted tiny local helpers for spinner setup and metadata/output-dir resolution:
+     - `spinner(...)`
+     - `resolve_output_dir(...)`
+     - `resolve_metadata_defaults(...)`
+   - Added git-init outcome formatting helper:
+     - `format_git_init_result(...)`
+   - Preserved command flow and user-facing output text.
+
+2. `cli/src/commands/bundle.rs`
+   - Extracted small helpers for delegated command argument/display assembly:
+     - `delegated_bundle_args(...)`
+     - `delegated_command_display(...)`
+   - Extracted exit status formatting helper:
+     - `format_exit_status(...)`
+   - Improved marker-check readability through local marker helper:
+     - `has_project_marker(...)`
+
+3. `cli/src/commands/extract_params.rs`
+   - Added cohesive local helpers for dylib validation and JSON stdout formatting:
+     - `validate_dylib_path(...)`
+     - `has_expected_dylib_extension(...)`
+     - `expected_dylib_extension(...)`
+     - `print_compact_json(...)`
+   - Preserved extraction behavior and error semantics.
+
+4. `cli/src/commands/extract_processors.rs`
+   - Applied matching local helper structure for dylib validation and compact JSON output:
+     - `validate_dylib_path(...)`
+     - `has_expected_dylib_extension(...)`
+     - `expected_dylib_extension(...)`
+     - `print_compact_json(...)`
+   - Preserved extraction behavior and error semantics.
+
+### Invariants
+
+- [x] Behavior-preserving cleanup only.
+- [x] No architecture shifts introduced.
+- [x] No cross-crate API changes introduced.
+- [x] Edits bounded to Batch 10 target files + this ledger update.
+- [x] CLI command UX/output preserved for `new` and `bundle` command paths.
+- [x] Dylib validation and extraction command behavior preserved in hidden extract commands.
+
+### Validation
+
+- `cargo fmt --manifest-path cli/Cargo.toml --all` — **PASSED**
+- `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path cli/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**
+
+### Escalation
+
+- **Architect escalation: NO**
+  - Rationale: all edits stayed within explicit quick-scan cleanup boundaries and required no ownership or architecture decisions.
+
