@@ -9,11 +9,23 @@
 //! This is the local equivalent of the CI template-validation workflow.
 
 use anyhow::{Context, Result, bail};
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output, Stdio};
+use std::process::{Child, ChildStderr, ChildStdout, Command, Output, Stdio};
 use std::time::Instant;
 use std::{env, fs};
 use std::{thread, time::Duration};
+
+#[cfg(unix)]
+use nix::libc;
+#[cfg(unix)]
+use nix::sys::signal::{Signal, killpg};
+#[cfg(unix)]
+use nix::unistd::{Pid, setpgid};
+#[cfg(unix)]
+use std::os::fd::AsRawFd;
+#[cfg(unix)]
+use std::os::unix::process::CommandExt;
 
 use xtask::output::*;
 
@@ -22,6 +34,9 @@ const TEST_PLUGIN_INTERNAL_ID: &str = "my_plugin";
 const START_SMOKE_TIMEOUT_SECS: u64 = 180;
 const START_SMOKE_WS_PORT: u16 = 39091;
 const START_SMOKE_UI_PORT: u16 = 39092;
+const START_SMOKE_KILL_GRACE_MS: u64 = 2_000;
+const START_SMOKE_POST_EXIT_DRAIN_ATTEMPTS: usize = 5;
+const START_SMOKE_POST_EXIT_DRAIN_SLEEP_MS: u64 = 25;
 
 /// Template validation configuration.
 #[derive(Debug, Clone, Default)]
@@ -544,6 +559,8 @@ fn validate_git_source_start_smoke(
     ui_port: u16,
     verbose: bool,
 ) -> Result<()> {
+    ensure_generated_plugin_root(project_dir)?;
+
     if verbose {
         println!(
             "Running bounded startup smoke: wavecraft start --no-install --port {} --ui-port {}",
@@ -551,33 +568,23 @@ fn validate_git_source_start_smoke(
         );
     }
 
-    let mut child = Command::new(cli_binary)
-        .args([
-            "start",
-            "--no-install",
-            "--port",
-            &ws_port.to_string(),
-            "--ui-port",
-            &ui_port.to_string(),
-        ])
-        .current_dir(project_dir)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .context("Failed to spawn `wavecraft start` for startup smoke")?;
+    let mut child = spawn_start_smoke_child(cli_binary, project_dir, ws_port, ui_port)?;
+    let mut output_capture = ChildOutputCapture::new(&mut child)?;
 
     let start_time = Instant::now();
 
     loop {
+        output_capture
+            .drain_available()
+            .context("Failed to read startup smoke output")?;
+
         if let Some(status) = child
             .try_wait()
             .context("Failed to poll startup smoke process")?
         {
-            let output = child
-                .wait_with_output()
-                .context("Failed to capture startup smoke output")?;
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let stderr = String::from_utf8_lossy(&output.stderr);
+            output_capture.drain_after_exit()?;
+            let stdout = output_capture.stdout_lossy();
+            let stderr = output_capture.stderr_lossy();
             let combined = format!("{}\n{}", stdout, stderr);
 
             cleanup_start_smoke_ports(ws_port, ui_port, verbose);
@@ -591,7 +598,7 @@ fn validate_git_source_start_smoke(
                 );
             }
 
-            if output_contains_asset_regression_signature(&combined) {
+            if output_contains_asset_regression_signature(combined.as_str()) {
                 bail!(
                     "Detected fallback asset regression signature in startup smoke output:\n{}",
                     combined
@@ -610,17 +617,15 @@ fn validate_git_source_start_smoke(
         }
 
         if start_time.elapsed() >= Duration::from_secs(START_SMOKE_TIMEOUT_SECS) {
-            let _ = child.kill();
-            let output = child
-                .wait_with_output()
-                .context("Failed to capture timed startup smoke output")?;
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let stderr = String::from_utf8_lossy(&output.stderr);
+            terminate_start_smoke_child(&mut child, verbose)?;
+            output_capture.drain_after_exit()?;
+            let stdout = output_capture.stdout_lossy();
+            let stderr = output_capture.stderr_lossy();
             let combined = format!("{}\n{}", stdout, stderr);
 
             cleanup_start_smoke_ports(ws_port, ui_port, verbose);
 
-            if output_contains_asset_regression_signature(&combined) {
+            if output_contains_asset_regression_signature(combined.as_str()) {
                 bail!(
                     "Detected fallback asset regression signature in startup smoke output:\n{}",
                     combined
@@ -640,6 +645,234 @@ fn validate_git_source_start_smoke(
 
         thread::sleep(Duration::from_millis(200));
     }
+}
+
+fn ensure_generated_plugin_root(project_dir: &Path) -> Result<()> {
+    let engine_cargo = project_dir.join("engine/Cargo.toml");
+    let sdk_template_dir = project_dir.join("sdk-template");
+
+    if !engine_cargo.is_file() || sdk_template_dir.is_dir() {
+        bail!(
+            "Expected generated plugin root (engine/Cargo.toml present, sdk-template absent), got: {}",
+            project_dir.display()
+        );
+    }
+
+    Ok(())
+}
+
+fn spawn_start_smoke_child(
+    cli_binary: &Path,
+    project_dir: &Path,
+    ws_port: u16,
+    ui_port: u16,
+) -> Result<Child> {
+    let mut command = Command::new(cli_binary);
+    command
+        .args([
+            "start",
+            "--no-install",
+            "--port",
+            &ws_port.to_string(),
+            "--ui-port",
+            &ui_port.to_string(),
+        ])
+        .current_dir(project_dir)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    #[cfg(unix)]
+    {
+        // SAFETY: `pre_exec` runs in the child process after fork and before exec.
+        // We only call async-signal-safe `setpgid(0, 0)` to put the startup smoke
+        // process in its own process group so timeout cleanup can terminate all
+        // descendants that may inherit stdio handles.
+        unsafe {
+            command.pre_exec(|| {
+                setpgid(Pid::from_raw(0), Pid::from_raw(0))
+                    .map_err(|err| io::Error::other(format!("setpgid failed: {err}")))?;
+                Ok(())
+            });
+        }
+    }
+
+    command
+        .spawn()
+        .context("Failed to spawn `wavecraft start` for startup smoke")
+}
+
+fn terminate_start_smoke_child(child: &mut Child, verbose: bool) -> Result<()> {
+    #[cfg(unix)]
+    {
+        let pid_raw = child.id() as i32;
+        if verbose {
+            println!(
+                "Startup smoke timeout reached, terminating process group {}",
+                pid_raw
+            );
+        }
+
+        let process_group = Pid::from_raw(pid_raw);
+
+        // Best effort graceful stop first.
+        let _ = killpg(process_group, Signal::SIGTERM);
+        if wait_for_child_exit(child, Duration::from_millis(START_SMOKE_KILL_GRACE_MS))? {
+            return Ok(());
+        }
+
+        if verbose {
+            println!(
+                "Process group {} still running after SIGTERM, sending SIGKILL",
+                pid_raw
+            );
+        }
+
+        let _ = killpg(process_group, Signal::SIGKILL);
+        if wait_for_child_exit(child, Duration::from_millis(START_SMOKE_KILL_GRACE_MS))? {
+            return Ok(());
+        }
+
+        bail!(
+            "Failed to terminate startup smoke process group {} within bounded timeout",
+            pid_raw
+        );
+    }
+
+    #[cfg(not(unix))]
+    {
+        if verbose {
+            println!("Startup smoke timeout reached, killing process");
+        }
+
+        let _ = child.kill();
+        if wait_for_child_exit(child, Duration::from_millis(START_SMOKE_KILL_GRACE_MS))? {
+            return Ok(());
+        }
+
+        bail!("Failed to terminate startup smoke process within bounded timeout");
+    }
+}
+
+fn wait_for_child_exit(child: &mut Child, timeout: Duration) -> Result<bool> {
+    let started = Instant::now();
+    loop {
+        if child
+            .try_wait()
+            .context("Failed while waiting for startup smoke process to exit")?
+            .is_some()
+        {
+            return Ok(true);
+        }
+
+        if started.elapsed() >= timeout {
+            return Ok(false);
+        }
+
+        thread::sleep(Duration::from_millis(50));
+    }
+}
+
+struct ChildOutputCapture {
+    stdout: ChildStdout,
+    stderr: ChildStderr,
+    stdout_buf: Vec<u8>,
+    stderr_buf: Vec<u8>,
+}
+
+impl ChildOutputCapture {
+    fn new(child: &mut Child) -> Result<Self> {
+        let stdout = child
+            .stdout
+            .take()
+            .context("Startup smoke stdout pipe was not available")?;
+        let stderr = child
+            .stderr
+            .take()
+            .context("Startup smoke stderr pipe was not available")?;
+
+        #[cfg(unix)]
+        {
+            set_nonblocking(stdout.as_raw_fd())
+                .context("Failed to set startup smoke stdout non-blocking")?;
+            set_nonblocking(stderr.as_raw_fd())
+                .context("Failed to set startup smoke stderr non-blocking")?;
+        }
+
+        Ok(Self {
+            stdout,
+            stderr,
+            stdout_buf: Vec::new(),
+            stderr_buf: Vec::new(),
+        })
+    }
+
+    fn drain_available(&mut self) -> Result<usize> {
+        let mut total_read = 0;
+        total_read += drain_nonblocking(&mut self.stdout, &mut self.stdout_buf)
+            .context("Failed draining startup smoke stdout")?;
+        total_read += drain_nonblocking(&mut self.stderr, &mut self.stderr_buf)
+            .context("Failed draining startup smoke stderr")?;
+        Ok(total_read)
+    }
+
+    fn drain_after_exit(&mut self) -> Result<()> {
+        for _ in 0..START_SMOKE_POST_EXIT_DRAIN_ATTEMPTS {
+            let bytes = self.drain_available()?;
+            if bytes == 0 {
+                break;
+            }
+            thread::sleep(Duration::from_millis(START_SMOKE_POST_EXIT_DRAIN_SLEEP_MS));
+        }
+
+        Ok(())
+    }
+
+    fn stdout_lossy(&self) -> String {
+        String::from_utf8_lossy(&self.stdout_buf).into_owned()
+    }
+
+    fn stderr_lossy(&self) -> String {
+        String::from_utf8_lossy(&self.stderr_buf).into_owned()
+    }
+}
+
+fn drain_nonblocking<R: Read>(reader: &mut R, buffer: &mut Vec<u8>) -> io::Result<usize> {
+    let mut total_read = 0;
+    let mut chunk = [0_u8; 8 * 1024];
+
+    loop {
+        match reader.read(&mut chunk) {
+            Ok(0) => break,
+            Ok(n) => {
+                buffer.extend_from_slice(&chunk[..n]);
+                total_read += n;
+            }
+            Err(err) if err.kind() == io::ErrorKind::WouldBlock => break,
+            Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
+            Err(err) => return Err(err),
+        }
+    }
+
+    Ok(total_read)
+}
+
+#[cfg(unix)]
+fn set_nonblocking(fd: i32) -> Result<()> {
+    // SAFETY: `fd` is an open file descriptor owned by the child pipe handles.
+    // `F_GETFL` does not modify memory and returns the descriptor flags.
+    let flags = unsafe { libc::fcntl(fd, libc::F_GETFL) };
+    if flags < 0 {
+        return Err(io::Error::last_os_error()).context("Failed to read file descriptor flags");
+    }
+
+    // SAFETY: `fd` is valid and we only update file status flags by OR-ing
+    // `O_NONBLOCK` onto existing flags.
+    let status = unsafe { libc::fcntl(fd, libc::F_SETFL, flags | libc::O_NONBLOCK) };
+    if status < 0 {
+        return Err(io::Error::last_os_error()).context("Failed to set non-blocking flag");
+    }
+
+    Ok(())
 }
 
 /// Validate the CLI-owned bundle command contract.
@@ -800,6 +1033,7 @@ impl Drop for CleanupGuard {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::tempdir;
 
     #[test]
     fn test_default_config() {
@@ -834,5 +1068,50 @@ mod tests {
     fn test_create_test_plugin_args_git_source_mode() {
         let args = create_test_plugin_args("/tmp/test-plugin", false);
         assert!(!args.iter().any(|arg| arg == "--local-sdk"));
+    }
+
+    #[test]
+    fn test_output_contains_asset_regression_signature_detects_include_dir_path() {
+        let output = r#"panic at include_dir!("$CARGO_MANIFEST_DIR/assets/ui-dist")"#;
+        assert!(output_contains_asset_regression_signature(output));
+    }
+
+    #[test]
+    fn test_output_contains_asset_regression_signature_detects_missing_assets_dir() {
+        let output = "assets/ui-dist: No such file or directory";
+        assert!(output_contains_asset_regression_signature(output));
+    }
+
+    #[test]
+    fn test_output_contains_asset_regression_signature_ignores_unrelated_output() {
+        let output = "All servers running";
+        assert!(!output_contains_asset_regression_signature(output));
+    }
+
+    #[test]
+    fn test_ensure_generated_plugin_root_accepts_generated_project_shape() {
+        let temp = tempdir().expect("tempdir");
+        let root = temp.path();
+        fs::create_dir_all(root.join("engine")).expect("create engine dir");
+        fs::write(root.join("engine/Cargo.toml"), "[package]\nname = \"x\"\n")
+            .expect("write engine cargo");
+
+        ensure_generated_plugin_root(root).expect("expected generated project root to pass");
+    }
+
+    #[test]
+    fn test_ensure_generated_plugin_root_rejects_sdk_repo_shape() {
+        let temp = tempdir().expect("tempdir");
+        let root = temp.path();
+        fs::create_dir_all(root.join("engine")).expect("create engine dir");
+        fs::write(root.join("engine/Cargo.toml"), "[package]\nname = \"x\"\n")
+            .expect("write engine cargo");
+        fs::create_dir_all(root.join("sdk-template")).expect("create sdk-template dir");
+
+        let err = ensure_generated_plugin_root(root).expect_err("expected repo shape to fail");
+        assert!(
+            err.to_string().contains("Expected generated plugin root"),
+            "unexpected error: {err}"
+        );
     }
 }
