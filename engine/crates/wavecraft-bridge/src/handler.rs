@@ -3,6 +3,7 @@
 use crate::error::BridgeError;
 use crate::host::ParameterHost;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 use wavecraft_protocol::{
     GetAllParametersResult, GetAudioStatusResult, GetMeterFrameResult, GetOscilloscopeFrameResult,
     GetParameterParams, GetParameterResult, IpcRequest, IpcResponse, METHOD_GET_ALL_PARAMETERS,
@@ -53,7 +54,7 @@ impl<H: ParameterHost> IpcHandler<H> {
         let request: IpcRequest = match serde_json::from_str(json) {
             Ok(req) => req,
             Err(_e) => {
-                // Can't extract ID from malformed request, use null
+                // Can't extract ID from malformed request, use a synthetic ID.
                 let response = IpcResponse::error(
                     RequestId::Number(0),
                     wavecraft_protocol::IpcError::parse_error(),
@@ -72,21 +73,30 @@ impl<H: ParameterHost> IpcHandler<H> {
         serde_json::to_string(&response).expect("IpcResponse serialization is infallible")
     }
 
+    fn parse_required_params<T>(
+        &self,
+        request: &IpcRequest,
+        method: &'static str,
+    ) -> Result<T, BridgeError>
+    where
+        T: DeserializeOwned,
+    {
+        match &request.params {
+            Some(value) => Ok(serde_json::from_value(value.clone())?),
+            None => Err(BridgeError::InvalidParams {
+                method: method.to_string(),
+                reason: "Missing params".to_string(),
+            }),
+        }
+    }
+
     // ------------------------------------------------------------------------
     // Method Handlers
     // ------------------------------------------------------------------------
 
     fn handle_get_parameter(&self, request: &IpcRequest) -> Result<IpcResponse, BridgeError> {
-        // Parse params
-        let params: GetParameterParams = match &request.params {
-            Some(value) => serde_json::from_value(value.clone())?,
-            None => {
-                return Err(BridgeError::InvalidParams {
-                    method: METHOD_GET_PARAMETER.to_string(),
-                    reason: "Missing params".to_string(),
-                });
-            }
-        };
+        let params: GetParameterParams =
+            self.parse_required_params(request, METHOD_GET_PARAMETER)?;
 
         // Get parameter from host
         let param_info = self
@@ -104,16 +114,8 @@ impl<H: ParameterHost> IpcHandler<H> {
     }
 
     fn handle_set_parameter(&self, request: &IpcRequest) -> Result<IpcResponse, BridgeError> {
-        // Parse params
-        let params: SetParameterParams = match &request.params {
-            Some(value) => serde_json::from_value(value.clone())?,
-            None => {
-                return Err(BridgeError::InvalidParams {
-                    method: METHOD_SET_PARAMETER.to_string(),
-                    reason: "Missing params".to_string(),
-                });
-            }
-        };
+        let params: SetParameterParams =
+            self.parse_required_params(request, METHOD_SET_PARAMETER)?;
 
         // Set parameter
         self.host.set_parameter(&params.id, params.value)?;
@@ -154,16 +156,8 @@ impl<H: ParameterHost> IpcHandler<H> {
     }
 
     fn handle_request_resize(&self, request: &IpcRequest) -> Result<IpcResponse, BridgeError> {
-        // Parse params
-        let params: RequestResizeParams = match &request.params {
-            Some(value) => serde_json::from_value(value.clone())?,
-            None => {
-                return Err(BridgeError::InvalidParams {
-                    method: METHOD_REQUEST_RESIZE.to_string(),
-                    reason: "Missing params".to_string(),
-                });
-            }
-        };
+        let params: RequestResizeParams =
+            self.parse_required_params(request, METHOD_REQUEST_RESIZE)?;
 
         // Request resize from host
         let accepted = self.host.request_resize(params.width, params.height);

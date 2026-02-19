@@ -52,6 +52,7 @@ mod macos;
 
 #[cfg(target_os = "windows")]
 #[cfg(not(feature = "_param-discovery"))]
+#[path = "windows/mod.rs"]
 mod windows;
 
 #[cfg(all(

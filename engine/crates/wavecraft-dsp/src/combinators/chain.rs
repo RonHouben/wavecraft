@@ -26,7 +26,7 @@ where
 
 /// Combined parameters for chained processors.
 ///
-/// Merges parameter specs from both processors, prefixing IDs to avoid collisions.
+/// Merges parameter specs from both processors.
 pub struct ChainParams<PA, PB> {
     pub first: PA,
     pub second: PB,
@@ -51,6 +51,19 @@ where
     PB: ProcessorParams,
 {
     fn param_specs() -> &'static [ParamSpec] {
+        fn extend_specs(target: &mut Vec<ParamSpec>, source: &[ParamSpec]) {
+            for spec in source {
+                target.push(ParamSpec {
+                    name: spec.name,
+                    id_suffix: spec.id_suffix,
+                    range: spec.range.clone(),
+                    default: spec.default,
+                    unit: spec.unit,
+                    group: spec.group,
+                });
+            }
+        }
+
         // WORKAROUND FOR HOT-RELOAD HANG:
         //
         // Do NOT use OnceLock or any locking primitive here. On macOS, when the
@@ -72,29 +85,8 @@ where
 
         let mut merged = Vec::with_capacity(first_specs.len() + second_specs.len());
 
-        // Add first processor's params
-        for spec in first_specs {
-            merged.push(ParamSpec {
-                name: spec.name,
-                id_suffix: spec.id_suffix,
-                range: spec.range.clone(),
-                default: spec.default,
-                unit: spec.unit,
-                group: spec.group,
-            });
-        }
-
-        // Add second processor's params
-        for spec in second_specs {
-            merged.push(ParamSpec {
-                name: spec.name,
-                id_suffix: spec.id_suffix,
-                range: spec.range.clone(),
-                default: spec.default,
-                unit: spec.unit,
-                group: spec.group,
-            });
-        }
+        extend_specs(&mut merged, first_specs);
+        extend_specs(&mut merged, second_specs);
 
         // Leak to get 'static reference (intentional - see comment above)
         Box::leak(merged.into_boxed_slice())

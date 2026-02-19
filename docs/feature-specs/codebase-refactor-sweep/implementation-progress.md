@@ -2271,3 +2271,64 @@
 - **Architect escalation: NO**
   - Reason: the requested migration boundary was explicit and mechanical (module root relocation + minimal path cleanup), and no ownership or behavior tradeoff required architectural guidance.
 
+---
+
+## Tier 2 — Batch 1 quick-scan cleanup
+
+### Scope
+
+- Tier: **Tier 2 (quick scan)**
+- Batch: **Batch 1**
+- Goal: Bounded cleanup only (naming consistency, dead/unused cleanup, obvious local helper extraction, error-message consistency) with **no behavior/API/architecture changes**.
+
+### Files Touched
+
+- `engine/crates/wavecraft-dsp/src/combinators/chain.rs`
+  - Corrected doc wording for `ChainParams` to match actual behavior (merged specs, no ID prefixing).
+  - Extracted local `extend_specs(...)` helper inside `param_specs()` to remove duplicated merge logic.
+
+- `engine/crates/wavecraft-bridge/src/plugin_loader.rs`
+  - Standardized JSON parse display message to generic payload wording (`Failed to parse JSON payload: ...`) for params/processors consistency.
+  - Extracted duplicated FFI JSON load/parse/free sequence into local helper `load_json_via_ffi(...)`.
+
+- `engine/crates/wavecraft-bridge/src/in_memory_host.rs`
+  - Extracted duplicated `ParameterInfo` materialization into local helper `materialize_parameter(...)`.
+  - Reused helper in both `get_parameter(...)` and `get_all_parameters(...)` for local consistency.
+
+- `engine/crates/wavecraft-bridge/src/handler.rs`
+  - Added local helper `parse_required_params(...)` to unify repeated required-param parsing path and missing-param error shape.
+  - Updated malformed-request comment to match implementation (synthetic request ID rather than `null`).
+
+- `engine/crates/wavecraft-nih_plug/src/editor/mod.rs`
+  - Added explicit `#[path = "windows/mod.rs"] mod windows;` to disambiguate module resolution and unblock required validation commands (no runtime behavior change).
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Appended Tier 2 Batch 1 record.
+
+### Bounded-Change Invariants
+
+- [x] No behavior changes introduced.
+- [x] No public API surface changes introduced.
+- [x] No architecture changes introduced.
+- [x] Cleanup remained local to naming/consistency/helper extraction scope.
+- [x] No roadmap or archived spec files were modified.
+
+### Validation
+
+- `cargo fmt --manifest-path engine/Cargo.toml` — **FAILED** (`Failed to find targets`)
+- `cargo fmt --manifest-path engine/Cargo.toml --all` — **PASSED** (required fallback)
+- `cargo clippy --manifest-path engine/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path engine/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**
+
+### Deferred Follow-ups
+
+- **Candidate:** clean up duplicate Windows module root artifact (`editor/windows.rs` vs `editor/windows/mod.rs`) repository-wide.
+  - Current batch applied a non-behavioral explicit module path in `editor/mod.rs` to keep checks green.
+  - Deeper normalization of file layout is deferred to a dedicated cleanup slice to avoid scope drift.
+
+### Escalation Decision
+
+- **Architect escalation: NO**
+  - Reason: all changes stayed within bounded Tier 2 quick-scan cleanup scope; no redesign or ownership ambiguity required architectural input.
+

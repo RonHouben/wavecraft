@@ -132,14 +132,9 @@ impl InMemoryParameterHost {
             .and_then(|values| values.get(id).copied())
             .unwrap_or(default)
     }
-}
 
-impl ParameterHost for InMemoryParameterHost {
-    fn get_parameter(&self, id: &str) -> Option<ParameterInfo> {
-        let parameters = self.parameters.read().ok()?;
-        let param = parameters.iter().find(|p| p.id == id)?;
-
-        Some(ParameterInfo {
+    fn materialize_parameter(&self, param: &ParameterInfo) -> ParameterInfo {
+        ParameterInfo {
             id: param.id.clone(),
             name: param.name.clone(),
             param_type: param.param_type,
@@ -150,7 +145,16 @@ impl ParameterHost for InMemoryParameterHost {
             unit: param.unit.clone(),
             group: param.group.clone(),
             variants: param.variants.clone(),
-        })
+        }
+    }
+}
+
+impl ParameterHost for InMemoryParameterHost {
+    fn get_parameter(&self, id: &str) -> Option<ParameterInfo> {
+        let parameters = self.parameters.read().ok()?;
+        let param = parameters.iter().find(|p| p.id == id)?;
+
+        Some(self.materialize_parameter(param))
     }
 
     fn set_parameter(&self, id: &str, value: f32) -> Result<(), BridgeError> {
@@ -193,18 +197,7 @@ impl ParameterHost for InMemoryParameterHost {
 
         parameters
             .iter()
-            .map(|param| ParameterInfo {
-                id: param.id.clone(),
-                name: param.name.clone(),
-                param_type: param.param_type,
-                value: self.current_value(&param.id, param.default),
-                default: param.default,
-                min: param.min,
-                max: param.max,
-                unit: param.unit.clone(),
-                group: param.group.clone(),
-                variants: param.variants.clone(),
-            })
+            .map(|param| self.materialize_parameter(param))
             .collect()
     }
 
