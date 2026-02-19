@@ -1060,7 +1060,8 @@ fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u16) -> Resu
                     {
                         println!(
                             "{}",
-                            style(format!("⚠ Failed to broadcast audio status: {}", error)).yellow()
+                            style(format!("⚠ Failed to broadcast audio status: {}", error))
+                                .yellow()
                         );
                     }
 
@@ -1081,7 +1082,8 @@ fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u16) -> Resu
                     {
                         println!(
                             "{}",
-                            style(format!("⚠ Failed to broadcast audio status: {}", error)).yellow()
+                            style(format!("⚠ Failed to broadcast audio status: {}", error))
+                                .yellow()
                         );
                     }
 
