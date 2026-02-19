@@ -61,8 +61,7 @@ pub(super) fn inject_tsconfig_paths_if_needed(content: &str) -> Result<String> {
         let anchor_start = compiler_options_start + 1 + anchor.start();
         let anchor_end = compiler_options_start + 1 + anchor.end();
         let anchor_text = &content[anchor_start..anchor_end];
-        let needs_comma = !anchor_text.trim_end().ends_with(',');
-        let comma = if needs_comma { "," } else { "" };
+        let comma = comma_if_needed(anchor_text);
         let has_following_properties =
             has_jsonc_property_after_anchor(&content[anchor_end..compiler_options_end]);
 
@@ -80,8 +79,11 @@ pub(super) fn inject_tsconfig_paths_if_needed(content: &str) -> Result<String> {
 
     let trimmed = compiler_options_content.trim_end();
     let has_properties = trimmed.contains('"') && trimmed.contains(':');
-    let needs_comma = has_properties && !trimmed.ends_with(',');
-    let comma = if needs_comma { "," } else { "" };
+    let comma = if has_properties {
+        comma_if_needed(trimmed)
+    } else {
+        ""
+    };
 
     let mut injected = String::with_capacity(content.len() + 256);
     injected.push_str(&content[..compiler_options_end]);
@@ -99,34 +101,14 @@ fn has_jsonc_property_after_anchor(segment: &str) -> bool {
     let mut index = 0;
 
     while index < bytes.len() {
-        while index < bytes.len() && (bytes[index].is_ascii_whitespace() || bytes[index] == b',') {
-            index += 1;
-        }
+        index = skip_jsonc_whitespace_and_commas(bytes, index);
 
         if index >= bytes.len() {
             return false;
         }
 
-        if bytes[index] == b'/' && index + 1 < bytes.len() {
-            if bytes[index + 1] == b'/' {
-                index += 2;
-                while index < bytes.len() && bytes[index] != b'\n' {
-                    index += 1;
-                }
-                continue;
-            }
-
-            if bytes[index + 1] == b'*' {
-                index += 2;
-                while index + 1 < bytes.len() {
-                    if bytes[index] == b'*' && bytes[index + 1] == b'/' {
-                        index += 2;
-                        break;
-                    }
-                    index += 1;
-                }
-                continue;
-            }
+        if skip_jsonc_comment(bytes, &mut index) {
+            continue;
         }
 
         return bytes[index] == b'"';
@@ -188,27 +170,8 @@ fn find_object_bounds_after_key(content: &str, key: &str) -> Option<(usize, usiz
             continue;
         }
 
-        if ch == b'/' && cursor + 1 < bytes.len() {
-            let next = bytes[cursor + 1];
-            if next == b'/' {
-                cursor += 2;
-                while cursor < bytes.len() && bytes[cursor] != b'\n' {
-                    cursor += 1;
-                }
-                continue;
-            }
-
-            if next == b'*' {
-                cursor += 2;
-                while cursor + 1 < bytes.len() {
-                    if bytes[cursor] == b'*' && bytes[cursor + 1] == b'/' {
-                        cursor += 2;
-                        break;
-                    }
-                    cursor += 1;
-                }
-                continue;
-            }
+        if ch == b'/' && cursor + 1 < bytes.len() && skip_jsonc_comment(bytes, &mut cursor) {
+            continue;
         }
 
         if ch == b'{' {
@@ -224,4 +187,47 @@ fn find_object_bounds_after_key(content: &str, key: &str) -> Option<(usize, usiz
     }
 
     None
+}
+
+fn comma_if_needed(segment: &str) -> &'static str {
+    if segment.trim_end().ends_with(',') {
+        ""
+    } else {
+        ","
+    }
+}
+
+fn skip_jsonc_whitespace_and_commas(bytes: &[u8], mut index: usize) -> usize {
+    while index < bytes.len() && (bytes[index].is_ascii_whitespace() || bytes[index] == b',') {
+        index += 1;
+    }
+    index
+}
+
+fn skip_jsonc_comment(bytes: &[u8], index: &mut usize) -> bool {
+    if *index + 1 >= bytes.len() || bytes[*index] != b'/' {
+        return false;
+    }
+
+    if bytes[*index + 1] == b'/' {
+        *index += 2;
+        while *index < bytes.len() && bytes[*index] != b'\n' {
+            *index += 1;
+        }
+        return true;
+    }
+
+    if bytes[*index + 1] == b'*' {
+        *index += 2;
+        while *index + 1 < bytes.len() {
+            if bytes[*index] == b'*' && bytes[*index + 1] == b'/' {
+                *index += 2;
+                break;
+            }
+            *index += 1;
+        }
+        return true;
+    }
+
+    false
 }

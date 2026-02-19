@@ -51,7 +51,44 @@ fn apply_local_dev_overrides(content: &str, vars: &TemplateVariables) -> Result<
 mod tests {
     use super::*;
     use std::path::PathBuf;
-    use tempfile::tempdir;
+    use tempfile::{tempdir, TempDir};
+
+    fn make_vars(local_dev: Option<PathBuf>) -> TemplateVariables {
+        TemplateVariables::new(
+            "test-plugin".to_string(),
+            "Test Vendor".to_string(),
+            "test@example.com".to_string(),
+            "https://test.com".to_string(),
+            "v0.9.0".to_string(),
+            local_dev,
+        )
+    }
+
+    fn setup_sdk_fixture(include_ui_packages: bool) -> (TempDir, PathBuf, PathBuf) {
+        // Create a temp directory simulating the SDK layout:
+        //   {root}/engine/crates/  ← sdk_path
+        //   {root}/dev-server/     ← wavecraft-dev-server location
+        let temp = tempdir().expect("failed to create temp dir");
+        let sdk_root = temp.path().to_path_buf();
+        let sdk_path = sdk_root.join("engine").join("crates");
+        fs::create_dir_all(&sdk_path).expect("failed to create sdk crates dir");
+
+        for crate_name in &SDK_CRATES {
+            fs::create_dir_all(sdk_path.join(crate_name)).expect("failed to create sdk crate dir");
+        }
+        fs::create_dir_all(sdk_path.join("wavecraft-nih_plug"))
+            .expect("failed to create wavecraft-nih_plug dir");
+        fs::create_dir_all(sdk_root.join("dev-server")).expect("failed to create dev-server dir");
+
+        if include_ui_packages {
+            fs::create_dir_all(sdk_root.join("ui/packages/core"))
+                .expect("failed to create ui/packages/core");
+            fs::create_dir_all(sdk_root.join("ui/packages/components"))
+                .expect("failed to create ui/packages/components");
+        }
+
+        (temp, sdk_root, sdk_path)
+    }
 
     #[test]
     fn test_apply_local_dev_overrides() {
@@ -69,31 +106,8 @@ wavecraft-metering = { git = "https://github.com/RonHouben/wavecraft", tag = "v0
 wavecraft-dev-server = { git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.0", features = ["audio"], optional = true }
 "#;
 
-        // Create a temp directory simulating the SDK layout:
-        //   {root}/engine/crates/  ← sdk_path
-        //   {root}/dev-server/     ← wavecraft-dev-server location
-        let temp = tempdir().unwrap();
-        let sdk_root = temp.path();
-        let sdk_path = sdk_root.join("engine").join("crates");
-        fs::create_dir_all(&sdk_path).unwrap();
-
-        // Create the engine crate directories so canonicalize works
-        for crate_name in &SDK_CRATES {
-            fs::create_dir_all(sdk_path.join(crate_name)).unwrap();
-        }
-        fs::create_dir_all(sdk_path.join("wavecraft-nih_plug")).unwrap();
-
-        // Create the dev-server directory at the SDK root
-        fs::create_dir_all(sdk_root.join("dev-server")).unwrap();
-
-        let vars = TemplateVariables::new(
-            "test-plugin".to_string(),
-            "Test Vendor".to_string(),
-            "test@example.com".to_string(),
-            "https://test.com".to_string(),
-            "v0.9.0".to_string(),
-            Some(sdk_path.clone()),
-        );
+        let (_temp, _sdk_root, sdk_path) = setup_sdk_fixture(false);
+        let vars = make_vars(Some(sdk_path.clone()));
 
         let result = apply_local_dev_overrides(content, &vars).unwrap();
 
@@ -156,14 +170,7 @@ wavecraft-dev-server = { git = "https://github.com/RonHouben/wavecraft", tag = "
     fn test_apply_local_dev_overrides_no_local_dev() {
         let content = r#"wavecraft-core = { git = "https://github.com/RonHouben/wavecraft", tag = "v0.7.0" }"#;
 
-        let vars = TemplateVariables::new(
-            "test-plugin".to_string(),
-            "Test Vendor".to_string(),
-            "test@example.com".to_string(),
-            "https://test.com".to_string(),
-            "v0.9.0".to_string(),
-            None, // No local_dev
-        );
+        let vars = make_vars(None); // No local_dev
 
         let result = apply_local_dev_overrides(content, &vars).unwrap();
 
@@ -176,14 +183,7 @@ wavecraft-dev-server = { git = "https://github.com/RonHouben/wavecraft", tag = "
         let content =
             "wavecraft-core = { git = \"https://github.com/RonHouben/wavecraft\", tag = \"v0.7.0\" }";
 
-        let vars = TemplateVariables::new(
-            "test-plugin".to_string(),
-            "Test Vendor".to_string(),
-            "test@example.com".to_string(),
-            "https://test.com".to_string(),
-            "v0.9.0".to_string(),
-            Some(PathBuf::from("/nonexistent/path/that/does/not/exist")),
-        );
+        let vars = make_vars(Some(PathBuf::from("/nonexistent/path/that/does/not/exist")));
 
         // Should fail because the path doesn't exist
         let result = apply_local_dev_overrides(content, &vars);
@@ -218,25 +218,8 @@ wavecraft-dev-server = { git = "https://github.com/RonHouben/wavecraft", tag = "
   "references": [{ "path": "./tsconfig.node.json" }]
 }"#;
 
-        let temp = tempdir().unwrap();
-        let sdk_root = temp.path();
-        let sdk_path = sdk_root.join("engine").join("crates");
-        fs::create_dir_all(&sdk_path).unwrap();
-
-        for crate_name in &SDK_CRATES {
-            fs::create_dir_all(sdk_path.join(crate_name)).unwrap();
-        }
-        fs::create_dir_all(sdk_path.join("wavecraft-nih_plug")).unwrap();
-        fs::create_dir_all(sdk_root.join("dev-server")).unwrap();
-
-        let vars = TemplateVariables::new(
-            "test-plugin".to_string(),
-            "Test Vendor".to_string(),
-            "test@example.com".to_string(),
-            "https://test.com".to_string(),
-            "v0.9.0".to_string(),
-            Some(sdk_path),
-        );
+        let (_temp, _sdk_root, sdk_path) = setup_sdk_fixture(false);
+        let vars = make_vars(Some(sdk_path));
 
         let result = apply_local_dev_overrides(content, &vars).unwrap();
 
@@ -294,25 +277,8 @@ wavecraft-dev-server = { git = "https://github.com/RonHouben/wavecraft", tag = "
   "include": ["src"]
 }"#;
 
-        let temp = tempdir().unwrap();
-        let sdk_root = temp.path();
-        let sdk_path = sdk_root.join("engine").join("crates");
-        fs::create_dir_all(&sdk_path).unwrap();
-
-        for crate_name in &SDK_CRATES {
-            fs::create_dir_all(sdk_path.join(crate_name)).unwrap();
-        }
-        fs::create_dir_all(sdk_path.join("wavecraft-nih_plug")).unwrap();
-        fs::create_dir_all(sdk_root.join("dev-server")).unwrap();
-
-        let vars = TemplateVariables::new(
-            "test-plugin".to_string(),
-            "Test Vendor".to_string(),
-            "test@example.com".to_string(),
-            "https://test.com".to_string(),
-            "v0.9.0".to_string(),
-            Some(sdk_path),
-        );
+        let (_temp, _sdk_root, sdk_path) = setup_sdk_fixture(false);
+        let vars = make_vars(Some(sdk_path));
 
         let result = apply_local_dev_overrides(content, &vars).unwrap();
 
@@ -338,25 +304,8 @@ wavecraft-dev-server = { git = "https://github.com/RonHouben/wavecraft", tag = "
   }
 }"#;
 
-        let temp = tempdir().unwrap();
-        let sdk_root = temp.path();
-        let sdk_path = sdk_root.join("engine").join("crates");
-        fs::create_dir_all(&sdk_path).unwrap();
-
-        for crate_name in &SDK_CRATES {
-            fs::create_dir_all(sdk_path.join(crate_name)).unwrap();
-        }
-        fs::create_dir_all(sdk_path.join("wavecraft-nih_plug")).unwrap();
-        fs::create_dir_all(sdk_root.join("dev-server")).unwrap();
-
-        let vars = TemplateVariables::new(
-            "test-plugin".to_string(),
-            "Test Vendor".to_string(),
-            "test@example.com".to_string(),
-            "https://test.com".to_string(),
-            "v0.9.0".to_string(),
-            Some(sdk_path),
-        );
+        let (_temp, _sdk_root, sdk_path) = setup_sdk_fixture(false);
+        let vars = make_vars(Some(sdk_path));
 
         let result = apply_local_dev_overrides(content, &vars).unwrap();
 
@@ -380,14 +329,7 @@ wavecraft-dev-server = { git = "https://github.com/RonHouben/wavecraft", tag = "
   }
 }"#;
 
-        let vars = TemplateVariables::new(
-            "test-plugin".to_string(),
-            "Test Vendor".to_string(),
-            "test@example.com".to_string(),
-            "https://test.com".to_string(),
-            "v0.9.0".to_string(),
-            None,
-        );
+        let vars = make_vars(None);
 
         let result = apply_local_dev_overrides(content, &vars).unwrap();
         assert_eq!(
@@ -406,27 +348,8 @@ wavecraft-dev-server = { git = "https://github.com/RonHouben/wavecraft", tag = "
   }
 }"#;
 
-        let temp = tempdir().unwrap();
-        let sdk_root = temp.path();
-        let sdk_path = sdk_root.join("engine").join("crates");
-        fs::create_dir_all(&sdk_path).unwrap();
-
-        for crate_name in &SDK_CRATES {
-            fs::create_dir_all(sdk_path.join(crate_name)).unwrap();
-        }
-        fs::create_dir_all(sdk_path.join("wavecraft-nih_plug")).unwrap();
-        fs::create_dir_all(sdk_root.join("dev-server")).unwrap();
-        fs::create_dir_all(sdk_root.join("ui/packages/core")).unwrap();
-        fs::create_dir_all(sdk_root.join("ui/packages/components")).unwrap();
-
-        let vars = TemplateVariables::new(
-            "test-plugin".to_string(),
-            "Test Vendor".to_string(),
-            "test@example.com".to_string(),
-            "https://test.com".to_string(),
-            "v0.9.0".to_string(),
-            Some(sdk_path),
-        );
+        let (_temp, _sdk_root, sdk_path) = setup_sdk_fixture(true);
+        let vars = make_vars(Some(sdk_path));
 
         let result = apply_local_dev_overrides(content, &vars).unwrap();
 
@@ -464,25 +387,8 @@ wavecraft-dev-server = { git = "https://github.com/RonHouben/wavecraft", tag = "
   }
 }"#;
 
-        let temp = tempdir().unwrap();
-        let sdk_root = temp.path();
-        let sdk_path = sdk_root.join("engine").join("crates");
-        fs::create_dir_all(&sdk_path).unwrap();
-
-        for crate_name in &SDK_CRATES {
-            fs::create_dir_all(sdk_path.join(crate_name)).unwrap();
-        }
-        fs::create_dir_all(sdk_path.join("wavecraft-nih_plug")).unwrap();
-        fs::create_dir_all(sdk_root.join("dev-server")).unwrap();
-
-        let vars = TemplateVariables::new(
-            "test-plugin".to_string(),
-            "Test Vendor".to_string(),
-            "test@example.com".to_string(),
-            "https://test.com".to_string(),
-            "v0.9.0".to_string(),
-            Some(sdk_path),
-        );
+        let (_temp, _sdk_root, sdk_path) = setup_sdk_fixture(false);
+        let vars = make_vars(Some(sdk_path));
 
         let result = apply_local_dev_overrides(content, &vars).unwrap();
 
@@ -507,25 +413,8 @@ name = "test-plugin"
 version = "0.1.0"
 "#;
 
-        let temp = tempdir().unwrap();
-        let sdk_root = temp.path();
-        let sdk_path = sdk_root.join("engine").join("crates");
-        fs::create_dir_all(&sdk_path).unwrap();
-
-        for crate_name in &SDK_CRATES {
-            fs::create_dir_all(sdk_path.join(crate_name)).unwrap();
-        }
-        fs::create_dir_all(sdk_path.join("wavecraft-nih_plug")).unwrap();
-        fs::create_dir_all(sdk_root.join("dev-server")).unwrap();
-
-        let vars = TemplateVariables::new(
-            "test-plugin".to_string(),
-            "Test Vendor".to_string(),
-            "test@example.com".to_string(),
-            "https://test.com".to_string(),
-            "v0.9.0".to_string(),
-            Some(sdk_path),
-        );
+        let (_temp, _sdk_root, sdk_path) = setup_sdk_fixture(false);
+        let vars = make_vars(Some(sdk_path));
 
         let result = apply_local_dev_overrides(content, &vars).unwrap();
 

@@ -2717,3 +2717,62 @@
 - **Architect escalation: NO**
   - Reason: all changes were bounded helper/readability refactors with explicit local scope and no ownership or architecture ambiguity.
 
+---
+
+## Tier 2 — Batch 8 quick-scan cleanup
+
+### Scope
+
+- Tier: **Tier 2 (quick scan)**
+- Batch: **8**
+- Goal: Bounded, behavior-preserving cleanup only (helper extraction, duplication reduction, naming clarity, logging helper reuse) with **no architecture moves and no cross-crate API changes**.
+
+### Files
+
+1. `cli/src/template/tsconfig_paths.rs`
+   - Extracted shared JSONC scanning helpers (`skip_jsonc_whitespace_and_commas`, `skip_jsonc_comment`) used by both anchor and object-bound scans.
+   - Extracted punctuation insertion helper (`comma_if_needed`) to dedupe comma decisions in anchor/fallback insertion paths.
+
+2. `cli/src/template/dependency_rewrites.rs`
+   - Added shared constants for Git URL regex and `dev-server` path segment.
+   - Deduplicated dependency replacement assembly via helper extraction:
+     - `package_attr_for_capture(...)`
+     - `format_path_dependency(...)`
+
+3. `cli/src/template/overrides.rs`
+   - Extracted test-only fixture/helpers to reduce repeated setup and variable construction:
+     - `make_vars(...)`
+     - `setup_sdk_fixture(...)`
+   - Preserved all test coverage intent and assertions.
+
+4. `dev-server/src/audio/server/device_setup.rs`
+   - Extracted repeated device/sample-rate logging helpers and stream-error callback logging helper:
+     - `log_required_device_name(...)`
+     - `log_device_name_or_fallback(...)`
+     - `log_sample_rate(...)`
+     - `log_stream_error(...)`
+   - Tightened negotiated config naming clarity (`input_supported_config`, `output_supported_config`, `output_sample_rate`).
+
+### Invariants
+
+- [x] Behavior-preserving cleanup only.
+- [x] No architecture moves or cross-crate API changes.
+- [x] Edits bounded to Batch 8 files + this ledger update.
+- [x] JSONC insertion/rewrite semantics preserved for template processing.
+- [x] Dev-server audio runtime behavior preserved (device negotiation, stream build/callback wiring unchanged).
+
+### Validation
+
+- `cargo fmt --manifest-path cli/Cargo.toml --all` — **PASSED**
+- `cargo fmt --manifest-path dev-server/Cargo.toml --all` — **PASSED**
+- `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo clippy --manifest-path dev-server/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path cli/Cargo.toml` — **PASSED**
+- `cargo test --manifest-path dev-server/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**
+
+### Escalation
+
+- **Architect escalation: NO**
+  - Rationale: changes stayed within explicit quick-scan helper/readability cleanup scope and did not introduce ownership or architecture ambiguity.
+
