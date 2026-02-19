@@ -26,22 +26,17 @@ mod input_pipeline;
 mod metering;
 mod output_modifiers;
 mod output_routing;
+mod startup_wiring;
 
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
-use cpal::traits::StreamTrait;
+use anyhow::Result;
 use cpal::{Device, Stream, StreamConfig};
-use wavecraft_processors::{
-    OscilloscopeFrameConsumer, OscilloscopeTap, create_oscilloscope_channel,
-};
+use wavecraft_processors::OscilloscopeFrameConsumer;
 use wavecraft_protocol::MeterUpdateNotification;
 
 use super::atomic_params::AtomicParameterBridge;
 use super::ffi_processor::DevAudioProcessor;
-
-const GAIN_MULTIPLIER_MIN: f32 = 0.0;
-const GAIN_MULTIPLIER_MAX: f32 = 2.0;
 
 /// Configuration for audio server.
 #[derive(Debug, Clone)]
@@ -116,63 +111,18 @@ impl AudioServer {
         let output_channels = self.output_config.channels as usize;
         let param_bridge = Arc::clone(&self.param_bridge);
 
-        // --- SPSC ring buffer for input→output audio transfer ---
-        // Capacity: buffer_size * num_channels * 4 blocks of headroom.
-        // Data format: interleaved f32 samples (matches cpal output).
-        let ring_capacity = buffer_size * 2 * 4;
-        let (ring_producer, ring_consumer) = rtrb::RingBuffer::new(ring_capacity);
-
-        // --- SPSC ring buffer for meter data (audio → consumer task) ---
-        // Capacity: 64 frames — sufficient for ~1s at 60 Hz update rate.
-        // Uses rtrb (lock-free, zero-allocation) instead of tokio channels
-        // to maintain real-time safety on the audio thread.
-        let (meter_producer, meter_consumer) = rtrb::RingBuffer::<MeterUpdateNotification>::new(64);
-        let (oscilloscope_producer, oscilloscope_consumer) = create_oscilloscope_channel(8);
-        let mut oscilloscope_tap = OscilloscopeTap::with_output(oscilloscope_producer);
-        oscilloscope_tap.set_sample_rate_hz(actual_sample_rate);
-        let input_stream = device_setup::build_input_stream(
-            &self.input_device,
-            &self.input_config,
-            device_setup::InputStreamBuildContext {
-                processor,
-                buffer_size,
-                input_channels,
-                param_bridge,
-                actual_sample_rate,
-                ring_producer,
-                meter_producer,
-                oscilloscope_tap,
-            },
-        )?;
-
-        input_stream
-            .play()
-            .context("Failed to start input stream")?;
-        tracing::info!("Input stream started");
-
-        // --- Output stream (required) ---
-        let output_stream = device_setup::build_output_stream(
-            &self.output_device,
-            &self.output_config,
+        startup_wiring::start_audio_io(startup_wiring::StartAudioIoContext {
+            input_device: &self.input_device,
+            input_config: &self.input_config,
+            output_device: &self.output_device,
+            output_config: &self.output_config,
+            processor,
+            buffer_size,
+            input_channels,
             output_channels,
-            ring_consumer,
-        )?;
-
-        output_stream
-            .play()
-            .context("Failed to start output stream")?;
-        tracing::info!("Output stream started");
-
-        tracing::info!("Audio server started in full-duplex (input + output) mode");
-
-        Ok((
-            AudioHandle {
-                _input_stream: input_stream,
-                _output_stream: Some(output_stream),
-            },
-            meter_consumer,
-            oscilloscope_consumer,
-        ))
+            param_bridge,
+            actual_sample_rate,
+        })
     }
 
     /// Returns true if an output device is available for audio playback.

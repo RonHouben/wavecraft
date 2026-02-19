@@ -8,20 +8,16 @@ use std::sync::{Arc, Mutex, Once};
 use nih_plug::prelude::*;
 use wavecraft_bridge::IpcHandler;
 use webview2_com::Microsoft::Web::WebView2::Win32::{ICoreWebView2, ICoreWebView2Controller};
-use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, RECT, WPARAM};
+use windows::Win32::Foundation::{HWND, RECT};
 use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx};
 use windows::core::HSTRING;
 
 use super::bridge::PluginEditorBridge;
 use super::webview::{WebViewConfig, WebViewHandle};
 
-#[path = "windows/content.rs"]
 mod content;
-#[path = "windows/ipc_bridge.rs"]
 mod ipc_bridge;
-#[path = "windows/runtime_checks.rs"]
 mod runtime_checks;
-#[path = "windows/webview2_init.rs"]
 mod webview2_init;
 
 /// Trait for handling IPC JSON messages (type-erased interface).

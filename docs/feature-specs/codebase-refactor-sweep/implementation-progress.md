@@ -464,6 +464,57 @@
 
 ---
 
+## Slice 2 — Content + IPC script extraction (editor/windows.rs)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `engine/crates/wavecraft-nih_plug/src/editor/windows.rs`
+- Slice goal: Extract content-loading and injected IPC script concerns into a dedicated module while preserving Windows WebView initialization behavior exactly.
+
+### Files Touched
+
+- `engine/crates/wavecraft-nih_plug/src/editor/windows.rs`
+  - Added `content` submodule wiring (`#[path = "windows/content.rs"] mod content;`).
+  - Rewired WebView controller initialization to call:
+    - `content::inject_ipc_script(&wv)`
+    - `content::load_ui_content(&wv)`
+  - Removed in-file ownership of moved content/IPC helper functions.
+
+- `engine/crates/wavecraft-nih_plug/src/editor/windows/content.rs`
+  - New module owning extracted content/IPC script concerns:
+    - `inject_ipc_script(...)`
+    - `load_ui_content(...)`
+    - `get_windows_ipc_primitives()`
+    - `get_fallback_html()`
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added this Slice 2 progress record.
+
+### Invariants (Behavior Preservation)
+
+- [x] Public entrypoint preserved (`create_windows_webview(...)` unchanged).
+- [x] WebView initialization semantics preserved exactly (same call order: settings → message handler → IPC script injection → content load).
+- [x] IPC primitive JavaScript payload preserved exactly (same global API/queue/listener behavior and diagnostics).
+- [x] Embedded `index.html` load and fallback HTML behavior preserved exactly.
+- [x] Refactor-only scope preserved (no feature or contract changes).
+
+### Validation
+
+- Required cadence executed:
+  - `cargo fmt --manifest-path engine/Cargo.toml` — **FAILED** (`Failed to find targets`)
+  - `cargo fmt --manifest-path engine/Cargo.toml --all` — **PASSED** (fallback per requirement)
+  - `cargo clippy --manifest-path engine/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+  - `cargo test --manifest-path engine/Cargo.toml` — **PASSED**
+  - `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log
+
+- **Architect escalation: NO**
+  - Reason: Extraction boundary was explicit and cohesive (content-loading + injected IPC script concerns only), and no ownership ambiguity or architectural tradeoff emerged.
+
+---
+
 ## Slice 1 — Template tsconfig-path helper decomposition (`template/mod.rs`)
 
 ### Scope Tracking
@@ -1893,3 +1944,330 @@
 
 - **Architect escalation: NO**
   - Reason: output callback routing is a narrow, cohesive concern with a clear ownership boundary separate from stream wiring/orchestration, and extraction required no architectural tradeoff.
+
+---
+
+## Slice 6 — Start-time stream/ring setup orchestration decomposition (audio/server.rs)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `dev-server/src/audio/server.rs`
+- Slice goal: Extract start-time stream/ring setup orchestration from `AudioServer::start` into a dedicated internal helper module (ring buffers + oscilloscope channel + input/output stream build and start invocation), while preserving public API and runtime behavior.
+
+### Files Touched
+
+- `dev-server/src/audio/server.rs`
+  - Added `mod startup_wiring;`.
+  - Reduced `AudioServer::start` to orchestration by delegating start-time stream/ring setup through:
+    - `startup_wiring::start_audio_io(...)`
+  - Preserved `AudioServer::start` signature and return shape.
+
+- `dev-server/src/audio/server/startup_wiring.rs`
+  - New module owning extracted startup wiring concern:
+    - input/output audio ring buffer creation
+    - meter ring + oscilloscope channel/tap setup
+    - `device_setup::build_input_stream(...)` / `device_setup::build_output_stream(...)` invocation
+    - stream `.play()` startup and startup log emission
+    - assembly of unchanged `(AudioHandle, meter_consumer, oscilloscope_consumer)` return tuple.
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added this Slice 6 progress record.
+
+### Invariants (Behavior Preservation)
+
+- [x] Public API and contract preserved (`AudioServer::start` signature/return shape unchanged).
+- [x] Startup ordering preserved (sample-rate set before stream setup; input stream start before output stream start).
+- [x] Ring buffer capacities/semantics preserved (`buffer_size * 2 * 4` audio ring, `64` meter ring).
+- [x] Oscilloscope channel/tap setup preserved (same channel capacity and sample-rate assignment).
+- [x] Stream build/start error contexts and startup logs preserved.
+- [x] RT-safety semantics preserved (no additional locks/blocking/allocations introduced in callback hot paths).
+- [x] Refactor-only scope preserved (no feature/contract changes).
+
+### Validation
+
+- `cargo fmt --manifest-path dev-server/Cargo.toml` — **PASSED**
+- `cargo clippy --manifest-path dev-server/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path dev-server/Cargo.toml` — **PASSED**
+  - Unit/integration summary: **42 passed, 0 failed** (`37` unit + `3` audio status integration + `2` reload integration)
+- `cargo xtask ci-check` — **PASSED**
+  - Documentation: passed
+  - Lint/type-check: passed
+  - Engine + UI tests: passed
+
+### Escalation Log
+
+- **Architect escalation: NO**
+  - Reason: start-time stream/ring setup forms a narrow, cohesive ownership boundary (startup wiring only), and extraction required no architectural tradeoff or contract reinterpretation.
+
+---
+
+## Slice 7 — Gain-bound constants ownership relocation (audio/server.rs)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `dev-server/src/audio/server.rs`
+- Slice goal: Remove remaining non-orchestration coupling by relocating gain-bound constants ownership from `server.rs` into `output_modifiers.rs` (the owning usage module) while preserving exact runtime behavior and public contracts.
+
+### Files Touched
+
+- `dev-server/src/audio/server.rs`
+  - Removed gain-bound constants from orchestration shell:
+    - `GAIN_MULTIPLIER_MIN`
+    - `GAIN_MULTIPLIER_MAX`
+
+- `dev-server/src/audio/server/output_modifiers.rs`
+  - Added local ownership of gain-bound constants used by `read_gain_multiplier(...)`:
+    - `GAIN_MULTIPLIER_MIN`
+    - `GAIN_MULTIPLIER_MAX`
+  - Removed coupling import from parent module (`use super::{...}`) and kept all call sites unchanged.
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added this Slice 7 progress record.
+
+### Invariants (Behavior Preservation)
+
+- [x] Gain clamp bounds preserved exactly (`0.0..=2.0`).
+- [x] `read_gain_multiplier(...)` logic unchanged (same finite check, same clamp, same fallback to `1.0`).
+- [x] Runtime output-modifier behavior unchanged (same canonical gain IDs and gain-apply flow).
+- [x] Public API/signatures unchanged (`AudioServer`, `AudioConfig`, `AudioHandle`, `new/start/has_output`).
+- [x] `server.rs` remains orchestration/public API shell only.
+- [x] Refactor-only scope preserved (no feature/contract changes).
+
+### Validation
+
+- `cargo fmt --manifest-path dev-server/Cargo.toml` — **PASSED**
+- `cargo clippy --manifest-path dev-server/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path dev-server/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log
+
+- **Architect escalation: NO**
+  - Reason: ownership boundary is explicit and narrow (constants now co-located with the only consuming module), with no architectural tradeoff or contract reinterpretation required.
+
+---
+
+## Slice 1 — Runtime checks + handle helpers extraction (`editor/windows.rs`)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `engine/crates/wavecraft-nih_plug/src/editor/windows.rs`
+- Slice goal: Extract runtime checks and parent/child window handle helper concern into a dedicated module while preserving `create_windows_webview` behavior/signature and Windows init diagnostics exactly.
+
+### Files Touched
+
+- `engine/crates/wavecraft-nih_plug/src/editor/windows.rs`
+  - Added narrow submodule wiring:
+    - `#[path = "windows/runtime_checks.rs"] mod runtime_checks;`
+  - Rewired existing entrypoint flow to extracted helpers only:
+    - `runtime_checks::check_webview2_runtime()`
+    - `runtime_checks::get_parent_hwnd(...)`
+    - `runtime_checks::create_child_window(...)`
+  - Removed in-file implementations for:
+    - WebView2 runtime presence check
+    - parent HWND extraction from `ParentWindowHandle`
+    - child host window creation + child window proc
+
+- `engine/crates/wavecraft-nih_plug/src/editor/windows/runtime_checks.rs`
+  - New module owning extracted concern:
+    - `check_webview2_runtime(...)`
+    - `get_parent_hwnd(...)`
+    - `create_child_window(...)`
+    - private `window_proc(...)`
+  - Preserved all existing diagnostics/error strings and Win32 setup logic.
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added this Slice 1 ledger entry for the Windows editor hotspot.
+
+### Invariants (Behavior Preservation)
+
+- [x] `create_windows_webview` signature unchanged.
+- [x] `create_windows_webview` initialization order preserved exactly:
+  - COM init once → WebView2 runtime check → parent HWND extraction → child window creation → WebView2 init.
+- [x] Runtime detection diagnostics preserved exactly (including install URL and detection-failure wording).
+- [x] Parent handle and null-HWND validation behavior preserved exactly.
+- [x] Child window registration/creation behavior and diagnostics preserved exactly.
+- [x] No cross-platform rewrites; Windows-only extraction scope maintained.
+- [x] Refactor-only scope preserved (no feature/contract changes).
+
+### Validation
+
+- `cargo fmt --manifest-path engine/Cargo.toml` — **FAILED** (`Failed to find targets`)
+- `cargo fmt --manifest-path engine/Cargo.toml --all` — **PASSED** (required fallback)
+- `cargo clippy --manifest-path engine/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path engine/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log
+
+- **Architect escalation: NO**
+  - Reason: the requested boundary (runtime checks + handle helpers) was explicit and cohesive, and extraction did not introduce ownership ambiguity or behavior interpretation risk.
+
+---
+
+## Slice 3 — WebView2 init wiring extraction (editor/windows.rs)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `engine/crates/wavecraft-nih_plug/src/editor/windows.rs`
+- Slice goal: Extract WebView2 initialization wiring concern into a dedicated module while preserving initialization order, timeout behavior, IPC handler semantics, content-loading behavior, diagnostics, and public API signatures.
+
+### Files Touched
+
+- `engine/crates/wavecraft-nih_plug/src/editor/windows.rs`
+  - Added narrow submodule wiring:
+    - `#[path = "windows/webview2_init.rs"] mod webview2_init;`
+  - Rewired existing init call path from in-file helper to extracted module:
+    - `webview2_init::initialize_webview2(...)`
+  - Kept `create_windows_webview(...)` signature and flow intact.
+  - Exposed IPC trait to sibling submodule boundary only (`pub(super) trait JsonIpcHandler`).
+  - Removed moved WebView2 init helper implementations from this file:
+    - `initialize_webview2(...)`
+    - `configure_webview_settings(...)`
+    - `setup_web_message_handler(...)`
+    - `pump_messages_until_ready(...)`
+
+- `engine/crates/wavecraft-nih_plug/src/editor/windows/webview2_init.rs`
+  - New module owning extracted WebView2 init wiring concern:
+    - `initialize_webview2(...)`
+    - settings setup helper
+    - web-message IPC handler setup helper
+    - readiness message-pump/timeout helper
+  - Preserved call ordering and side effects, including:
+    - controller bounds/visibility setup
+    - settings configuration
+    - IPC handler registration
+    - content script injection and content loading ordering
+    - readiness wait loop timeout/logging semantics.
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added this Slice 3 ledger entry.
+
+### Invariants (Behavior Preservation)
+
+- [x] `create_windows_webview(...)` public signature preserved.
+- [x] WebView2 initialization order preserved exactly:
+  - environment creation → controller creation → bounds/visibility → settings → web-message handler → IPC script injection → content load → controller/webview store → success log → readiness pump.
+- [x] IPC message handling semantics preserved exactly (request/response handling + escaping + JS callback dispatch unchanged).
+- [x] Content-loading semantics preserved exactly (delegation to existing extracted `content` module unchanged).
+- [x] Readiness timeout behavior/logging preserved exactly (`5s` timeout + same timeout error log).
+- [x] Refactor-only scope preserved (no feature/contract changes).
+
+### Validation
+
+- `cargo fmt --manifest-path engine/Cargo.toml` — **FAILED** (`Failed to find targets`)
+- `cargo fmt --manifest-path engine/Cargo.toml --all` — **PASSED** (required fallback)
+- `cargo clippy --manifest-path engine/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path engine/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log
+
+- **Architect escalation: NO**
+  - Reason: extraction boundary was explicit and cohesive (WebView2 init wiring + directly related setup helpers), and implementation introduced no ownership ambiguity or contract/behavior tradeoffs.
+
+---
+
+## Slice 4 — Web-message IPC bridge extraction (editor/windows.rs)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `engine/crates/wavecraft-nih_plug/src/editor/windows.rs`
+- Slice goal: Extract WebView2 web-message IPC bridge plumbing from init wiring into a dedicated module so `webview2_init.rs` stays focused on setup sequencing, with zero behavior/contract changes.
+
+### Files Touched
+
+- `engine/crates/wavecraft-nih_plug/src/editor/windows.rs`
+  - Added narrow module wiring:
+    - `#[path = "windows/ipc_bridge.rs"] mod ipc_bridge;`
+
+- `engine/crates/wavecraft-nih_plug/src/editor/windows/webview2_init.rs`
+  - Removed in-file ownership of web-message IPC bridge helper and delegated to extracted module:
+    - `ipc_bridge::setup_web_message_handler(&wv, handler_inner.clone())`
+  - Kept WebView2 init sequencing responsibility in place.
+
+- `engine/crates/wavecraft-nih_plug/src/editor/windows/ipc_bridge.rs`
+  - New module owning extracted web-message IPC bridge concern:
+    - handler registration (`add_WebMessageReceived`)
+    - request reception (`TryGetWebMessageAsString`)
+    - JSON IPC forwarding (`handler.handle_json(...)`)
+    - response escaping + JS callback dispatch (`globalThis.__WAVECRAFT_IPC__._receive(...)`)
+  - Preserved existing logging statements and escaping semantics exactly.
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added this Slice 4 ledger entry.
+
+### Invariants (Behavior Preservation)
+
+- [x] `create_windows_webview(...)` public signature unchanged.
+- [x] WebView2 initialization order preserved exactly:
+  - settings → web-message handler registration → IPC script injection → content load.
+- [x] Web-message IPC semantics preserved exactly (same request handling, response generation, escaping, and JS dispatch target).
+- [x] IPC logging preserved exactly (`[IPC] Received message`, `[IPC] Response`).
+- [x] Refactor-only scope preserved (no feature/contract changes).
+
+### Validation
+
+- `cargo fmt --manifest-path engine/Cargo.toml` — **FAILED** (`Failed to find targets`)
+- `cargo fmt --manifest-path engine/Cargo.toml --all` — **PASSED** (required fallback)
+- `cargo clippy --manifest-path engine/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path engine/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log
+
+- **Architect escalation: NO**
+  - Reason: extraction boundary was explicit and narrow (web-message IPC bridge registration + forwarding glue only), and no ownership ambiguity or behavior tradeoff required architectural guidance.
+
+---
+
+## Slice 5 — Module root migration to windows/mod.rs (editor/windows.rs)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `engine/crates/wavecraft-nih_plug/src/editor/windows.rs`
+- Slice goal: Migrate Windows module root from `editor/windows.rs` to `editor/windows/mod.rs` to align module layout with extracted submodule structure, with zero behavior/signature/contract changes.
+
+### Files Touched
+
+- `engine/crates/wavecraft-nih_plug/src/editor/windows.rs`
+  - Removed legacy flat module root file.
+
+- `engine/crates/wavecraft-nih_plug/src/editor/windows/mod.rs`
+  - New module root containing moved `windows.rs` logic unchanged in behavior.
+  - Replaced path-qualified submodule declarations with local declarations:
+    - `mod content;`
+    - `mod ipc_bridge;`
+    - `mod runtime_checks;`
+    - `mod webview2_init;`
+  - Kept all public and internal signatures unchanged (`create_windows_webview`, `WindowsWebView`, `JsonIpcHandler`, `WebViewHandle` impl behavior).
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added this Slice 5 migration record.
+
+### Invariants (Behavior Preservation)
+
+- [x] No behavior changes introduced (module root relocation only).
+- [x] No public API/signature changes (`editor::windows` exports/entrypoints preserved by Rust module resolution).
+- [x] Existing extracted submodules remain functional and path-stable under new root layout.
+- [x] WebView2 initialization order and IPC/content wiring remain unchanged.
+- [x] Refactor-only scope preserved (no feature/contract changes).
+
+### Validation
+
+- `cargo fmt --manifest-path engine/Cargo.toml` — **PASSED**
+- `cargo clippy --manifest-path engine/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path engine/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log
+
+- **Architect escalation: NO**
+  - Reason: the requested migration boundary was explicit and mechanical (module root relocation + minimal path cleanup), and no ownership or behavior tradeoff required architectural guidance.
+

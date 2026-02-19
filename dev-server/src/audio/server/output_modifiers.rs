@@ -1,7 +1,9 @@
 use wavecraft_processors::{Waveform, generate_waveform_sample};
 
 use super::super::atomic_params::AtomicParameterBridge;
-use super::{GAIN_MULTIPLIER_MAX, GAIN_MULTIPLIER_MIN};
+
+const GAIN_MULTIPLIER_MIN: f32 = 0.0;
+const GAIN_MULTIPLIER_MAX: f32 = 2.0;
 
 // Strict runtime policy: canonical IDs only (no alias/legacy fallbacks).
 const INPUT_GAIN_PARAM_ID: &str = "input_gain_level";
