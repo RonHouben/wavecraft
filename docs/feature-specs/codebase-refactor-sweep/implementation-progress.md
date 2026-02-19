@@ -2776,3 +2776,50 @@
 - **Architect escalation: NO**
   - Rationale: changes stayed within explicit quick-scan helper/readability cleanup scope and did not introduce ownership or architecture ambiguity.
 
+---
+
+## Tier 2 — Batch 9 quick-scan cleanup
+
+### Scope
+
+- Tier: **Tier 2 (quick-scan cleanup)**
+- Batch: **9**
+- Goal: Behavior-preserving readability/duplication cleanup only (no architecture shifts, no cross-crate API changes).
+
+### Files
+
+1. `cli/src/main.rs`
+  - Flattened command dispatch readability by extracting small local dispatch helpers (`dispatch`, `run_create`, `run_start`, `run_bundle`) while preserving command flow and behavior.
+
+2. `engine/crates/wavecraft-bridge/src/host.rs`
+  - Deduplicated `Arc<T>` forwarding boilerplate through a tiny local forward helper (`forward_host`) without trait/API changes.
+
+3. `engine/crates/wavecraft-dsp/src/traits.rs`
+  - Applied doc/comment consistency and wording clarity updates only; no trait/struct/enum signature changes.
+
+4. `engine/crates/wavecraft-dsp/src/processor.rs`
+  - Extracted repeated channel gain loop into `apply_gain_to_channel` helper.
+  - Reduced repeated assertion logic in tests via shared `assert_buffer_close` helper with identical expectations.
+
+### Invariants
+
+- [x] Behavior-preserving cleanup only.
+- [x] No architecture shifts introduced.
+- [x] No cross-crate API changes introduced.
+- [x] Edits bounded to Batch 9 target files + ledger update.
+
+### Validation
+
+- `cargo fmt --manifest-path cli/Cargo.toml --all` — **PASSED**
+- `cargo fmt --manifest-path engine/Cargo.toml --all` — **PASSED**
+- `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo clippy --manifest-path engine/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path cli/Cargo.toml` — **PASSED**
+- `cargo test --manifest-path engine/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**
+
+### Escalation
+
+- **Architect escalation: NO**
+  - Rationale: all edits remained within explicit Tier 2 quick-scan cleanup bounds with no ownership or architecture ambiguity.
+
