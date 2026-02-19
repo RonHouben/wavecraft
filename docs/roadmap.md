@@ -1692,6 +1692,7 @@ In newly created Wavecraft projects, enabling `Oscillator` in the signal chain c
 - Dead code and unused imports removed across all tiers
 - No behavior changes beyond documented minor QoL improvements
 - Lessons learned documented; coding standards updates proposed
+- Unclear implementation decisions were escalated to the Architect before coding continued
 
 **User Stories:** [docs/feature-specs/codebase-refactor-sweep/user-stories.md](feature-specs/codebase-refactor-sweep/user-stories.md)
 

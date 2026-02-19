@@ -165,6 +165,8 @@ During each tier of the refactor, the Coder should track recurring issues and pa
 
 **Execution order:** US3 (lint baseline) → US1 (deep refactor) → US2 (quick scan) → US4 (QoL) → US3 again (final lint pass) → US5 (distill findings into guidelines)
 
+**Escalation rule:** If implementation or refactor decisions are unclear, the Coder must ask the Architect agent for guidance before proceeding.
+
 ---
 
 ## Out of Scope
@@ -198,6 +200,7 @@ During each tier of the refactor, the Coder should track recurring issues and pa
 - [ ] No behavior changes beyond documented minor improvements
 - [ ] `lessons-learned.md` created with top patterns and proposed coding guideline updates
 - [ ] Coding standards updates proposed (with before/after examples)
+- [ ] All ambiguous decomposition, boundary, or behavior-preservation decisions were escalated to the Architect before implementation continued
 
 ---
 
