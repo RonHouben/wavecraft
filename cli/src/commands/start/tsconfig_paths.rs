@@ -14,12 +14,42 @@ const SDK_TSCONFIG_PATHS_SNIPPET: &str = r#"    /* SDK development — resolve @
       "@wavecraft/components": ["../../ui/packages/components/src/index.ts"],
       "@wavecraft/components/*": ["../../ui/packages/components/src/*"]
     }"#;
+const WARNING_COMPILER_OPTIONS_MISSING: &str =
+    "could not inject SDK TypeScript paths: `compilerOptions` block not found";
+const WARNING_COMPILER_OPTIONS_OBJECT_MISSING: &str =
+    "could not inject SDK TypeScript paths: failed to locate `compilerOptions` object";
+const WARNING_PATHS_ALREADY_EXISTS: &str =
+    "could not inject SDK TypeScript paths: `compilerOptions.paths` already exists, please add @wavecraft mappings manually";
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum TsconfigPathsInjection {
     Updated(String),
     Unchanged,
     Warning(&'static str),
+}
+
+fn build_updated_content(
+    content: &str,
+    insert_at: usize,
+    prepend_comma: bool,
+    append_comma: bool,
+    append_newline: bool,
+) -> String {
+    let mut updated = String::with_capacity(content.len() + 256);
+    updated.push_str(&content[..insert_at]);
+    if prepend_comma {
+        updated.push(',');
+    }
+    updated.push_str("\n\n");
+    updated.push_str(SDK_TSCONFIG_PATHS_SNIPPET);
+    if append_comma {
+        updated.push(',');
+    }
+    if append_newline {
+        updated.push('\n');
+    }
+    updated.push_str(&content[insert_at..]);
+    updated
 }
 
 fn find_object_bounds_after_key(content: &str, key: &str) -> Option<(usize, usize)> {
@@ -116,7 +146,7 @@ fn find_object_bounds_after_key(content: &str, key: &str) -> Option<(usize, usiz
 pub(crate) fn apply_sdk_tsconfig_paths(content: &str) -> Result<TsconfigPathsInjection> {
     if !content.contains("\"compilerOptions\"") {
         return Ok(TsconfigPathsInjection::Warning(
-            "could not inject SDK TypeScript paths: `compilerOptions` block not found",
+            WARNING_COMPILER_OPTIONS_MISSING,
         ));
     }
 
@@ -127,15 +157,17 @@ pub(crate) fn apply_sdk_tsconfig_paths(content: &str) -> Result<TsconfigPathsInj
     let (compiler_options_start, compiler_options_end) =
         match find_object_bounds_after_key(content, "\"compilerOptions\"") {
             Some(bounds) => bounds,
-            None => return Ok(TsconfigPathsInjection::Warning(
-                "could not inject SDK TypeScript paths: failed to locate `compilerOptions` object",
-            )),
+            None => {
+                return Ok(TsconfigPathsInjection::Warning(
+                    WARNING_COMPILER_OPTIONS_OBJECT_MISSING,
+                ))
+            }
         };
 
     let compiler_options_content = &content[compiler_options_start + 1..compiler_options_end];
     if compiler_options_content.contains("\"paths\"") {
         return Ok(TsconfigPathsInjection::Warning(
-            "could not auto-inject SDK TypeScript paths: `compilerOptions.paths` already exists, please add @wavecraft mappings manually",
+            WARNING_PATHS_ALREADY_EXISTS,
         ));
     }
 
@@ -148,36 +180,30 @@ pub(crate) fn apply_sdk_tsconfig_paths(content: &str) -> Result<TsconfigPathsInj
         let anchor_start = compiler_options_start + 1 + anchor.start();
         let anchor_end = compiler_options_start + 1 + anchor.end();
         let anchor_text = &content[anchor_start..anchor_end];
-        let needs_comma = !anchor_text.trim_end().ends_with(',');
-        let comma = if needs_comma { "," } else { "" };
+        let needs_prepend_comma = !anchor_text.trim_end().ends_with(',');
         let has_following_properties =
             has_jsonc_property_after_anchor(&content[anchor_end..compiler_options_end]);
-
-        let mut updated = String::with_capacity(content.len() + 256);
-        updated.push_str(&content[..anchor_end]);
-        updated.push_str(comma);
-        updated.push_str("\n\n");
-        updated.push_str(SDK_TSCONFIG_PATHS_SNIPPET);
-        if has_following_properties {
-            updated.push(',');
-        }
-        updated.push_str(&content[anchor_end..]);
+        let updated = build_updated_content(
+            content,
+            anchor_end,
+            needs_prepend_comma,
+            has_following_properties,
+            false,
+        );
 
         return Ok(TsconfigPathsInjection::Updated(updated));
     }
 
     let trimmed = compiler_options_content.trim_end();
     let has_properties = trimmed.contains('"') && trimmed.contains(':');
-    let needs_comma = has_properties && !trimmed.ends_with(',');
-    let comma = if needs_comma { "," } else { "" };
-
-    let mut updated = String::with_capacity(content.len() + 256);
-    updated.push_str(&content[..compiler_options_end]);
-    updated.push_str(comma);
-    updated.push_str("\n\n");
-    updated.push_str(SDK_TSCONFIG_PATHS_SNIPPET);
-    updated.push('\n');
-    updated.push_str(&content[compiler_options_end..]);
+    let needs_prepend_comma = has_properties && !trimmed.ends_with(',');
+    let updated = build_updated_content(
+        content,
+        compiler_options_end,
+        needs_prepend_comma,
+        false,
+        true,
+    );
 
     Ok(TsconfigPathsInjection::Updated(updated))
 }

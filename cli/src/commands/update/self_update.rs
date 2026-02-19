@@ -1,7 +1,7 @@
 use super::CURRENT_VERSION;
 use anyhow::{bail, Context, Result};
 use std::io::{BufRead, BufReader};
-use std::process::{Command, Stdio};
+use std::process::{Command, ExitStatus, Stdio};
 
 /// Result of the CLI self-update attempt.
 ///
@@ -25,6 +25,44 @@ enum InstallPhase {
     Compiling,
 }
 
+struct InstallOutput {
+    status: ExitStatus,
+    stderr_content: String,
+}
+
+fn print_manual_update_guidance() {
+    eprintln!("   Run 'cargo install wavecraft' manually to update the CLI.");
+}
+
+fn report_self_update_failure(message: impl AsRef<str>, show_guidance: bool) {
+    eprintln!("⚠️  CLI self-update failed: {}", message.as_ref());
+    if show_guidance {
+        print_manual_update_guidance();
+    }
+}
+
+fn run_cargo_install_with_progress() -> Result<InstallOutput> {
+    let mut child = Command::new("cargo")
+        .args(["install", "wavecraft"])
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .context("Failed to run 'cargo install'. Is cargo installed?")?;
+
+    // Stream stderr in real time for progress feedback and capture full content
+    let stderr_pipe = child
+        .stderr
+        .take()
+        .expect("child stderr should be piped for progress parsing");
+    let stderr_content = stream_install_progress(stderr_pipe);
+    let status = child.wait().context("failed to wait for cargo install")?;
+
+    Ok(InstallOutput {
+        status,
+        stderr_content,
+    })
+}
+
 /// Perform CLI self-update via `cargo install wavecraft`.
 ///
 /// Runs `cargo install wavecraft`, captures output, and determines whether
@@ -38,50 +76,24 @@ enum InstallPhase {
 pub(super) fn update_cli() -> SelfUpdateResult {
     println!("🔄 Checking for CLI updates...");
 
-    let mut child = match Command::new("cargo")
-        .args(["install", "wavecraft"])
-        .stdout(Stdio::null())
-        .stderr(Stdio::piped())
-        .spawn()
-    {
-        Ok(child) => child,
-        Err(e) => {
-            eprintln!(
-                "⚠️  CLI self-update failed: Failed to run 'cargo install'. \
-                 Is cargo installed? ({})",
-                e
-            );
-            eprintln!("   Run 'cargo install wavecraft' manually to update the CLI.");
+    let install = match run_cargo_install_with_progress() {
+        Ok(install) => install,
+        Err(error) => {
+            report_self_update_failure(error.to_string(), true);
             return SelfUpdateResult::Failed;
         }
     };
 
-    // Stream stderr in real time for progress feedback and capture full content
-    let stderr_pipe = child
-        .stderr
-        .take()
-        .expect("child stderr should be piped for progress parsing");
-    let stderr_content = stream_install_progress(stderr_pipe);
-
-    let status = match child.wait() {
-        Ok(status) => status,
-        Err(e) => {
-            eprintln!("⚠️  CLI self-update failed: {}", e);
-            return SelfUpdateResult::Failed;
-        }
-    };
-
-    if !status.success() {
-        eprintln!(
-            "⚠️  CLI self-update failed: cargo install failed: {}",
-            stderr_content.trim()
+    if !install.status.success() {
+        report_self_update_failure(
+            format!("cargo install failed: {}", install.stderr_content.trim()),
+            true,
         );
-        eprintln!("   Run 'cargo install wavecraft' manually to update the CLI.");
         return SelfUpdateResult::Failed;
     }
 
     // Detect whether a new version was installed vs already up-to-date
-    if is_already_up_to_date(&stderr_content) {
+    if is_already_up_to_date(&install.stderr_content) {
         println!("✅ CLI is up to date ({})", CURRENT_VERSION);
         return SelfUpdateResult::AlreadyUpToDate;
     }

@@ -31,85 +31,88 @@ fn processors_sidecar_json_path(engine_dir: &Path) -> Result<PathBuf> {
     sidecar_json_path(engine_dir, PROCESSOR_SIDECAR_FILENAME)
 }
 
+fn stale_sidecar_reason(
+    engine_dir: &Path,
+    dylib_path: &Path,
+    sidecar_mtime: SystemTime,
+) -> Option<&'static str> {
+    let dylib_mtime = std::fs::metadata(dylib_path).ok()?.modified().ok()?;
+    if dylib_mtime > sidecar_mtime {
+        return Some("dylib newer");
+    }
+
+    if let Some(src_mtime) = newest_file_mtime_under(&engine_dir.join("src")) {
+        if src_mtime > sidecar_mtime {
+            return Some("engine source newer");
+        }
+    }
+
+    if let Some(cli_mtime) = current_exe_mtime() {
+        if cli_mtime > sidecar_mtime {
+            return Some("CLI binary newer");
+        }
+    }
+
+    None
+}
+
+fn try_read_cached_sidecar_json<T>(
+    engine_dir: &Path,
+    sidecar_path: &Path,
+    stale_cache_name: &str,
+    parse: impl FnOnce(&str) -> Option<Vec<T>>,
+) -> Option<Vec<T>> {
+    if !sidecar_path.exists() {
+        return None;
+    }
+
+    let dylib_path = find_plugin_dylib(engine_dir).ok()?;
+    let sidecar_mtime = std::fs::metadata(sidecar_path).ok()?.modified().ok()?;
+
+    if let Some(reason) = stale_sidecar_reason(engine_dir, &dylib_path, sidecar_mtime) {
+        println!("  {stale_cache_name} stale ({reason}), rebuilding...");
+        return None;
+    }
+
+    let contents = std::fs::read_to_string(sidecar_path).ok()?;
+    parse(&contents)
+}
+
+fn write_sidecar_json(
+    engine_dir: &Path,
+    file_name: &str,
+    json: &str,
+    write_error: &'static str,
+) -> Result<()> {
+    let sidecar_path = sidecar_json_path(engine_dir, file_name)?;
+    std::fs::write(&sidecar_path, json).context(write_error)?;
+    Ok(())
+}
+
 /// Try reading cached parameters from the sidecar JSON file.
 ///
 /// Returns `Some(params)` if the file exists and is newer than the dylib
 /// (i.e., no source changes since last extraction). Returns `None` otherwise.
 pub(super) fn try_read_cached_params(engine_dir: &Path) -> Option<Vec<ParameterInfo>> {
     let sidecar_path = params_sidecar_json_path(engine_dir).ok()?;
-    if !sidecar_path.exists() {
-        return None;
-    }
-
-    // Check if sidecar is still valid.
-    //
     // A sidecar is valid only when it is newer than:
     // - the compiled dylib currently used for extraction
     // - the newest file under engine/src (source edits before rebuild)
     // - the currently running CLI binary (cache format/logic migrations)
-    let dylib_path = find_plugin_dylib(engine_dir).ok()?;
-    let sidecar_mtime = std::fs::metadata(&sidecar_path).ok()?.modified().ok()?;
-    let dylib_mtime = std::fs::metadata(&dylib_path).ok()?.modified().ok()?;
-
-    if dylib_mtime > sidecar_mtime {
-        println!("  Sidecar cache stale (dylib newer), rebuilding...");
-
-        return None;
-    }
-
-    if let Some(src_mtime) = newest_file_mtime_under(&engine_dir.join("src")) {
-        if src_mtime > sidecar_mtime {
-            println!("  Sidecar cache stale (engine source newer), rebuilding...");
-
-            return None;
-        }
-    }
-
-    if let Some(cli_mtime) = current_exe_mtime() {
-        if cli_mtime > sidecar_mtime {
-            println!("  Sidecar cache stale (CLI binary newer), rebuilding...");
-
-            return None;
-        }
-    }
-
-    // Load parameters from JSON file (inline to avoid publish dep issues)
-    let contents = std::fs::read_to_string(&sidecar_path).ok()?;
-    serde_json::from_str(&contents).ok()
+    try_read_cached_sidecar_json(engine_dir, &sidecar_path, "Sidecar cache", |contents| {
+        serde_json::from_str(contents).ok()
+    })
 }
 
 /// Try reading cached processors from sidecar JSON file.
 fn try_read_cached_processors(engine_dir: &Path) -> Option<Vec<ProcessorInfo>> {
     let sidecar_path = processors_sidecar_json_path(engine_dir).ok()?;
-    if !sidecar_path.exists() {
-        return None;
-    }
-
-    let dylib_path = find_plugin_dylib(engine_dir).ok()?;
-    let sidecar_mtime = std::fs::metadata(&sidecar_path).ok()?.modified().ok()?;
-    let dylib_mtime = std::fs::metadata(&dylib_path).ok()?.modified().ok()?;
-
-    if dylib_mtime > sidecar_mtime {
-        println!("  Processor sidecar cache stale (dylib newer), rebuilding...");
-        return None;
-    }
-
-    if let Some(src_mtime) = newest_file_mtime_under(&engine_dir.join("src")) {
-        if src_mtime > sidecar_mtime {
-            println!("  Processor sidecar cache stale (engine source newer), rebuilding...");
-            return None;
-        }
-    }
-
-    if let Some(cli_mtime) = current_exe_mtime() {
-        if cli_mtime > sidecar_mtime {
-            println!("  Processor sidecar cache stale (CLI binary newer), rebuilding...");
-            return None;
-        }
-    }
-
-    let contents = std::fs::read_to_string(&sidecar_path).ok()?;
-    serde_json::from_str(&contents).ok()
+    try_read_cached_sidecar_json(
+        engine_dir,
+        &sidecar_path,
+        "Processor sidecar cache",
+        |contents| serde_json::from_str(contents).ok(),
+    )
 }
 
 fn newest_file_mtime_under(root: &Path) -> Option<SystemTime> {
@@ -133,18 +136,24 @@ fn current_exe_mtime() -> Option<SystemTime> {
 
 /// Write parameter metadata to the sidecar JSON cache.
 pub(crate) fn write_sidecar_cache(engine_dir: &Path, params: &[ParameterInfo]) -> Result<()> {
-    let sidecar_path = params_sidecar_json_path(engine_dir)?;
     let json = serde_json::to_string_pretty(params).context("Failed to serialize parameters")?;
-    std::fs::write(&sidecar_path, json).context("Failed to write sidecar cache")?;
-    Ok(())
+    write_sidecar_json(
+        engine_dir,
+        PARAM_SIDECAR_FILENAME,
+        &json,
+        "Failed to write sidecar cache",
+    )
 }
 
 fn write_processors_sidecar_cache(engine_dir: &Path, processors: &[ProcessorInfo]) -> Result<()> {
-    let sidecar_path = processors_sidecar_json_path(engine_dir)?;
     let json =
         serde_json::to_string_pretty(processors).context("Failed to serialize processors")?;
-    std::fs::write(&sidecar_path, json).context("Failed to write processor sidecar cache")?;
-    Ok(())
+    write_sidecar_json(
+        engine_dir,
+        PROCESSOR_SIDECAR_FILENAME,
+        &json,
+        "Failed to write processor sidecar cache",
+    )
 }
 
 /// Load plugin metadata (parameters + processors) using cached sidecars or

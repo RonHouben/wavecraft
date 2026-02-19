@@ -2453,3 +2453,73 @@
 - **Architect escalation: NO**
   - Reason: all edits were strictly local cleanup (naming/consistency/helper extraction) with no contract or ownership redesign.
 
+---
+
+## Tier 2 — Batch 4 quick-scan cleanup
+
+### Scope
+
+- Tier: **Tier 2 (quick scan)**
+- Batch: **Batch 4**
+- Goal: Bounded cleanup only (small helper extraction + duplication reduction + wording consistency) with **no behavior/API/architecture changes**.
+
+### Files Touched
+
+- `cli/src/commands/start/metadata_cache.rs`
+  - Extracted shared stale-sidecar decision helper (`stale_sidecar_reason(...)`) used by both params/processors cache paths.
+  - Extracted sidecar read-if-fresh helper (`try_read_cached_sidecar_json(...)`) to dedupe sidecar existence/mtime/read flow while keeping per-type JSON parsing local.
+  - Extracted sidecar write helper (`write_sidecar_json(...)`) to dedupe path/write IO flow while preserving existing serialize/write error contexts.
+  - Normalized stale-cache diagnostics formatting between parameter and processor sidecars.
+
+- `cli/src/commands/start/tsconfig_paths.rs`
+  - Extracted insertion-string builder (`build_updated_content(...)`) to remove duplicated string assembly paths for anchored and fallback insertion.
+  - Added shared warning constants for compiler-options and existing-paths warning paths.
+  - Normalized warning wording prefix to consistent `could not inject SDK TypeScript paths: ...`.
+  - Applied naming symmetry cleanup for comma-need booleans (`needs_prepend_comma`).
+
+- `cli/src/commands/update/self_update.rs`
+  - Extracted cargo-install spawn/wait/progress capture flow into helper (`run_cargo_install_with_progress(...)`).
+  - Added shared failure-reporting helper (`report_self_update_failure(...)`) and shared manual-guidance helper to dedupe repeated user guidance text.
+  - Preserved phase detection/progress reporting and updated/already-up-to-date decision behavior.
+
+- `dev-server/src/audio/server/output_modifiers.rs`
+  - Extracted oscillator parameter normalization helpers:
+    - `normalize_oscillator_frequency(...)`
+    - `normalize_oscillator_level(...)`
+    - `normalize_phase(...)`
+  - Extracted phase-advance helper (`advance_phase(...)`) for readability and consistency.
+  - Replaced inline normalization/phase math with helper calls only (same ranges/fallbacks/wrap logic).
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Appended Tier 2 Batch 4 progress record.
+
+### Bounded-Change Invariants
+
+- [x] No behavior changes introduced.
+- [x] No public API surface changes introduced.
+- [x] No architecture changes introduced.
+- [x] Cleanup remained local to selected Batch 4 files and helper extraction scope.
+- [x] `dev-server/src/ws/mod.rs` was re-read for context and left unmodified.
+- [x] No roadmap or archived spec files were modified.
+
+### Validation
+
+- `cargo fmt --manifest-path cli/Cargo.toml --all` — **PASSED**
+- `cargo fmt --manifest-path dev-server/Cargo.toml --all` — **PASSED**
+- `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo clippy --manifest-path dev-server/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path cli/Cargo.toml` — **PASSED**
+  - Unit tests: **105 passed, 0 failed**
+  - Integration tests: **18 passed, 0 failed**
+- `cargo test --manifest-path dev-server/Cargo.toml` — **PASSED**
+  - Unit/integration summary: **42 passed, 0 failed** (`37` unit + `3` audio status integration + `2` reload integration)
+- `cargo xtask ci-check` — **PASSED**
+  - Documentation: passed
+  - Lint/type-check: passed
+  - Engine + UI tests: passed
+
+### Escalation Decision
+
+- **Architect escalation: NO**
+  - Reason: changes were strictly local cleanup/refactor actions with explicit scope and no ownership/architecture ambiguity.
+

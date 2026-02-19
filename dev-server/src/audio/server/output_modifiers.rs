@@ -10,6 +10,13 @@ const INPUT_GAIN_PARAM_ID: &str = "input_gain_level";
 const OUTPUT_GAIN_PARAM_ID: &str = "output_gain_level";
 const OSCILLATOR_WAVEFORM_PARAM_ID: &str = "oscillator_waveform";
 
+const OSCILLATOR_FREQUENCY_MIN_HZ: f32 = 20.0;
+const OSCILLATOR_FREQUENCY_MAX_HZ: f32 = 5_000.0;
+const OSCILLATOR_FREQUENCY_FALLBACK_HZ: f32 = 440.0;
+const OSCILLATOR_LEVEL_MIN: f32 = 0.0;
+const OSCILLATOR_LEVEL_MAX: f32 = 1.0;
+const OSCILLATOR_LEVEL_FALLBACK: f32 = 0.0;
+
 pub(super) fn apply_output_modifiers(
     left: &mut [f32],
     right: &mut [f32],
@@ -46,23 +53,11 @@ pub(super) fn apply_output_modifiers(
             return;
         }
 
-        let clamped_frequency = if frequency.is_finite() {
-            frequency.clamp(20.0, 5000.0)
-        } else {
-            440.0
-        };
-        let clamped_level = if level.is_finite() {
-            level.clamp(0.0, 1.0)
-        } else {
-            0.0
-        };
+        let clamped_frequency = normalize_oscillator_frequency(frequency);
+        let clamped_level = normalize_oscillator_level(level);
 
         let phase_delta = clamped_frequency / sample_rate;
-        let mut phase = if oscillator_phase.is_finite() {
-            *oscillator_phase
-        } else {
-            0.0
-        };
+        let mut phase = normalize_phase(*oscillator_phase);
         let waveform = Waveform::from_index(oscillator_waveform);
 
         for (left_sample, right_sample) in left.iter_mut().zip(right.iter_mut()) {
@@ -70,10 +65,7 @@ pub(super) fn apply_output_modifiers(
             *left_sample = sample;
             *right_sample = sample;
 
-            phase += phase_delta;
-            if phase >= 1.0 {
-                phase -= phase.floor();
-            }
+            advance_phase(&mut phase, phase_delta);
         }
 
         *oscillator_phase = phase;
@@ -100,6 +92,33 @@ fn apply_gain(left: &mut [f32], right: &mut [f32], gain: f32) {
     for (left_sample, right_sample) in left.iter_mut().zip(right.iter_mut()) {
         *left_sample *= gain;
         *right_sample *= gain;
+    }
+}
+
+fn normalize_oscillator_frequency(value: f32) -> f32 {
+    if value.is_finite() {
+        value.clamp(OSCILLATOR_FREQUENCY_MIN_HZ, OSCILLATOR_FREQUENCY_MAX_HZ)
+    } else {
+        OSCILLATOR_FREQUENCY_FALLBACK_HZ
+    }
+}
+
+fn normalize_oscillator_level(value: f32) -> f32 {
+    if value.is_finite() {
+        value.clamp(OSCILLATOR_LEVEL_MIN, OSCILLATOR_LEVEL_MAX)
+    } else {
+        OSCILLATOR_LEVEL_FALLBACK
+    }
+}
+
+fn normalize_phase(phase: f32) -> f32 {
+    if phase.is_finite() { phase } else { 0.0 }
+}
+
+fn advance_phase(phase: &mut f32, phase_delta: f32) {
+    *phase += phase_delta;
+    if *phase >= 1.0 {
+        *phase -= phase.floor();
     }
 }
 
