@@ -1840,3 +1840,56 @@
 
 - **Architect escalation: NO**
   - Reason: ownership boundary was cohesive and explicit (input callback processing pipeline as a single concern), with no ambiguous architecture split or contract decision required.
+
+---
+
+## Slice 5 — Output callback routing decomposition (audio/server.rs)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `dev-server/src/audio/server.rs`
+- Slice goal: Extract output callback routing concern (ring-consumer pop, mono downmix, stereo-to-device-channel mapping, and underflow/multichannel silence fill) into a dedicated helper module while preserving behavior and keeping `server.rs` orchestration-focused and `device_setup.rs` stream-wiring-focused.
+
+### Files Touched
+
+- `dev-server/src/audio/server.rs`
+  - Added `mod output_routing;` wiring for extracted output callback routing ownership.
+
+- `dev-server/src/audio/server/device_setup.rs`
+  - Kept output stream build wiring responsibility.
+  - Replaced in-closure output routing body with delegated call:
+    - `super::output_routing::route_output_callback(data, output_channels, &mut ring_consumer)`
+
+- `dev-server/src/audio/server/output_routing.rs`
+  - New module owning extracted output callback routing concern:
+    - `route_output_callback(...)`
+  - Preserves existing callback behavior:
+    - `output_channels == 0` → full silence
+    - ring underflow → per-sample silence fallback
+    - mono output → `(L + R) * 0.5` downmix
+    - multi-channel output → `L/R` on channels `0/1`, channels `2+` zeroed
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added this Slice 5 progress record.
+
+### Invariants (Behavior Preservation)
+
+- [x] Output callback routing semantics preserved exactly (same ring pop order, same downmix/mapping/silence behavior).
+- [x] Stream wiring ownership preserved in `device_setup.rs`; no contract/public API changes.
+- [x] `server.rs` remains orchestration/wiring focused.
+- [x] RT-safety unchanged in output callback hot path (no blocking, no locks, no allocations introduced).
+- [x] Refactor-only scope preserved (no feature/contract changes).
+
+### Validation
+
+- `cargo fmt --manifest-path dev-server/Cargo.toml` — **PASSED**
+- `cargo clippy --manifest-path dev-server/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path dev-server/Cargo.toml` — **PASSED**
+  - Unit/integration summary: **42 passed, 0 failed** (`37` unit + `3` audio status integration + `2` reload integration)
+- `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log
+
+- **Architect escalation: NO**
+  - Reason: output callback routing is a narrow, cohesive concern with a clear ownership boundary separate from stream wiring/orchestration, and extraction required no architectural tradeoff.

@@ -24,8 +24,8 @@
 mod device_setup;
 mod input_pipeline;
 mod metering;
-mod output_routing;
 mod output_modifiers;
+mod output_routing;
 
 use std::sync::Arc;
 
