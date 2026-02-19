@@ -2398,3 +2398,58 @@
 - **Architect escalation: NO**
   - Reason: changes were strictly local cleanups with no ownership ambiguity and no architectural redesign.
 
+---
+
+## Tier 2 — Batch 3 quick-scan cleanup
+
+### Scope
+
+- Tier: **Tier 2 (quick scan)**
+- Batch: **Batch 3**
+- Goal: Bounded cleanup only (naming consistency, dead/unused cleanup, obvious local helper extraction, error-message consistency) with **no behavior/API/architecture changes**.
+
+### Files Touched
+
+- `dev-server/src/reload/watcher.rs`
+  - Performed naming consistency cleanup for keep-alive fields by using underscore-prefixed names (`_debouncer`, `_shutdown_rx`) and removed now-unnecessary dead-code attributes.
+  - Clarified local variable names in `new(...)` (`engine_dir_path`, `watched_root`) to make watcher-root ownership explicit.
+  - Standardized watcher error prefixing (`Warning: file watcher error: ...`) to align with existing warning style.
+  - Extracted editor temporary-file predicate into local helper `is_editor_temp_file(...)`.
+
+- `dev-server/src/reload/rebuild.rs`
+  - Extracted duplicated TypeScript-regeneration failure logging into local helper `log_regeneration_failure(...)`.
+  - Unified retry guidance text emission for parameter and processor type-generation failure paths.
+
+- `dev-server/src/ws/mod.rs`
+  - Improved naming consistency by replacing hardcoded method/notification strings with protocol constants where available (`METHOD_REGISTER_AUDIO`, `NOTIFICATION_METER_UPDATE`, `NOTIFICATION_PARAMETER_CHANGED`).
+  - Introduced local constant `NOTIFICATION_PARAMETERS_CHANGED` for the dev-server-only notification string to avoid inline literal duplication.
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Appended Tier 2 Batch 3 quick-scan record.
+
+### Bounded-Change Invariants
+
+- [x] No behavior changes introduced.
+- [x] No public API surface changes introduced.
+- [x] No architecture changes introduced.
+- [x] Cleanup remained local to naming/consistency/helper extraction scope.
+- [x] No roadmap or archived spec files were modified.
+
+### Validation
+
+- `cargo fmt --manifest-path dev-server/Cargo.toml` — **PASSED**
+- `cargo clippy --manifest-path dev-server/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path dev-server/Cargo.toml` — **PASSED**
+  - Unit/integration summary: **42 passed, 0 failed** (`37` unit + `3` audio status integration + `2` reload integration)
+- `cargo xtask ci-check` — **PASSED**
+
+### Deferred Follow-ups
+
+- **Candidate:** replace the remaining dev-server-local notification literal `parametersChanged` with a protocol-level exported constant for full cross-transport parity.
+  - Deferred because introducing/standardizing protocol constants is cross-crate contract hygiene and outside this bounded quick-scan scope.
+
+### Escalation Decision
+
+- **Architect escalation: NO**
+  - Reason: all edits were strictly local cleanup (naming/consistency/helper extraction) with no contract or ownership redesign.
+
