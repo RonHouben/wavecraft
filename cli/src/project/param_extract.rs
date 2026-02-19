@@ -13,16 +13,12 @@ use wavecraft_protocol::ProcessorInfo;
 /// Default timeout for subprocess parameter extraction.
 pub const DEFAULT_EXTRACT_TIMEOUT: Duration = Duration::from_secs(30);
 
-async fn extract_via_subprocess(
+fn spawn_extraction_subprocess(
+    self_exe: &Path,
     subcommand: &str,
     dylib_path: &Path,
-    timeout: Duration,
-) -> Result<String> {
-    // Resolve the path to the current wavecraft binary
-    let self_exe = std::env::current_exe().context("Failed to determine wavecraft binary path")?;
-
-    // Spawn the extraction subprocess
-    let mut child = tokio::process::Command::new(&self_exe)
+) -> Result<tokio::process::Child> {
+    tokio::process::Command::new(self_exe)
         .arg(subcommand)
         .arg(dylib_path)
         .stdout(std::process::Stdio::piped())
@@ -34,35 +30,86 @@ async fn extract_via_subprocess(
                 subcommand,
                 self_exe.display()
             )
-        })?;
+        })
+}
 
-    // Take ownership of stdout/stderr before consuming child
-    let mut stdout = child
+fn take_subprocess_pipes(
+    child: &mut tokio::process::Child,
+) -> Result<(tokio::process::ChildStdout, tokio::process::ChildStderr)> {
+    let stdout = child
         .stdout
         .take()
         .ok_or_else(|| anyhow::anyhow!("Failed to capture subprocess stdout"))?;
-    let mut stderr = child
+    let stderr = child
         .stderr
         .take()
         .ok_or_else(|| anyhow::anyhow!("Failed to capture subprocess stderr"))?;
+
+    Ok((stdout, stderr))
+}
+
+async fn read_subprocess_pipes(
+    stdout: &mut tokio::process::ChildStdout,
+    stderr: &mut tokio::process::ChildStderr,
+) -> Result<(Vec<u8>, Vec<u8>)> {
+    use tokio::io::AsyncReadExt;
+
+    let mut stdout_buf = Vec::new();
+    let mut stderr_buf = Vec::new();
+
+    stdout
+        .read_to_end(&mut stdout_buf)
+        .await
+        .context("Failed to read subprocess stdout")?;
+    stderr
+        .read_to_end(&mut stderr_buf)
+        .await
+        .context("Failed to read subprocess stderr")?;
+
+    Ok((stdout_buf, stderr_buf))
+}
+
+fn timeout_diagnostics(subcommand: &str, timeout: Duration, dylib_path: &Path) -> String {
+    format!(
+        "{} timed out after {}s. \
+         This is likely caused by macOS static initializers in the plugin dylib. \
+         The plugin was built with --features _param-discovery but dlopen \
+         still hung. Check for transitive dependencies that register with \
+         macOS system services during library load.\n\
+         \n\
+         Suggested actions:\n\
+         • Check for new transitive dependencies in Cargo.toml\n\
+         • Try: nm -gU {} | grep _init  (look for unexpected initializers)\n\
+         • File a bug with the offending dependency\n\
+         \n\
+         Dylib: {}",
+        subcommand,
+        timeout.as_secs(),
+        dylib_path.display(),
+        dylib_path.display()
+    )
+}
+
+async fn extract_via_subprocess(
+    subcommand: &str,
+    dylib_path: &Path,
+    timeout: Duration,
+) -> Result<String> {
+    // Resolve the path to the current wavecraft binary
+    let self_exe = std::env::current_exe().context("Failed to determine wavecraft binary path")?;
+
+    // Spawn the extraction subprocess
+    let mut child = spawn_extraction_subprocess(&self_exe, subcommand, dylib_path)?;
+
+    // Take ownership of stdout/stderr before consuming child
+    let (mut stdout, mut stderr) = take_subprocess_pipes(&mut child)?;
 
     // Wait for the subprocess with timeout (using wait() not wait_with_output())
     match tokio::time::timeout(timeout, child.wait()).await {
         // Subprocess completed within timeout
         Ok(Ok(status)) => {
             // Read stdout and stderr
-            let mut stdout_buf = Vec::new();
-            let mut stderr_buf = Vec::new();
-
-            use tokio::io::AsyncReadExt;
-            stdout
-                .read_to_end(&mut stdout_buf)
-                .await
-                .context("Failed to read subprocess stdout")?;
-            stderr
-                .read_to_end(&mut stderr_buf)
-                .await
-                .context("Failed to read subprocess stderr")?;
+            let (stdout_buf, stderr_buf) = read_subprocess_pipes(&mut stdout, &mut stderr).await?;
 
             if status.success() {
                 // Parse stdout as JSON
@@ -94,24 +141,7 @@ async fn extract_via_subprocess(
             // Now we can kill because child wasn't consumed
             let _ = child.kill().await;
 
-            anyhow::bail!(
-                "{} timed out after {}s. \
-                 This is likely caused by macOS static initializers in the plugin dylib. \
-                 The plugin was built with --features _param-discovery but dlopen \
-                 still hung. Check for transitive dependencies that register with \
-                 macOS system services during library load.\n\
-                 \n\
-                 Suggested actions:\n\
-                 • Check for new transitive dependencies in Cargo.toml\n\
-                 • Try: nm -gU {} | grep _init  (look for unexpected initializers)\n\
-                 • File a bug with the offending dependency\n\
-                 \n\
-                 Dylib: {}",
-                subcommand,
-                timeout.as_secs(),
-                dylib_path.display(),
-                dylib_path.display()
-            );
+            anyhow::bail!("{}", timeout_diagnostics(subcommand, timeout, dylib_path));
         }
     }
 }

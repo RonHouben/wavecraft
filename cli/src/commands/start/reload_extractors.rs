@@ -1,9 +1,54 @@
 use anyhow::{Context, Result};
 use console::style;
+use std::future::Future;
 use std::path::{Path, PathBuf};
 
 use crate::project::find_plugin_dylib;
 use wavecraft_protocol::{ParameterInfo, ProcessorInfo};
+
+fn prepare_temp_dylib(engine_dir: &Path) -> Result<PathBuf> {
+    println!("  {} Finding plugin dylib...", style("→").dim());
+    let lib_path =
+        find_plugin_dylib(engine_dir).context("Failed to find plugin dylib after rebuild")?;
+    println!("  {} Found: {}", style("→").dim(), lib_path.display());
+
+    println!("  {} Copying to temp location...", style("→").dim());
+    let temp_path = create_temp_dylib_copy(&lib_path)?;
+    println!("  {} Temp: {}", style("→").dim(), temp_path.display());
+
+    Ok(temp_path)
+}
+
+async fn load_from_temp_dylib<T, F, Fut>(
+    engine_dir: PathBuf,
+    noun: &str,
+    extract: F,
+) -> Result<Vec<T>>
+where
+    F: FnOnce(PathBuf) -> Fut,
+    Fut: Future<Output = Result<Vec<T>>>,
+{
+    let temp_path = prepare_temp_dylib(&engine_dir)?;
+
+    println!("  {} Loading {} via subprocess...", style("→").dim(), noun);
+    let result = extract(temp_path.clone())
+        .await
+        .with_context(|| format!("Failed to extract {} from: {}", noun, temp_path.display()));
+
+    // Clean up temp file regardless of extract result.
+    let _ = std::fs::remove_file(&temp_path);
+
+    let values = result?;
+
+    println!(
+        "  {} Loaded {} {} via subprocess",
+        style("→").dim(),
+        values.len(),
+        noun
+    );
+
+    Ok(values)
+}
 
 /// Load parameters from the rebuilt dylib via subprocess isolation.
 ///
@@ -15,68 +60,26 @@ use wavecraft_protocol::{ParameterInfo, ProcessorInfo};
 /// infrastructure: `find_plugin_dylib`, `extract_params_subprocess`,
 /// and `create_temp_dylib_copy`.
 pub(super) async fn load_parameters_from_dylib(engine_dir: PathBuf) -> Result<Vec<ParameterInfo>> {
-    println!("  {} Finding plugin dylib...", style("→").dim());
-    let lib_path =
-        find_plugin_dylib(&engine_dir).context("Failed to find plugin dylib after rebuild")?;
-    println!("  {} Found: {}", style("→").dim(), lib_path.display());
-
-    println!("  {} Copying to temp location...", style("→").dim());
-    let temp_path = create_temp_dylib_copy(&lib_path)?;
-    println!("  {} Temp: {}", style("→").dim(), temp_path.display());
-
-    println!(
-        "  {} Loading parameters via subprocess...",
-        style("→").dim()
-    );
-    let params = crate::project::param_extract::extract_params_subprocess(
-        &temp_path,
-        crate::project::param_extract::DEFAULT_EXTRACT_TIMEOUT,
-    )
+    load_from_temp_dylib(engine_dir, "parameters", |temp_path| async move {
+        crate::project::param_extract::extract_params_subprocess(
+            &temp_path,
+            crate::project::param_extract::DEFAULT_EXTRACT_TIMEOUT,
+        )
+        .await
+    })
     .await
-    .with_context(|| format!("Failed to extract parameters from: {}", temp_path.display()))?;
-    println!(
-        "  {} Loaded {} parameters via subprocess",
-        style("→").dim(),
-        params.len()
-    );
-
-    // Clean up temp file
-    let _ = std::fs::remove_file(&temp_path);
-
-    Ok(params)
 }
 
 /// Load processors from the rebuilt dylib via subprocess isolation.
 pub(super) async fn load_processors_from_dylib(engine_dir: PathBuf) -> Result<Vec<ProcessorInfo>> {
-    println!("  {} Finding plugin dylib...", style("→").dim());
-    let lib_path =
-        find_plugin_dylib(&engine_dir).context("Failed to find plugin dylib after rebuild")?;
-    println!("  {} Found: {}", style("→").dim(), lib_path.display());
-
-    println!("  {} Copying to temp location...", style("→").dim());
-    let temp_path = create_temp_dylib_copy(&lib_path)?;
-    println!("  {} Temp: {}", style("→").dim(), temp_path.display());
-
-    println!(
-        "  {} Loading processors via subprocess...",
-        style("→").dim()
-    );
-    let processors = crate::project::param_extract::extract_processors_subprocess(
-        &temp_path,
-        crate::project::param_extract::DEFAULT_EXTRACT_TIMEOUT,
-    )
+    load_from_temp_dylib(engine_dir, "processors", |temp_path| async move {
+        crate::project::param_extract::extract_processors_subprocess(
+            &temp_path,
+            crate::project::param_extract::DEFAULT_EXTRACT_TIMEOUT,
+        )
+        .await
+    })
     .await
-    .with_context(|| format!("Failed to extract processors from: {}", temp_path.display()))?;
-
-    let _ = std::fs::remove_file(&temp_path);
-
-    println!(
-        "  {} Loaded {} processors via subprocess",
-        style("→").dim(),
-        processors.len()
-    );
-
-    Ok(processors)
 }
 
 /// Create a temporary copy of the dylib with a unique name.

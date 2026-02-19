@@ -43,27 +43,17 @@ impl InputCallbackPipeline {
     pub(super) fn process_callback(&mut self, data: &[f32]) {
         self.frame_counter += 1;
 
-        let num_samples = data.len() / self.input_channels.max(1);
-        if num_samples == 0 || self.input_channels == 0 {
+        let Some(actual_samples) =
+            callback_sample_count(data.len(), self.input_channels, self.left_buf.len())
+        else {
             return;
-        }
+        };
 
-        let actual_samples = num_samples.min(self.left_buf.len());
         let left = &mut self.left_buf[..actual_samples];
         let right = &mut self.right_buf[..actual_samples];
 
         // Zero-fill and deinterleave
-        left.fill(0.0);
-        right.fill(0.0);
-
-        for i in 0..actual_samples {
-            left[i] = data[i * self.input_channels];
-            if self.input_channels > 1 {
-                right[i] = data[i * self.input_channels + 1];
-            } else {
-                right[i] = left[i];
-            }
-        }
+        deinterleave_input(data, self.input_channels, left, right);
 
         // Process through the user's DSP (stack-local channel array)
         {
@@ -102,16 +92,51 @@ impl InputCallbackPipeline {
         // If the ring buffer is full, samples are silently dropped
         // (acceptable — temporary glitch, RT-safe).
         let interleave = &mut self.interleave_buf[..actual_samples * 2];
-        for i in 0..actual_samples {
-            interleave[i * 2] = left[i];
-            interleave[i * 2 + 1] = right[i];
-        }
+        interleave_stereo(left, right, interleave);
 
         // Write to SPSC ring buffer — non-blocking, lock-free.
-        for &sample in interleave.iter() {
-            if self.ring_producer.push(sample).is_err() {
-                break;
-            }
+        push_samples_to_ring(&mut self.ring_producer, interleave);
+    }
+}
+
+fn callback_sample_count(
+    data_len: usize,
+    input_channels: usize,
+    max_samples: usize,
+) -> Option<usize> {
+    let num_samples = data_len / input_channels.max(1);
+    if num_samples == 0 || input_channels == 0 {
+        return None;
+    }
+
+    Some(num_samples.min(max_samples))
+}
+
+fn deinterleave_input(data: &[f32], input_channels: usize, left: &mut [f32], right: &mut [f32]) {
+    left.fill(0.0);
+    right.fill(0.0);
+
+    for i in 0..left.len() {
+        left[i] = data[i * input_channels];
+        if input_channels > 1 {
+            right[i] = data[i * input_channels + 1];
+        } else {
+            right[i] = left[i];
+        }
+    }
+}
+
+fn interleave_stereo(left: &[f32], right: &[f32], interleave: &mut [f32]) {
+    for i in 0..left.len() {
+        interleave[i * 2] = left[i];
+        interleave[i * 2 + 1] = right[i];
+    }
+}
+
+fn push_samples_to_ring(ring_producer: &mut rtrb::Producer<f32>, samples: &[f32]) {
+    for &sample in samples {
+        if ring_producer.push(sample).is_err() {
+            break;
         }
     }
 }

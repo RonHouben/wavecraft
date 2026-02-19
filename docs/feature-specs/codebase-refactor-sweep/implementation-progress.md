@@ -2523,3 +2523,70 @@
 - **Architect escalation: NO**
   - Reason: changes were strictly local cleanup/refactor actions with explicit scope and no ownership/architecture ambiguity.
 
+---
+
+## Tier 2 — Batch 5 quick-scan cleanup
+
+### Scope
+
+- Tier: **Tier 2 (quick scan)**
+- Batch: **Batch 5**
+- Goal: Bounded cleanup only (small helper extraction, duplication reduction, readability-only nested-flow simplification) with **no behavior/API/architecture changes**.
+
+### Files Touched
+
+- `cli/src/project/param_extract.rs`
+  - Extracted subprocess spawn helper (`spawn_extraction_subprocess`) to dedupe process construction and error-context formatting.
+  - Extracted stdout/stderr capture helper (`take_subprocess_pipes`) and buffered pipe-read helper (`read_subprocess_pipes`) to reduce repeated diagnostics plumbing.
+  - Extracted timeout diagnostic formatter (`timeout_diagnostics`) to centralize long timeout guidance text while preserving wording and values.
+
+- `cli/src/commands/start/reload_extractors.rs`
+  - Extracted shared dylib find/copy logging flow into `prepare_temp_dylib(...)`.
+  - Extracted shared temp-dylib extraction + cleanup flow into `load_from_temp_dylib(...)` used by both parameter and processor loaders.
+  - Preserved temp cleanup semantics (best-effort `remove_file` after extraction attempt, including failure path).
+
+- `dev-server/src/audio/server/input_pipeline.rs`
+  - Extracted callback-guard helper (`callback_sample_count`) for sample-count gating.
+  - Extracted pure channel-layout helpers (`deinterleave_input`, `interleave_stereo`) and ring-write helper (`push_samples_to_ring`) for readability.
+  - Preserved callback order and preallocated-buffer usage; no new callback allocations/locks introduced.
+
+- `dev-server/src/session.rs`
+  - Extracted tiny watch/rebuild path helpers:
+    - `log_rust_file_change(...)`
+    - `report_rebuild_result(...)`
+    - `handle_rust_files_changed(...)`
+  - Simplified nested event-handler flow while preserving rebuild/panic reporting behavior and message text.
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Appended Tier 2 Batch 5 progress record.
+
+### Bounded-Change Invariants
+
+- [x] No behavior changes introduced.
+- [x] No public API surface changes introduced.
+- [x] No architecture changes introduced.
+- [x] Cleanup remained local to selected Batch 5 files and helper-extraction scope.
+- [x] Real-time safety in audio callback paths preserved (no allocations/locks added in callback hot path).
+- [x] No roadmap or archived spec files were modified.
+
+### Validation
+
+- `cargo fmt --manifest-path cli/Cargo.toml --all` — **PASSED**
+- `cargo fmt --manifest-path dev-server/Cargo.toml --all` — **PASSED**
+- `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo clippy --manifest-path dev-server/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path cli/Cargo.toml` — **PASSED**
+  - Unit tests: **105 passed, 0 failed**
+  - Integration tests: **18 passed, 0 failed**
+- `cargo test --manifest-path dev-server/Cargo.toml` — **PASSED**
+  - Unit/integration summary: **42 passed, 0 failed** (`37` unit + `3` audio status integration + `2` reload integration)
+- `cargo xtask ci-check` — **PASSED**
+  - Documentation: passed
+  - Lint/type-check: passed
+  - Engine + UI tests: passed
+
+### Escalation Decision
+
+- **Architect escalation: NO**
+  - Reason: the cleanup boundaries were explicit and local; no ownership ambiguity or architectural tradeoff appeared while implementing Batch 5.
+
