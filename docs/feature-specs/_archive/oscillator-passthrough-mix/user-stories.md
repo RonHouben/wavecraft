@@ -1,8 +1,10 @@
-# User Stories: Oscillator Passthrough Mix
+# Archived
 
-## Overview
+This feature spec has been archived.
 
-In newly created Wavecraft projects, enabling `Oscillator` in `SignalChain` currently blocks incoming DAW audio instead of layering with it. This creates a broken first-use experience: users hear either oscillator output or DAW passthrough, but not both.
+Canonical file: `docs/feature-specs/_archive/oscillator-passthrough-mix/user-stories.md`
+
+Please read/update the archived file only.
 
 **User problem:**
 

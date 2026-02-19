@@ -1,8 +1,10 @@
-# QA Report: Oscillator Passthrough Mix
+# Archived
 
-**Date**: 2026-02-18  
-**Reviewer**: QA Agent  
-**Status**: PASS
+This feature spec has been archived.
+
+Canonical file: `docs/feature-specs/_archive/oscillator-passthrough-mix/QA-report.md`
+
+Please read/update the archived file only.
 
 ## Summary
 
