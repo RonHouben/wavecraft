@@ -1577,3 +1577,266 @@
 
 - **Architect escalation: NO**
   - Reason: the requested boundary was explicit (`ipc/errors.rs` for error contract extraction), and no ambiguous ownership split or architecture tradeoff was encountered.
+
+---
+
+## Slice 3 — Method contracts + method/notification constants extraction (`ipc.rs`)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `engine/crates/wavecraft-protocol/src/ipc.rs`
+- Slice goal: Extract method-specific IPC contract types and method/notification constants into a dedicated module while preserving JSON-RPC wire compatibility exactly and keeping `ipc.rs` as orchestration + stable re-export surface.
+
+### Files Touched
+
+- `engine/crates/wavecraft-protocol/src/ipc.rs`
+  - Added submodule wiring:
+    - `#[path = "ipc/methods.rs"] mod methods;`
+    - `pub use methods::{ ... };` for all moved method-specific contracts and method/notification constants.
+  - Removed in-file method-specific contract definitions and method/notification constants.
+  - Kept envelope/errors ownership and test orchestration in `ipc.rs`.
+
+- `engine/crates/wavecraft-protocol/src/ipc/methods.rs`
+  - New module owning extracted method-contract concern:
+    - request/response params/results (`getParameter`, `setParameter`, `getAllParameters`, `getMeterFrame`, `getOscilloscopeFrame`, `getAudioStatus`, `requestResize`, `registerAudio`)
+    - method-related data contracts (`ParameterInfo`, `ParameterType`, `ProcessorInfo`, metering/oscilloscope/audio status structs/enums)
+    - notification payloads (`ParameterChangedNotification`, `MeterUpdateNotification`)
+    - method/notification constants (`METHOD_*`, `NOTIFICATION_*`)
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added Slice 3 checkpoint entry for `ipc.rs` hotspot.
+
+### Invariants (Behavior Preservation)
+
+- [x] JSON-RPC wire format preserved exactly (no serde attribute, field name, enum casing, or optional-field behavior changes).
+- [x] Method and notification string constants preserved exactly (same literal values).
+- [x] Public API compatibility preserved through `wavecraft_protocol::ipc` re-exports in `ipc.rs`.
+- [x] Existing serialization/tests for IPC envelopes and method payloads remained green.
+- [x] Refactor-only scope preserved (no feature additions, no semantic changes).
+
+### Validation
+
+- Required cadence executed:
+  - `cargo fmt --manifest-path engine/Cargo.toml` — **FAILED** (`Failed to find targets`)
+  - `cargo fmt --manifest-path engine/Cargo.toml --all` — **PASSED** (fallback rerun)
+  - `cargo clippy --manifest-path engine/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+  - `cargo test --manifest-path engine/Cargo.toml` — **PASSED**
+  - `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log
+
+- **Architect escalation: NO**
+  - Reason: extraction boundary was explicit and cohesive (method-specific contract types + method/notification constants), with no ambiguous ownership split requiring architectural guidance.
+
+---
+
+## Slice 1 — Device/config negotiation + stream construction extraction (audio/server.rs)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `dev-server/src/audio/server.rs`
+- Slice goal: Extract device/config negotiation and stream construction concerns into a dedicated internal module while preserving runtime behavior and keeping `server.rs` focused on orchestration/wiring.
+
+### Files Touched
+
+- `dev-server/src/audio/server.rs`
+  - Added `mod device_setup;` and rewired:
+    - `AudioServer::new(...)` device/config setup via `device_setup::negotiate_default_devices_and_configs(...)`
+    - input stream construction via `device_setup::build_input_stream(...)`
+    - output stream construction via `device_setup::build_output_stream(...)`
+  - Kept public API/signatures and orchestration flow intact.
+
+- `dev-server/src/audio/server/device_setup.rs`
+  - New module owning extracted cohesive boundary:
+    - default input/output device + config negotiation
+    - input stream construction (including pre-callback buffer setup and callback wiring)
+    - output stream construction (ring-consumer playback callback wiring)
+
+- `dev-server/src/host.rs`
+  - Minimal lint-only correction required by strict validation gate (`clone_on_copy`) with no functional behavior change.
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added this slice progress record.
+
+### Invariants (Behavior Preservation)
+
+- [x] No functional changes introduced (refactor-only extraction).
+- [x] Public API/signatures remain stable (`AudioServer`, `AudioConfig`, `AudioHandle`, `start/new` signatures unchanged).
+- [x] Device negotiation behavior/logging preserved (same required-device semantics, same mismatch warning behavior).
+- [x] Stream callback behavior preserved (same deinterleave/process/modifier/meter/interleave flow and output routing).
+- [x] Real-time safety unchanged in callback paths:
+  - pre-allocated callback buffers remain allocated before callback execution;
+  - lock-free ring-buffer usage unchanged;
+  - no new locks/allocations introduced in RT callback hot paths.
+
+### Validation
+
+- Required cadence:
+  - `cargo fmt --manifest-path dev-server/Cargo.toml` — **PASSED**
+  - `cargo clippy --manifest-path dev-server/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+  - `cargo test --manifest-path dev-server/Cargo.toml` — **PASSED**
+    - unit/integration summary: **42 passed, 0 failed** (`37` unit + `3` audio status integration + `2` reload integration)
+  - `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log
+
+- **Architect escalation: NO**
+  - Boundary ownership was cohesive and unambiguous: device/config negotiation and stream construction are tightly coupled setup concerns that can be isolated from server orchestration without crossing ownership boundaries.
+
+---
+
+## Slice 2 — Output modifiers + gain read/apply helpers extraction (audio/server.rs)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `dev-server/src/audio/server.rs`
+- Slice goal: Extract runtime output-modifier flow and parameter-read/gain-apply helpers into a dedicated module while preserving behavior and keeping `server.rs` orchestration-focused.
+
+### Files Touched
+
+- `dev-server/src/audio/server.rs`
+  - Added `mod output_modifiers;` wiring and removed in-file output modifier/gain helper cluster.
+  - Kept orchestration responsibilities (`AudioServer` setup/start + meter computation) in place.
+
+- `dev-server/src/audio/server/device_setup.rs`
+  - Rewired callback modifier invocation to extracted module:
+    - `super::output_modifiers::apply_output_modifiers(...)`
+
+- `dev-server/src/audio/server/output_modifiers.rs`
+  - New module owning extracted boundary:
+    - runtime oscillator/output-modifier flow
+    - canonical gain multiplier reads (`input_gain_level`, `output_gain_level`)
+    - gain application helper tied to modifier path
+  - Co-located output-modifier behavior tests moved from `server.rs`.
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added this Slice 2 progress record.
+
+### Invariants (Behavior Preservation)
+
+- [x] Runtime oscillator/output-modifier behavior preserved.
+- [x] Canonical parameter-ID policy preserved (no legacy alias fallback introduced).
+- [x] Gain multiplier read/validation/clamp behavior preserved.
+- [x] Gain application path preserved and remains tied to output modifier flow.
+- [x] RT-safety characteristics unchanged (no new locks/allocations introduced in callback hot path).
+- [x] Refactor-only scope preserved (no feature or contract changes).
+
+### Validation
+
+- Required cadence executed:
+  - `cargo fmt --manifest-path dev-server/Cargo.toml` — **PASSED**
+  - `cargo clippy --manifest-path dev-server/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+  - `cargo test --manifest-path dev-server/Cargo.toml` — **PASSED**
+    - Unit/integration summary: **42 passed, 0 failed**
+    - Output-modifier tests now under `audio::server::output_modifiers::tests`: **10 passed**
+  - `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log
+
+- **Architect escalation: NO**
+  - Boundary remained narrow and cohesive (output modifier + gain helper cluster) with no cross-cutting ownership ambiguity.
+
+---
+
+## Slice 3 — Metering helper extraction (audio/server.rs)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `dev-server/src/audio/server.rs`
+- Slice goal: Extract metering helper concern (peak/RMS computation + meter notification packaging/cadence helper) into a dedicated module while preserving callback behavior and keeping `server.rs` orchestration-focused.
+
+### Files Touched
+
+- `dev-server/src/audio/server.rs`
+  - Added `mod metering;`.
+  - Removed in-file metering helper ownership from orchestrator file.
+
+- `dev-server/src/audio/server/metering.rs`
+  - New module owning extracted metering concern:
+    - `maybe_build_meter_update(...)` (notification packaging + cadence gate)
+    - `compute_peak_and_rms(...)` (peak/RMS helper)
+
+- `dev-server/src/audio/server/device_setup.rs`
+  - Rewired input callback metering path to call:
+    - `super::metering::maybe_build_meter_update(frame_counter, left, right)`
+  - Preserved existing lock-free meter push flow (`meter_producer.push(...)`).
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added this Slice 3 progress record.
+
+### Invariants (Behavior Preservation)
+
+- [x] Meter cadence preserved exactly (every other callback via `frame_counter.is_multiple_of(2)`).
+- [x] Meter fields preserved exactly (`timestamp_us`, `left_peak`, `left_rms`, `right_peak`, `right_rms`).
+- [x] Peak/RMS computation logic preserved exactly (same absolute-peak fold + RMS formula).
+- [x] Callback flow preserved (capture → metering helper → lock-free push → interleave/ring write).
+- [x] RT-safety unchanged (no new locks/blocking/allocations in callback hot path).
+- [x] Refactor-only scope preserved (no feature/contract changes).
+
+### Validation
+
+- `cargo fmt --manifest-path dev-server/Cargo.toml` — **PASSED**
+- `cargo clippy --manifest-path dev-server/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path dev-server/Cargo.toml` — **PASSED**
+  - Unit/integration summary: **42 passed, 0 failed** (`37` unit + `3` audio status integration + `2` reload integration)
+- `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log
+
+- **Architect escalation: NO**
+  - Boundary was narrow and cohesive (meter math + meter packaging/cadence helper) and did not crosscut broader ownership beyond callback-local metering responsibilities.
+
+---
+
+## Slice 4 — Input callback pipeline decomposition (audio/server.rs)
+
+### Scope
+
+- Tier: **Tier 1 (hotspot decomposition)**
+- Hotspot: `dev-server/src/audio/server.rs`
+- Slice goal: Extract the cohesive input callback processing pipeline (deinterleave/process/modifier/oscilloscope/meter/interleave/ring-write) from stream setup wiring into a dedicated helper module while preserving behavior and keeping `server.rs` orchestration-focused.
+
+### Files Touched
+
+- `dev-server/src/audio/server.rs`
+  - Added `mod input_pipeline;` wiring for extracted callback-pipeline ownership.
+
+- `dev-server/src/audio/server/device_setup.rs`
+  - Kept input stream build wiring responsibility.
+  - Replaced in-closure callback processing body with delegated call to extracted helper:
+    - `input_pipeline.process_callback(data)`
+
+- `dev-server/src/audio/server/input_pipeline.rs`
+  - New module owning extracted input callback pipeline concern:
+    - callback-local state (frame counter, oscillator phase, preallocated channel/interleave buffers)
+    - `InputCallbackPipeline::new(...)` pre-callback allocation/setup
+    - `InputCallbackPipeline::process_callback(...)` with unchanged processing sequence.
+
+- `docs/feature-specs/codebase-refactor-sweep/implementation-progress.md`
+  - Added this Slice 4 progress record.
+
+### Invariants (Behavior Preservation)
+
+- [x] Input callback sequence preserved exactly:
+  - deinterleave → DSP process → output modifiers → oscilloscope capture → optional meter update/push → interleave → ring write.
+- [x] Callback-local state semantics preserved (`frame_counter`, `oscillator_phase`).
+- [x] Buffer sizing/reuse semantics preserved (same preallocated `left/right/interleave` buffers, no per-callback allocation).
+- [x] Lock-free ring interactions preserved (`meter_producer.push`, `ring_producer.push` with drop-on-full behavior unchanged).
+- [x] Public API/signatures preserved (`AudioServer`/`AudioHandle`/`AudioConfig`/`start/new` unchanged).
+- [x] Refactor-only scope preserved (no feature/contract changes).
+
+### Validation
+
+- `cargo fmt --manifest-path dev-server/Cargo.toml` — **PASSED**
+- `cargo clippy --manifest-path dev-server/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path dev-server/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**
+
+### Escalation Log
+
+- **Architect escalation: NO**
+  - Reason: ownership boundary was cohesive and explicit (input callback processing pipeline as a single concern), with no ambiguous architecture split or contract decision required.

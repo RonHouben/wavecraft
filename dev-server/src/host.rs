@@ -171,10 +171,10 @@ impl ParameterHost for DevServerHost {
     }
 
     fn get_meter_frame(&self) -> Option<MeterFrame> {
-        self.latest_meter_frame
+        *self
+            .latest_meter_frame
             .read()
             .expect("latest_meter_frame lock poisoned")
-            .clone()
     }
 
     fn get_oscilloscope_frame(&self) -> Option<OscilloscopeFrame> {
