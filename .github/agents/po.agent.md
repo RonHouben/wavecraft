@@ -54,6 +54,19 @@ When asked to update the roadmap:
 
 ---
 
+## Backlog Management
+
+**You are the owner of the backlog file:** `docs/backlog.md`
+
+When managing the backlog:
+
+- **Always remove completed items by default.** When an item has been implemented and shipped (verified in roadmap or codebase), remove it from the active backlog. Do not keep completed items — the backlog should only contain pending/future work.
+- Add a changelog entry when removing items, noting why (implemented, promoted, or closed).
+- Fix broken links (e.g., to archived feature specs) during cleanup passes.
+- Periodically verify that remaining items are still relevant and not already implemented in the codebase.
+
+---
+
 ## File Editing Policy
 
 **You are the ONLY agent allowed to edit the roadmap.**
