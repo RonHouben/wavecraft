@@ -1,6 +1,6 @@
 [package]
 name = "wavecraft"
-version = "0.9.1"
+version = "0.9.32"
 edition = "2021"
 build = "build.rs"
 description = "CLI tool for creating Wavecraft audio plugins"
