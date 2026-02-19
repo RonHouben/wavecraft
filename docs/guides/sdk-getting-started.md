@@ -186,13 +186,13 @@ When the CLI is updated, it automatically re-executes the new binary to run Phas
 
 ### CLI Options
 
-| Option         | Description               | Default           |
-| -------------- | ------------------------- | ----------------- |
-| `--vendor, -v` | Company or developer name | `"Your Company"`  |
-| `--email, -e`  | Contact email (optional)  | —                 |
-| `--url, -u`    | Website URL (optional)    | —                 |
-| `--output, -o` | Output directory          | `./<plugin-name>` |
-| `--no-git`     | Skip git init + initial commit | false        |
+| Option         | Description                    | Default           |
+| -------------- | ------------------------------ | ----------------- |
+| `--vendor, -v` | Company or developer name      | `"Your Company"`  |
+| `--email, -e`  | Contact email (optional)       | —                 |
+| `--url, -u`    | Website URL (optional)         | —                 |
+| `--output, -o` | Output directory               | `./<plugin-name>` |
+| `--no-git`     | Skip git init + initial commit | false             |
 
 ---
 
