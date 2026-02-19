@@ -3,6 +3,7 @@
 ## Scope Tracking
 
 ### Current slice
+
 - Tier: **Tier 1 (hotspot decomposition)**
 - Hotspot: `cli/src/commands/start.rs`
 - Slice goal: Extract tsconfig path injection concern into dedicated module without behavior changes.
@@ -20,16 +21,19 @@
 ## Invariant Checks
 
 ### Behavior-preserving constraints
+
 - [x] No feature expansion introduced.
 - [x] `StartCommand::execute` flow preserved; only helper location changed.
 - [x] CLI diagnostics/messages for tsconfig path injection preserved.
 
 ### Tier 1 decomposition constraints
+
 - [x] First responsibility cluster extracted (`tsconfig_paths`).
 - [x] Decomposition remains within existing crate boundaries.
 - [x] No roadmap/backlog/archive files edited.
 
 ### RT-safety constraints
+
 - [x] No audio callback code touched in this slice.
 
 ## CI/Validation Checkpoints
@@ -63,11 +67,13 @@
 ## Slice 2 — Metadata cache decomposition (`start.rs`)
 
 ### Scope Tracking
+
 - Tier: **Tier 1 (hotspot decomposition)**
 - Hotspot: `cli/src/commands/start.rs`
 - Slice goal: Extract metadata sidecar/cache responsibilities into dedicated module with zero behavior change.
 
 ### Files Touched
+
 - `cli/src/commands/start.rs`
   - Added `mod metadata_cache;` and routed metadata calls through the extracted module.
   - Replaced in-file metadata/cache usage with module-qualified calls:
@@ -87,6 +93,7 @@
   - Added Slice 2 checkpoint details.
 
 ### Invariant Checks (Behavior Preservation)
+
 - [x] Cache staleness rules preserved exactly:
   - Dylib newer than sidecar invalidates cache.
   - Newest file under `engine/src` newer than sidecar invalidates cache.
@@ -101,6 +108,7 @@
 - [x] Refactor-only scope respected (no feature or contract changes).
 
 ### CI/Validation Checkpoints (Slice 2)
+
 - CLI-focused validation (requested cadence):
   - `cargo fmt --manifest-path cli/Cargo.toml` — **PASSED**
   - `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
@@ -113,6 +121,7 @@
     - Engine + UI tests: passed
 
 ### Escalation Log (Mandatory)
+
 - **No Architect escalation required for Slice 2.**
   - Decomposition target and boundary were explicit in task direction (metadata cache concern extraction only).
 
@@ -121,11 +130,13 @@
 ## Slice 3 — Hot-reload dylib extractor decomposition (`start.rs`)
 
 ### Scope Tracking
+
 - Tier: **Tier 1 (hotspot decomposition)**
 - Hotspot: `cli/src/commands/start.rs`
 - Slice goal: Extract hot-reload dylib extraction helpers into a dedicated module with zero behavior changes.
 
 ### Files Touched
+
 - `cli/src/commands/start.rs`
   - Added `mod reload_extractors;`.
   - Rewired rebuild callback loaders to call:
@@ -143,12 +154,14 @@
   - Added Slice 3 progress details.
 
 ### Invariant Checks (Behavior Preservation)
+
 - [x] Same hot-reload extraction contract preserved (subprocess-based metadata extraction).
 - [x] Same diagnostics/log lines preserved for dylib discovery, temp copy, and extraction results.
 - [x] Same temporary dylib copy semantics preserved (timestamped temp filename + cleanup behavior).
 - [x] Refactor-only scope preserved (no feature changes, no contract changes).
 
 ### CI/Validation Checkpoints (Slice 3)
+
 - CLI-focused validation (requested cadence):
   - `cargo fmt --manifest-path cli/Cargo.toml` — **PASSED**
   - `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
@@ -158,6 +171,7 @@
   - `cargo xtask ci-check` — **PASSED**
 
 ### Escalation Log (Mandatory)
+
 - **No Architect escalation required for Slice 3.**
   - Extraction target, destination module, and moved function set were explicitly defined in slice requirements, and no ambiguous design decisions were encountered.
   - No ambiguity in ownership split was encountered during implementation.
@@ -167,11 +181,13 @@
 ## Slice 4 — Audio runtime startup/status orchestration decomposition (`start.rs`)
 
 ### Scope Tracking
+
 - Tier: **Tier 1 (hotspot decomposition)**
 - Hotspot: `cli/src/commands/start.rs`
 - Slice goal: Extract audio runtime startup/status orchestration (including classification helpers and startup flow) into a dedicated module with zero behavior changes.
 
 ### Files Touched
+
 - `cli/src/commands/start.rs`
   - Added `mod audio_runtime;`.
   - Rewired audio runtime startup in `run_dev_servers()` to call extracted orchestration entrypoint:
@@ -190,6 +206,7 @@
   - Added Slice 4 progress details.
 
 ### Invariant Checks (Behavior Preservation)
+
 - [x] Status transition flow preserved: `Initializing` → `RunningFullDuplex` on success, `Failed` with diagnostics on failures.
 - [x] Diagnostics classification and hint mapping preserved.
 - [x] Strict/degraded mode behavior preserved, including `WAVECRAFT_ALLOW_NO_AUDIO=1` bypass semantics.
@@ -198,6 +215,7 @@
 - [x] Refactor-only scope preserved (no feature or contract changes).
 
 ### CI/Validation Checkpoints (Slice 4)
+
 - CLI-focused validation (requested cadence):
   - `cargo fmt --manifest-path cli/Cargo.toml` — **PASSED**
   - `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
@@ -210,6 +228,7 @@
     - Engine + UI tests: passed
 
 ### Escalation Log (Mandatory)
+
 - **No Architect escalation required for Slice 4.**
   - Extraction target, destination module, and behavior-preserving boundaries were explicit in slice requirements.
   - No ambiguous ownership or behavioral decision point was encountered during implementation.
@@ -219,11 +238,13 @@
 ## Slice 5 — Shutdown/lifecycle decomposition (`start.rs`)
 
 ### Scope Tracking
+
 - Tier: **Tier 1 (hotspot decomposition)**
 - Hotspot: `cli/src/commands/start.rs`
 - Slice goal: Extract shutdown/lifecycle helpers into a dedicated module with zero behavior changes.
 
 ### Files Touched
+
 - `cli/src/commands/start.rs`
   - Added `mod shutdown;`.
   - Rewired shutdown wait flow to call `shutdown::wait_for_shutdown(...)`.
@@ -241,6 +262,7 @@
   - Added Slice 5 progress details.
 
 ### Invariant Checks (Behavior Preservation)
+
 - [x] Ctrl+C handling preserved (`ctrlc::set_handler` semantics unchanged).
 - [x] Shutdown signaling preserved (`watch::Sender<bool>` broadcast semantics unchanged).
 - [x] UI process cleanup preserved (`kill()` + `wait()` on shutdown/disconnect paths).
@@ -249,6 +271,7 @@
 - [x] Refactor-only scope preserved (no feature or contract changes).
 
 ### CI/Validation Checkpoints (Slice 5)
+
 - CLI-focused validation (requested cadence):
   - `cargo fmt --manifest-path cli/Cargo.toml` — **PASSED**
   - `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
@@ -258,6 +281,7 @@
   - `cargo xtask ci-check` — **PASSED**
 
 ### Escalation Log (Mandatory)
+
 - **No Architect escalation required for Slice 5.**
   - Decomposition boundary and extracted symbol set were explicitly specified, and no ambiguous ownership split or behavior tradeoff was encountered.
 
@@ -266,11 +290,13 @@
 ## Slice 6 — Startup preflight/orchestration decomposition (`start.rs`)
 
 ### Scope Tracking
+
 - Tier: **Tier 1 (hotspot decomposition)**
 - Hotspot: `cli/src/commands/start.rs`
 - Slice goal: Extract startup preflight/orchestration helpers (dependency checks/install prompt flow + port/startup preconditions) into a dedicated module with zero behavior changes.
 
 ### Files Touched
+
 - `cli/src/commands/start.rs`
   - Added `mod preflight;`.
   - Rewired dependency preflight in `StartCommand::execute()` to `preflight::ensure_dependencies(...)`.
@@ -291,6 +317,7 @@
   - Added Slice 6 progress details.
 
 ### Invariant Checks (Behavior Preservation)
+
 - [x] Dependency gating semantics preserved (`--install`, `--no-install`, prompt accept/decline paths).
 - [x] Prompt text, diagnostics, and dependency install failure messaging preserved.
 - [x] Port precondition checks preserved (same bind strategy, same error text/flags).
@@ -298,6 +325,7 @@
 - [x] Refactor-only scope preserved (no feature or contract changes).
 
 ### CI/Validation Checkpoints (Slice 6)
+
 - CLI-focused validation (requested cadence):
   - `cargo fmt --manifest-path cli/Cargo.toml` — **PASSED**
   - `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
@@ -307,6 +335,7 @@
   - `cargo xtask ci-check` — **PASSED**
 
 ### Escalation Log (Mandatory)
+
 - **No Architect escalation required for Slice 6.**
   - Extraction boundaries and candidate scope were explicitly provided by slice instructions.
   - No ambiguous ownership split or behavior tradeoff was encountered during implementation.
@@ -316,11 +345,13 @@
 ## Slice 7 — Dev-server startup pipeline decomposition (`start.rs`)
 
 ### Scope Tracking
+
 - Tier: **Tier 1 (hotspot decomposition)**
 - Hotspot: `cli/src/commands/start.rs`
 - Slice goal: Extract dev-server bootstrap/startup orchestration concerns into a focused module while preserving startup order, diagnostics, and failure semantics.
 
 ### Files Touched
+
 - `cli/src/commands/start.rs`
   - Added `mod startup_pipeline;`.
   - Rewired startup execution to `startup_pipeline::run_dev_servers(...)`.
@@ -338,6 +369,7 @@
   - Added Slice 7 progress details.
 
 ### Invariant Checks (Behavior Preservation)
+
 - [x] Startup sequencing preserved exactly:
   - port preflight → metadata load/codegen → WebSocket start → hot-reload session init → audio runtime startup → UI server startup → success banner/shutdown wait.
 - [x] Startup diagnostics/log text preserved for banner, step outputs, success output, and early UI failure path.
@@ -345,6 +377,7 @@
 - [x] Refactor-only scope preserved (no feature or contract changes).
 
 ### CI/Validation Checkpoints (Slice 7)
+
 - CLI-focused validation (requested cadence):
   - `cargo fmt --manifest-path cli/Cargo.toml` — **PASSED**
   - `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
@@ -354,6 +387,7 @@
   - `cargo xtask ci-check` — **PASSED**
 
 ### Escalation Log (Mandatory)
+
 - **No Architect escalation required for Slice 7.**
   - Decomposition boundary was clear and explicit (startup orchestration cluster extraction), and no ambiguous ownership split or design decision point was encountered.
 
@@ -362,11 +396,13 @@
 ## Slice 8 — Start command test/module co-location finalization (`start.rs`)
 
 ### Scope Tracking
+
 - Tier: **Tier 1 (hotspot decomposition)**
 - Hotspot: `cli/src/commands/start.rs`
 - Slice goal: Finalize decomposition by co-locating remaining `start` command tests into module ownership boundaries and leaving `start.rs` as command wiring + minimal orchestration.
 
 ### Files Touched
+
 - `cli/src/commands/start.rs`
   - Removed centralized `#[cfg(test)]` test bucket.
   - Retained only command-level wiring/orchestration symbols (`StartCommand`, module declarations, execute flow).
@@ -395,12 +431,14 @@
   - Added Slice 8 completion record.
 
 ### Invariant Checks (Behavior Preservation)
+
 - [x] No feature expansion introduced.
 - [x] No runtime/log/flow semantics changed.
 - [x] Test logic preserved exactly; only ownership location changed.
 - [x] `start.rs` reduced to command wiring + minimal orchestration symbols.
 
 ### CI/Validation Checkpoints (Slice 8)
+
 - Requested CLI validation cadence:
   - `cargo fmt --manifest-path cli/Cargo.toml` — **PASSED**
   - `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
@@ -415,9 +453,11 @@
     - Engine + UI tests: passed
 
 ### Escalation Log (Mandatory)
+
 - **No Architect escalation required for Slice 8.**
   - Module ownership boundaries were unambiguous: each test was moved to the module that owns the exercised symbol/behavior.
   - No cross-module boundary ambiguity or architectural tradeoff emerged while implementing this slice.
 
 ### Hotspot Completion Status
+
 - `cli/src/commands/start.rs` Tier 1 hotspot status: **COMPLETE** (Slices 1–8 complete and validation green).
