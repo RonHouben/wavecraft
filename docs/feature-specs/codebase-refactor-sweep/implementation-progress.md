@@ -2789,17 +2789,21 @@
 ### Files
 
 1. `cli/src/main.rs`
-  - Flattened command dispatch readability by extracting small local dispatch helpers (`dispatch`, `run_create`, `run_start`, `run_bundle`) while preserving command flow and behavior.
+
+- Flattened command dispatch readability by extracting small local dispatch helpers (`dispatch`, `run_create`, `run_start`, `run_bundle`) while preserving command flow and behavior.
 
 2. `engine/crates/wavecraft-bridge/src/host.rs`
-  - Deduplicated `Arc<T>` forwarding boilerplate through a tiny local forward helper (`forward_host`) without trait/API changes.
+
+- Deduplicated `Arc<T>` forwarding boilerplate through a tiny local forward helper (`forward_host`) without trait/API changes.
 
 3. `engine/crates/wavecraft-dsp/src/traits.rs`
-  - Applied doc/comment consistency and wording clarity updates only; no trait/struct/enum signature changes.
+
+- Applied doc/comment consistency and wording clarity updates only; no trait/struct/enum signature changes.
 
 4. `engine/crates/wavecraft-dsp/src/processor.rs`
-  - Extracted repeated channel gain loop into `apply_gain_to_channel` helper.
-  - Reduced repeated assertion logic in tests via shared `assert_buffer_close` helper with identical expectations.
+
+- Extracted repeated channel gain loop into `apply_gain_to_channel` helper.
+- Reduced repeated assertion logic in tests via shared `assert_buffer_close` helper with identical expectations.
 
 ### Invariants
 
@@ -2903,19 +2907,23 @@
 ### Files
 
 1. `cli/src/template/variables.rs`
-  - Extracted replacement-table driven application helper (`replacements`, `apply_all_replacements`) to reduce repeated inline replacement calls.
-  - Standardized unreplaced-variable regex usage through a reusable static regex.
+
+- Extracted replacement-table driven application helper (`replacements`, `apply_all_replacements`) to reduce repeated inline replacement calls.
+- Standardized unreplaced-variable regex usage through a reusable static regex.
 
 2. `engine/crates/wavecraft-dsp/src/builtins/gain.rs`
-  - Extracted per-channel gain loop into `apply_gain_to_channel(...)` helper.
-  - Consolidated repeated test setup/assert boilerplate through `process_with_gain(...)` and `assert_close(...)` helpers.
+
+- Extracted per-channel gain loop into `apply_gain_to_channel(...)` helper.
+- Consolidated repeated test setup/assert boilerplate through `process_with_gain(...)` and `assert_close(...)` helpers.
 
 3. `dev-server/src/reload/guard.rs`
-  - Extracted atomic ordering constant (`STATE_ORDERING`) and small atomic state-transition helpers (`try_transition`, `store_state`, `take_state`) for consistent transition semantics.
+
+- Extracted atomic ordering constant (`STATE_ORDERING`) and small atomic state-transition helpers (`try_transition`, `store_state`, `take_state`) for consistent transition semantics.
 
 4. `cli/src/validation.rs`
-  - Extracted reusable static crate-name regex and focused validation helpers (`ensure_valid_crate_name_format`, `ensure_not_reserved_rust_keyword`, `ensure_not_std_crate_name`).
-  - Consolidated error construction into dedicated helper functions for consistency.
+
+- Extracted reusable static crate-name regex and focused validation helpers (`ensure_valid_crate_name_format`, `ensure_not_reserved_rust_keyword`, `ensure_not_std_crate_name`).
+- Consolidated error construction into dedicated helper functions for consistency.
 
 ### Invariants
 
@@ -2958,21 +2966,25 @@
 ### Files
 
 1. `engine/crates/wavecraft-bridge/src/error.rs`
-  - Simplified `BridgeError::to_ipc_error` mapping readability using local `IpcError` import and `Self::` match arms.
-  - Preserved exact mapping behavior, variants, and resulting protocol error messages/codes.
+
+- Simplified `BridgeError::to_ipc_error` mapping readability using local `IpcError` import and `Self::` match arms.
+- Preserved exact mapping behavior, variants, and resulting protocol error messages/codes.
 
 2. `engine/crates/wavecraft-bridge/src/lib.rs`
-  - Clarified crate-root re-export grouping comments/order for scanability.
-  - Preserved exported symbol surface exactly.
+
+- Clarified crate-root re-export grouping comments/order for scanability.
+- Preserved exported symbol surface exactly.
 
 3. `engine/crates/wavecraft-dsp/src/lib.rs`
-  - Clarified crate-root re-export grouping comments/order for scanability.
-  - Preserved exported symbol surface exactly.
+
+- Clarified crate-root re-export grouping comments/order for scanability.
+- Preserved exported symbol surface exactly.
 
 4. `engine/crates/wavecraft-dsp/src/builtins/passthrough.rs`
-  - Polished module/type docs wording (no semantic changes).
-  - Extracted `assert_passthrough_unchanged(...)` test helper to reduce inline test setup repetition.
-  - Preserved processor logic and test expectations.
+
+- Polished module/type docs wording (no semantic changes).
+- Extracted `assert_passthrough_unchanged(...)` test helper to reduce inline test setup repetition.
+- Preserved processor logic and test expectations.
 
 ### Invariants
 
@@ -3008,20 +3020,24 @@
 ### Files
 
 1. `dev-server/src/audio/status.rs`
-  - Deduplicated constructor field wiring through a small internal helper (`build_status(...)`).
-  - Preserved status payload fields and timestamp behavior.
+
+- Deduplicated constructor field wiring through a small internal helper (`build_status(...)`).
+- Preserved status payload fields and timestamp behavior.
 
 2. `dev-server/src/lib.rs`
-  - Clarified crate-root re-export grouping/order and consolidated feature-gated audio re-exports.
-  - Preserved public export surface exactly.
+
+- Clarified crate-root re-export grouping/order and consolidated feature-gated audio re-exports.
+- Preserved public export surface exactly.
 
 3. `engine/crates/wavecraft-dsp/src/combinators/mod.rs`
-  - Improved doc consistency for preferred (`SignalChain!`) versus deprecated (`Chain!`) macro usage.
-  - No macro behavior or expansion changes.
+
+- Improved doc consistency for preferred (`SignalChain!`) versus deprecated (`Chain!`) macro usage.
+- No macro behavior or expansion changes.
 
 4. `engine/crates/wavecraft-processors/src/lib.rs`
-  - Polished crate docs and re-export grouping comments/order for readability.
-  - Preserved exported symbol surface.
+
+- Polished crate docs and re-export grouping comments/order for readability.
+- Preserved exported symbol surface.
 
 ### Invariants
 
@@ -3060,20 +3076,24 @@
 ### Files
 
 1. `dev-server/src/audio/mod.rs`
-  - Clarified module-boundary and re-export grouping comments.
-  - Preserved all module declarations and exported symbols.
+
+- Clarified module-boundary and re-export grouping comments.
+- Preserved all module declarations and exported symbols.
 
 2. `dev-server/src/reload/mod.rs`
-  - Clarified module-boundary and re-export grouping comments.
-  - Preserved all module declarations and exported symbols.
+
+- Clarified module-boundary and re-export grouping comments.
+- Preserved all module declarations and exported symbols.
 
 3. `cli/src/project/mod.rs`
-  - Clarified module-boundary and re-export grouping comments.
-  - Preserved all module declarations and exported symbols.
+
+- Clarified module-boundary and re-export grouping comments.
+- Preserved all module declarations and exported symbols.
 
 4. `cli/src/commands/mod.rs`
-  - Added concise module-level documentation and clarified internal-module vs public re-export grouping.
-  - Preserved all module declarations and exported symbols.
+
+- Added concise module-level documentation and clarified internal-module vs public re-export grouping.
+- Preserved all module declarations and exported symbols.
 
 ### Invariants
 
@@ -3110,17 +3130,20 @@
 ### Files
 
 1. `cli/src/template/mod.rs`
-  - Added concise module-level doc comment clarifying extraction/wiring responsibility.
-  - Replaced test-only `unwrap()` with explicit `expect(...)` for clearer failure diagnostics.
+
+- Added concise module-level doc comment clarifying extraction/wiring responsibility.
+- Replaced test-only `unwrap()` with explicit `expect(...)` for clearer failure diagnostics.
 
 2. `dev-server/src/ws/mod.rs`
-  - Added local alias `BrowserClientTx` to improve readability of shared state type signatures.
-  - Grouped protocol imports and used imported `IpcRequest`/`SetParameterParams` in helper signatures/parsing paths.
-  - Preserved runtime message handling and broadcast behavior exactly.
+
+- Added local alias `BrowserClientTx` to improve readability of shared state type signatures.
+- Grouped protocol imports and used imported `IpcRequest`/`SetParameterParams` in helper signatures/parsing paths.
+- Preserved runtime message handling and broadcast behavior exactly.
 
 3. `engine/crates/wavecraft-core/src/lib.rs`
-  - Polished crate-root re-export grouping comments for consistency/readability.
-  - Preserved exported symbol surface exactly.
+
+- Polished crate-root re-export grouping comments for consistency/readability.
+- Preserved exported symbol surface exactly.
 
 ### Invariants
 
@@ -3145,3 +3168,27 @@
 - **Architect escalation: NO**
   - Rationale: all edits are bounded readability/doc/comment/type-alias cleanups within existing ownership boundaries and required no architectural decisions.
 
+---
+
+## Phase 4 / Tier 3 — Terminal lint-format sweep
+
+### Scope
+
+- Tier: **Tier 3 (terminal lint-format sweep)**
+- Goal: Run requested terminal gates exactly and record outcomes with zero behavior changes.
+
+### Validation outcomes
+
+- `cargo xtask ci-check` — **PASSED**
+- `cargo xtask ci-check --full` — **FAILED** *(initial run)*
+  - Failure reason: template-validation startup step hit environment contention (`Address already in use (os error 48)`), causing `wavecraft start` to exit non-zero.
+- Port remediation + rerun:
+  - Performed targeted listener/process checks for TCP `9001` (`lsof -nP -iTCP:9001` and listener-filtered variant) and verified no stale dev-server/WebSocket process remained bound.
+  - Re-ran `cargo xtask ci-check --full` — **PASSED**
+    - Summary: Documentation **PASSED**, Linting **PASSED**, Automated Tests **PASSED**, Template Validation **PASSED**, CD Dry-Run **PASSED**.
+
+### Diff/commit outcome
+
+- No tracked lint/format auto-fix changes were produced by the Tier 3 gate commands.
+- Tier 3 lint/format commit **not needed**.
+- Push for Tier 3 lint/format commit: **not applicable**.
