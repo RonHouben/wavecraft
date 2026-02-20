@@ -24,14 +24,14 @@
 //! }
 //! ```
 
-// Public modules
+// Public modules.
 pub mod macros;
 pub mod prelude;
 
-// Re-export helper crates used by macros
+// Macro-support dependency re-export.
 pub use paste;
 
-// Re-export sub-crates for convenient access
+// Wavecraft crate re-exports for convenient downstream imports.
 pub use wavecraft_bridge;
 pub use wavecraft_dsp;
 pub use wavecraft_macros;

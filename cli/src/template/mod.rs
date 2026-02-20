@@ -1,3 +1,5 @@
+//! Template extraction entrypoints and embedded template wiring.
+
 mod dependency_rewrites;
 mod extract;
 mod overrides;
@@ -32,7 +34,7 @@ mod tests {
 
     #[test]
     fn test_extract_template() {
-        let temp = tempdir().unwrap();
+        let temp = tempdir().expect("create temp dir");
         let vars = TemplateVariables::new(
             "my-plugin".to_string(),
             "My Company".to_string(),

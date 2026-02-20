@@ -3097,3 +3097,51 @@
 - **Architect escalation: NO**
   - Rationale: cleanup scope was explicit and limited to docs/grouping/order clarity with no ownership or architecture decisions required.
 
+---
+
+## Tier 2 — Batch 15 quick-scan cleanup
+
+### Scope
+
+- Tier: **Tier 2 (quick-scan cleanup)**
+- Batch: **15**
+- Goal: Apply bounded, behavior-preserving readability/export-grouping/doc-comment cleanup only (no architecture/API/contract changes).
+
+### Files
+
+1. `cli/src/template/mod.rs`
+  - Added concise module-level doc comment clarifying extraction/wiring responsibility.
+  - Replaced test-only `unwrap()` with explicit `expect(...)` for clearer failure diagnostics.
+
+2. `dev-server/src/ws/mod.rs`
+  - Added local alias `BrowserClientTx` to improve readability of shared state type signatures.
+  - Grouped protocol imports and used imported `IpcRequest`/`SetParameterParams` in helper signatures/parsing paths.
+  - Preserved runtime message handling and broadcast behavior exactly.
+
+3. `engine/crates/wavecraft-core/src/lib.rs`
+  - Polished crate-root re-export grouping comments for consistency/readability.
+  - Preserved exported symbol surface exactly.
+
+### Invariants
+
+- [x] Behavior-preserving cleanup only.
+- [x] No architecture/API/contract changes.
+- [x] No symbol additions/removals in crate re-export surfaces.
+- [x] Edits bounded to Batch 15 target files + this ledger update.
+
+### Validation
+
+- `cargo fmt --manifest-path cli/Cargo.toml --all` — **PASSED**
+- `cargo fmt --manifest-path dev-server/Cargo.toml --all` — **PASSED**
+- `cargo fmt --manifest-path engine/Cargo.toml --all` — **PASSED**
+- `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo clippy --manifest-path dev-server/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path cli/Cargo.toml` — **PASSED**
+- `cargo test --manifest-path dev-server/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**
+
+### Escalation
+
+- **Architect escalation: NO**
+  - Rationale: all edits are bounded readability/doc/comment/type-alias cleanups within existing ownership boundaries and required no architectural decisions.
+
