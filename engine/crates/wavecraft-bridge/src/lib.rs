@@ -70,14 +70,16 @@ pub mod host;
 pub mod in_memory_host;
 pub mod plugin_loader;
 
-// Re-export key types for convenience
+// Core bridge entrypoints and host abstraction.
 pub use error::BridgeError;
 pub use handler::IpcHandler;
 pub use host::ParameterHost;
+
+// Test/dev host implementations and plugin loader support.
 pub use in_memory_host::{InMemoryParameterHost, MeterProvider, OscilloscopeProvider};
 pub use plugin_loader::{PluginLoaderError, PluginParamLoader};
 
-// Re-export protocol types used in bridge API
+// Protocol contracts surfaced by the bridge API.
 pub use wavecraft_protocol::{
     GetAllParametersResult, GetParameterParams, GetParameterResult, IpcError, IpcNotification,
     IpcRequest, IpcResponse, MeterUpdateNotification, ParameterChangedNotification, ParameterInfo,

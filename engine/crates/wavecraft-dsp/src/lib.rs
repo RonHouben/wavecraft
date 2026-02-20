@@ -9,17 +9,13 @@ pub mod gain;
 pub mod processor;
 pub mod traits;
 
-// Re-export the core trait for user implementations
+// Core DSP contracts.
 pub use traits::{ParamRange, ParamSpec, Processor, ProcessorParams, Transport};
 
-// Re-export the concrete gain processor (legacy)
-pub use processor::GainProcessor;
-
-// Re-export built-in processors
+// Built-in processors and combinators.
 pub use builtins::*;
-
-// Re-export combinators
 pub use combinators::Chain;
+pub use processor::GainProcessor;
 
 // Note: SignalChain! and Chain! macros are automatically exported at crate root
 // via #[macro_export] in combinators/mod.rs

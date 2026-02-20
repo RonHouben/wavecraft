@@ -2945,3 +2945,53 @@
 - **Architect escalation: NO**
   - Rationale: all changes stayed within explicit Tier 2 quick-scan helper/readability cleanup scope and did not require ownership or architecture decisions.
 
+---
+
+## Tier 2 — Batch 12 quick-scan cleanup
+
+### Scope
+
+- Tier: **Tier 2 (quick-scan cleanup)**
+- Batch: **12**
+- Goal: Apply bounded, behavior-preserving readability/doc cleanup only (no architecture shifts, no API changes).
+
+### Files
+
+1. `engine/crates/wavecraft-bridge/src/error.rs`
+  - Simplified `BridgeError::to_ipc_error` mapping readability using local `IpcError` import and `Self::` match arms.
+  - Preserved exact mapping behavior, variants, and resulting protocol error messages/codes.
+
+2. `engine/crates/wavecraft-bridge/src/lib.rs`
+  - Clarified crate-root re-export grouping comments/order for scanability.
+  - Preserved exported symbol surface exactly.
+
+3. `engine/crates/wavecraft-dsp/src/lib.rs`
+  - Clarified crate-root re-export grouping comments/order for scanability.
+  - Preserved exported symbol surface exactly.
+
+4. `engine/crates/wavecraft-dsp/src/builtins/passthrough.rs`
+  - Polished module/type docs wording (no semantic changes).
+  - Extracted `assert_passthrough_unchanged(...)` test helper to reduce inline test setup repetition.
+  - Preserved processor logic and test expectations.
+
+### Invariants
+
+- [x] Behavior-preserving cleanup only.
+- [x] No architecture shifts introduced.
+- [x] No API/symbol changes introduced.
+- [x] Edits bounded to Batch 12 target files + this ledger update.
+- [x] `BridgeError` to IPC-error mapping behavior/messages unchanged.
+- [x] `PassthroughDsp` runtime processing semantics unchanged (no-op processing preserved).
+
+### Validation
+
+- `cargo fmt --manifest-path engine/Cargo.toml --all` — **PASSED**
+- `cargo clippy --manifest-path engine/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path engine/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**
+
+### Escalation
+
+- **Architect escalation: NO**
+  - Rationale: all edits were low-risk readability/doc/test-helper cleanups within explicit file bounds and required no architecture/ownership decision.
+

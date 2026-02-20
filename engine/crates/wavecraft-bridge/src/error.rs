@@ -1,6 +1,7 @@
 //! Error types for the IPC bridge layer
 
 use thiserror::Error;
+use wavecraft_protocol::IpcError;
 
 /// Bridge-specific errors that occur during IPC handling
 #[derive(Debug, Error)]
@@ -32,20 +33,14 @@ pub enum BridgeError {
 
 impl BridgeError {
     /// Convert BridgeError to IpcError from protocol
-    pub fn to_ipc_error(&self) -> wavecraft_protocol::IpcError {
+    pub fn to_ipc_error(&self) -> IpcError {
         match self {
-            BridgeError::JsonParse(_) => wavecraft_protocol::IpcError::parse_error(),
-            BridgeError::ParameterNotFound(id) => wavecraft_protocol::IpcError::param_not_found(id),
-            BridgeError::ParameterOutOfRange { id, value } => {
-                wavecraft_protocol::IpcError::param_out_of_range(id, *value)
-            }
-            BridgeError::UnknownMethod(method) => {
-                wavecraft_protocol::IpcError::method_not_found(method)
-            }
-            BridgeError::InvalidParams { reason, .. } => {
-                wavecraft_protocol::IpcError::invalid_params(reason)
-            }
-            BridgeError::Internal(reason) => wavecraft_protocol::IpcError::internal_error(reason),
+            Self::JsonParse(_) => IpcError::parse_error(),
+            Self::ParameterNotFound(id) => IpcError::param_not_found(id),
+            Self::ParameterOutOfRange { id, value } => IpcError::param_out_of_range(id, *value),
+            Self::UnknownMethod(method) => IpcError::method_not_found(method),
+            Self::InvalidParams { reason, .. } => IpcError::invalid_params(reason),
+            Self::Internal(reason) => IpcError::internal_error(reason),
         }
     }
 }
