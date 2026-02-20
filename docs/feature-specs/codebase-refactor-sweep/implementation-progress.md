@@ -3047,3 +3047,53 @@
 - **Architect escalation: NO**
   - Rationale: all edits remained within explicit Tier 2 quick-scan readability/documentation/re-export cleanup boundaries and required no ownership or architecture decision.
 
+---
+
+## Tier 2 — Batch 14 quick-scan cleanup
+
+### Scope
+
+- Tier: **Tier 2 (quick-scan cleanup)**
+- Batch: **14**
+- Goal: Apply bounded, behavior-preserving module-doc and re-export grouping/order cleanup only (no architecture/API changes).
+
+### Files
+
+1. `dev-server/src/audio/mod.rs`
+  - Clarified module-boundary and re-export grouping comments.
+  - Preserved all module declarations and exported symbols.
+
+2. `dev-server/src/reload/mod.rs`
+  - Clarified module-boundary and re-export grouping comments.
+  - Preserved all module declarations and exported symbols.
+
+3. `cli/src/project/mod.rs`
+  - Clarified module-boundary and re-export grouping comments.
+  - Preserved all module declarations and exported symbols.
+
+4. `cli/src/commands/mod.rs`
+  - Added concise module-level documentation and clarified internal-module vs public re-export grouping.
+  - Preserved all module declarations and exported symbols.
+
+### Invariants
+
+- [x] Behavior-preserving cleanup only.
+- [x] No architecture/API changes.
+- [x] No symbol additions/removals.
+- [x] Edits bounded to Batch 14 target files + this ledger update.
+
+### Validation
+
+- `cargo fmt --manifest-path cli/Cargo.toml --all` — **PASSED**
+- `cargo fmt --manifest-path dev-server/Cargo.toml --all` — **PASSED**
+- `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo clippy --manifest-path dev-server/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path cli/Cargo.toml` — **PASSED**
+- `cargo test --manifest-path dev-server/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**
+
+### Escalation
+
+- **Architect escalation: NO**
+  - Rationale: cleanup scope was explicit and limited to docs/grouping/order clarity with no ownership or architecture decisions required.
+
