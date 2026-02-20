@@ -2890,3 +2890,58 @@
 - **Architect escalation: NO**
   - Rationale: all edits stayed within explicit quick-scan cleanup boundaries and required no ownership or architecture decisions.
 
+---
+
+## Tier 2 — Batch 11 quick-scan cleanup
+
+### Scope
+
+- Tier: **Tier 2 (quick-scan cleanup)**
+- Batch: **11**
+- Goal: Apply bounded, behavior-preserving cleanup only (no architecture shifts, no cross-crate API changes).
+
+### Files
+
+1. `cli/src/template/variables.rs`
+  - Extracted replacement-table driven application helper (`replacements`, `apply_all_replacements`) to reduce repeated inline replacement calls.
+  - Standardized unreplaced-variable regex usage through a reusable static regex.
+
+2. `engine/crates/wavecraft-dsp/src/builtins/gain.rs`
+  - Extracted per-channel gain loop into `apply_gain_to_channel(...)` helper.
+  - Consolidated repeated test setup/assert boilerplate through `process_with_gain(...)` and `assert_close(...)` helpers.
+
+3. `dev-server/src/reload/guard.rs`
+  - Extracted atomic ordering constant (`STATE_ORDERING`) and small atomic state-transition helpers (`try_transition`, `store_state`, `take_state`) for consistent transition semantics.
+
+4. `cli/src/validation.rs`
+  - Extracted reusable static crate-name regex and focused validation helpers (`ensure_valid_crate_name_format`, `ensure_not_reserved_rust_keyword`, `ensure_not_std_crate_name`).
+  - Consolidated error construction into dedicated helper functions for consistency.
+
+### Invariants
+
+- [x] Behavior-preserving cleanup only.
+- [x] No architecture shifts introduced.
+- [x] No cross-crate API changes introduced.
+- [x] Edits bounded to Batch 11 target files + this ledger update.
+- [x] User-facing validation and template error messages preserved.
+- [x] DSP gain processing semantics preserved.
+- [x] BuildGuard concurrency semantics preserved (single active build + single pending latch semantics unchanged).
+
+### Validation
+
+- `cargo fmt --manifest-path cli/Cargo.toml --all` — **PASSED**
+- `cargo fmt --manifest-path dev-server/Cargo.toml --all` — **PASSED**
+- `cargo fmt --manifest-path engine/Cargo.toml --all` — **PASSED**
+- `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo clippy --manifest-path dev-server/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo clippy --manifest-path engine/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path cli/Cargo.toml` — **PASSED**
+- `cargo test --manifest-path dev-server/Cargo.toml` — **PASSED**
+- `cargo test --manifest-path engine/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**
+
+### Escalation
+
+- **Architect escalation: NO**
+  - Rationale: all changes stayed within explicit Tier 2 quick-scan helper/readability cleanup scope and did not require ownership or architecture decisions.
+

@@ -60,9 +60,7 @@ impl Processor for GainDsp {
         let gain = params.level;
 
         for channel in buffer.iter_mut() {
-            for sample in channel.iter_mut() {
-                *sample *= gain;
-            }
+            apply_gain_to_channel(channel, gain);
         }
     }
 
@@ -75,53 +73,59 @@ impl Processor for GainDsp {
     }
 }
 
+#[inline]
+fn apply_gain_to_channel(channel: &mut [f32], gain: f32) {
+    for sample in channel.iter_mut() {
+        *sample *= gain;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn process_with_gain(buffer: &mut [&mut [f32]], level: f32) {
+        let mut processor = GainDsp::default();
+        let params = GainParams { level };
+        let transport = Transport::default();
+        processor.process(buffer, &transport, &params);
+    }
+
+    fn assert_close(actual: f32, expected: f32) {
+        assert!((actual - expected).abs() < 1e-6);
+    }
+
     #[test]
     fn test_unity_gain() {
-        let mut processor = GainDsp::default();
         let mut left = [0.5, -0.5, 0.25];
         let mut right = [0.3, -0.3, 0.1];
         let mut buffer = [&mut left[..], &mut right[..]];
 
-        let params = GainParams { level: 1.0 };
-        let transport = Transport::default();
+        process_with_gain(&mut buffer, 1.0);
 
-        processor.process(&mut buffer, &transport, &params);
-
-        assert!((left[0] - 0.5).abs() < 1e-6);
-        assert!((left[1] + 0.5).abs() < 1e-6);
-        assert!((right[0] - 0.3).abs() < 1e-6);
+        assert_close(left[0], 0.5);
+        assert_close(left[1], -0.5);
+        assert_close(right[0], 0.3);
     }
 
     #[test]
     fn test_boost() {
-        let mut processor = GainDsp::default();
         let mut left = [1.0];
         let mut buffer = [&mut left[..]];
 
-        let params = GainParams { level: 2.0 };
-        let transport = Transport::default();
+        process_with_gain(&mut buffer, 2.0);
 
-        processor.process(&mut buffer, &transport, &params);
-
-        assert!((left[0] - 2.0).abs() < 1e-6);
+        assert_close(left[0], 2.0);
     }
 
     #[test]
     fn test_attenuation() {
-        let mut processor = GainDsp::default();
         let mut left = [1.0];
         let mut buffer = [&mut left[..]];
 
-        let params = GainParams { level: 0.5 };
-        let transport = Transport::default();
+        process_with_gain(&mut buffer, 0.5);
 
-        processor.process(&mut buffer, &transport, &params);
-
-        assert!((left[0] - 0.5).abs() < 1e-6);
+        assert_close(left[0], 0.5);
     }
 
     #[test]
