@@ -2995,3 +2995,55 @@
 - **Architect escalation: NO**
   - Rationale: all edits were low-risk readability/doc/test-helper cleanups within explicit file bounds and required no architecture/ownership decision.
 
+---
+
+## Tier 2 — Batch 13 quick-scan cleanup
+
+### Scope
+
+- Tier: **Tier 2 (quick-scan cleanup)**
+- Batch: **13**
+- Goal: Apply bounded, behavior-preserving readability/doc/export cleanup only (no architecture/API changes).
+
+### Files
+
+1. `dev-server/src/audio/status.rs`
+  - Deduplicated constructor field wiring through a small internal helper (`build_status(...)`).
+  - Preserved status payload fields and timestamp behavior.
+
+2. `dev-server/src/lib.rs`
+  - Clarified crate-root re-export grouping/order and consolidated feature-gated audio re-exports.
+  - Preserved public export surface exactly.
+
+3. `engine/crates/wavecraft-dsp/src/combinators/mod.rs`
+  - Improved doc consistency for preferred (`SignalChain!`) versus deprecated (`Chain!`) macro usage.
+  - No macro behavior or expansion changes.
+
+4. `engine/crates/wavecraft-processors/src/lib.rs`
+  - Polished crate docs and re-export grouping comments/order for readability.
+  - Preserved exported symbol surface.
+
+### Invariants
+
+- [x] Behavior-preserving cleanup only.
+- [x] No architecture or API changes.
+- [x] Edits bounded to Batch 13 target files + this ledger update.
+- [x] `AudioRuntimeStatus` construction semantics unchanged (including timestamp source).
+- [x] Re-export/public surface unchanged in `dev-server` and `wavecraft-processors` crate roots.
+- [x] `SignalChain!` / `Chain!` macro behavior unchanged.
+
+### Validation
+
+- `cargo fmt --manifest-path dev-server/Cargo.toml --all` — **PASSED**
+- `cargo fmt --manifest-path engine/Cargo.toml --all` — **PASSED**
+- `cargo clippy --manifest-path dev-server/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo clippy --manifest-path engine/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path dev-server/Cargo.toml` — **PASSED**
+- `cargo test --manifest-path engine/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**
+
+### Escalation
+
+- **Architect escalation: NO**
+  - Rationale: all edits remained within explicit Tier 2 quick-scan readability/documentation/re-export cleanup boundaries and required no ownership or architecture decision.
+

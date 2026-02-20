@@ -6,7 +6,7 @@ pub use chain::Chain;
 
 /// Combines processors into a serial signal chain.
 ///
-/// This is the recommended macro for building DSP chains in Wavecraft.
+/// Preferred macro for building DSP chains in Wavecraft.
 /// Use `SignalChain!` for consistency with the `wavecraft_plugin!` DSL.
 ///
 /// # Single Processor (Zero Overhead)
@@ -38,10 +38,11 @@ macro_rules! SignalChain {
     };
 }
 
-/// DEPRECATED: Use `SignalChain!` instead.
+/// Deprecated compatibility alias for `SignalChain!`.
 ///
-/// This macro is deprecated and will be removed in 0.10.0.
-/// Please use `SignalChain!` for consistency with the Wavecraft DSL.
+/// Prefer `SignalChain!` for all new code and migrations.
+/// This alias remains available for backward compatibility and is
+/// scheduled for removal in `0.10.0`.
 ///
 /// # Migration
 ///
