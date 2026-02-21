@@ -7,7 +7,7 @@ description: Creates a Pull Request using GitHub CLI with a PR summary file. Gen
 
 ## Purpose
 
-This skill creates a GitHub Pull Request using the `gh` CLI tool. To avoid issues with pasting large text into the terminal, it first creates a `PR-summary.md` file in `/docs/feature-specs/${featureName}/` and then uses this file as the PR body.
+This skill creates a GitHub Pull Request using the `gh` CLI tool. To avoid issues with pasting large text into the terminal, it first creates a `PR-summary.md` file in `/docs/feature-specs/${featureName}/`, then **must commit and push that summary file**, and only then runs `gh pr create` with that file as the PR body.
 
 ## Prerequisites
 
@@ -24,7 +24,7 @@ If you don't have terminal execution tools, hand off to the **Coder** agent with
 
 Include in your handoff:
 
-1. The exact commands to run (from Steps 2 and 6)
+1. The exact commands to run (from Steps 2, 6, and 7)
 2. The PR title (from Step 4)
 3. The path to the PR summary file (from Step 5)
 4. This scope constraint verbatim
@@ -111,14 +111,30 @@ Fill in the auto-generated content for each section:
 - **Testing**: Based on types of changes made
 - **Checklist**: Standard quality checks
 
-### Step 6: Create the Pull Request
+### Step 6: Commit and Push PR Summary (Mandatory)
+
+**This step is required.** Always stage and commit `docs/feature-specs/${featureName}/PR-summary.md` before creating the PR to avoid leaving an unstaged summary file behind.
 
 Run the following commands:
 
 ```bash
-# Ensure branch is pushed
-git push -u origin HEAD
+# Stage only the PR summary file
+git add docs/feature-specs/${featureName}/PR-summary.md
 
+# Commit only this file; safe no-op if there is nothing new to commit
+git diff --cached --quiet || git commit -m "docs: add PR summary for ${featureName}"
+
+# Push branch updates (including PR-summary commit)
+git push -u origin HEAD
+```
+
+### Step 7: Create the Pull Request
+
+Run this only after Step 6 succeeds.
+
+Run the following commands:
+
+```bash
 # Create PR using the summary file (use relative path from repo root)
 gh pr create \
   --title "${PR_TITLE}" \
@@ -126,7 +142,7 @@ gh pr create \
   --base "${BASE_BRANCH}"
 ```
 
-### Step 7: Confirm Success
+### Step 8: Confirm Success
 
 After successful PR creation:
 
@@ -151,12 +167,13 @@ After successful PR creation:
 3. Check changed files: `ui/src/components/Meter.tsx`, `ui/src/lib/audio-math.ts`
 4. Auto-generate title: "Improve meter performance and accuracy"
 5. Create `docs/feature-specs/meter-improvements/PR-summary.md` with auto-generated content
-6. Run: `gh pr create --title "Improve meter performance and accuracy" --body-file "docs/feature-specs/meter-improvements/PR-summary.md" --base main`
-7. Return: "✅ PR created: https://github.com/owner/repo/pull/123"
+6. Run: `git add docs/feature-specs/meter-improvements/PR-summary.md`, then `git diff --cached --quiet || git commit -m "docs: add PR summary for meter-improvements"`, then `git push -u origin HEAD`
+7. Run: `gh pr create --title "Improve meter performance and accuracy" --body-file "docs/feature-specs/meter-improvements/PR-summary.md" --base main`
+8. Return: "✅ PR created: https://github.com/owner/repo/pull/123"
 
 ## Notes
 
-- The PR summary file is committed to the repository for documentation purposes
+- Committing and pushing `docs/feature-specs/${featureName}/PR-summary.md` before `gh pr create` is mandatory
 - If the feature-specs folder doesn't exist for this feature, create it
 - Always use relative paths from the repository root in the `--body-file` argument
 - All PR details (title, description) are auto-generated from branch changes - no user input required
