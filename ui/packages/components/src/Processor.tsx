@@ -21,7 +21,7 @@ export interface ProcessorProps {
 
 export function Processor({ id, title, parameters }: Readonly<ProcessorProps>): React.JSX.Element {
   return (
-    <div className="border-green-200! border-spacing-300 bg-blue-100">
+    <div className="space-y-2 rounded-lg border border-plugin-border bg-plugin-surface p-4">
       <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400">
         {title ?? id}
       </h3>

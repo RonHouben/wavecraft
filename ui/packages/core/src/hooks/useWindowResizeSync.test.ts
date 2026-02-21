@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { IpcBridge } from '../ipc/IpcBridge';
+import { IpcMethods } from '../ipc/constants';
 import { useWindowResizeSync } from './useWindowResizeSync';
 
 describe('useWindowResizeSync', () => {
@@ -67,7 +68,10 @@ describe('useWindowResizeSync', () => {
     document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
 
     await waitFor(() => {
-      expect(mockInvoke).toHaveBeenCalledWith('requestResize', { width: 1040, height: 730 });
+      expect(mockInvoke).toHaveBeenCalledWith(IpcMethods.REQUEST_RESIZE, {
+        width: 1040,
+        height: 730,
+      });
     });
   });
 });

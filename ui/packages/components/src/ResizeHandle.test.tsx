@@ -8,6 +8,17 @@ describe('ResizeHandle', () => {
   beforeEach(() => {
     mockRequestResize.mockReset();
     mockRequestResize.mockResolvedValue(undefined);
+
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 1000,
+    });
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      writable: true,
+      value: 700,
+    });
   });
 
   it('renders with a visible anchored handle class', () => {
@@ -16,7 +27,9 @@ describe('ResizeHandle', () => {
     const handle = screen.getByTestId('resize-handle');
     expect(handle).toHaveClass('bottom-2');
     expect(handle).toHaveClass('right-2');
-    expect(handle).toHaveClass('bg-black/40');
+    expect(handle).toHaveClass('bg-plugin-surface');
+    expect(handle).toHaveClass('focus-visible:ring-2');
+    expect(handle).toHaveClass('focus-visible:ring-accent');
   });
 
   it('requests resize while dragging', () => {
@@ -32,5 +45,16 @@ describe('ResizeHandle', () => {
     const [width, height] = mockRequestResize.mock.calls[0] as [number, number];
     expect(width).toBeGreaterThanOrEqual(400);
     expect(height).toBeGreaterThanOrEqual(300);
+  });
+
+  it('supports keyboard resize with arrow keys', () => {
+    render(<ResizeHandle onRequestResize={mockRequestResize} />);
+    const handle = screen.getByTestId('resize-handle');
+
+    fireEvent.keyDown(handle, { key: 'ArrowRight' });
+    fireEvent.keyDown(handle, { key: 'ArrowDown', shiftKey: true });
+
+    expect(mockRequestResize).toHaveBeenNthCalledWith(1, 1024, 700);
+    expect(mockRequestResize).toHaveBeenNthCalledWith(2, 1000, 764);
   });
 });

@@ -50,5 +50,9 @@ describe('Processor', () => {
     const renderedControls = container.querySelectorAll('[data-testid]');
     expect(renderedControls[0]).toHaveAttribute('data-testid', 'toggle-tone_filter_bypass');
     expect(renderedControls[1]).toHaveAttribute('data-testid', 'slider-tone_filter_cutoff_hz');
+
+    const root = container.firstElementChild;
+    expect(root).toHaveClass('border-plugin-border');
+    expect(root).toHaveClass('bg-plugin-surface');
   });
 });

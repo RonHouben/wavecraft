@@ -6,6 +6,12 @@
  */
 
 import React, { useCallback, useRef, useState } from 'react';
+import { focusRingClass, interactionStateClass } from './utils/classNames';
+
+const MIN_WIDTH = 400;
+const MIN_HEIGHT = 300;
+const KEYBOARD_RESIZE_STEP = 24;
+const KEYBOARD_RESIZE_STEP_LARGE = 64;
 
 export interface ResizeHandleProps {
   readonly onRequestResize: (width: number, height: number) => Promise<boolean>;
@@ -14,6 +20,15 @@ export interface ResizeHandleProps {
 export function ResizeHandle({ onRequestResize }: Readonly<ResizeHandleProps>): React.JSX.Element {
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
+
+  const requestResizeWithDelta = useCallback(
+    (deltaWidth: number, deltaHeight: number): void => {
+      const newWidth = Math.max(MIN_WIDTH, window.innerWidth + deltaWidth);
+      const newHeight = Math.max(MIN_HEIGHT, window.innerHeight + deltaHeight);
+      void onRequestResize(newWidth, newHeight);
+    },
+    [onRequestResize]
+  );
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -32,8 +47,8 @@ export function ResizeHandle({ onRequestResize }: Readonly<ResizeHandleProps>): 
         const deltaX = moveEvent.clientX - dragStartRef.current.x;
         const deltaY = moveEvent.clientY - dragStartRef.current.y;
 
-        const newWidth = Math.max(400, dragStartRef.current.width + deltaX);
-        const newHeight = Math.max(300, dragStartRef.current.height + deltaY);
+        const newWidth = Math.max(MIN_WIDTH, dragStartRef.current.width + deltaX);
+        const newHeight = Math.max(MIN_HEIGHT, dragStartRef.current.height + deltaY);
 
         // Request resize from host
         void onRequestResize(newWidth, newHeight);
@@ -51,13 +66,42 @@ export function ResizeHandle({ onRequestResize }: Readonly<ResizeHandleProps>): 
     [onRequestResize]
   );
 
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>): void => {
+      const step = event.shiftKey ? KEYBOARD_RESIZE_STEP_LARGE : KEYBOARD_RESIZE_STEP;
+
+      switch (event.key) {
+        case 'ArrowRight':
+          event.preventDefault();
+          requestResizeWithDelta(step, 0);
+          break;
+        case 'ArrowLeft':
+          event.preventDefault();
+          requestResizeWithDelta(-step, 0);
+          break;
+        case 'ArrowDown':
+          event.preventDefault();
+          requestResizeWithDelta(0, step);
+          break;
+        case 'ArrowUp':
+          event.preventDefault();
+          requestResizeWithDelta(0, -step);
+          break;
+        default:
+          break;
+      }
+    },
+    [requestResizeWithDelta]
+  );
+
   return (
     <button
       data-testid="resize-handle"
-      className={`group fixed bottom-2 right-2 z-[9999] flex h-11 w-11 cursor-nwse-resize select-none items-center justify-center rounded-md border border-white/20 bg-black/40 p-0 shadow-sm backdrop-blur-[1px] transition-colors duration-150 ${
+      className={`group fixed bottom-2 right-2 z-[9999] flex h-11 w-11 cursor-nwse-resize select-none items-center justify-center rounded-md border border-plugin-border bg-plugin-surface p-0 shadow-sm ${focusRingClass} ${interactionStateClass} ${
         isDragging ? 'border-accent/60 bg-accent/25' : 'hover:border-white/35 hover:bg-white/15'
       }`}
       onMouseDown={handleMouseDown}
+      onKeyDown={handleKeyDown}
       aria-label="Resize window"
       type="button"
     >

@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ParameterClient } from '../ipc/ParameterClient';
 import { IpcBridge } from '../ipc/IpcBridge';
+import { IpcEvents } from '../ipc/constants';
 import { useConnectionStatus } from './useConnectionStatus';
 import { logger } from '../logger/Logger';
 import type { ParameterId, ParameterInfo, ParameterValue } from '../types/parameters';
@@ -262,7 +263,7 @@ export function useAllParameters(): UseAllParametersResult {
   // ─── Effect: Subscribe to hot-reload notifications ─────────────────
   useEffect(() => {
     const bridge = IpcBridge.getInstance();
-    const unsubscribe = bridge.on('parametersChanged', () => {
+    const unsubscribe = bridge.on(IpcEvents.PARAMETERS_CHANGED, () => {
       logger.info('Parameters changed on server (hot-reload), re-fetching...');
       reload();
     });

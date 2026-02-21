@@ -9,6 +9,7 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { useAllParameters } from './useAllParameters';
 import { IpcBridge } from '../ipc/IpcBridge';
 import { ParameterClient } from '../ipc/ParameterClient';
+import { IpcEvents } from '../ipc/constants';
 import { MockTransport } from '../transports/MockTransport';
 import * as transportsModule from '../transports';
 import * as environmentModule from '../utils/environment';
@@ -501,7 +502,7 @@ describe('useAllParameters', () => {
     await act(async () => {
       mockTransport.simulateNotification({
         jsonrpc: '2.0',
-        method: 'parametersChanged',
+        method: IpcEvents.PARAMETERS_CHANGED,
         params: {},
       });
     });

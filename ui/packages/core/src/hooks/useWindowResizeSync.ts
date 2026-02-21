@@ -4,6 +4,7 @@
 
 import { useEffect } from 'react';
 import { IpcBridge } from '../ipc/IpcBridge';
+import { IpcMethods } from '../ipc/constants';
 import { logger } from '../logger';
 
 const LEGACY_RESIZE_HANDLE_ID = 'wavecraft-legacy-resize-handle';
@@ -37,7 +38,10 @@ export interface RequestResizeResult {
 export async function requestResize(width: number, height: number): Promise<boolean> {
   const bridge = IpcBridge.getInstance();
 
-  const result = await bridge.invoke<RequestResizeResult>('requestResize', { width, height });
+  const result = await bridge.invoke<RequestResizeResult>(IpcMethods.REQUEST_RESIZE, {
+    width,
+    height,
+  });
 
   return result.accepted;
 }

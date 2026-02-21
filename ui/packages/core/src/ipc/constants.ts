@@ -16,6 +16,7 @@ export const IpcEvents = {
   PARAM_UPDATE: 'paramUpdate',
   METER_FRAME: 'meterFrame',
   PARAMETER_CHANGED: 'parameterChanged',
+  PARAMETERS_CHANGED: 'parametersChanged',
 } as const;
 
 export type IpcEvent = (typeof IpcEvents)[keyof typeof IpcEvents];
