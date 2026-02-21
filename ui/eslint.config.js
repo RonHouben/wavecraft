@@ -38,31 +38,68 @@ export default [
     },
   },
 
-  // Guardrail: disallow raw IPC method strings outside core package
+  // Guardrail: disallow raw IPC method/event literals outside core package
   {
     files: ['packages/components/src/**/*.{ts,tsx}'],
+    ignores: [
+      'packages/components/src/**/*.test.{ts,tsx}',
+      'packages/components/src/**/__mocks__/**',
+      'packages/components/src/**/*mock*.{ts,tsx}',
+    ],
     rules: {
       'no-restricted-syntax': [
         'error',
         {
           selector: "Literal[value='getParameter']",
-          message: 'Use canonical IPC constants instead of raw method strings.',
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
         },
         {
           selector: "Literal[value='setParameter']",
-          message: 'Use canonical IPC constants instead of raw method strings.',
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
+        },
+        {
+          selector: "Literal[value='getAllParameters']",
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
         },
         {
           selector: "Literal[value='getMeterFrame']",
-          message: 'Use canonical IPC constants instead of raw method strings.',
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
         },
         {
           selector: "Literal[value='getAudioStatus']",
-          message: 'Use canonical IPC constants instead of raw method strings.',
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
+        },
+        {
+          selector: "Literal[value='getOscilloscopeFrame']",
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
+        },
+        {
+          selector: "Literal[value='requestResize']",
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
         },
         {
           selector: "Literal[value='ping']",
-          message: 'Use canonical IPC constants instead of raw method strings.',
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
+        },
+        {
+          selector: "Literal[value='audioStatusChanged']",
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
+        },
+        {
+          selector: "Literal[value='paramUpdate']",
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
+        },
+        {
+          selector: "Literal[value='meterFrame']",
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
+        },
+        {
+          selector: "Literal[value='parameterChanged']",
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
+        },
+        {
+          selector: "Literal[value='parametersChanged']",
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
         },
       ],
     },
