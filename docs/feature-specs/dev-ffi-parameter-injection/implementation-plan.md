@@ -85,7 +85,7 @@ This plan delivers FFI v2 parameter injection for browser dev audio and removes 
 
 ---
 
-### Phase 3 — Bridge: Strict v2 by Default + Explicit v1 Compat Toggle
+### Phase 3 — Bridge: Strict v2 Contract
 
 **Files:**
 
@@ -95,9 +95,8 @@ This plan delivers FFI v2 parameter injection for browser dev audio and removes 
 **Changes:**
 
 - Default loader requires vtable version `2`; version mismatch fails fast
-- On mismatch, diagnostics report: found version, expected version, and remediation step (rebuild with current SDK, or set compat flag)
-- Add explicit opt-in env var `WAVECRAFT_DEV_FFI_V1_COMPAT=1` to accept v1 during migration window only
-- Document sunset policy for the compat flag in code comments
+- On mismatch, diagnostics report: found version, expected version, and remediation step (rebuild with current SDK)
+- Enforce v2-only contract unconditionally
 
 **Validation gate:** `cargo test -p wavecraft-bridge`
 
@@ -105,7 +104,7 @@ This plan delivers FFI v2 parameter injection for browser dev audio and removes 
 
 ---
 
-### Phase 4 — Dev-Server: Block-Boundary Parameter Injection
+### Phase 4 — Dev-Server: Block-Boundary Parameter Injection (v2-only)
 
 **Files:**
 
@@ -122,12 +121,12 @@ This plan delivers FFI v2 parameter injection for browser dev audio and removes 
 - Evolve `atomic_params.rs` to support a dense indexed snapshot bridge (SPSC ring or atomic generation) if not already compatible
 - In `input_pipeline.rs` audio callback: drain parameter updates at block boundary, call `apply_plain_values` before `process`
 - No allocations, locks, HashMap lookups, or string work in the callback hot path
-- Gate old `output_modifiers.rs` parameter-semantic DSP behind `WAVECRAFT_DEV_FFI_V1_COMPAT=1`; new default path skips it
+- Remove old `output_modifiers.rs` parameter-semantic DSP compatibility path from the runtime callback flow
 - `DevServerHost` forwards parameter updates from IPC/WebSocket into the lock-free bridge on parameter set
 
 **Validation gate:** `cargo test -p wavecraft-dev-server`
 
-**Rollback:** Set `WAVECRAFT_DEV_FFI_V1_COMPAT=1` to restore previous behavior immediately.
+**Rollback:** Rebuild plugin/runtime against the current SDK contracts.
 
 ---
 
@@ -145,7 +144,7 @@ This plan delivers FFI v2 parameter injection for browser dev audio and removes 
 
 - Remove parameter-semantic DSP (gain, saturation, oscillator, clip logic) from `output_modifiers.rs`
 - Retain only non-semantic audio transport utilities in `output_modifiers.rs`, or remove the file entirely
-- Remove `WAVECRAFT_DEV_FFI_V1_COMPAT` compat branch after burn-in window is confirmed
+- Remove all remaining v1 compatibility branches from runtime startup and injection flow
 
 **Validation gate:**
 
@@ -166,7 +165,7 @@ This plan delivers FFI v2 parameter injection for browser dev audio and removes 
 **Changes:**
 
 - Update `development-workflows.md` to describe FFI v2 parameter injection flow and data path
-- Document `WAVECRAFT_DEV_FFI_V1_COMPAT` compat flag and its sunset date/policy
+- Remove v1 compatibility mode guidance and document v2-only startup/injection behavior
 - Note block-boundary injection semantics and RT-safety constraints
 
 **Validation gate:** `cargo xtask ci-check`
@@ -181,45 +180,45 @@ Phase 5 is gated on parity suite pass. The suite must:
 - Compare outputs sample-by-sample (strict epsilon)
 - Cover oscillator, filter, saturator, and gain processors as a minimum
 
-Passing the parity suite is a required signal before defaulting `WAVECRAFT_DEV_FFI_V1_COMPAT` to off.
+Passing the parity suite is a required signal before removing compatibility-era runtime code.
 
 ---
 
 ## Validation Matrix
 
-| Phase | Command                                                      |
-|-------|--------------------------------------------------------------|
-| P1    | `cargo test -p wavecraft-protocol`                           |
-| P2    | `cargo test -p wavecraft-macros`                             |
-| P3    | `cargo test -p wavecraft-bridge`                             |
-| P4    | `cargo test -p wavecraft-dev-server`                         |
+| Phase | Command                                                                   |
+| ----- | ------------------------------------------------------------------------- |
+| P1    | `cargo test -p wavecraft-protocol`                                        |
+| P2    | `cargo test -p wavecraft-macros`                                          |
+| P3    | `cargo test -p wavecraft-bridge`                                          |
+| P4    | `cargo test -p wavecraft-dev-server`                                      |
 | P5    | `cargo test -p wavecraft-dev-server` + `cargo xtask ci-check --skip-docs` |
-| P6    | `cargo xtask ci-check`                                       |
+| P6    | `cargo xtask ci-check`                                                    |
 
 ---
 
 ## Compatibility and Rollback Policy
 
-| Default behavior           | Strict v2 FFI required                                                 |
-|----------------------------|------------------------------------------------------------------------|
-| Migration escape hatch     | `WAVECRAFT_DEV_FFI_V1_COMPAT=1` — temporary, explicit opt-in only     |
-| Compat window              | One release cycle after Phase 4 merge                                  |
-| Compat removal trigger     | Parity gate passed + burn-in confirmed                                 |
-| Permanent behavior (post-5)| Strict v2 only; compat flag removed; ABI mismatch always fails fast    |
+| Default behavior            | Strict v2 FFI required                                              |
+| --------------------------- | ------------------------------------------------------------------- |
+| Migration escape hatch      | None (v2-only runtime)                                              |
+| Compat window               | N/A                                                                 |
+| Compat removal trigger      | Completed as part of v2-only cleanup                                |
+| Permanent behavior (post-5) | Strict v2 only; compat flag removed; ABI mismatch always fails fast |
 
 ---
 
 ## Acceptance Criteria Mapping
 
-| AC  | Description                                                                       | Addressed by   |
-|-----|-----------------------------------------------------------------------------------|----------------|
-| AC1 | Browser dev params affect DSP through the FFI path                                | Phases 2 + 4   |
-| AC2 | `wavecraft-processors` is the single DSP source of truth                          | Phase 5        |
-| AC3 | ABI version mismatch fails fast with actionable diagnostics                       | Phases 1 + 3   |
-| AC4 | Audio callback path is allocation-free and lock-free in steady state              | Phase 4        |
-| AC5 | Deterministic parity tests pass before cutover                                    | Phases 4 + 5   |
-| AC6 | `output_modifiers.rs` no longer implements parameter-semantic DSP                 | Phase 5        |
-| AC7 | Development workflow documentation updated                                        | Phase 6        |
+| AC  | Description                                                          | Addressed by |
+| --- | -------------------------------------------------------------------- | ------------ |
+| AC1 | Browser dev params affect DSP through the FFI path                   | Phases 2 + 4 |
+| AC2 | `wavecraft-processors` is the single DSP source of truth             | Phase 5      |
+| AC3 | ABI version mismatch fails fast with actionable diagnostics          | Phases 1 + 3 |
+| AC4 | Audio callback path is allocation-free and lock-free in steady state | Phase 4      |
+| AC5 | Deterministic parity tests pass before cutover                       | Phases 4 + 5 |
+| AC6 | `output_modifiers.rs` no longer implements parameter-semantic DSP    | Phase 5      |
+| AC7 | Development workflow documentation updated                           | Phase 6      |
 
 ---
 

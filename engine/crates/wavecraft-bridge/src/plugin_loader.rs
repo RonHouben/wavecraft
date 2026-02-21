@@ -8,8 +8,6 @@ use wavecraft_protocol::{
     DEV_PROCESSOR_VTABLE_VERSION, DevProcessorVTable, ParameterInfo, ProcessorInfo,
 };
 
-const DEV_FFI_V1_COMPAT_ENV: &str = "WAVECRAFT_DEV_FFI_V1_COMPAT";
-
 /// Errors that can occur during plugin loading.
 #[derive(Debug)]
 pub enum PluginLoaderError {
@@ -26,11 +24,7 @@ pub enum PluginLoaderError {
     /// Failed to read a file (e.g., sidecar JSON cache).
     FileRead(std::io::Error),
     /// Vtable ABI version mismatch.
-    VtableVersionMismatch {
-        found: u32,
-        expected: u32,
-        compat_enabled: bool,
-    },
+    VtableVersionMismatch { found: u32, expected: u32 },
 }
 
 impl std::fmt::Display for PluginLoaderError {
@@ -42,20 +36,10 @@ impl std::fmt::Display for PluginLoaderError {
             Self::JsonParse(e) => write!(f, "Failed to parse JSON payload: {}", e),
             Self::InvalidUtf8(e) => write!(f, "Invalid UTF-8 in FFI response: {}", e),
             Self::FileRead(e) => write!(f, "Failed to read file: {}", e),
-            Self::VtableVersionMismatch {
-                found,
-                expected,
-                compat_enabled,
-            } => write!(
+            Self::VtableVersionMismatch { found, expected } => write!(
                 f,
-                "Dev processor vtable version mismatch: found {}, expected {}. {}",
-                found,
-                expected,
-                if *compat_enabled {
-                    "Compatibility mode is enabled, but this version is still unsupported. Rebuild the plugin with the current SDK."
-                } else {
-                    "Rebuild the plugin with the current SDK, or temporarily set WAVECRAFT_DEV_FFI_V1_COMPAT=1 to allow v1 during migration."
-                }
+                "Dev processor vtable version mismatch: found {}, expected {}. Rebuild the plugin with the current SDK.",
+                found, expected
             ),
         }
     }
@@ -370,27 +354,16 @@ impl PluginParamLoader {
         // The Library remains loaded for the duration of this call.
         let vtable = unsafe { symbol() };
 
-        // Version check — strict v2 by default, optional explicit v1 migration mode.
-        let compat_enabled = is_dev_ffi_v1_compat_enabled();
-        let version_supported = vtable.version == DEV_PROCESSOR_VTABLE_VERSION
-            || (compat_enabled && vtable.version == 1);
-
-        if !version_supported {
+        // Version check — v2-only contract.
+        if vtable.version != DEV_PROCESSOR_VTABLE_VERSION {
             return Err(PluginLoaderError::VtableVersionMismatch {
                 found: vtable.version,
                 expected: DEV_PROCESSOR_VTABLE_VERSION,
-                compat_enabled,
             });
         }
 
         Ok(vtable)
     }
-}
-
-fn is_dev_ffi_v1_compat_enabled() -> bool {
-    std::env::var(DEV_FFI_V1_COMPAT_ENV)
-        .map(|value| value == "1")
-        .unwrap_or(false)
 }
 
 #[cfg(test)]
@@ -423,42 +396,10 @@ mod tests {
         let err = PluginLoaderError::VtableVersionMismatch {
             found: 1,
             expected: 2,
-            compat_enabled: false,
         };
         assert!(err.to_string().contains("version mismatch"));
         assert!(err.to_string().contains("found 1"));
         assert!(err.to_string().contains("expected 2"));
-        assert!(err.to_string().contains("WAVECRAFT_DEV_FFI_V1_COMPAT=1"));
-    }
-
-    #[test]
-    fn test_vtable_version_mismatch_error_display_in_compat_mode() {
-        let err = PluginLoaderError::VtableVersionMismatch {
-            found: 3,
-            expected: 2,
-            compat_enabled: true,
-        };
-        assert!(err.to_string().contains("Compatibility mode is enabled"));
-    }
-
-    #[test]
-    fn test_is_dev_ffi_v1_compat_enabled() {
-        let _guard = super::tests_support::TEST_ENV_LOCK.lock().unwrap();
-
-        // SAFETY: Test is serialized by TEST_ENV_LOCK; no concurrent env access.
-        unsafe { std::env::remove_var(super::DEV_FFI_V1_COMPAT_ENV) };
-        assert!(!super::is_dev_ffi_v1_compat_enabled());
-
-        // SAFETY: Test is serialized by TEST_ENV_LOCK; no concurrent env access.
-        unsafe { std::env::set_var(super::DEV_FFI_V1_COMPAT_ENV, "0") };
-        assert!(!super::is_dev_ffi_v1_compat_enabled());
-
-        // SAFETY: Test is serialized by TEST_ENV_LOCK; no concurrent env access.
-        unsafe { std::env::set_var(super::DEV_FFI_V1_COMPAT_ENV, "1") };
-        assert!(super::is_dev_ffi_v1_compat_enabled());
-
-        // SAFETY: Test is serialized by TEST_ENV_LOCK; no concurrent env access.
-        unsafe { std::env::remove_var(super::DEV_FFI_V1_COMPAT_ENV) };
     }
 
     #[test]
@@ -541,11 +482,4 @@ mod tests {
         let parsed: Result<Vec<ProcessorInfo>, _> = serde_json::from_str(json);
         assert!(parsed.is_err());
     }
-}
-
-#[cfg(test)]
-mod tests_support {
-    use std::sync::Mutex;
-
-    pub(super) static TEST_ENV_LOCK: Mutex<()> = Mutex::new(());
 }
