@@ -6,7 +6,7 @@ model:
   - Claude Opus 4.6 (copilot)
   - Claude Sonnet 4.6 (copilot)
 tools: ['read', 'search', 'agent', 'web', 'todo', 'memory', 'excalidraw/*']
-agents: [po, architect, planner, coder, tester, qa, docwriter, search]
+agents: ['*']
 user-invokable: true
 handoffs:
   - label: Requirements Phase
