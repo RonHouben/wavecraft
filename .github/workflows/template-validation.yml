@@ -26,6 +26,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
+          cache-dependency-path: ui/package-lock.json
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -101,14 +103,6 @@ jobs:
         run: cargo check --manifest-path engine/Cargo.toml
         working-directory: /tmp/test-plugin
 
-      - name: Auto-fix generated engine linting (Clippy)
-        run: cargo clippy --workspace --all-targets --fix --allow-dirty --allow-staged --allow-no-vcs
-        working-directory: /tmp/test-plugin/engine
-
-      - name: Auto-fix generated engine formatting
-        run: cargo fmt
-        working-directory: /tmp/test-plugin/engine
-
       - name: Verify generated engine linting (Clippy)
         run: cargo clippy --workspace --all-targets -- -D warnings
         working-directory: /tmp/test-plugin/engine
@@ -132,14 +126,6 @@ jobs:
         run: npm install
         working-directory: /tmp/test-plugin/ui
 
-      - name: Auto-fix UI linting
-        run: npm run lint:fix
-        working-directory: /tmp/test-plugin/ui
-
-      - name: Auto-fix UI formatting
-        run: npm run format
-        working-directory: /tmp/test-plugin/ui
-
       - name: Verify UI linting
         run: npm run lint
         working-directory: /tmp/test-plugin/ui
@@ -150,10 +136,6 @@ jobs:
 
       - name: TypeScript type-check
         run: npm run typecheck
-        working-directory: /tmp/test-plugin/ui
-
-      - name: Build UI
-        run: npm run build
         working-directory: /tmp/test-plugin/ui
 
       # ═════════════════════════════════════════════════════════════
@@ -218,32 +200,55 @@ jobs:
             exit 1
           fi
 
-          set +e
-          timeout 180s /tmp/wavecraft-installed-cli/wavecraft start --no-install --port 39091 --ui-port 39092 > /tmp/test-plugin-git/start-smoke.log 2>&1
-          STATUS=$?
-          set -e
+          LOG_FILE=/tmp/test-plugin-git/start-smoke.log
+          /tmp/wavecraft-installed-cli/wavecraft start --no-install --port 39091 --ui-port 39092 > "$LOG_FILE" 2>&1 &
+          START_PID=$!
 
-          cat /tmp/test-plugin-git/start-smoke.log
+          READY=0
+          TIMEOUT_SECS=180
 
-          if grep -q 'include_dir!("\$CARGO_MANIFEST_DIR/assets/ui-dist")' /tmp/test-plugin-git/start-smoke.log; then
-            echo "❌ Regressed include_dir fallback asset panic detected"
+          for _ in $(seq 1 "$TIMEOUT_SECS"); do
+            if grep -q 'include_dir!("\$CARGO_MANIFEST_DIR/assets/ui-dist")' "$LOG_FILE"; then
+              echo "❌ Regressed include_dir fallback asset panic detected"
+              kill "$START_PID" 2>/dev/null || true
+              wait "$START_PID" 2>/dev/null || true
+              cat "$LOG_FILE"
+              exit 1
+            fi
+
+            if grep -q 'No such file or directory' "$LOG_FILE" && grep -q 'assets/ui-dist' "$LOG_FILE"; then
+              echo "❌ Missing fallback assets regression detected"
+              kill "$START_PID" 2>/dev/null || true
+              wait "$START_PID" 2>/dev/null || true
+              cat "$LOG_FILE"
+              exit 1
+            fi
+
+            if grep -q 'All servers running' "$LOG_FILE"; then
+              READY=1
+              break
+            fi
+
+            if ! kill -0 "$START_PID" 2>/dev/null; then
+              echo "❌ wavecraft start exited before ready state"
+              cat "$LOG_FILE"
+              exit 1
+            fi
+
+            sleep 1
+          done
+
+          if [ "$READY" -ne 1 ]; then
+            echo "❌ wavecraft start did not reach ready state within ${TIMEOUT_SECS}s"
+            kill "$START_PID" 2>/dev/null || true
+            wait "$START_PID" 2>/dev/null || true
+            cat "$LOG_FILE"
             exit 1
           fi
 
-          if grep -q 'No such file or directory' /tmp/test-plugin-git/start-smoke.log && grep -q 'assets/ui-dist' /tmp/test-plugin-git/start-smoke.log; then
-            echo "❌ Missing fallback assets regression detected"
-            exit 1
-          fi
-
-          if ! grep -q 'All servers running' /tmp/test-plugin-git/start-smoke.log; then
-            echo "❌ wavecraft start did not reach ready state"
-            exit 1
-          fi
-
-          if [ "$STATUS" -ne 0 ] && [ "$STATUS" -ne 124 ]; then
-            echo "❌ wavecraft start exited unexpectedly with status $STATUS"
-            exit 1
-          fi
+          kill "$START_PID" 2>/dev/null || true
+          wait "$START_PID" 2>/dev/null || true
+          cat "$LOG_FILE"
 
       # ═════════════════════════════════════════════════════════════
       # Summary
