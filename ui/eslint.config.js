@@ -14,10 +14,18 @@ export default [
   // Guardrail: prevent direct filesystem imports from core package internals
   {
     files: ['packages/components/src/**/*.{ts,tsx}'],
+    ignores: ['packages/components/src/**/*.test.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
         'error',
         {
+          paths: [
+            {
+              name: '@wavecraft/core',
+              message:
+                'Presentational components must not import @wavecraft/core directly. Move hook/state logic to sdk-template smart containers and pass data via props.',
+            },
+          ],
           patterns: [
             {
               group: [

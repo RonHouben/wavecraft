@@ -1,12 +1,12 @@
 import React from 'react';
 import { Processor } from './Processor';
+import type { ProcessorProps } from './Processor';
 
-export interface OutputGainProcessorProps {
-  readonly hideWhenNotInSignalChain?: boolean;
-}
+export type OutputGainProcessorProps = Omit<ProcessorProps, 'id'>;
 
 export function OutputGainProcessor({
-  hideWhenNotInSignalChain,
+  title,
+  parameters,
 }: Readonly<OutputGainProcessorProps>): React.JSX.Element | null {
-  return <Processor id="output_gain" hideWhenNotInSignalChain={hideWhenNotInSignalChain} />;
+  return <Processor id="output_gain" title={title} parameters={parameters} />;
 }

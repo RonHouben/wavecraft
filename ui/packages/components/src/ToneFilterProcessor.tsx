@@ -1,12 +1,12 @@
 import React from 'react';
 import { Processor } from './Processor';
+import type { ProcessorProps } from './Processor';
 
-export interface ToneFilterProcessorProps {
-  readonly hideWhenNotInSignalChain?: boolean;
-}
+export type ToneFilterProcessorProps = Omit<ProcessorProps, 'id'>;
 
 export function ToneFilterProcessor({
-  hideWhenNotInSignalChain,
+  title,
+  parameters,
 }: Readonly<ToneFilterProcessorProps>): React.JSX.Element | null {
-  return <Processor id="tone_filter" hideWhenNotInSignalChain={hideWhenNotInSignalChain} />;
+  return <Processor id="tone_filter" title={title} parameters={parameters} />;
 }

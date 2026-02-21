@@ -12,7 +12,8 @@ import type {
   IpcRequest,
   IpcResponse,
 } from '../types/ipc';
-import { METHOD_GET_AUDIO_STATUS, isIpcNotification } from '../types/ipc';
+import { isIpcNotification } from '../types/ipc';
+import { IpcMethods } from './constants';
 import type { Transport } from '../transports';
 import { getTransport } from '../transports';
 import { logger } from '../logger/Logger';
@@ -121,7 +122,7 @@ export class IpcBridge {
    * Fetch current audio runtime status from the host.
    */
   public async getAudioStatus(): Promise<AudioRuntimeStatus | null> {
-    const result = await this.invoke<GetAudioStatusResult>(METHOD_GET_AUDIO_STATUS);
+    const result = await this.invoke<GetAudioStatusResult>(IpcMethods.GET_AUDIO_STATUS);
     return result.status;
   }
 

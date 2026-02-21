@@ -87,6 +87,9 @@ export {
   NOTIFICATION_PARAMETER_CHANGED,
 } from './types/parameters';
 
+export { IpcMethods, IpcEvents } from './ipc/constants';
+export type { IpcMethod, IpcEvent } from './ipc/constants';
+
 // =============================================================================
 // Core Classes (advanced use)
 // =============================================================================

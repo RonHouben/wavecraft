@@ -1,12 +1,12 @@
 import React from 'react';
 import { Processor } from './Processor';
+import type { ProcessorProps } from './Processor';
 
-export interface InputTrimProcessorProps {
-  readonly hideWhenNotInSignalChain?: boolean;
-}
+export type InputTrimProcessorProps = Omit<ProcessorProps, 'id'>;
 
 export function InputTrimProcessor({
-  hideWhenNotInSignalChain,
+  title,
+  parameters,
 }: Readonly<InputTrimProcessorProps>): React.JSX.Element {
-  return <Processor id="input_trim" hideWhenNotInSignalChain={hideWhenNotInSignalChain} />;
+  return <Processor id="input_trim" title={title} parameters={parameters} />;
 }

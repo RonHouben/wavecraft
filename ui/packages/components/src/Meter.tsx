@@ -5,17 +5,26 @@
  */
 
 import React, { useEffect, useState, useRef } from 'react';
-import { getMeterFrame, linearToDb, useConnectionStatus, type MeterFrame } from '@wavecraft/core';
+import type { MeterFrame } from './types';
 
-const METER_UPDATE_HZ = 30;
 const METER_FLOOR_DB = -60;
 const METER_RANGE_DB = 60; // 0 to -60 dB
 const CLIP_THRESHOLD = 1; // Linear amplitude threshold
 const CLIP_HOLD_MS = 2000; // Hold clip indicator for 2 seconds
 
-export function Meter(): React.JSX.Element {
-  const { connected } = useConnectionStatus();
-  const [frame, setFrame] = useState<MeterFrame | null>(null);
+function linearToDb(linear: number, floorDb = METER_FLOOR_DB): number {
+  if (linear <= 0) {
+    return floorDb;
+  }
+  return Math.max(floorDb, 20 * Math.log10(linear));
+}
+
+export interface MeterProps {
+  readonly connected: boolean;
+  readonly frame: MeterFrame | null;
+}
+
+export function Meter({ connected, frame }: Readonly<MeterProps>): React.JSX.Element {
   const [clippedL, setClippedL] = useState(false);
   const [clippedR, setClippedR] = useState(false);
 
@@ -23,46 +32,35 @@ export function Meter(): React.JSX.Element {
   const clipRTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    // Only poll when connected
-    if (!connected) {
+    if (!frame) {
       return;
     }
 
-    // Poll meter frames at 30 Hz
-    const interval = setInterval(async () => {
-      const newFrame = await getMeterFrame();
-      setFrame(newFrame);
-
-      // Detect clipping (peak > 1.0 linear = 0 dB)
-      if (newFrame) {
-        if (newFrame.peak_l > CLIP_THRESHOLD) {
-          setClippedL(true);
-          // Clear existing timeout and set new one
-          if (clipLTimeoutRef.current !== null) {
-            clearTimeout(clipLTimeoutRef.current);
-          }
-          clipLTimeoutRef.current = globalThis.setTimeout(() => {
-            setClippedL(false);
-            clipLTimeoutRef.current = null;
-          }, CLIP_HOLD_MS);
-        }
-
-        if (newFrame.peak_r > CLIP_THRESHOLD) {
-          setClippedR(true);
-          // Clear existing timeout and set new one
-          if (clipRTimeoutRef.current !== null) {
-            clearTimeout(clipRTimeoutRef.current);
-          }
-          clipRTimeoutRef.current = globalThis.setTimeout(() => {
-            setClippedR(false);
-            clipRTimeoutRef.current = null;
-          }, CLIP_HOLD_MS);
-        }
+    if (frame.peak_l > CLIP_THRESHOLD) {
+      setClippedL(true);
+      if (clipLTimeoutRef.current !== null) {
+        clearTimeout(clipLTimeoutRef.current);
       }
-    }, 1000 / METER_UPDATE_HZ);
+      clipLTimeoutRef.current = globalThis.setTimeout(() => {
+        setClippedL(false);
+        clipLTimeoutRef.current = null;
+      }, CLIP_HOLD_MS);
+    }
 
+    if (frame.peak_r > CLIP_THRESHOLD) {
+      setClippedR(true);
+      if (clipRTimeoutRef.current !== null) {
+        clearTimeout(clipRTimeoutRef.current);
+      }
+      clipRTimeoutRef.current = globalThis.setTimeout(() => {
+        setClippedR(false);
+        clipRTimeoutRef.current = null;
+      }, CLIP_HOLD_MS);
+    }
+  }, [frame]);
+
+  useEffect(() => {
     return (): void => {
-      clearInterval(interval);
       if (clipLTimeoutRef.current !== null) {
         clearTimeout(clipLTimeoutRef.current);
       }
@@ -70,7 +68,7 @@ export function Meter(): React.JSX.Element {
         clearTimeout(clipRTimeoutRef.current);
       }
     };
-  }, [connected]);
+  }, []);
 
   // Convert linear to dB for display
   const peakLDb = frame ? linearToDb(frame.peak_l, METER_FLOOR_DB) : METER_FLOOR_DB;
@@ -138,18 +136,18 @@ export function Meter(): React.JSX.Element {
         <div className="w-4 text-center text-[11px] font-semibold text-gray-300">L</div>
         <div className="relative h-6 flex-1">
           <div
-            className={`relative h-full w-full overflow-hidden rounded bg-[#333] transition-shadow duration-100 ${
+            className={`relative h-full w-full overflow-hidden rounded bg-plugin-surface motion-safe:transition-shadow motion-safe:duration-100 ${
               clippedL ? 'shadow-[inset_0_0_8px_rgba(255,23,68,0.8)]' : ''
             }`}
           >
             <div
               data-testid="meter-L-rms"
-              className="absolute left-0 top-0 h-full bg-gradient-to-r from-meter-safe to-meter-safe-light transition-[width] duration-100"
+              className="absolute left-0 top-0 h-full bg-gradient-to-r from-meter-safe to-meter-safe-light motion-safe:transition-[width] motion-safe:duration-100"
               style={{ width: `${Math.max(0, Math.min(100, rmsLPercent))}%` }}
             />
             <div
               data-testid="meter-L-peak"
-              className="duration-50 absolute left-0 top-0 h-full bg-gradient-to-r from-meter-safe via-meter-warning to-orange-500 opacity-60 transition-[width]"
+              className="absolute left-0 top-0 h-full bg-gradient-to-r from-meter-safe via-meter-warning to-orange-500 opacity-60 motion-safe:transition-[width] motion-safe:duration-75"
               style={{ width: `${Math.max(0, Math.min(100, peakLPercent))}%` }}
             />
           </div>
@@ -168,18 +166,18 @@ export function Meter(): React.JSX.Element {
         <div className="w-4 text-center text-[11px] font-semibold text-gray-300">R</div>
         <div className="relative h-6 flex-1">
           <div
-            className={`relative h-full w-full overflow-hidden rounded bg-[#333] transition-shadow duration-100 ${
+            className={`relative h-full w-full overflow-hidden rounded bg-plugin-surface motion-safe:transition-shadow motion-safe:duration-100 ${
               clippedR ? 'shadow-[inset_0_0_8px_rgba(255,23,68,0.8)]' : ''
             }`}
           >
             <div
               data-testid="meter-R-rms"
-              className="absolute left-0 top-0 h-full bg-gradient-to-r from-meter-safe to-meter-safe-light transition-[width] duration-100"
+              className="absolute left-0 top-0 h-full bg-gradient-to-r from-meter-safe to-meter-safe-light motion-safe:transition-[width] motion-safe:duration-100"
               style={{ width: `${Math.max(0, Math.min(100, rmsRPercent))}%` }}
             />
             <div
               data-testid="meter-R-peak"
-              className="duration-50 absolute left-0 top-0 h-full bg-gradient-to-r from-meter-safe via-meter-warning to-orange-500 opacity-60 transition-[width]"
+              className="absolute left-0 top-0 h-full bg-gradient-to-r from-meter-safe via-meter-warning to-orange-500 opacity-60 motion-safe:transition-[width] motion-safe:duration-75"
               style={{ width: `${Math.max(0, Math.min(100, peakRPercent))}%` }}
             />
           </div>

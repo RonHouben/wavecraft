@@ -4,13 +4,6 @@ import { ResizeHandle } from './ResizeHandle';
 
 const mockRequestResize = vi.hoisted(() => vi.fn());
 
-vi.mock('@wavecraft/core', () => ({
-  useRequestResize: () => mockRequestResize,
-  logger: {
-    error: vi.fn(),
-  },
-}));
-
 describe('ResizeHandle', () => {
   beforeEach(() => {
     mockRequestResize.mockReset();
@@ -18,7 +11,7 @@ describe('ResizeHandle', () => {
   });
 
   it('renders with a visible anchored handle class', () => {
-    render(<ResizeHandle />);
+    render(<ResizeHandle onRequestResize={mockRequestResize} />);
 
     const handle = screen.getByTestId('resize-handle');
     expect(handle).toHaveClass('bottom-2');
@@ -27,7 +20,7 @@ describe('ResizeHandle', () => {
   });
 
   it('requests resize while dragging', () => {
-    render(<ResizeHandle />);
+    render(<ResizeHandle onRequestResize={mockRequestResize} />);
     const handle = screen.getByTestId('resize-handle');
 
     fireEvent.mouseDown(handle, { clientX: 100, clientY: 100 });

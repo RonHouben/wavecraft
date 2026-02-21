@@ -3,53 +3,71 @@
  */
 
 import React from 'react';
-import { useAllParametersFor, useHasProcessorInSignalChain } from '@wavecraft/core';
 import { ParameterSlider } from './ParameterSlider';
 import { ParameterSelect } from './ParameterSelect';
-import { logger } from '@wavecraft/core';
-import { ProcessorId } from '@wavecraft/core';
 import { ParameterToggle } from './ParameterToggle';
+import type { ParameterInfo } from './types';
 
-export interface ProcessorProps {
-  readonly id: ProcessorId;
-  readonly hideWhenNotInSignalChain?: boolean;
+export interface ProcessorParameter extends ParameterInfo {
+  readonly onChange: (value: number | boolean) => void | Promise<void>;
+  readonly disabled?: boolean;
 }
 
-export function Processor({
-  id,
-  hideWhenNotInSignalChain,
-}: Readonly<ProcessorProps>): React.JSX.Element | null {
-  const hasProcessorInSignalChain = useHasProcessorInSignalChain(id);
-  const { params } = useAllParametersFor(id);
+export interface ProcessorProps {
+  readonly id: string;
+  readonly title?: string;
+  readonly parameters: ProcessorParameter[];
+}
 
-  if ((hideWhenNotInSignalChain && !hasProcessorInSignalChain) || !params) {
-    return null;
-  }
-
+export function Processor({ id, title, parameters }: Readonly<ProcessorProps>): React.JSX.Element {
   return (
     <div className="border-green-200! border-spacing-300 bg-blue-100">
-      <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400">{id}</h3>
+      <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400">
+        {title ?? id}
+      </h3>
 
       <div className="space-y-3">
-        {params.map((param) => {
+        {parameters.map((param) => {
           switch (param.type) {
             case 'bool':
-              return <ParameterToggle key={param.id} id={param.id} />;
+              return (
+                <ParameterToggle
+                  key={param.id}
+                  id={param.id}
+                  name={param.name}
+                  value={Boolean(param.value)}
+                  disabled={param.disabled}
+                  onChange={param.onChange}
+                />
+              );
             case 'enum':
-              return <ParameterSelect key={param.id} id={param.id} />;
+              return (
+                <ParameterSelect
+                  key={param.id}
+                  id={param.id}
+                  name={param.name}
+                  value={typeof param.value === 'number' ? param.value : 0}
+                  options={param.variants ?? []}
+                  disabled={param.disabled}
+                  onChange={param.onChange}
+                />
+              );
             case 'float':
-              return <ParameterSlider key={param.id} id={param.id} />;
-            default: {
-              const msg = `Unknown processor parameter type ${param.type}`;
-
-              logger.error(msg, {
-                processor: id,
-                parameterId: param.id,
-                parameterType: param.type,
-              });
-
-              throw new Error(msg);
-            }
+              return (
+                <ParameterSlider
+                  key={param.id}
+                  id={param.id}
+                  name={param.name}
+                  value={typeof param.value === 'number' ? param.value : 0}
+                  min={param.min}
+                  max={param.max}
+                  unit={param.unit}
+                  disabled={param.disabled}
+                  onChange={param.onChange as (value: number) => void | Promise<void>}
+                />
+              );
+            default:
+              return null;
           }
         })}
       </div>

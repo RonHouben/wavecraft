@@ -1,142 +1,50 @@
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  ConnectionStatus,
-  LatencyMonitor,
-  Meter,
-  OscillatorProcessor,
-  ParameterGroup,
-  ParameterSlider,
-  VersionBadge,
-} from './index';
-import { useAllParameters, useWindowResizeSync } from '@wavecraft/core';
+import { describe, expect, it, vi } from 'vitest';
+import { ParameterGroup } from './ParameterGroup';
+import type { ProcessorParameter } from './Processor';
 
-interface TestParameter {
-  id: string;
-  name: string;
-  type: 'float' | 'bool' | 'enum';
-  value: number | boolean;
-  default: number | boolean;
-  unit?: string;
-  group?: string;
-}
+describe('ParameterGroup rendering', () => {
+  it('renders mixed parameter controls via presentational props', () => {
+    const params: ProcessorParameter[] = [
+      {
+        id: 'oscillator_enabled',
+        name: 'Enabled',
+        type: 'bool',
+        value: true,
+        default: true,
+        min: 0,
+        max: 1,
+        onChange: vi.fn(),
+      },
+      {
+        id: 'oscillator_waveform',
+        name: 'Waveform',
+        type: 'enum',
+        value: 0,
+        default: 0,
+        min: 0,
+        max: 3,
+        variants: ['Sine', 'Square', 'Saw', 'Triangle'],
+        onChange: vi.fn(),
+      },
+      {
+        id: 'oscillator_frequency',
+        name: 'Frequency',
+        type: 'float',
+        value: 440,
+        default: 440,
+        min: 20,
+        max: 5000,
+        unit: 'Hz',
+        onChange: vi.fn(),
+      },
+    ];
 
-const DEDICATED_PARAMETER_IDS = new Set([
-  'oscillator_enabled',
-  'oscillator_waveform',
-  'oscillator_frequency',
-  'oscillator_level',
-]);
+    render(<ParameterGroup group={{ name: 'Oscillator', parameters: params }} />);
 
-function TestApp(): JSX.Element {
-  const { params, isLoading } = useAllParameters();
-  const genericParams = params.filter((param) => !DEDICATED_PARAMETER_IDS.has(param.id));
-  const groups = genericParams.length > 0 ? [{ name: 'Main', parameters: genericParams }] : [];
-
-  useWindowResizeSync();
-
-  return (
-    <div>
-      <ConnectionStatus />
-      <VersionBadge />
-      <OscillatorProcessor />
-      {isLoading
-        ? null
-        : groups.length > 0
-          ? groups.map((group) => <ParameterGroup key={group.name} group={group} />)
-          : genericParams.map((p) => <ParameterSlider key={p.id} id={p.id} />)}
-      <Meter />
-      <LatencyMonitor />
-    </div>
-  );
-}
-
-const mockUseAllParameters = vi.hoisted(() => vi.fn());
-const mockUseMeterFrame = vi.hoisted(() => vi.fn());
-const mockUseWindowResizeSync = vi.hoisted(() => vi.fn());
-
-vi.mock('@wavecraft/core', () => ({
-  useAllParameters: mockUseAllParameters,
-  useMeterFrame: mockUseMeterFrame,
-  useWindowResizeSync: mockUseWindowResizeSync,
-}));
-
-vi.mock('@wavecraft/components', () => ({
-  Meter: () => <div data-testid="meter" />,
-  ParameterSlider: ({ id }: { id: string }) => <div data-testid={`slider-${id}`} />,
-  ParameterGroup: ({ group }: { group: { name: string } }) => (
-    <div data-testid={`group-${group.name}`} />
-  ),
-  VersionBadge: () => <div data-testid="version-badge" />,
-  ConnectionStatus: () => <div data-testid="connection-status" />,
-  LatencyMonitor: () => <div data-testid="latency-monitor" />,
-  OscillatorProcessor: () => <div data-testid="oscillator-control" />,
-}));
-
-describe('App parameter rendering', () => {
-  const baseParams: TestParameter[] = [
-    {
-      id: 'oscillator_enabled',
-      name: 'Enabled',
-      type: 'bool',
-      value: true,
-      default: true,
-      group: 'Oscillator',
-    },
-    {
-      id: 'oscillator_frequency',
-      name: 'Frequency',
-      type: 'float',
-      value: 0.5,
-      default: 0.5,
-      group: 'Oscillator',
-    },
-    {
-      id: 'oscillator_level',
-      name: 'Level',
-      type: 'float',
-      value: 0.75,
-      default: 0.75,
-      group: 'Oscillator',
-    },
-    {
-      id: 'oscillator_waveform',
-      name: 'Waveform',
-      type: 'enum',
-      value: 0,
-      default: 0,
-      group: 'Oscillator',
-    },
-    {
-      id: 'gain',
-      name: 'Gain',
-      type: 'float',
-      value: 0.5,
-      default: 0.5,
-      group: 'Main',
-    },
-  ];
-
-  beforeEach(() => {
-    mockUseAllParameters.mockReturnValue({ params: baseParams, isLoading: false });
-    mockUseMeterFrame.mockReturnValue(undefined);
-    mockUseWindowResizeSync.mockImplementation(() => undefined);
-  });
-
-  it('renders oscillator only through dedicated control, not as generic slider', () => {
-    render(<TestApp />);
-
-    expect(screen.getByTestId('oscillator-control')).toBeInTheDocument();
-    expect(screen.getByTestId('group-Main')).toBeInTheDocument();
-    expect(screen.queryByTestId('slider-oscillator_enabled')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('slider-oscillator_frequency')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('slider-oscillator_level')).not.toBeInTheDocument();
-  });
-
-  it('filters oscillator_enabled before grouped rendering as well', () => {
-    render(<TestApp />);
-
-    expect(screen.getByTestId('group-Main')).toBeInTheDocument();
-    expect(screen.queryByTestId('slider-gain')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Oscillator' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Enabled')).toBeInTheDocument();
+    expect(screen.getByLabelText('Waveform')).toBeInTheDocument();
+    expect(screen.getByLabelText('Frequency')).toBeInTheDocument();
   });
 });

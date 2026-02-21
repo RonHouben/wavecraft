@@ -1,12 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  useConnectionStatus,
-  useOscilloscopeFrame,
-  useHasProcessorInSignalChain,
-  type OscilloscopeChannelView,
-  type OscilloscopeFrame,
-  type OscilloscopeTriggerMode,
-} from '@wavecraft/core';
+import type { OscilloscopeChannelView, OscilloscopeFrame, OscilloscopeTriggerMode } from './types';
 
 const WIDTH = 640;
 const HEIGHT = 220;
@@ -18,16 +11,14 @@ const GRID_COLOR = '#334155';
 const AXIS_COLOR = '#64748b';
 
 interface OscilloscopeProcessorProps {
-  hideWhenNotInSignalChain?: boolean;
+  readonly connected: boolean;
+  readonly frame: OscilloscopeFrame | null;
 }
 
 export function OscilloscopeProcessor({
-  hideWhenNotInSignalChain,
+  connected,
+  frame,
 }: Readonly<OscilloscopeProcessorProps>): React.JSX.Element | null {
-  const { connected } = useConnectionStatus();
-  const frame = useOscilloscopeFrame();
-  const hasProcessorInSignalChain = useHasProcessorInSignalChain('oscilloscope_tap');
-
   const [channelView, setChannelView] = useState<OscilloscopeChannelView>('overlay');
   const [triggerMode, setTriggerMode] = useState<OscilloscopeTriggerMode>('risingZeroCrossing');
 
@@ -156,10 +147,6 @@ export function OscilloscopeProcessor({
       }
     };
   }, [channelView, connected]);
-
-  if (hideWhenNotInSignalChain && !hasProcessorInSignalChain) {
-    return null;
-  }
 
   return (
     <div

@@ -4,13 +4,13 @@
 
 import React from 'react';
 import { Processor } from './Processor';
+import type { ProcessorProps } from './Processor';
 
-interface OscillatorProcessorProps {
-  hideWhenNotInSignalChain?: boolean;
-}
+type OscillatorProcessorProps = Omit<ProcessorProps, 'id'>;
 
 export function OscillatorProcessor({
-  hideWhenNotInSignalChain,
+  title,
+  parameters,
 }: Readonly<OscillatorProcessorProps>): React.JSX.Element {
-  return <Processor id="oscillator" hideWhenNotInSignalChain={hideWhenNotInSignalChain} />;
+  return <Processor id="oscillator" title={title} parameters={parameters} />;
 }

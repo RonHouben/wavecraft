@@ -6,12 +6,25 @@
  */
 
 import React from 'react';
-import { useAudioStatus, useConnectionStatus } from '@wavecraft/core';
+import type { AudioDiagnostic, AudioRuntimePhase } from './types';
 
-export function ConnectionStatus(): React.JSX.Element {
-  const { connected, transport } = useConnectionStatus();
-  const { phase, isReady, isDegraded, diagnostic } = useAudioStatus();
+export interface ConnectionStatusProps {
+  readonly connected: boolean;
+  readonly transport: string;
+  readonly phase: AudioRuntimePhase | null;
+  readonly isReady: boolean;
+  readonly isDegraded: boolean;
+  readonly diagnostic?: AudioDiagnostic;
+}
 
+export function ConnectionStatus({
+  connected,
+  transport,
+  phase,
+  isReady,
+  isDegraded,
+  diagnostic,
+}: Readonly<ConnectionStatusProps>): React.JSX.Element {
   const transportLabel = connected ? 'Connected' : 'Connecting...';
   const transportTone = connected
     ? 'bg-green-900/30 text-green-400'

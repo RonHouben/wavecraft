@@ -6,10 +6,12 @@
  */
 
 import React, { useCallback, useRef, useState } from 'react';
-import { useRequestResize, logger } from '@wavecraft/core';
 
-export function ResizeHandle(): React.JSX.Element {
-  const requestResize = useRequestResize();
+export interface ResizeHandleProps {
+  readonly onRequestResize: (width: number, height: number) => Promise<boolean>;
+}
+
+export function ResizeHandle({ onRequestResize }: Readonly<ResizeHandleProps>): React.JSX.Element {
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
 
@@ -34,9 +36,7 @@ export function ResizeHandle(): React.JSX.Element {
         const newHeight = Math.max(300, dragStartRef.current.height + deltaY);
 
         // Request resize from host
-        requestResize(newWidth, newHeight).catch((err) => {
-          logger.error('Resize request failed', { error: err, width: newWidth, height: newHeight });
-        });
+        void onRequestResize(newWidth, newHeight);
       };
 
       const handleMouseUp = (): void => {
@@ -48,7 +48,7 @@ export function ResizeHandle(): React.JSX.Element {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
     },
-    [requestResize]
+    [onRequestResize]
   );
 
   return (

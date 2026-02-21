@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { OscillatorProcessor } from './OscillatorProcessor';
+import type { ProcessorParameter } from './Processor';
 
 const mockProcessor = vi.hoisted(() =>
   vi.fn(({ id }: { id: string }) => <div data-testid="processor" data-processor-id={id} />)
@@ -12,36 +13,42 @@ vi.mock('./Processor', () => ({
 }));
 
 describe('OscillatorProcessor', () => {
+  const parameters: ProcessorParameter[] = [];
+
   beforeEach(() => {
     mockProcessor.mockClear();
   });
 
   it('renders processor for oscillator id', () => {
-    render(<OscillatorProcessor />);
+    render(<OscillatorProcessor parameters={parameters} />);
 
     expect(screen.getByTestId('processor')).toHaveAttribute('data-processor-id', 'oscillator');
   });
 
-  it('hides when processor is not in signal chain and hideWhenNotInSignalChain is set', () => {
-    render(<OscillatorProcessor hideWhenNotInSignalChain />);
+  it('forwards title and parameters props to Processor', () => {
+    render(<OscillatorProcessor title="Oscillator" parameters={parameters} />);
 
     const lastCallIndex = mockProcessor.mock.calls.length - 1;
     const props = mockProcessor.mock.calls[lastCallIndex]?.[0];
-    expect(props).toMatchObject({ id: 'oscillator', hideWhenNotInSignalChain: true });
+    expect(props).toMatchObject({ id: 'oscillator', title: 'Oscillator', parameters });
   });
 
-  it('defaults hideWhenNotInSignalChain to undefined when omitted', () => {
-    render(<OscillatorProcessor />);
+  it('omits title when not provided', () => {
+    render(<OscillatorProcessor parameters={parameters} />);
 
     const lastCallIndex = mockProcessor.mock.calls.length - 1;
-    const props = mockProcessor.mock.calls[lastCallIndex]?.[0];
-    expect(props).toMatchObject({ id: 'oscillator', hideWhenNotInSignalChain: undefined });
+    const props = mockProcessor.mock.calls[lastCallIndex]?.[0] as
+      | { id: string; title?: string; parameters: ProcessorParameter[] }
+      | undefined;
+    expect(props).toBeDefined();
+    expect(props).toMatchObject({ id: 'oscillator', parameters });
+    expect(props?.title).toBeUndefined();
   });
 
   it('keeps oscillator processor id across rerenders', () => {
-    const { rerender } = render(<OscillatorProcessor hideWhenNotInSignalChain />);
+    const { rerender } = render(<OscillatorProcessor title="Oscillator" parameters={parameters} />);
 
-    rerender(<OscillatorProcessor />);
+    rerender(<OscillatorProcessor parameters={parameters} />);
 
     expect(mockProcessor).toHaveBeenCalledTimes(2);
     expect(mockProcessor.mock.calls[0]?.[0]).toMatchObject({ id: 'oscillator' });

@@ -4,6 +4,8 @@
  * These types must stay in sync with engine/crates/protocol/src/ipc.rs
  */
 
+import { IpcEvents, IpcMethods } from '../ipc/constants';
+
 // ============================================================================
 // JSON-RPC 2.0 Message Types
 // ============================================================================
@@ -76,9 +78,9 @@ export interface GetAudioStatusResult {
   status: AudioRuntimeStatus | null;
 }
 
-export const METHOD_GET_AUDIO_STATUS = 'getAudioStatus';
-export const METHOD_GET_OSCILLOSCOPE_FRAME = 'getOscilloscopeFrame';
-export const NOTIFICATION_AUDIO_STATUS_CHANGED = 'audioStatusChanged';
+export const METHOD_GET_AUDIO_STATUS = IpcMethods.GET_AUDIO_STATUS;
+export const METHOD_GET_OSCILLOSCOPE_FRAME = IpcMethods.GET_OSCILLOSCOPE_FRAME;
+export const NOTIFICATION_AUDIO_STATUS_CHANGED = IpcEvents.AUDIO_STATUS_CHANGED;
 
 // ============================================================================
 // Error Codes (matching Rust constants)

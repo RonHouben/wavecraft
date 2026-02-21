@@ -6,14 +6,14 @@
  */
 
 import React from 'react';
-import type { ParameterInfo } from '@wavecraft/core';
 import { ParameterSlider } from './ParameterSlider';
 import { ParameterSelect } from './ParameterSelect';
 import { ParameterToggle } from './ParameterToggle';
+import type { ProcessorParameter } from './Processor';
 
 type ParameterGroupType = {
   name: string;
-  parameters: ParameterInfo[];
+  parameters: ProcessorParameter[];
 };
 
 export interface ParameterGroupProps {
@@ -48,11 +48,36 @@ export function ParameterGroup({ group }: Readonly<ParameterGroupProps>): React.
       <div className="space-y-3">
         {group.parameters.map((param) =>
           param.type === 'bool' ? (
-            <ParameterToggle key={param.id} id={param.id} />
+            <ParameterToggle
+              key={param.id}
+              id={param.id}
+              name={param.name}
+              value={Boolean(param.value)}
+              disabled={param.disabled}
+              onChange={param.onChange}
+            />
           ) : param.type === 'enum' ? (
-            <ParameterSelect key={param.id} id={param.id} />
+            <ParameterSelect
+              key={param.id}
+              id={param.id}
+              name={param.name}
+              value={typeof param.value === 'number' ? param.value : 0}
+              options={param.variants ?? []}
+              disabled={param.disabled}
+              onChange={param.onChange as (value: number) => void | Promise<void>}
+            />
           ) : (
-            <ParameterSlider key={param.id} id={param.id} />
+            <ParameterSlider
+              key={param.id}
+              id={param.id}
+              name={param.name}
+              value={typeof param.value === 'number' ? param.value : 0}
+              min={param.min}
+              max={param.max}
+              unit={param.unit}
+              disabled={param.disabled}
+              onChange={param.onChange as (value: number) => void | Promise<void>}
+            />
           )
         )}
       </div>

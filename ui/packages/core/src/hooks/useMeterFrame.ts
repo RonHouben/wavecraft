@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { IpcBridge } from '../ipc/IpcBridge';
+import { IpcMethods } from '../ipc/constants';
 import type { MeterFrame, GetMeterFrameResult } from '../types/metering';
 
 /**
@@ -23,7 +24,7 @@ export function useMeterFrame(intervalMs = 50): MeterFrame | null {
       if (!bridge.isConnected()) return;
 
       try {
-        const result = await bridge.invoke<GetMeterFrameResult>('getMeterFrame');
+        const result = await bridge.invoke<GetMeterFrameResult>(IpcMethods.GET_METER_FRAME);
         if (isMounted && result.frame) {
           setFrame(result.frame);
         }

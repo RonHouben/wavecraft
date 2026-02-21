@@ -3,46 +3,34 @@
  */
 
 import React from 'react';
-import { useParameter, logger } from '@wavecraft/core';
-import type { ParameterId } from '@wavecraft/core';
 import { focusRingClass, interactionStateClass } from './utils/classNames';
 
-interface ParameterToggleProps {
-  readonly id: ParameterId;
+export interface ParameterToggleProps {
+  readonly id: string;
+  readonly name: string;
+  readonly value: boolean;
+  readonly disabled?: boolean;
+  readonly onChange: (value: boolean) => void | Promise<void>;
 }
 
-export function ParameterToggle({ id }: ParameterToggleProps): React.JSX.Element {
-  const { param, setValue, isLoading, error } = useParameter(id);
-
-  if (isLoading) {
-    return (
-      <div className="mb-4 flex items-center justify-between rounded-lg border border-plugin-border bg-plugin-surface p-4 italic text-gray-500">
-        Loading {id}...
-      </div>
-    );
-  }
-
-  if (error || !param) {
-    return (
-      <div className="mb-4 flex items-center justify-between rounded-lg border border-red-400 bg-plugin-surface p-4 text-red-400">
-        Error: {error?.message || 'Parameter not found'}
-      </div>
-    );
-  }
-
-  const isOn = Boolean(param.value);
+export function ParameterToggle({
+  id,
+  name,
+  value,
+  disabled = false,
+  onChange,
+}: Readonly<ParameterToggleProps>): React.JSX.Element {
+  const isOn = Boolean(value);
 
   const handleToggle = (): void => {
     const newValue = !isOn;
-    setValue(newValue).catch((err) => {
-      logger.error('Failed to set parameter', { error: err, parameterId: id });
-    });
+    void onChange(newValue);
   };
 
   return (
     <div className="mb-4 flex items-center justify-between rounded-lg border border-plugin-border bg-plugin-surface p-4">
       <label htmlFor={`toggle-${id}`} className="font-semibold text-gray-200">
-        {param.name}
+        {name}
       </label>
       <button
         id={`toggle-${id}`}
@@ -51,6 +39,7 @@ export function ParameterToggle({ id }: ParameterToggleProps): React.JSX.Element
         }`}
         onClick={handleToggle}
         aria-pressed={isOn}
+        disabled={disabled}
       >
         <span
           className={`absolute top-[3px] h-5 w-5 rounded-full bg-white motion-safe:transition-[left] motion-safe:duration-200 ${
