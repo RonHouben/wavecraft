@@ -15,7 +15,8 @@ tools:
     'github/*',
     'web',
     'todo',
-    'memory'
+    'memory',
+    vscode
   ]
 agents: [orchestrator, coder, qa, docwriter, search]
 user-invokable: true
