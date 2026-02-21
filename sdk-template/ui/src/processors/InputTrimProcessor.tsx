@@ -8,5 +8,11 @@ export interface InputTrimProcessorProps {
 export function InputTrimProcessor({
   hideWhenNotInSignalChain,
 }: Readonly<InputTrimProcessorProps>): JSX.Element | null {
-  return <SmartProcessor id="input_trim" title="Input Trim" hideWhenNotInSignalChain={hideWhenNotInSignalChain} />;
+  return (
+    <SmartProcessor
+      id="input_trim"
+      title="Input Trim"
+      hideWhenNotInSignalChain={hideWhenNotInSignalChain}
+    />
+  );
 }

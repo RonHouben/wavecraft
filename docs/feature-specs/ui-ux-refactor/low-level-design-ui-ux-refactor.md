@@ -63,14 +63,14 @@ The design is **incremental and rollback-safe**: each migration slice maps to a 
 
 ### 1.2 Known Drift Points
 
-| Area | Current Symptom | Impact |
-|------|-----------------|--------|
-| Parameter state | Multiple components each subscribe to `useParameter` independently for the same param | Redundant renders, fan-out risk |
-| Smart/presentational boundary | Presentational components (`@wavecraft/components`) call hooks internally, coupling them to IPC | Hard to test or reuse in isolation |
-| IPC method strings | Raw string literals (`"getParameter"`, `"setParameter"`) scattered in component call sites | Naming drift, typo risk, no editor assistance |
-| Resize ownership | Both declarative (`ResizeObserver`-based) and legacy imperative paths active concurrently | Double-resize events, jitter, ambiguous authority |
-| Design tokens | `bg-[#2a2a2a]`, inline `style={{color: '#4a9eff'}}`, and similar ad-hoc values exist in components | Visual inconsistency, harder theming |
-| Interaction states | Focus, hover, active, disabled states not consistently applied across control families | Keyboard context loss, inconsistent feel |
+| Area                          | Current Symptom                                                                                    | Impact                                            |
+| ----------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Parameter state               | Multiple components each subscribe to `useParameter` independently for the same param              | Redundant renders, fan-out risk                   |
+| Smart/presentational boundary | Presentational components (`@wavecraft/components`) call hooks internally, coupling them to IPC    | Hard to test or reuse in isolation                |
+| IPC method strings            | Raw string literals (`"getParameter"`, `"setParameter"`) scattered in component call sites         | Naming drift, typo risk, no editor assistance     |
+| Resize ownership              | Both declarative (`ResizeObserver`-based) and legacy imperative paths active concurrently          | Double-resize events, jitter, ambiguous authority |
+| Design tokens                 | `bg-[#2a2a2a]`, inline `style={{color: '#4a9eff'}}`, and similar ad-hoc values exist in components | Visual inconsistency, harder theming              |
+| Interaction states            | Focus, hover, active, disabled states not consistently applied across control families             | Keyboard context loss, inconsistent feel          |
 
 ---
 
@@ -107,14 +107,14 @@ The design is **incremental and rollback-safe**: each migration slice maps to a 
 
 The following rules are **architecture requirements** for this refactor and all future UI work in scope:
 
-| Rule | Package | Enforcement |
-|------|---------|-------------|
-| Parameter state has a single subscription point per surface | `@wavecraft/core` hooks | Smart container subscribes; passes props to children |
+| Rule                                                            | Package                 | Enforcement                                                          |
+| --------------------------------------------------------------- | ----------------------- | -------------------------------------------------------------------- |
+| Parameter state has a single subscription point per surface     | `@wavecraft/core` hooks | Smart container subscribes; passes props to children                 |
 | Presentational components import nothing from `@wavecraft/core` | `@wavecraft/components` | ESLint `import/no-restricted-paths` rule (add to `eslint.config.js`) |
-| IPC method names are referenced only via `IpcConstants` | `@wavecraft/core` | TypeScript type; raw strings trigger ESLint `no-restricted-syntax` |
-| Resize authority is singular per surface | App / smart container | One `ResizeObserver` owner per surface; declarative preferred |
-| All styling uses design tokens | Both packages | `design-token-compliance` skill gate on PR |
-| Focus/interaction states use shared Tailwind variants | `@wavecraft/components` | Shared `focusRing`, `interactionState` class-sets |
+| IPC method names are referenced only via `IpcConstants`         | `@wavecraft/core`       | TypeScript type; raw strings trigger ESLint `no-restricted-syntax`   |
+| Resize authority is singular per surface                        | App / smart container   | One `ResizeObserver` owner per surface; declarative preferred        |
+| All styling uses design tokens                                  | Both packages           | `design-token-compliance` skill gate on PR                           |
+| Focus/interaction states use shared Tailwind variants           | `@wavecraft/components` | Shared `focusRing`, `interactionState` class-sets                    |
 
 ---
 
@@ -182,18 +182,18 @@ export const IpcMethods = {
   SET_PARAMETER: 'setParameter',
   GET_METER_FRAME: 'getMeterFrame',
   GET_AUDIO_STATUS: 'getAudioStatus',
-  PING: 'ping',
+  PING: 'ping'
 } as const;
 
-export type IpcMethod = typeof IpcMethods[keyof typeof IpcMethods];
+export type IpcMethod = (typeof IpcMethods)[keyof typeof IpcMethods];
 
 export const IpcEvents = {
   AUDIO_STATUS_CHANGED: 'audioStatusChanged',
   PARAM_UPDATE: 'paramUpdate',
-  METER_FRAME: 'meterFrame',
+  METER_FRAME: 'meterFrame'
 } as const;
 
-export type IpcEvent = typeof IpcEvents[keyof typeof IpcEvents];
+export type IpcEvent = (typeof IpcEvents)[keyof typeof IpcEvents];
 ```
 
 **Migration:** `IpcBridge.invoke(method, ...)` call sites in the UI replace raw strings with `IpcMethods.*` references. `ParameterClient` and `MeterClient` are updated internally; external call sites update to use the exported constants when they construct direct `IpcBridge` calls.
@@ -204,13 +204,13 @@ export type IpcEvent = typeof IpcEvents[keyof typeof IpcEvents];
 
 All `@wavecraft/components` components that currently call hooks internally get a **clean props interface**:
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `value` | `number \| string \| boolean` | Controlled value |
-| `onChange` | `(v: T) => void` | Controlled change handler |
-| `disabled` | `boolean` | Disables interaction |
-| `aria-label` \| `name` | `string` | Accessible label |
-| `onResize` | `(entry: ResizeObserverEntry) => void` (optional) | Resize callback, owned upward |
+| Prop                   | Type                                              | Description                   |
+| ---------------------- | ------------------------------------------------- | ----------------------------- |
+| `value`                | `number \| string \| boolean`                     | Controlled value              |
+| `onChange`             | `(v: T) => void`                                  | Controlled change handler     |
+| `disabled`             | `boolean`                                         | Disables interaction          |
+| `aria-label` \| `name` | `string`                                          | Accessible label              |
+| `onResize`             | `(entry: ResizeObserverEntry) => void` (optional) | Resize callback, owned upward |
 
 Components may **not** add IPC or hook imports. Props must be sufficient for full render without side-effects.
 
@@ -252,15 +252,15 @@ These constraints apply as **hard gates** in PR review for all changes in this f
 
 ### 5.1 Accessibility (A11y) Requirements
 
-| Requirement | Standard | Implementation |
-|-------------|----------|----------------|
-| Focus visibility | WCAG 2.1 AA — SC 2.4.7 | `:focus-visible` ring on all interactive controls via shared `focusRingClass` Tailwind variant |
-| Keyboard operability | WCAG 2.1 AA — SC 2.1.1 | All custom controls respond to `Enter`/`Space`; `Escape` closes overlays |
-| Focus order | WCAG 2.1 AA — SC 2.4.3 | Logical DOM order; no `tabIndex > 0` unless explicitly justified |
-| Accessible names | WCAG 2.1 AA — SC 4.1.2 | All controls have `aria-label` or associated `<label>` |
-| Contrast | WCAG 2.1 AA — SC 1.4.3 | Token-based colors; design token table maintains ≥4.5:1 ratio for text |
-| Reduced motion | WCAG 2.1 AA — SC 2.3.3 | All new transitions guarded by `motion-safe:` or `@media (prefers-reduced-motion)` |
-| Semantic elements | WCAG best practice | Native elements preferred; ARIA only when semantics cannot be achieved natively |
+| Requirement          | Standard               | Implementation                                                                                 |
+| -------------------- | ---------------------- | ---------------------------------------------------------------------------------------------- |
+| Focus visibility     | WCAG 2.1 AA — SC 2.4.7 | `:focus-visible` ring on all interactive controls via shared `focusRingClass` Tailwind variant |
+| Keyboard operability | WCAG 2.1 AA — SC 2.1.1 | All custom controls respond to `Enter`/`Space`; `Escape` closes overlays                       |
+| Focus order          | WCAG 2.1 AA — SC 2.4.3 | Logical DOM order; no `tabIndex > 0` unless explicitly justified                               |
+| Accessible names     | WCAG 2.1 AA — SC 4.1.2 | All controls have `aria-label` or associated `<label>`                                         |
+| Contrast             | WCAG 2.1 AA — SC 1.4.3 | Token-based colors; design token table maintains ≥4.5:1 ratio for text                         |
+| Reduced motion       | WCAG 2.1 AA — SC 2.3.3 | All new transitions guarded by `motion-safe:` or `@media (prefers-reduced-motion)`             |
+| Semantic elements    | WCAG best practice     | Native elements preferred; ARIA only when semantics cannot be achieved natively                |
 
 **Shared focus ring class (defined in `ui/packages/components/src/utils/classNames.ts`):**
 
@@ -273,22 +273,24 @@ export const focusRingClass =
 
 All new or modified styling in scope **must** use the following token sources. Ad-hoc values require a documented exception comment in the PR.
 
-| Category | Allowed sources |
-|----------|----------------|
-| Background | `bg-plugin-dark`, `bg-plugin-surface` (Tailwind theme tokens) |
-| Border | `border-plugin-border` |
-| Text | `text-accent`, `text-accent-light`, `text-gray-*` (Tailwind scale) |
-| Metering | `bg-meter-safe`, `bg-meter-warning`, `bg-meter-clip` |
+| Category           | Allowed sources                                                             |
+| ------------------ | --------------------------------------------------------------------------- |
+| Background         | `bg-plugin-dark`, `bg-plugin-surface` (Tailwind theme tokens)               |
+| Border             | `border-plugin-border`                                                      |
+| Text               | `text-accent`, `text-accent-light`, `text-gray-*` (Tailwind scale)          |
+| Metering           | `bg-meter-safe`, `bg-meter-warning`, `bg-meter-clip`                        |
 | Interaction states | Tailwind state variants: `hover:`, `active:`, `disabled:`, `focus-visible:` |
-| Spacing | Tailwind spacing scale (`gap-*`, `p-*`, `m-*`) |
-| Typography | Tailwind type scale (`text-sm`, `text-base`, `font-semibold`, etc.) |
+| Spacing            | Tailwind spacing scale (`gap-*`, `p-*`, `m-*`)                              |
+| Typography         | Tailwind type scale (`text-sm`, `text-base`, `font-semibold`, etc.)         |
 
 **Prohibited:**
+
 - Inline `style={{ color: '#...' }}` for tokens that exist in the theme
 - `bg-[#...]` hardcoded arbitrary colors
 - Component-scoped CSS files (`MyComponent.css`)
 
 **Exceptions** (custom CSS remains valid):
+
 - Vendor-prefixed slider thumb pseudo-elements (`::-webkit-slider-thumb`)
 - `@keyframes`-based animations not expressible in Tailwind utilities
 
@@ -300,13 +302,13 @@ The migration is structured into three independent slices, each with a defined r
 
 ### 6.1 Migration Slices
 
-| Slice | Phase | Scope | Rollback mechanism |
-|-------|-------|-------|--------------------|
-| **A — Focus & Interaction States** | Phase 1 | Add `focusRingClass` and shared interaction-state variants to existing components | Revert `classNames.ts` changes; no API surface changed |
-| **B — Token Normalization** | Phase 1–2 | Replace ad-hoc color/spacing values with design tokens in touched surfaces | Per-component PR; non-breaking visual-only changes |
-| **C — Smart/Presentational Split** | Phase 3 | Lift hook calls out of presentational components; add clean props contract | Feature-flagged via `legacyProps` opt-in during transition |
-| **D — IPC Constants** | Phase 3 | Add `IpcMethods`/`IpcEvents` exports; migrate call sites | Old strings still work at runtime; migration is reference-only |
-| **E — Resize Ownership** | Phase 3 | Introduce declarative `ResizeObserver` in smart containers; gate legacy path | `legacyResize` prop allows fallback until surface migration is complete |
+| Slice                              | Phase     | Scope                                                                             | Rollback mechanism                                                      |
+| ---------------------------------- | --------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| **A — Focus & Interaction States** | Phase 1   | Add `focusRingClass` and shared interaction-state variants to existing components | Revert `classNames.ts` changes; no API surface changed                  |
+| **B — Token Normalization**        | Phase 1–2 | Replace ad-hoc color/spacing values with design tokens in touched surfaces        | Per-component PR; non-breaking visual-only changes                      |
+| **C — Smart/Presentational Split** | Phase 3   | Lift hook calls out of presentational components; add clean props contract        | Feature-flagged via `legacyProps` opt-in during transition              |
+| **D — IPC Constants**              | Phase 3   | Add `IpcMethods`/`IpcEvents` exports; migrate call sites                          | Old strings still work at runtime; migration is reference-only          |
+| **E — Resize Ownership**           | Phase 3   | Introduce declarative `ResizeObserver` in smart containers; gate legacy path      | `legacyResize` prop allows fallback until surface migration is complete |
 
 ### 6.2 Rollback Points
 
@@ -331,15 +333,15 @@ Each slice targets its own minimal-scope PR:
 
 ## 7. Risks and Mitigations
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|------------|
-| Coupling regression: presentational component accidentally re-imports a hook | Medium | High | ESLint `import/no-restricted-paths` rule; PR gate via `design-token-compliance` skill |
-| Token substitution causes subtle visual regression | Medium | Low–Medium | Before/after Playwright screenshots per PR; visual diff review required |
-| Incomplete fan-out lift leaves duplicate subscribers | Medium | Medium | Smart container checklist in implementation plan; tester validates no duplicate renders |
-| Resize jitter during `legacyResize` transition | Low | Medium | Keep surfaces on `legacyResize: true` until both paths are validated in browser-dev and plugin-host |
-| Focus styling breaks in WKWebView | Low | High | Test critical focus indicators inside plugin host, not only browser-dev |
-| IPC string drift re-emerges | Low | Medium | `no-restricted-syntax` ESLint rule prevents new raw string call sites post-migration |
-| A11y regression in reduced-motion context | Low | Medium | All new transitions use `motion-safe:` prefix; checked in Tester verification pass |
+| Risk                                                                         | Likelihood | Impact     | Mitigation                                                                                          |
+| ---------------------------------------------------------------------------- | ---------- | ---------- | --------------------------------------------------------------------------------------------------- |
+| Coupling regression: presentational component accidentally re-imports a hook | Medium     | High       | ESLint `import/no-restricted-paths` rule; PR gate via `design-token-compliance` skill               |
+| Token substitution causes subtle visual regression                           | Medium     | Low–Medium | Before/after Playwright screenshots per PR; visual diff review required                             |
+| Incomplete fan-out lift leaves duplicate subscribers                         | Medium     | Medium     | Smart container checklist in implementation plan; tester validates no duplicate renders             |
+| Resize jitter during `legacyResize` transition                               | Low        | Medium     | Keep surfaces on `legacyResize: true` until both paths are validated in browser-dev and plugin-host |
+| Focus styling breaks in WKWebView                                            | Low        | High       | Test critical focus indicators inside plugin host, not only browser-dev                             |
+| IPC string drift re-emerges                                                  | Low        | Medium     | `no-restricted-syntax` ESLint rule prevents new raw string call sites post-migration                |
+| A11y regression in reduced-motion context                                    | Low        | Medium     | All new transitions use `motion-safe:` prefix; checked in Tester verification pass                  |
 
 ---
 

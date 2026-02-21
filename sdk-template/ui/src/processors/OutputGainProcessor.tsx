@@ -8,5 +8,11 @@ export interface OutputGainProcessorProps {
 export function OutputGainProcessor({
   hideWhenNotInSignalChain,
 }: Readonly<OutputGainProcessorProps>): JSX.Element | null {
-  return <SmartProcessor id="output_gain" title="Output Gain" hideWhenNotInSignalChain={hideWhenNotInSignalChain} />;
+  return (
+    <SmartProcessor
+      id="output_gain"
+      title="Output Gain"
+      hideWhenNotInSignalChain={hideWhenNotInSignalChain}
+    />
+  );
 }

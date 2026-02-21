@@ -1,4 +1,10 @@
-import { type ProcessorId, ParameterClient, logger, useAllParametersFor, useHasProcessorInSignalChain } from '@wavecraft/core';
+import {
+  type ProcessorId,
+  ParameterClient,
+  logger,
+  useAllParametersFor,
+  useHasProcessorInSignalChain,
+} from '@wavecraft/core';
 import { Processor } from '@wavecraft/components';
 import { useMemo } from 'react';
 import type { JSX } from 'react';

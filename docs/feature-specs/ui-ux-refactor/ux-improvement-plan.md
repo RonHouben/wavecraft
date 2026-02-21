@@ -7,6 +7,7 @@ This document defines a practical, incremental UX improvement plan for the `ui-u
 It translates prior UX findings, visual QA caveats, and architecture constraints into phased execution guidance that can be implemented safely in `ui/` and `sdk-template/ui/`.
 
 **In scope:**
+
 - Focus visibility and keyboard clarity
 - Interaction-state clarity and consistency
 - Design-token compliance and ad-hoc value reduction
@@ -15,6 +16,7 @@ It translates prior UX findings, visual QA caveats, and architecture constraints
 - Structural UX improvements that preserve existing architecture boundaries
 
 **Out of scope:**
+
 - DSP/audio behavior changes
 - Framework rewrites or large visual rebranding
 - Contract/layering changes that introduce new coupling between UI presentational components and transport/business logic
@@ -56,6 +58,7 @@ Based on prior UX, visual QA, and architect findings:
 **Objective:** remove highest-friction usability issues quickly and safely.
 
 **Backlog items:**
+
 - Standardize visible `:focus-visible` treatment across shared interactive controls.
 - Fix keyboard path gaps in critical flows (tab order, Enter/Space activation, Escape close flows where applicable).
 - Strengthen interaction-state contrast/readability for core controls (button, toggle, slider, selectable row/card).
@@ -68,6 +71,7 @@ Based on prior UX, visual QA, and architect findings:
 **Objective:** consolidate consistency so future UI work remains predictable.
 
 **Backlog items:**
+
 - Replace ad-hoc visual values with existing design tokens in targeted surfaces.
 - Consolidate repeated class patterns into shared component/state variants.
 - Define and apply a shared interaction-state matrix for core control families.
@@ -80,6 +84,7 @@ Based on prior UX, visual QA, and architect findings:
 **Objective:** improve long-term UX velocity by reducing architecture-linked friction.
 
 **Backlog items:**
+
 - Refactor selected flows to reinforce smart-vs-presentational boundaries.
 - Reduce state fan-out in targeted surfaces to simplify behavior and UX predictability.
 - Align IPC-facing naming usage in UI touchpoints with canonical contracts (without widening coupling).

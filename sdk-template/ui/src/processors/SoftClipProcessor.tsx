@@ -8,5 +8,11 @@ export interface SoftClipProcessorProps {
 export function SoftClipProcessor({
   hideWhenNotInSignalChain,
 }: Readonly<SoftClipProcessorProps>): JSX.Element | null {
-  return <SmartProcessor id="soft_clip" title="Soft Clip" hideWhenNotInSignalChain={hideWhenNotInSignalChain} />;
+  return (
+    <SmartProcessor
+      id="soft_clip"
+      title="Soft Clip"
+      hideWhenNotInSignalChain={hideWhenNotInSignalChain}
+    />
+  );
 }

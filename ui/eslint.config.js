@@ -28,12 +28,7 @@ export default [
           ],
           patterns: [
             {
-              group: [
-                '../core/*',
-                '../../core/*',
-                '../../../core/*',
-                'packages/core/*',
-              ],
+              group: ['../core/*', '../../core/*', '../../../core/*', 'packages/core/*'],
               message:
                 'Presentational components must not import core internals. Use package public APIs and props boundaries.',
             },
@@ -72,7 +67,7 @@ export default [
       ],
     },
   },
-  
+
   // TypeScript files
   {
     files: ['**/*.{ts,tsx}'],
@@ -91,7 +86,7 @@ export default [
     },
     plugins: {
       '@typescript-eslint': typescript,
-      'react': react,
+      react: react,
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
     },
@@ -103,18 +98,18 @@ export default [
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-      
+
       // React rules
       ...react.configs.recommended.rules,
       'react/react-in-jsx-scope': 'off', // Not needed with React 17+
       'react/prop-types': 'off', // Using TypeScript
-      
+
       // React Hooks rules (exhaustive deps)
       ...reactHooks.configs.recommended.rules,
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'error',
       'react-hooks/set-state-in-effect': 'off',
-      
+
       // React Refresh (Vite HMR)
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
@@ -122,12 +117,12 @@ export default [
       react: { version: 'detect' },
     },
   },
-  
+
   // Ignore patterns
   {
     ignores: ['dist/**', 'node_modules/**', '*.config.js'],
   },
-  
+
   // Prettier config must be last to disable conflicting ESLint rules
   eslintConfigPrettier,
 ];

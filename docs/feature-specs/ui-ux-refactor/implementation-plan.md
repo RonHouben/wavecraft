@@ -42,11 +42,11 @@ Phase 0: Baseline + Guardrails  ←────────── start here; un
 
 ### Parallelization Opportunities
 
-| Parallel tracks | Condition |
-|-----------------|-----------|
-| Phase 1 + Phase 2 | Both begin after Phase 0 completes; no shared file dependencies |
-| Phase 3 alongside Phase 1/2 | `IpcConstants` addition is additive; no conflict with styling work |
-| Phase 4 + Phase 5 (partially) | Per-surface tasks may interleave once Phase 3 is merged |
+| Parallel tracks               | Condition                                                          |
+| ----------------------------- | ------------------------------------------------------------------ |
+| Phase 1 + Phase 2             | Both begin after Phase 0 completes; no shared file dependencies    |
+| Phase 3 alongside Phase 1/2   | `IpcConstants` addition is additive; no conflict with styling work |
+| Phase 4 + Phase 5 (partially) | Per-surface tasks may interleave once Phase 3 is merged            |
 
 ---
 
@@ -61,15 +61,18 @@ Establish a reproducible visual baseline and add static-analysis guardrails **be
 #### 0.1 — Capture baseline screenshots
 
 **Files affected:**
+
 - `ui/` (read-only, no edits — screenshots captured against existing build)
 
 **Steps:**
+
 1. Run `cargo xtask dev` to start the dev servers.
 2. Using the `playwright-mcp-ui-testing` skill, capture full-viewport screenshots of all primary surfaces: plugin root, slider controls, toggle buttons, selectable rows, meter display, version badge, any overlay/modal flows.
 3. Save screenshots to `docs/feature-specs/ui-ux-refactor/visual-baseline/` (create directory).
 4. Document any pre-existing visual QA caveats (focus, interaction states) in a brief `baseline-notes.md` in the same directory.
 
 **Acceptance criteria:**
+
 - [ ] Screenshot artifacts exist for every primary surface.
 - [ ] Caveat list is documented and matches prior QA findings (focus visibility gaps, interaction-state inconsistencies).
 
@@ -80,9 +83,11 @@ Establish a reproducible visual baseline and add static-analysis guardrails **be
 #### 0.2 — Add ESLint guardrail: no `@wavecraft/core` imports in `@wavecraft/components`
 
 **Files affected:**
+
 - `ui/eslint.config.js`
 
 **Changes:**
+
 - Add `import/no-restricted-paths` rule that prevents any file under `ui/packages/components/` from importing from `ui/packages/core/`.
 
 ```js
@@ -101,6 +106,7 @@ Establish a reproducible visual baseline and add static-analysis guardrails **be
 ```
 
 **Acceptance criteria:**
+
 - [ ] `cargo xtask ci-check` passes with the new rule active.
 - [ ] Existing violations (if any) are listed in a follow-up comment and tracked for Phase 4.
 
@@ -111,12 +117,15 @@ Establish a reproducible visual baseline and add static-analysis guardrails **be
 #### 0.3 — Add ESLint guardrail: no raw IPC method strings outside `IpcBridge`
 
 **Files affected:**
+
 - `ui/eslint.config.js`
 
 **Changes:**
+
 - Add `no-restricted-syntax` rule targeting string literals matching known IPC method names (`"getParameter"`, `"setParameter"`, `"getMeterFrame"`, `"getAudioStatus"`, `"ping"`) at call sites other than `ui/packages/core/src/ipc/`.
 
 **Acceptance criteria:**
+
 - [ ] Rule activates without blocking current build (annotate existing violations with TODO for Phase 3).
 - [ ] `cargo xtask ci-check` passes.
 
@@ -126,10 +135,10 @@ Establish a reproducible visual baseline and add static-analysis guardrails **be
 
 ### Phase 0 Risk Controls
 
-| Risk | Control |
-|------|---------|
-| Playwright screenshots unavailable | Use browser-dev mode (`cargo xtask dev`); record any limitations in `baseline-notes.md` |
-| ESLint rule breaks existing imports | Add temporary `// eslint-disable-next-line` with `TODO(phase-4)` tracker comment |
+| Risk                                | Control                                                                                 |
+| ----------------------------------- | --------------------------------------------------------------------------------------- |
+| Playwright screenshots unavailable  | Use browser-dev mode (`cargo xtask dev`); record any limitations in `baseline-notes.md` |
+| ESLint rule breaks existing imports | Add temporary `// eslint-disable-next-line` with `TODO(phase-4)` tracker comment        |
 
 ### Phase 0 Rollback
 
@@ -158,21 +167,27 @@ Make every interactive control expose clear, consistent focus and interaction st
 #### 1.1 — Add shared `focusRingClass` utility
 
 **Files affected:**
+
 - `ui/packages/components/src/utils/classNames.ts` (new or existing)
 
 **Changes:**
+
 - Define and export:
+
 ```typescript
 export const focusRingClass =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-plugin-dark';
 ```
+
 - Define and export shared interaction-state Tailwind class sets for buttons, toggles, sliders, and selectable rows. Example:
+
 ```typescript
 export const interactionStateClass =
   'hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed';
 ```
 
 **Acceptance criteria:**
+
 - [ ] `focusRingClass` and `interactionStateClass` are exported from `classNames.ts`.
 - [ ] TypeScript compiles cleanly (`tsc --noEmit`).
 - [ ] No existing component behavior changed by this task alone.
@@ -184,14 +199,17 @@ export const interactionStateClass =
 #### 1.2 — Apply `focusRingClass` to all keyboard-focusable controls
 
 **Files affected (apply per component):**
+
 - `ui/packages/components/src/` — `ParameterSlider`, `ToggleButton`, any selectable row/card components, version badge (if interactive)
 - `sdk-template/ui/src/` — any bespoke interactive controls not using the base component set
 
 **Changes per component:**
+
 - Add `focusRingClass` to the Tailwind `className` string.
 - Remove any ad-hoc `outline-none` or `:focus { outline: none }` overrides that suppress default focus rings without a visible alternative.
 
 **Acceptance criteria:**
+
 - [ ] Every keyboard-focusable control shows a visible focus ring during keyboard navigation.
 - [ ] Focus ring is present in both light-mode and dark-mode (plugin-dark) contexts.
 - [ ] No `outline-none` without a `focus-visible` ring replacement.
@@ -203,13 +221,16 @@ export const interactionStateClass =
 #### 1.3 — Apply shared interaction-state classes to core control set
 
 **Files affected:**
+
 - `ui/packages/components/src/` — `ParameterSlider`, `ToggleButton`, selectable row/card components, primary action buttons
 
 **Changes per component:**
+
 - Apply `interactionStateClass` (or component-appropriate subset) to each control's root or trigger element.
 - Verify that focus + disabled, active + hover, and selected + hover compound states are visually unambiguous.
 
 **Acceptance criteria:**
+
 - [ ] Hover, active, focus, and disabled states are visually distinct for each control in the core set.
 - [ ] Compound states do not produce conflicting visual results.
 - [ ] No regressions in controls not included in this task.
@@ -221,14 +242,17 @@ export const interactionStateClass =
 #### 1.4 — Validate keyboard flow and tab order for primary surfaces
 
 **Files affected:**
+
 - Read-only verification pass; no code changes expected unless gaps are found.
 
 **Steps:**
+
 1. Tab through all interactive elements in the primary plugin surface in browser-dev mode.
 2. Confirm Enter/Space activates custom controls; Escape closes any overlays.
 3. Confirm no positive `tabIndex` values exist without documented justification.
 
 **Acceptance criteria:**
+
 - [ ] Tab order is logical and matches visual top-to-bottom, left-to-right flow.
 - [ ] All custom interactive controls respond to keyboard activation.
 - [ ] No keyboard traps.
@@ -240,13 +264,16 @@ export const interactionStateClass =
 #### 1.5 — Validate reduced-motion baseline for changed transitions
 
 **Files affected:**
+
 - `ui/packages/components/src/` — any component modified in 1.2/1.3 with transitions.
 
 **Changes:**
+
 - Wrap any new CSS transitions or `transition-*` Tailwind utilities in `motion-safe:` prefix.
 - Example: `motion-safe:transition-transform` instead of `transition-transform`.
 
 **Acceptance criteria:**
+
 - [ ] All new/modified transitions use `motion-safe:` prefix.
 - [ ] Browser devtools `prefers-reduced-motion: reduce` simulation confirms transitions are suppressed.
 
@@ -256,9 +283,9 @@ export const interactionStateClass =
 
 ### Phase 1 Risk Controls
 
-| Risk | Control |
-|------|---------|
-| Focus ring breaks in WKWebView | Test inside plugin host after Phase 1 merge; record results in test plan |
+| Risk                                         | Control                                                                                       |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Focus ring breaks in WKWebView               | Test inside plugin host after Phase 1 merge; record results in test plan                      |
 | Adjacent untouched component visually shifts | Before/after screenshot diff; revert class change to `focusRingClass` only (no layout impact) |
 
 ### Phase 1 Rollback
@@ -272,6 +299,7 @@ feat(ui): add shared focusRingClass and interactionStateClass utilities       �
 feat(ui): apply focus ring to all keyboard-focusable controls                  ← Task 1.2
 feat(ui): apply interaction-state classes to core control set                  ← Task 1.3
 ```
+
 Tasks 1.4 and 1.5 are verification steps embedded in the above PRs' test passes; no separate PR needed.
 
 ---
@@ -290,15 +318,18 @@ Replace ad-hoc color/spacing/typography values with design tokens and improve vi
 #### 2.1 — Audit and inventory ad-hoc token violations
 
 **Files affected:**
+
 - `ui/packages/components/src/` — full grep scan
 - `sdk-template/ui/src/` — full grep scan
 
 **Steps:**
+
 1. Run: `grep -rn "bg-\[#" ui/packages/ sdk-template/ui/src/`
 2. Run: `grep -rn "style={{" ui/packages/ sdk-template/ui/src/` to find inline style objects with color/spacing overrides.
 3. Produce a prioritized list: per-component, violation type, replacement token.
 
 **Acceptance criteria:**
+
 - [ ] Inventory list exists with at least severity tiers (blocking / warning / documented exception).
 - [ ] List is committed to `docs/feature-specs/ui-ux-refactor/token-audit.md`.
 
@@ -309,6 +340,7 @@ Replace ad-hoc color/spacing/typography values with design tokens and improve vi
 #### 2.2 — Replace ad-hoc background and border token violations
 
 **Files affected (based on 2.1 audit):**
+
 - Components using `bg-[#...]` or `border-[#...]` for values that map to existing theme tokens.
 
 **Allowed replacements:**
@@ -319,6 +351,7 @@ Replace ad-hoc color/spacing/typography values with design tokens and improve vi
 | `bg-[#4a9eff]` or accent-like | `bg-accent` |
 
 **Acceptance criteria:**
+
 - [ ] Zero `bg-[#...]` or `border-[#...]` ad-hoc color values remain in touched files.
 - [ ] Visual output is equivalent (before/after Playwright comparison).
 
@@ -329,6 +362,7 @@ Replace ad-hoc color/spacing/typography values with design tokens and improve vi
 #### 2.3 — Replace ad-hoc text/color and inline style overrides
 
 **Files affected (based on 2.1 audit):**
+
 - Components with `style={{ color: '#...' }}` or `text-[#...]`.
 
 **Allowed replacements:**
@@ -338,6 +372,7 @@ Replace ad-hoc color/spacing/typography values with design tokens and improve vi
 | `text-[#aaa]` | `text-gray-400` (or appropriate Tailwind scale) |
 
 **Acceptance criteria:**
+
 - [ ] No inline `style={{ color: ... }}` overrides that map to existing tokens in touched files.
 - [ ] Visual regression check passes.
 
@@ -348,14 +383,17 @@ Replace ad-hoc color/spacing/typography values with design tokens and improve vi
 #### 2.4 — Improve hierarchy: typography and spacing normalization
 
 **Files affected:**
+
 - Identified "flat hierarchy" surfaces from UX findings (refer to `ux-improvement-plan.md` Section 3).
 
 **Changes:**
+
 - Use Tailwind typography scale to differentiate labels from values (e.g., `text-xs` labels, `text-sm` values).
 - Apply consistent `gap-*` / `p-*` spacing between logical groups.
 - Improve emphasis with `font-semibold` for section titles; `font-normal` for secondary text.
 
 **Acceptance criteria:**
+
 - [ ] Hierarchy improvements are visible (grouped controls have logical spacing and label differentiation).
 - [ ] All new spacing and type values use Tailwind scale (no ad-hoc values).
 - [ ] No regressions in overall layout.
@@ -366,10 +404,10 @@ Replace ad-hoc color/spacing/typography values with design tokens and improve vi
 
 ### Phase 2 Risk Controls
 
-| Risk | Control |
-|------|---------|
-| Token substitution causes visual regression | Before/after screenshot diff required; revert per-component (non-breaking) |
-| Token doesn't match visual intent | Document exception in PR with rationale; add `// token-exception: <reason>` comment |
+| Risk                                        | Control                                                                             |
+| ------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Token substitution causes visual regression | Before/after screenshot diff required; revert per-component (non-breaking)          |
+| Token doesn't match visual intent           | Document exception in PR with rationale; add `// token-exception: <reason>` comment |
 
 ### Phase 2 Rollback
 
@@ -402,32 +440,35 @@ Eliminate raw IPC method strings at UI call sites by adding a canonical `IpcMeth
 #### 3.1 — Add `IpcMethods` and `IpcEvents` constants to `@wavecraft/core`
 
 **Files affected:**
+
 - `ui/packages/core/src/ipc/constants.ts` (new file)
 - `ui/packages/core/src/index.ts` (add export)
 
 **Changes:**
+
 ```typescript
 // ui/packages/core/src/ipc/constants.ts
 export const IpcMethods = {
-  GET_PARAMETER:   'getParameter',
-  SET_PARAMETER:   'setParameter',
+  GET_PARAMETER: 'getParameter',
+  SET_PARAMETER: 'setParameter',
   GET_METER_FRAME: 'getMeterFrame',
-  GET_AUDIO_STATUS:'getAudioStatus',
-  PING:            'ping',
+  GET_AUDIO_STATUS: 'getAudioStatus',
+  PING: 'ping'
 } as const;
 
-export type IpcMethod = typeof IpcMethods[keyof typeof IpcMethods];
+export type IpcMethod = (typeof IpcMethods)[keyof typeof IpcMethods];
 
 export const IpcEvents = {
   AUDIO_STATUS_CHANGED: 'audioStatusChanged',
-  PARAM_UPDATE:         'paramUpdate',
-  METER_FRAME:          'meterFrame',
+  PARAM_UPDATE: 'paramUpdate',
+  METER_FRAME: 'meterFrame'
 } as const;
 
-export type IpcEvent = typeof IpcEvents[keyof typeof IpcEvents];
+export type IpcEvent = (typeof IpcEvents)[keyof typeof IpcEvents];
 ```
 
 **Acceptance criteria:**
+
 - [ ] `IpcMethods` and `IpcEvents` are exported from `@wavecraft/core` public API.
 - [ ] TypeScript types `IpcMethod` and `IpcEvent` are available.
 - [ ] No existing runtime behavior changes; this is a pure addition.
@@ -440,12 +481,15 @@ export type IpcEvent = typeof IpcEvents[keyof typeof IpcEvents];
 #### 3.2 — Migrate internal `@wavecraft/core` call sites to use constants
 
 **Files affected:**
+
 - `ui/packages/core/src/ipc/` — `IpcBridge.ts`, `ParameterClient.ts`, `MeterClient.ts` (any that reference raw string method names internally)
 
 **Changes:**
+
 - Replace `'getParameter'` → `IpcMethods.GET_PARAMETER`, etc. inside the core package.
 
 **Acceptance criteria:**
+
 - [ ] No raw IPC method strings remain inside `ui/packages/core/src/` (excluding `constants.ts` itself).
 - [ ] All tests pass; no behavioral change.
 
@@ -456,13 +500,16 @@ export type IpcEvent = typeof IpcEvents[keyof typeof IpcEvents];
 #### 3.3 — Migrate external call sites in `sdk-template/ui/`
 
 **Files affected:**
+
 - `sdk-template/ui/src/` — any component or hook calling `IpcBridge.invoke(...)` with a raw string.
 
 **Changes:**
+
 - Import `IpcMethods` from `@wavecraft/core` at call sites; replace raw strings.
 - Remove ESLint `// eslint-disable` annotations added in Phase 0 (Task 0.3) for these files.
 
 **Acceptance criteria:**
+
 - [ ] Zero raw IPC method strings at non-constants call sites (`grep` check passes cleanly).
 - [ ] No new ESLint `no-restricted-syntax` violations.
 
@@ -472,10 +519,10 @@ export type IpcEvent = typeof IpcEvents[keyof typeof IpcEvents];
 
 ### Phase 3 Risk Controls
 
-| Risk | Control |
-|------|---------|
-| Constants string value typo | TypeScript `as const` ensures type safety; unit test `IpcMethods.GET_PARAMETER === 'getParameter'` |
-| Partial migration leaves mixed usage | Merge 3.2 + 3.3 in sequence; grep check in PR description required before merge |
+| Risk                                 | Control                                                                                            |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| Constants string value typo          | TypeScript `as const` ensures type safety; unit test `IpcMethods.GET_PARAMETER === 'getParameter'` |
+| Partial migration leaves mixed usage | Merge 3.2 + 3.3 in sequence; grep check in PR description required before merge                    |
 
 ### Phase 3 Rollback
 
@@ -505,14 +552,17 @@ Lift hook subscriptions out of presentational components into smart containers. 
 #### 4.1 — Identify fan-out surfaces and components with internal hook usage
 
 **Files affected:**
+
 - `ui/packages/components/src/` — audit for `useParameter`, `useAllParameters`, `useMeterFrame` import usage
 - `sdk-template/ui/src/` — identify surfaces with multiple `useParameter(id)` calls for the same ID
 
 **Steps:**
+
 1. Run: `grep -rn "useParameter\|useAllParameters\|useMeterFrame" ui/packages/components/`
 2. Document results in `docs/feature-specs/ui-ux-refactor/fan-out-inventory.md`.
 
 **Acceptance criteria:**
+
 - [ ] Inventory exists listing every presentational component with internal hook usage.
 - [ ] Each duplicate subscription (same param ID, multiple subscribers in one surface) is listed.
 
@@ -521,10 +571,12 @@ Lift hook subscriptions out of presentational components into smart containers. 
 #### 4.2 — Extract hook calls from presentational components — per component
 
 **Files affected (per component identified in 4.1):**
+
 - `ui/packages/components/src/<Component>.tsx` — remove hook imports and calls
 - `sdk-template/ui/src/<Container>.tsx` — add smart container that owns hook + passes props
 
 **Changes pattern per component:**
+
 1. Add the clean props interface to the presentational component (see LLD Section 4.2):
    - `value`, `onChange`, `disabled`, `aria-label` / `name`
    - `data-*` passthrough as needed
@@ -533,6 +585,7 @@ Lift hook subscriptions out of presentational components into smart containers. 
 4. Annotate removed hook usage with `// Lifted to <ContainerName> — Phase 4` comment for traceability during transition.
 
 **Acceptance criteria (per component):**
+
 - [ ] Component file has zero imports from `@wavecraft/core`.
 - [ ] ESLint `import/no-restricted-paths` rule produces zero violations for the file.
 - [ ] Smart container test: render the component in isolation (Vitest/React Testing Library) with mock props — works without IPC context.
@@ -545,12 +598,15 @@ Lift hook subscriptions out of presentational components into smart containers. 
 #### 4.3 — Remove `legacyProps` gate once all consumers are migrated (per surface)
 
 **Files affected:**
+
 - `ui/packages/components/src/<Component>.tsx` — remove `legacyProps` fallback and associated code.
 
 **Changes:**
+
 - Once all call sites of a component pass the new clean props, delete the legacy hook path entirely.
 
 **Acceptance criteria:**
+
 - [ ] No `legacyProps` prop or internal hook call remains in the component.
 - [ ] `cargo xtask ci-check` passes with no TypeScript errors from removed prop.
 
@@ -560,11 +616,11 @@ Lift hook subscriptions out of presentational components into smart containers. 
 
 ### Phase 4 Risk Controls
 
-| Risk | Control |
-|------|---------|
-| Presentational component re-imports a hook accidentally | ESLint `import/no-restricted-paths` rule (added Phase 0) catches it immediately |
-| Duplicate subscriber not lifted (missed fan-out) | Smart container checklist: confirm exactly one `useParameter(id)` per surface per param ID |
-| Isolation test missing | PR gate: each extracted component must have at least one Vitest render test with mock props |
+| Risk                                                    | Control                                                                                     |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Presentational component re-imports a hook accidentally | ESLint `import/no-restricted-paths` rule (added Phase 0) catches it immediately             |
+| Duplicate subscriber not lifted (missed fan-out)        | Smart container checklist: confirm exactly one `useParameter(id)` per surface per param ID  |
+| Isolation test missing                                  | PR gate: each extracted component must have at least one Vitest render test with mock props |
 
 ### Phase 4 Rollback
 
@@ -596,14 +652,17 @@ Establish singular `ResizeObserver` authority per surface. Eliminate duplicate o
 #### 5.1 — Identify all active `ResizeObserver` and resize-event sites
 
 **Files affected:**
+
 - `ui/packages/components/src/` — grep for `ResizeObserver`
 - `sdk-template/ui/src/` — grep for `ResizeObserver`
 
 **Steps:**
+
 1. Run: `grep -rn "ResizeObserver" ui/packages/ sdk-template/ui/src/`
 2. Classify each occurrence as: smart-container-owned (correct), presentational-owned (needs migration), or legacy (needs gate).
 
 **Acceptance criteria:**
+
 - [ ] Inventory exists in `docs/feature-specs/ui-ux-refactor/resize-inventory.md`.
 
 ---
@@ -611,16 +670,19 @@ Establish singular `ResizeObserver` authority per surface. Eliminate duplicate o
 #### 5.2 — Migrate presentational `ResizeObserver` usage to smart containers
 
 **Files affected (per surface):**
+
 - `ui/packages/components/src/<Component>.tsx` — remove `ResizeObserver` construction
 - `sdk-template/ui/src/<Container>.tsx` — add `ResizeObserver` + pass `onResize` prop down
 
 **Changes pattern:**
+
 1. Add `onResize?: (entry: ResizeObserverEntry) => void` prop to the presentational component.
 2. Hook into the existing smart container's resize ownership (from Phase 4 container) to call the prop.
 3. Remove the `ResizeObserver` construction from the presentational component.
 4. Gate legacy path: add `legacyResize?: boolean` prop that defaults to `false` once declarative path is active.
 
 **Acceptance criteria (per surface):**
+
 - [ ] Only one `ResizeObserver` instance active per surface.
 - [ ] Resize behavior verified in browser-dev mode: no jitter; correct dimensions propagated.
 - [ ] `legacyResize` prop defaults to `false` and legacy path is documented.
@@ -632,13 +694,16 @@ Establish singular `ResizeObserver` authority per surface. Eliminate duplicate o
 #### 5.3 — Remove `legacyResize` gates and legacy observer construction
 
 **Files affected:**
+
 - `ui/packages/components/src/<Component>.tsx` — remove `legacyResize` prop and legacy `ResizeObserver` usage.
 
 **Changes:**
+
 - Delete the `legacyResize` prop fallback code.
 - Final state: component accepts `onResize` callback; constructs no observer itself.
 
 **Acceptance criteria:**
+
 - [ ] No `ResizeObserver` construction inside `ui/packages/components/`.
 - [ ] Resize ownership is singular and exclusively in smart containers.
 - [ ] Plugin host resize behavior validated in WKWebView context where feasible.
@@ -649,11 +714,11 @@ Establish singular `ResizeObserver` authority per surface. Eliminate duplicate o
 
 ### Phase 5 Risk Controls
 
-| Risk | Control |
-|------|---------|
+| Risk                                           | Control                                                                                          |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | Resize jitter during `legacyResize` transition | Keep surfaces on `legacyResize: true` until both browser-dev and plugin-host paths are validated |
-| Missing `onResize` call in smart container | Test: resize browser window and verify component receives dimensions correctly |
-| WKWebView behaves differently | Test in plugin host before removing `legacyResize` gate |
+| Missing `onResize` call in smart container     | Test: resize browser window and verify component receives dimensions correctly                   |
+| WKWebView behaves differently                  | Test in plugin host before removing `legacyResize` gate                                          |
 
 ### Phase 5 Rollback
 
@@ -673,16 +738,16 @@ refactor(components): remove legacyResize gate from <Meter>                    �
 
 ## Risk Controls Summary
 
-| Risk | Phase | Control |
-|------|-------|---------|
-| Focus ring breaks WKWebView | 1 | Post-merge plugin-host test; record in test plan |
-| Visual regression from token swap | 2 | Before/after Playwright screenshots required per PR |
-| IPC string typo in constants | 3 | `as const` + unit test (`IpcMethods.GET_PARAMETER === 'getParameter'`) |
-| Presentational re-import of hook | 4 | ESLint `import/no-restricted-paths` (Phase 0 guardrail) |
-| Duplicate subscriber not lifted | 4 | Smart container checklist; grep for duplicate `useParameter(id)` |
-| Resize jitter during transition | 5 | `legacyResize: true` gate; validate in both browser-dev and plugin-host |
-| A11y regression in reduced-motion context | 1 | All new transitions use `motion-safe:`; devtools simulation check |
-| IPC string drift re-emerges | 3 | `no-restricted-syntax` ESLint rule (Phase 0 guardrail) post Phase 3 |
+| Risk                                      | Phase | Control                                                                 |
+| ----------------------------------------- | ----- | ----------------------------------------------------------------------- |
+| Focus ring breaks WKWebView               | 1     | Post-merge plugin-host test; record in test plan                        |
+| Visual regression from token swap         | 2     | Before/after Playwright screenshots required per PR                     |
+| IPC string typo in constants              | 3     | `as const` + unit test (`IpcMethods.GET_PARAMETER === 'getParameter'`)  |
+| Presentational re-import of hook          | 4     | ESLint `import/no-restricted-paths` (Phase 0 guardrail)                 |
+| Duplicate subscriber not lifted           | 4     | Smart container checklist; grep for duplicate `useParameter(id)`        |
+| Resize jitter during transition           | 5     | `legacyResize: true` gate; validate in both browser-dev and plugin-host |
+| A11y regression in reduced-motion context | 1     | All new transitions use `motion-safe:`; devtools simulation check       |
+| IPC string drift re-emerges               | 3     | `no-restricted-syntax` ESLint rule (Phase 0 guardrail) post Phase 3     |
 
 ---
 
@@ -706,14 +771,14 @@ Phase 5 PRs → merge after Phase 4 smart containers for relevant surfaces
 
 **PR naming convention:**
 
-| Slice | Prefix |
-|-------|--------|
-| A (Focus/Interaction) | `feat(ui):` |
-| B (Token) | `fix(ui):` |
-| C (Smart/Pres split) | `refactor(components):` |
-| D (IPC constants) | `refactor(core):` |
-| E (Resize) | `refactor(ui):` |
-| Inventory/docs | `chore(ui):` |
+| Slice                 | Prefix                  |
+| --------------------- | ----------------------- |
+| A (Focus/Interaction) | `feat(ui):`             |
+| B (Token)             | `fix(ui):`              |
+| C (Smart/Pres split)  | `refactor(components):` |
+| D (IPC constants)     | `refactor(core):`       |
+| E (Resize)            | `refactor(ui):`         |
+| Inventory/docs        | `chore(ui):`            |
 
 ---
 

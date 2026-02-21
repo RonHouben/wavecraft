@@ -1,5 +1,9 @@
 import { OscilloscopeProcessor as OscilloscopeView } from '@wavecraft/components';
-import { useConnectionStatus, useHasProcessorInSignalChain, useOscilloscopeFrame } from '@wavecraft/core';
+import {
+  useConnectionStatus,
+  useHasProcessorInSignalChain,
+  useOscilloscopeFrame,
+} from '@wavecraft/core';
 import type { JSX } from 'react';
 
 export interface OscilloscopeProcessorProps {
