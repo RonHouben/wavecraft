@@ -1,13 +1,13 @@
 //! Passthrough processor that leaves input audio unchanged.
 
-use crate::traits::{Processor, ProcessorParams, Transport};
+use wavecraft_dsp::{ParamSpec, Processor, ProcessorParams, Transport};
 
 /// Empty parameter struct for passthrough processor.
 #[derive(Debug, Default, Clone)]
 pub struct PassthroughParams;
 
 impl ProcessorParams for PassthroughParams {
-    fn param_specs() -> &'static [crate::traits::ParamSpec] {
+    fn param_specs() -> &'static [ParamSpec] {
         &[] // No parameters
     }
 }

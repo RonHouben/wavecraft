@@ -136,11 +136,89 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::builtins::{GainDsp, GainParams, PassthroughDsp, PassthroughParams};
     use std::sync::{
         Arc,
         atomic::{AtomicBool, AtomicU32, Ordering},
     };
+
+    #[derive(Clone)]
+    struct TestGainParams {
+        level: f32,
+    }
+
+    impl Default for TestGainParams {
+        fn default() -> Self {
+            Self { level: 1.0 }
+        }
+    }
+
+    impl ProcessorParams for TestGainParams {
+        fn param_specs() -> &'static [ParamSpec] {
+            static SPECS: [ParamSpec; 1] = [ParamSpec {
+                name: "Level",
+                id_suffix: "level",
+                range: crate::ParamRange::Linear { min: 0.0, max: 2.0 },
+                default: 1.0,
+                unit: "x",
+                group: None,
+            }];
+            &SPECS
+        }
+
+        fn from_param_defaults() -> Self {
+            Self { level: 1.0 }
+        }
+
+        fn apply_plain_values(&mut self, values: &[f32]) {
+            if let Some(level) = values.first() {
+                self.level = *level;
+            }
+        }
+    }
+
+    #[derive(Default)]
+    struct TestGainDsp;
+
+    impl Processor for TestGainDsp {
+        type Params = TestGainParams;
+
+        fn process(
+            &mut self,
+            buffer: &mut [&mut [f32]],
+            _transport: &Transport,
+            params: &Self::Params,
+        ) {
+            for channel in buffer.iter_mut() {
+                for sample in channel.iter_mut() {
+                    *sample *= params.level;
+                }
+            }
+        }
+    }
+
+    #[derive(Clone, Default)]
+    struct TestPassthroughParams;
+
+    impl ProcessorParams for TestPassthroughParams {
+        fn param_specs() -> &'static [ParamSpec] {
+            &[]
+        }
+    }
+
+    #[derive(Default)]
+    struct TestPassthroughDsp;
+
+    impl Processor for TestPassthroughDsp {
+        type Params = TestPassthroughParams;
+
+        fn process(
+            &mut self,
+            _buffer: &mut [&mut [f32]],
+            _transport: &Transport,
+            _params: &Self::Params,
+        ) {
+        }
+    }
 
     #[derive(Clone)]
     struct TestParams;
@@ -201,8 +279,8 @@ mod tests {
     #[test]
     fn test_chain_processes_in_order() {
         let mut chain = Chain {
-            first: GainDsp::default(),
-            second: GainDsp::default(),
+            first: TestGainDsp,
+            second: TestGainDsp,
         };
 
         let mut left = [1.0_f32, 1.0_f32];
@@ -211,8 +289,8 @@ mod tests {
 
         let transport = Transport::default();
         let params = ChainParams {
-            first: GainParams { level: 0.5 },
-            second: GainParams { level: 2.0 },
+            first: TestGainParams { level: 0.5 },
+            second: TestGainParams { level: 2.0 },
         };
 
         chain.process(&mut buffer, &transport, &params);
@@ -225,8 +303,8 @@ mod tests {
     #[test]
     fn test_chain_with_passthrough() {
         let mut chain = Chain {
-            first: PassthroughDsp,
-            second: GainDsp::default(),
+            first: TestPassthroughDsp,
+            second: TestGainDsp,
         };
 
         let mut left = [2.0_f32, 2.0_f32];
@@ -235,8 +313,8 @@ mod tests {
 
         let transport = Transport::default();
         let params = ChainParams {
-            first: PassthroughParams,
-            second: GainParams { level: 0.5 },
+            first: TestPassthroughParams,
+            second: TestGainParams { level: 0.5 },
         };
 
         chain.process(&mut buffer, &transport, &params);
@@ -247,7 +325,7 @@ mod tests {
 
     #[test]
     fn test_chain_params_merge() {
-        let specs = <ChainParams<GainParams, GainParams>>::param_specs();
+        let specs = <ChainParams<TestGainParams, TestGainParams>>::param_specs();
         assert_eq!(specs.len(), 2); // Both gain params
 
         // Both should have "Level" name
@@ -257,20 +335,20 @@ mod tests {
 
     #[test]
     fn test_chain_default() {
-        let _chain: Chain<GainDsp, PassthroughDsp> = Chain::default();
-        let _params: ChainParams<GainParams, PassthroughParams> = ChainParams::default();
+        let _chain: Chain<TestGainDsp, TestPassthroughDsp> = Chain::default();
+        let _params: ChainParams<TestGainParams, TestPassthroughParams> = ChainParams::default();
     }
 
     #[test]
     fn test_chain_from_param_defaults_uses_children_spec_defaults() {
-        let defaults = <ChainParams<GainParams, GainParams>>::from_param_defaults();
+        let defaults = <ChainParams<TestGainParams, TestGainParams>>::from_param_defaults();
         assert!((defaults.first.level - 1.0).abs() < 1e-6);
         assert!((defaults.second.level - 1.0).abs() < 1e-6);
     }
 
     #[test]
     fn test_chain_apply_plain_values_splits_by_child_param_count() {
-        let mut params = <ChainParams<GainParams, GainParams>>::from_param_defaults();
+        let mut params = <ChainParams<TestGainParams, TestGainParams>>::from_param_defaults();
         params.apply_plain_values(&[0.25, 1.75]);
 
         assert!((params.first.level - 0.25).abs() < 1e-6);

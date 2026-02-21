@@ -36,4 +36,5 @@ pub use wavecraft_bridge;
 pub use wavecraft_dsp;
 pub use wavecraft_macros;
 pub use wavecraft_metering;
+pub use wavecraft_processors;
 pub use wavecraft_protocol;

@@ -1,6 +1,6 @@
 //! Gain processor - amplifies or attenuates audio signals.
 
-use crate::traits::{Processor, ProcessorParams, Transport};
+use wavecraft_dsp::{ParamRange, ParamSpec, Processor, ProcessorParams, Transport};
 
 /// Parameter struct for gain processor.
 #[derive(Debug, Default, Clone)]
@@ -10,9 +10,7 @@ pub struct GainParams {
 }
 
 impl ProcessorParams for GainParams {
-    fn param_specs() -> &'static [crate::traits::ParamSpec] {
-        use crate::traits::{ParamRange, ParamSpec};
-
+    fn param_specs() -> &'static [ParamSpec] {
         static SPECS: [ParamSpec; 1] = [ParamSpec {
             name: "Level",
             id_suffix: "level",

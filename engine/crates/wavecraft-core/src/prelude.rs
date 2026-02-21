@@ -21,7 +21,9 @@ pub use wavecraft_dsp::{
 };
 
 // Re-export built-in processors
-pub use wavecraft_dsp::builtins::{GainDsp, PassthroughDsp};
+pub use wavecraft_processors::{
+    GainDsp, PassthroughDsp, SaturatorDsp, UnifiedFilterDsp, UnifiedFilterMode,
+};
 
 // Re-export Wavecraft protocol types
 pub use wavecraft_protocol::{ParamId, ParameterInfo, ParameterType, db_to_linear};

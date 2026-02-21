@@ -21,7 +21,8 @@ Follow the existing crate structure:
 - `wavecraft-core` — Core SDK types and declarative macros (publishable, no nih_plug dependency)
 - `wavecraft-macros` — Procedural macros: `ProcessorParams` derive, `wavecraft_plugin!`
 - `wavecraft-protocol` — Shared contracts and types
-- `wavecraft-dsp` — Pure DSP code, `Processor` trait, built-in processors
+- `wavecraft-dsp` — DSP contracts and combinators: `Processor` trait, transport types (no concrete built-in processors)
+- `wavecraft-processors` — Concrete built-in processors (`Gain`, `Passthrough`, `Oscillator`, etc.) with flat crate-root exports
 - `wavecraft-bridge` — IPC handling
 - `wavecraft-metering` — SPSC ring buffer for audio → UI metering
 
@@ -44,7 +45,7 @@ wavecraft_processor!(OutputStage => Passthrough);
 // wavecraft_processor!(MyOsc => Oscillator); // Wrong — Oscillator is custom
 ```
 
-> **Note:** `wavecraft_processor!` only supports built-in processor types (`Gain`, `Passthrough`).
+> **Note:** `wavecraft_processor!` only supports built-in processor types (`Gain`, `Passthrough`); these aliases resolve to types in `wavecraft_processors::*`, not `wavecraft_dsp`.
 > Custom processors implementing the `Processor` trait go directly in `SignalChain![]`.
 
 **Custom Processors in Signal Chain:**
