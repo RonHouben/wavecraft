@@ -1,8 +1,7 @@
 import {
   type ProcessorId,
-  ParameterClient,
   logger,
-  useAllParametersFor,
+  useParametersForProcessor,
   useHasProcessorInSignalChain,
 } from '@wavecraft/core';
 import { Processor } from '@wavecraft/components';
@@ -21,9 +20,7 @@ export function SmartProcessor({
   title,
 }: Readonly<SmartProcessorProps>): JSX.Element | null {
   const hasProcessorInSignalChain = useHasProcessorInSignalChain(id);
-  const { params, isLoading, error, reload } = useAllParametersFor(id);
-
-  const client = ParameterClient.getInstance();
+  const { params, isLoading, error, setParameter } = useParametersForProcessor(id);
 
   const processorParameters = useMemo(
     () =>
@@ -31,8 +28,7 @@ export function SmartProcessor({
         ...param,
         onChange: async (value: number | boolean): Promise<void> => {
           try {
-            await client.setParameter(param.id, value);
-            await reload();
+            await setParameter(param.id, value);
           } catch (err) {
             logger.error('Failed to set processor parameter', {
               error: err,
@@ -42,7 +38,7 @@ export function SmartProcessor({
           }
         },
       })),
-    [client, id, params, reload]
+    [id, params, setParameter]
   );
 
   if (hideWhenNotInSignalChain && !hasProcessorInSignalChain) {

@@ -99,11 +99,17 @@ export { ParameterClient } from './ipc/ParameterClient';
 // =============================================================================
 // React Hooks (primary API)
 // =============================================================================
+export { WavecraftProvider } from './context/WavecraftProvider';
+export type { WavecraftProviderProps } from './context/WavecraftProvider';
+
 export { useParameter } from './hooks/useParameter';
 export type { UseParameterResult } from './hooks/useParameter';
 
 export { useAllParameters } from './hooks/useAllParameters';
 export type { UseAllParametersResult } from './hooks/useAllParameters';
+
+export { useParametersForProcessor } from './hooks/useAllParameterFor';
+export type { UseParametersForProcessorResult } from './hooks/useAllParameterFor';
 
 export { useAllParametersFor } from './hooks/useAllParameterFor';
 export type { UseAllParameterForResult } from './hooks/useAllParameterFor';

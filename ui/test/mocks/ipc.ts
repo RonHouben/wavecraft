@@ -125,16 +125,27 @@ export function useParameter(id: string): UseParameterResult {
  * Mock implementation of useAllParameters hook
  */
 export function useAllParameters(): UseAllParametersResult {
-  const [params] = useState<ParameterInfo[]>(Array.from(mockParameters.values()));
+  const [params, setParams] = useState<ParameterInfo[]>(Array.from(mockParameters.values()));
   const [isLoading] = useState(false);
   const [error] = useState<Error | null>(null);
+
+  const setParameter = useCallback(async (id: string, value: ParameterValue): Promise<void> => {
+    const existing = mockParameters.get(id);
+    if (!existing) {
+      throw new Error(`Parameter not found: ${id}`);
+    }
+
+    const updated = { ...existing, value };
+    mockParameters.set(id, updated);
+    setParams((prev) => prev.map((param) => (param.id === id ? updated : param)));
+  }, []);
 
   const reload = useCallback(async (): Promise<void> => {
     // In tests, params are set via setMockParameter
     // No need to actually reload
   }, []);
 
-  return { params, isLoading, error, reload };
+  return { params, isLoading, error, setParameter, reload };
 }
 
 // ============================================================================

@@ -1,7 +1,8 @@
-import { useParameterState } from '../context/useParameterState';
+import { createContext } from 'react';
+
 import type { ParameterId, ParameterInfo, ParameterValue } from '../types/parameters';
 
-export interface UseAllParametersResult {
+export interface ParameterStateContextValue {
   params: ParameterInfo[];
   isLoading: boolean;
   error: Error | null;
@@ -9,6 +10,6 @@ export interface UseAllParametersResult {
   reload: () => Promise<void>;
 }
 
-export function useAllParameters(): UseAllParametersResult {
-  return useParameterState();
-}
+export const ParameterStateContext = createContext<ParameterStateContextValue | undefined>(
+  undefined
+);

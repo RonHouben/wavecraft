@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 const mockUseWindowResizeSync = vi.hoisted(() => vi.fn());
@@ -9,6 +10,7 @@ const mockUseMeterFrame = vi.hoisted(() => vi.fn());
 const mockUseRequestResize = vi.hoisted(() => vi.fn());
 
 vi.mock('@wavecraft/core', () => ({
+  WavecraftProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
   useWindowResizeSync: mockUseWindowResizeSync,
   useConnectionStatus: mockUseConnectionStatus,
   useAudioStatus: mockUseAudioStatus,

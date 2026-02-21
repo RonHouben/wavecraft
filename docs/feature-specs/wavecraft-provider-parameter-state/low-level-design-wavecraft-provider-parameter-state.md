@@ -32,7 +32,7 @@ The current `@wavecraft/core` SDK exposes parameter state through a set of indep
 - Introduce a `WavecraftProvider` React context at the application root that owns the single global parameter fetch lifecycle.
 - Ensure all parameter reads in the component tree derive from one cached dataset, eliminating duplicate IPC calls.
 - Provide a context-aware `setParameter` that updates local state optimistically (or via confirmed server push) without requiring manual `reload()` calls in component code.
-- Keep the public hook API (`useParameter`, `useAllParameters`, `useAllParametersFor`) source-compatible; migrate their implementations to read from context rather than from independent fetch state.
+- Keep the public hook API (`useParameter`, `useAllParameters`) source-compatible and provide a migration-safe alias from `useAllParametersFor` to the canonical `useParametersForProcessor`.
 - Centralise hot-reload invalidation and `parameterChanged` notification handling once, in the provider.
 - Establish a clear public/internal API boundary so application code never imports `ParameterClient` or `IpcBridge` directly.
 
@@ -50,11 +50,11 @@ The current `@wavecraft/core` SDK exposes parameter state through a set of indep
 
 ### 4.1 Hook inventory
 
-| Hook | File | Fetch strategy | Invalidation |
-|---|---|---|---|
-| `useAllParameters` | `ui/packages/core/src/hooks/useAllParameters.ts` | Fetches `getAllParameters()` on mount + reconnect; retries up to 3× with exponential backoff. Deduplicates concurrent fetches via `fetchingRef`. | Subscribes to `parameterChanged` (in-place update) and `IpcEvents.PARAMETERS_CHANGED` (full refetch via `reload`). |
-| `useAllParametersFor` | `ui/packages/core/src/hooks/useAllParameterFor.ts` | Thin wrapper over `useAllParameters`; filters by `processorId` via `useMemo`. | Inherits parent's invalidation. |
-| `useParameter` | `ui/packages/core/src/hooks/useParameter.ts` | Calls `getAllParameters()` independently and filters for `id`. | Refetches on `connected` transition and `parameterChanged` notification; does NOT share state with `useAllParameters`. |
+| Hook                  | File                                               | Fetch strategy                                                                                                                                   | Invalidation                                                                                                           |
+| --------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `useAllParameters`    | `ui/packages/core/src/hooks/useAllParameters.ts`   | Fetches `getAllParameters()` on mount + reconnect; retries up to 3× with exponential backoff. Deduplicates concurrent fetches via `fetchingRef`. | Subscribes to `parameterChanged` (in-place update) and `IpcEvents.PARAMETERS_CHANGED` (full refetch via `reload`).     |
+| `useAllParametersFor` | `ui/packages/core/src/hooks/useAllParameterFor.ts` | Thin wrapper over `useAllParameters`; filters by `processorId` via `useMemo`.                                                                    | Inherits parent's invalidation.                                                                                        |
+| `useParameter`        | `ui/packages/core/src/hooks/useParameter.ts`       | Calls `getAllParameters()` independently and filters for `id`.                                                                                   | Refetches on `connected` transition and `parameterChanged` notification; does NOT share state with `useAllParameters`. |
 
 ### 4.2 ParameterClient and IpcBridge access
 
@@ -67,7 +67,7 @@ const client = ParameterClient.getInstance();
 onChange: async (value) => {
   await client.setParameter(param.id, value);
   await reload(); // <-- manual cache bust after write
-}
+};
 ```
 
 This pattern leaks IPC mechanics into view components and is the primary source of boilerplate and inconsistency.
@@ -139,7 +139,9 @@ interface WavecraftProviderProps {
   children: React.ReactNode;
 }
 
-export function WavecraftProvider({ children }: WavecraftProviderProps): JSX.Element;
+export function WavecraftProvider({
+  children
+}: WavecraftProviderProps): JSX.Element;
 ```
 
 `WavecraftProvider` is a zero-config component. It does not accept an `IpcBridge` prop; it resolves the singleton internally. This mirrors the existing hook pattern and avoids introducing dependency-injection plumbing before it is needed (see §9 Open Decisions).
@@ -157,14 +159,15 @@ This eliminates the `reload()` call in `SmartProcessor` and prevents a full refe
 
 ### 5.4 Hook taxonomy after migration
 
-| Export | Status | Implementation source |
-|---|---|---|
-| `useParameter(id)` | **Public** | Reads `params` from `ParameterStateContext`, filters for `id` |
-| `useAllParameters()` | **Public** | Returns `{ params, isLoading, error, reload }` directly from context |
-| `useAllParametersFor(processorId)` | **Public** | Reads from context, filters via `selectProcessorParams` (unchanged logic) |
-| `useParameterState` (internal) | **Internal** | Low-level context accessor; not exported from `index.ts` |
-| `ParameterClient` | **Advanced** | Still exported for escape-hatch use; not recommended in application code |
-| `IpcBridge` | **Advanced** | Unchanged |
+| Export                                   | Status                    | Implementation source                                                     |
+| ---------------------------------------- | ------------------------- | ------------------------------------------------------------------------- |
+| `useParameter(id)`                       | **Public**                | Reads `params` from `ParameterStateContext`, filters for `id`             |
+| `useAllParameters()`                     | **Public**                | Returns `{ params, isLoading, error, reload }` directly from context      |
+| `useParametersForProcessor(processorId)` | **Public (canonical)**    | Reads from context, filters via `selectProcessorParams` (unchanged logic) |
+| `useAllParametersFor(processorId)`       | **Public (compat alias)** | Alias wrapper to `useParametersForProcessor`                              |
+| `useParameterState` (internal)           | **Internal**              | Low-level context accessor; not exported from `index.ts`                  |
+| `ParameterClient`                        | **Advanced**              | Still exported for escape-hatch use; not recommended in application code  |
+| `IpcBridge`                              | **Advanced**              | Unchanged                                                                 |
 
 The public hook signatures remain identical. No breaking changes to the `@wavecraft/core` package public API.
 
@@ -190,9 +193,9 @@ On mount, `WavecraftProvider` sets `isLoading = true` and awaits the first succe
 
 ### 6.2 Connection-change invalidation
 
-| Transition | Behaviour |
-|---|---|
-| `disconnected → connected` | Clear error; set `isLoading = true`; fetch. |
+| Transition                 | Behaviour                                                                                  |
+| -------------------------- | ------------------------------------------------------------------------------------------ |
+| `disconnected → connected` | Clear error; set `isLoading = true`; fetch.                                                |
 | `connected → disconnected` | Keep `params` stale (better than empty); set `isLoading = true` (signals pending refetch). |
 
 ### 6.3 Per-parameter push update
@@ -200,7 +203,9 @@ On mount, `WavecraftProvider` sets `isLoading = true` and awaits the first succe
 `ParameterClient.onParameterChanged` fires when the engine pushes a `parameterChanged` notification. The provider applies an in-place immutable update:
 
 ```ts
-setParams(prev => prev.map(p => p.id === changedId ? { ...p, value } : p));
+setParams((prev) =>
+  prev.map((p) => (p.id === changedId ? { ...p, value } : p))
+);
 ```
 
 This is a direct copy of the existing `updateParameterValue` helper in `useAllParameters.ts`. Consumers re-render only if the value changed (React bailout applies at slice level).
@@ -212,11 +217,13 @@ This is a direct copy of the existing `updateParameterValue` helper in `useAllPa
 ### 6.5 Write-side invalidation
 
 After `setParameter` succeeds:
+
 - The optimistic update is already applied (§5.3).
 - No explicit reload is needed.
 - The engine confirms via `parameterChanged` notification, which is handled by the push handler (§6.3).
 
 If the IPC call fails:
+
 - Roll back the optimistic state.
 - Do not reload (write failed; the engine state is unchanged).
 - Reject the promise so the calling component can render feedback.
@@ -235,7 +242,10 @@ export type { WavecraftProviderProps } from './context/WavecraftProvider';
 // Existing hooks (re-exported unchanged — implementations updated internally)
 export { useParameter } from './hooks/useParameter';
 export { useAllParameters } from './hooks/useAllParameters';
-export { useAllParametersFor } from './hooks/useAllParameterFor';
+export {
+  useParametersForProcessor,
+  useAllParametersFor
+} from './hooks/useAllParameterFor';
 ```
 
 ### 7.2 Not exported (internal)
@@ -259,7 +269,7 @@ await reload();
 to:
 
 ```tsx
-const { setParameter } = useAllParametersFor(processorId);
+const { setParameter } = useParametersForProcessor(processorId);
 // or at component level:
 const { setParameter } = useAllParameters(); // if useAllParameters exposes setParameter
 ```
@@ -310,27 +320,28 @@ const { setParameter } = useAllParameters(); // if useAllParameters exposes setP
 
 File: `ui/packages/core/src/context/WavecraftProvider.test.tsx`
 
-| Scenario | Assertion |
-|---|---|
-| Initial mount with connected transport | `getAllParameters` called once; context `isLoading` transitions to `false` |
-| Mount while transport disconnected | `isLoading` remains `true`; fetch triggered on connect event |
-| `parameterChanged` notification received | Corresponding param in context updated in-place; no refetch |
-| `PARAMETERS_CHANGED` event received | Full reload triggered; `isLoading` briefly `true` |
-| `setParameter` success with push confirmation | Optimistic value applied; confirmed value replaces it |
-| `setParameter` failure | Rolled back to pre-call value; promise rejects |
-| Unmount during in-flight fetch | No `setState` after unmount (no React warning) |
-| 15-second connection timeout | Error surfaced; `isLoading` set to `false` |
+| Scenario                                      | Assertion                                                                  |
+| --------------------------------------------- | -------------------------------------------------------------------------- |
+| Initial mount with connected transport        | `getAllParameters` called once; context `isLoading` transitions to `false` |
+| Mount while transport disconnected            | `isLoading` remains `true`; fetch triggered on connect event               |
+| `parameterChanged` notification received      | Corresponding param in context updated in-place; no refetch                |
+| `PARAMETERS_CHANGED` event received           | Full reload triggered; `isLoading` briefly `true`                          |
+| `setParameter` success with push confirmation | Optimistic value applied; confirmed value replaces it                      |
+| `setParameter` failure                        | Rolled back to pre-call value; promise rejects                             |
+| Unmount during in-flight fetch                | No `setState` after unmount (no React warning)                             |
+| 15-second connection timeout                  | Error surfaced; `isLoading` set to `false`                                 |
 
 ### 9.2 Unit tests — updated hooks
 
-| Hook | Test change |
-|---|---|
-| `useAllParameters` | Existing tests pass without modification (same return shape) |
-| `useParameter` | Verify single `getAllParameters` call when both `useParameter` and `useAllParameters` are mounted in same tree (requires wrapping tree in `WavecraftProvider` in test) |
+| Hook               | Test change                                                                                                                                                            |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useAllParameters` | Existing tests pass without modification (same return shape)                                                                                                           |
+| `useParameter`     | Verify single `getAllParameters` call when both `useParameter` and `useAllParameters` are mounted in same tree (requires wrapping tree in `WavecraftProvider` in test) |
 
 ### 9.3 Integration test — duplicate fetch prevention
 
 A Vitest test mounts a component tree containing:
+
 - `<WavecraftProvider>`
   - `<SmartProcessor id="processorA" />`
   - `<SmartProcessor id="processorB" />`
@@ -346,14 +357,14 @@ Assert that `ParameterClient.getAllParameters` is called **exactly once** on ini
 
 ## 10. Risks and Mitigations
 
-| Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|
-| Context consumer re-renders on every param update | Medium | Medium | `useAllParametersFor` already uses `useMemo` to slice the param list; consumers only re-render when their slice changes. `useParameter` filters to a single object; reference equality prevents unnecessary re-renders if the value is unchanged. |
-| Optimistic rollback causes visual flicker | Low | Low | Optimistic writes are fast (IPC roundtrip <10ms in practice); confirmed push arrives quickly and is identity-equal, producing no DOM change. |
-| Provider missing from tree causes hook crash | Medium | High | `useParameterState` throws a descriptive error if context is `undefined`. Development-time only; SDK template always includes `<WavecraftProvider>`. |
-| Simultaneous migration across Phase 1→2 leaves a window of duplicate fetches | Medium | Low | Phase 1 is explicitly non-breaking; duplicate fetches are temporary and bounded. Phase 2 removes them. |
-| `reload` reference identity changes cause downstream `useEffect` re-runs | Low | Low | `reload` is created with `useCallback` inside the provider and has stable identity across renders (dependency: `fetchParameters`, itself stable). |
-| Hot-reload during `setParameter` in-flight | Low | Medium | `PARAMETERS_CHANGED` triggers a full reload which replaces all `params`, including any pending optimistic state. The in-flight `setParameter` IPC call completes independently; its push confirmation hits the fresh `params` array. No data corruption; worst case is a visible flicker. Document as known behaviour. |
+| Risk                                                                         | Likelihood | Impact | Mitigation                                                                                                                                                                                                                                                                                                             |
+| ---------------------------------------------------------------------------- | ---------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Context consumer re-renders on every param update                            | Medium     | Medium | `useAllParametersFor` already uses `useMemo` to slice the param list; consumers only re-render when their slice changes. `useParameter` filters to a single object; reference equality prevents unnecessary re-renders if the value is unchanged.                                                                      |
+| Optimistic rollback causes visual flicker                                    | Low        | Low    | Optimistic writes are fast (IPC roundtrip <10ms in practice); confirmed push arrives quickly and is identity-equal, producing no DOM change.                                                                                                                                                                           |
+| Provider missing from tree causes hook crash                                 | Medium     | High   | `useParameterState` throws a descriptive error if context is `undefined`. Development-time only; SDK template always includes `<WavecraftProvider>`.                                                                                                                                                                   |
+| Simultaneous migration across Phase 1→2 leaves a window of duplicate fetches | Medium     | Low    | Phase 1 is explicitly non-breaking; duplicate fetches are temporary and bounded. Phase 2 removes them.                                                                                                                                                                                                                 |
+| `reload` reference identity changes cause downstream `useEffect` re-runs     | Low        | Low    | `reload` is created with `useCallback` inside the provider and has stable identity across renders (dependency: `fetchParameters`, itself stable).                                                                                                                                                                      |
+| Hot-reload during `setParameter` in-flight                                   | Low        | Medium | `PARAMETERS_CHANGED` triggers a full reload which replaces all `params`, including any pending optimistic state. The in-flight `setParameter` IPC call completes independently; its push confirmation hits the fresh `params` array. No data corruption; worst case is a visible flicker. Document as known behaviour. |
 
 ---
 
@@ -381,4 +392,3 @@ Assert that `ParameterClient.getAllParameters` is called **exactly once** on ini
 - The fetch/retry logic in `WavecraftProvider` is moved verbatim from `useAllParameters.ts` (`attemptFetch`, `handleSuccessResult`, `handleStopResult`, constants). Once the migration is complete, `useAllParameters.ts` becomes a thin wrapper and the duplicated logic can be deleted.
 - The `updateParameterValue` helper (`useAllParameters.ts` line ≈82) is promoted to a shared utility in `context/` or `utils/` during the migration.
 - `useAllParameterFor.ts` (note: singular) exports `useAllParametersFor` (plural). The file name / export name inconsistency pre-dates this feature; it should be noted but is not in scope to fix here.
-
