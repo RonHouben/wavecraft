@@ -3180,7 +3180,7 @@
 ### Validation outcomes
 
 - `cargo xtask ci-check` — **PASSED**
-- `cargo xtask ci-check --full` — **FAILED** *(initial run)*
+- `cargo xtask ci-check --full` — **FAILED** _(initial run)_
   - Failure reason: template-validation startup step hit environment contention (`Address already in use (os error 48)`), causing `wavecraft start` to exit non-zero.
 - Port remediation + rerun:
   - Performed targeted listener/process checks for TCP `9001` (`lsof -nP -iTCP:9001` and listener-filtered variant) and verified no stale dev-server/WebSocket process remained bound.
