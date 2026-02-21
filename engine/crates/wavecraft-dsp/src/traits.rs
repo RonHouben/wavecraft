@@ -28,6 +28,16 @@ pub trait ProcessorParams: Default + Send + Sync + 'static {
     /// Returns the parameter specifications for this processor.
     fn param_specs() -> &'static [ParamSpec];
 
+    /// Returns how many plain values [`Self::apply_plain_values`] expects.
+    ///
+    /// By default this is derived from [`Self::param_specs`]. Override this for
+    /// parameter containers that can determine split counts without touching
+    /// `param_specs()` (for example to avoid alloc/leak helper paths in runtime
+    /// parameter splitting).
+    fn plain_value_count() -> usize {
+        Self::param_specs().len()
+    }
+
     /// Builds parameter values initialized from each [`ParamSpec::default`].
     ///
     /// By default this falls back to `Self::default()`. Implementations should

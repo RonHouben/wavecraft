@@ -72,16 +72,19 @@ impl Processor for TestPassthroughDsp {
 
 #[test]
 fn test_simple_chain_param_extraction() {
-    // SignalChain![A, B] expands to Chain<A, B>
+    // SignalChain![A, B] expands to Chain<Bypassed<A>, Bypassed<B>>
     type SimpleChain = SignalChain![TestGainDsp, TestGainDsp];
 
     // This should complete without hanging
     let specs = <SimpleChain as Processor>::Params::param_specs();
 
-    // Should have 2 gain parameters (one from each GainDsp)
-    assert_eq!(specs.len(), 2);
+    // Each stage contributes its params + bypass:
+    // Gain stage => level + bypass
+    assert_eq!(specs.len(), 4);
     assert_eq!(specs[0].name, "Level");
-    assert_eq!(specs[1].name, "Level");
+    assert_eq!(specs[1].id_suffix, "bypass");
+    assert_eq!(specs[2].name, "Level");
+    assert_eq!(specs[3].id_suffix, "bypass");
 }
 
 #[test]
@@ -92,8 +95,9 @@ fn test_nested_chain_param_extraction() {
     // This should complete without hanging
     let specs = <NestedChain as Processor>::Params::param_specs();
 
-    // Should have 2 gain parameters (PassthroughDsp has no params)
-    assert_eq!(specs.len(), 2);
+    // Gain + Gain + Passthrough:
+    // (level + bypass) + (level + bypass) + (bypass)
+    assert_eq!(specs.len(), 5);
 }
 
 #[test]
@@ -109,10 +113,11 @@ fn test_deeply_nested_chain_param_extraction() {
     // This should complete without hanging (previously caused dlopen timeout)
     let specs = <DeepChain as Processor>::Params::param_specs();
 
-    // Should have 2 gain parameters
-    assert_eq!(specs.len(), 2);
+    // Gain + Passthrough + Gain + Passthrough:
+    // (level + bypass) + (bypass) + (level + bypass) + (bypass)
+    assert_eq!(specs.len(), 6);
     assert_eq!(specs[0].name, "Level");
-    assert_eq!(specs[1].name, "Level");
+    assert_eq!(specs[3].name, "Level");
 }
 
 #[test]

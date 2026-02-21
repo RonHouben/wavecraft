@@ -19,6 +19,16 @@ const mockGainParameter: ParameterInfo = {
   unit: 'dB',
 };
 
+const mockBypassParameter: ParameterInfo = {
+  id: 'input_trim_bypass',
+  name: 'Input Trim Bypass',
+  type: 'bool',
+  value: 0,
+  default: 0,
+  min: 0,
+  max: 1,
+};
+
 describe('useParameter', () => {
   let mockTransport: MockTransport;
 
@@ -143,5 +153,32 @@ describe('useParameter', () => {
     expect(setSpy).toHaveBeenCalledWith('gain', 0.2);
     expect(getSpy).toHaveBeenCalledWith('gain');
     expect(result.current.param?.value).toBe(0.37);
+  });
+
+  it('normalizes bypass bool parameter values on load and setValue', async () => {
+    mockTransport.setConnected(true);
+    const client = ParameterClient.getInstance();
+
+    vi.spyOn(client, 'getAllParameters').mockResolvedValue([mockBypassParameter]);
+    const setSpy = vi.spyOn(client, 'setParameter').mockResolvedValue();
+    vi.spyOn(client, 'getParameter').mockResolvedValue({
+      id: 'input_trim_bypass',
+      value: 1,
+    });
+
+    const { result } = renderHook(() => useParameter('input_trim_bypass'));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.param?.value).toBe(false);
+
+    await act(async () => {
+      await result.current.setValue(true);
+    });
+
+    expect(setSpy).toHaveBeenCalledWith('input_trim_bypass', 1);
+    expect(result.current.param?.value).toBe(true);
   });
 });

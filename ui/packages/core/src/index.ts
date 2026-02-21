@@ -119,12 +119,19 @@ export type { UseAudioStatusResult } from './hooks/useAudioStatus';
 export { useRequestResize } from './hooks/useRequestResize';
 export { useHasProcessor } from './hooks/useHasProcessor';
 export { useAvailableProcessors } from './hooks/useAvailableProcessors';
+export { useProcessorBypass } from './hooks/useProcessorBypass';
+export type { UseProcessorBypassResult } from './hooks/useProcessorBypass';
 
 export { requestResize, useWindowResizeSync } from './hooks/useWindowResizeSync';
 export type { RequestResizeParams, RequestResizeResult } from './hooks/useWindowResizeSync';
 
 // Runtime processor registry (used by generated processors module)
 export { registerAvailableProcessors } from './processors/registry';
+export {
+  getProcessorBypassParamId,
+  isBypassParameterId,
+  PROCESSOR_BYPASS_SUFFIX,
+} from './processors/bypass';
 
 // =============================================================================
 // Metering API

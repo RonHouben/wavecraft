@@ -45,6 +45,10 @@ export function App(): JSX.Element {
 
         <div className="rounded-lg border border-plugin-border bg-plugin-surface p-4">
           <h2 className="mb-3 text-base font-semibold text-gray-200">Processor Controls</h2>
+          <p className="mb-3 text-xs text-gray-400">
+            Bypass controls are generated automatically per processor as <code>*_bypass</code>{' '}
+            parameters.
+          </p>
           {isLoading ? (
             <p className="text-sm text-gray-400">Loading parameters…</p>
           ) : groups.length > 0 ? (

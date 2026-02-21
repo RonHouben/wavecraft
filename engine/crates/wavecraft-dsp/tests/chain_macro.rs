@@ -1,6 +1,6 @@
 //! Tests for the SignalChain! macro.
 
-use wavecraft_dsp::combinators::Chain; // Import struct type, not macro
+use wavecraft_dsp::combinators::{Bypassed, Chain}; // Import struct types, not macro
 use wavecraft_dsp::{Processor, Transport};
 
 // Import macro separately to avoid deprecation warning on struct import
@@ -43,21 +43,20 @@ impl Processor for TestPassthrough {
 
 #[test]
 fn test_chain_macro_single_processor() {
-    // SignalChain![T] should compile to just T (zero overhead)
+    // SignalChain![T] compiles to Bypassed<T>
     type SingleChain = SignalChain![TestGain];
 
-    // This should be exactly TestGain, not wrapped
-    let _processor: SingleChain = TestGain;
+    let _processor: SingleChain = Bypassed::new(TestGain);
 }
 
 #[test]
 fn test_chain_macro_two_processors() {
-    // SignalChain![A, B] should compile to Chain<A, B>
+    // SignalChain![A, B] compiles to Chain<Bypassed<A>, Bypassed<B>>
     type TwoChain = SignalChain![TestGain, TestPassthrough];
 
     let mut chain: TwoChain = Chain {
-        first: TestGain,
-        second: TestPassthrough,
+        first: Bypassed::new(TestGain),
+        second: Bypassed::new(TestPassthrough),
     };
 
     // Verify it's a valid Processor
@@ -71,19 +70,20 @@ fn test_chain_macro_two_processors() {
 
 #[test]
 fn test_chain_macro_three_processors() {
-    // SignalChain![A, B, C] should compile to Chain<A, Chain<B, C>>
+    // SignalChain![A, B, C] compiles to
+    // Chain<Bypassed<A>, Chain<Bypassed<B>, Bypassed<C>>>
     type ThreeChain = SignalChain![TestGain, TestPassthrough, TestGain];
 
     let chain: ThreeChain = Chain {
-        first: TestGain,
+        first: Bypassed::new(TestGain),
         second: Chain {
-            first: TestPassthrough,
-            second: TestGain,
+            first: Bypassed::new(TestPassthrough),
+            second: Bypassed::new(TestGain),
         },
     };
 
     // Type check that it's properly nested
-    let _: &TestGain = &chain.first;
-    let _: &TestPassthrough = &chain.second.first;
-    let _: &TestGain = &chain.second.second;
+    let _: &Bypassed<TestGain> = &chain.first;
+    let _: &Bypassed<TestPassthrough> = &chain.second.first;
+    let _: &Bypassed<TestGain> = &chain.second.second;
 }
