@@ -1,12 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { OscillatorControl } from './OscillatorControl';
+import { OscillatorProcessor } from './OscillatorProcessor';
 
 const mockUseMeterFrame = vi.hoisted(() => vi.fn());
 const mockUseParameter = vi.hoisted(() => vi.fn());
 const mockSetOscillatorEnabled = vi.hoisted(() => vi.fn());
-const mockUseHasProcessor = vi.hoisted(() => vi.fn());
-const mockUseAllParameters = vi.hoisted(() => vi.fn());
+const mockUseHasProcessorInSignalChain = vi.hoisted(() => vi.fn());
+const mockUseAllParametersFor = vi.hoisted(() => vi.fn());
 
 vi.mock('@wavecraft/core', () => ({
   logger: {
@@ -14,8 +14,8 @@ vi.mock('@wavecraft/core', () => ({
   },
   useMeterFrame: mockUseMeterFrame,
   useParameter: mockUseParameter,
-  useHasProcessor: mockUseHasProcessor,
-  useAllParameters: mockUseAllParameters,
+  useHasProcessorInSignalChain: mockUseHasProcessorInSignalChain,
+  useAllParametersFor: mockUseAllParametersFor,
 }));
 
 vi.mock('./ParameterSlider', () => ({
@@ -26,11 +26,11 @@ vi.mock('./ParameterSelect', () => ({
   ParameterSelect: ({ id }: { id: string }) => <div data-testid={`select-${id}`} />,
 }));
 
-describe('OscillatorControl', () => {
+describe('OscillatorProcessor', () => {
   beforeEach(() => {
     mockUseMeterFrame.mockReturnValue({ peak_l: 0.2, peak_r: 0.1 });
     mockSetOscillatorEnabled.mockReset();
-    mockUseAllParameters.mockReturnValue({
+    mockUseAllParametersFor.mockReturnValue({
       params: [
         { id: 'oscillator_enabled' },
         { id: 'oscillator_waveform' },
@@ -47,11 +47,11 @@ describe('OscillatorControl', () => {
       isLoading: false,
       error: undefined,
     });
-    mockUseHasProcessor.mockReturnValue(true);
+    mockUseHasProcessorInSignalChain.mockReturnValue(true);
   });
 
   it('reflects oscillator enabled value changes in visual state', () => {
-    const { rerender } = render(<OscillatorControl />);
+    const { rerender } = render(<OscillatorProcessor />);
 
     expect(screen.getByText('Output signal (post-chain)')).toBeInTheDocument();
     expect(screen.getByText('Signal at output')).toBeInTheDocument();
@@ -68,7 +68,7 @@ describe('OscillatorControl', () => {
       error: undefined,
     });
 
-    rerender(<OscillatorControl />);
+    rerender(<OscillatorProcessor />);
 
     expect(screen.getByText('Oscillator output: Off')).toBeInTheDocument();
     expect(screen.getByText('Off')).toBeInTheDocument();
@@ -87,7 +87,7 @@ describe('OscillatorControl', () => {
       error: undefined,
     });
 
-    render(<OscillatorControl />);
+    render(<OscillatorProcessor />);
 
     expect(screen.getByText('Off')).toBeInTheDocument();
     expect(screen.getByText('Oscillator output: Off')).toBeInTheDocument();
@@ -108,21 +108,21 @@ describe('OscillatorControl', () => {
       enabledValue = nextValue;
     });
 
-    const { rerender } = render(<OscillatorControl />);
+    const { rerender } = render(<OscillatorProcessor />);
     const toggle = screen.getByRole('button', { name: 'Toggle oscillator output' });
 
     fireEvent.click(toggle);
 
     expect(mockSetOscillatorEnabled).toHaveBeenCalledWith(false);
 
-    rerender(<OscillatorControl />);
+    rerender(<OscillatorProcessor />);
     expect(screen.getByText('Oscillator output: Off')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Toggle oscillator output' }));
 
     expect(mockSetOscillatorEnabled).toHaveBeenCalledWith(true);
 
-    rerender(<OscillatorControl />);
+    rerender(<OscillatorProcessor />);
     expect(screen.getByText('Oscillator output: On')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Toggle oscillator output' })).toHaveAttribute(
       'aria-pressed',
@@ -131,7 +131,7 @@ describe('OscillatorControl', () => {
   });
 
   it('renders oscillator frequency and level controls inside oscillator component', () => {
-    render(<OscillatorControl />);
+    render(<OscillatorProcessor />);
 
     expect(screen.getByTestId('oscillator-control')).toBeInTheDocument();
     expect(screen.getByTestId('select-oscillator_waveform')).toBeInTheDocument();
@@ -154,12 +154,12 @@ describe('OscillatorControl', () => {
         error: null,
       });
 
-    const { rerender } = render(<OscillatorControl />);
+    const { rerender } = render(<OscillatorProcessor />);
 
     expect(screen.queryByText(/Error:/)).not.toBeInTheDocument();
     expect(screen.getByText('Oscillator output: Off')).toBeInTheDocument();
 
-    rerender(<OscillatorControl />);
+    rerender(<OscillatorProcessor />);
 
     expect(screen.queryByText(/Error:/)).not.toBeInTheDocument();
     expect(screen.getByText('Oscillator output: On')).toBeInTheDocument();
@@ -170,7 +170,7 @@ describe('OscillatorControl', () => {
   });
 
   it('resolves legacy param_N IDs when canonical oscillator IDs are unavailable', () => {
-    mockUseAllParameters.mockReturnValue({
+    mockUseAllParametersFor.mockReturnValue({
       params: [{ id: 'param_0' }, { id: 'param_1' }, { id: 'param_2' }, { id: 'param_3' }],
       isLoading: false,
       error: null,
@@ -184,7 +184,7 @@ describe('OscillatorControl', () => {
       error: undefined,
     }));
 
-    render(<OscillatorControl />);
+    render(<OscillatorProcessor />);
 
     expect(mockUseParameter).toHaveBeenCalledWith('param_0');
     expect(screen.getByTestId('select-param_1')).toBeInTheDocument();

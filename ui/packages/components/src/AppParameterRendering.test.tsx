@@ -4,7 +4,7 @@ import {
   ConnectionStatus,
   LatencyMonitor,
   Meter,
-  OscillatorControl,
+  OscillatorProcessor,
   ParameterGroup,
   ParameterSlider,
   VersionBadge,
@@ -39,7 +39,7 @@ function TestApp(): JSX.Element {
     <div>
       <ConnectionStatus />
       <VersionBadge />
-      <OscillatorControl />
+      <OscillatorProcessor />
       {isLoading
         ? null
         : groups.length > 0
@@ -72,7 +72,7 @@ vi.mock('@wavecraft/components', () => ({
   VersionBadge: () => <div data-testid="version-badge" />,
   ConnectionStatus: () => <div data-testid="connection-status" />,
   LatencyMonitor: () => <div data-testid="latency-monitor" />,
-  OscillatorControl: () => <div data-testid="oscillator-control" />,
+  OscillatorProcessor: () => <div data-testid="oscillator-control" />,
 }));
 
 describe('App parameter rendering', () => {

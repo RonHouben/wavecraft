@@ -5,17 +5,17 @@ import {
   __resetRegisteredProcessorsForTests,
   registerAvailableProcessors,
 } from '../processors/registry';
-import { useHasProcessor } from './useHasProcessor';
+import { useHasProcessorInSignalChain } from './useHasProcessor';
 
 afterEach(() => {
   __resetRegisteredProcessorsForTests();
 });
 
-describe('useHasProcessor', () => {
+describe('useHasProcessorInSignalChain', () => {
   it('returns true for registered processor id', () => {
     registerAvailableProcessors(['oscillator', 'output_gain']);
 
-    const { result } = renderHook(() => useHasProcessor('oscillator'));
+    const { result } = renderHook(() => useHasProcessorInSignalChain('oscillator'));
 
     expect(result.current).toBe(true);
   });
@@ -23,7 +23,7 @@ describe('useHasProcessor', () => {
   it('returns false for unknown processor id', () => {
     registerAvailableProcessors(['oscillator']);
 
-    const { result } = renderHook(() => useHasProcessor('example_processor'));
+    const { result } = renderHook(() => useHasProcessorInSignalChain('example_processor'));
 
     expect(result.current).toBe(false);
   });

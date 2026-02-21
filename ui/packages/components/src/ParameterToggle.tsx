@@ -45,7 +45,7 @@ export function ParameterToggle({ id }: ParameterToggleProps): React.JSX.Element
       </label>
       <button
         id={`toggle-${id}`}
-        className={`relative h-[26px] w-[50px] cursor-pointer rounded-full border-none outline-none transition-colors duration-200 ${
+        className={`relative h-[26px] w-[50px] cursor-pointer rounded-full border-none outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-plugin-surface ${
           isOn ? 'bg-accent hover:bg-accent-light' : 'bg-gray-600 hover:bg-gray-500'
         }`}
         onClick={handleToggle}
