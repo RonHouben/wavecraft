@@ -104,6 +104,16 @@ pub(super) fn apply_output_modifiers(
     oscillator_phase: &mut f32,
     sample_rate: f32,
 ) {
+    apply_v1_compat_output_modifiers(left, right, param_bridge, oscillator_phase, sample_rate);
+}
+
+pub(super) fn apply_v1_compat_output_modifiers(
+    left: &mut [f32],
+    right: &mut [f32],
+    param_bridge: &AtomicParameterBridge,
+    oscillator_phase: &mut f32,
+    sample_rate: f32,
+) {
     let mut tone_filter_state = StereoToneFilterState::default();
     apply_output_modifiers_with_state(
         left,
@@ -434,7 +444,10 @@ fn advance_phase(phase: &mut f32, phase_delta: f32) {
 
 #[cfg(test)]
 mod tests {
-    use super::{StereoToneFilterState, apply_output_modifiers, apply_output_modifiers_with_state};
+    use super::{
+        StereoToneFilterState, apply_output_modifiers, apply_output_modifiers_with_state,
+        apply_v1_compat_output_modifiers,
+    };
     use crate::audio::atomic_params::AtomicParameterBridge;
     use wavecraft_protocol::{ParameterInfo, ParameterType};
 
@@ -461,7 +474,7 @@ mod tests {
         let mut left = [0.25_f32, -0.5, 0.75];
         let mut right = [0.2_f32, -0.4, 0.6];
         let mut phase = 0.0;
-        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
+        apply_v1_compat_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
 
         assert!(left.iter().all(|s| s.abs() <= f32::EPSILON));
         assert!(right.iter().all(|s| s.abs() <= f32::EPSILON));
@@ -474,7 +487,7 @@ mod tests {
         let mut left = [0.25_f32, -0.5, 0.75];
         let mut right = [0.2_f32, -0.4, 0.6];
         let mut phase = 0.0;
-        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
+        apply_v1_compat_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
 
         assert_eq!(left, [0.25, -0.5, 0.75]);
         assert_eq!(right, [0.2, -0.4, 0.6]);
@@ -589,7 +602,7 @@ mod tests {
         let mut right = [0.0_f32; 128];
         let mut phase = 0.0;
 
-        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
+        apply_v1_compat_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
 
         let peak_left = left
             .iter()
@@ -611,7 +624,7 @@ mod tests {
         let mut right = [0.1_f32; 64];
         let mut phase = 0.0;
 
-        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
+        apply_v1_compat_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
 
         assert!(left.iter().all(|s| s.abs() <= f32::EPSILON));
         assert!(right.iter().all(|s| s.abs() <= f32::EPSILON));
@@ -630,14 +643,14 @@ mod tests {
         let mut low_phase = 0.0;
         let mut high_phase = 0.0;
 
-        apply_output_modifiers(
+        apply_v1_compat_output_modifiers(
             &mut low_left,
             &mut low_right,
             &low_freq_bridge,
             &mut low_phase,
             48_000.0,
         );
-        apply_output_modifiers(
+        apply_v1_compat_output_modifiers(
             &mut high_left,
             &mut high_right,
             &high_freq_bridge,
@@ -666,14 +679,14 @@ mod tests {
         let mut unity_phase = 0.0;
         let mut boosted_phase = 0.0;
 
-        apply_output_modifiers(
+        apply_v1_compat_output_modifiers(
             &mut unity_left,
             &mut unity_right,
             &unity_bridge,
             &mut unity_phase,
             48_000.0,
         );
-        apply_output_modifiers(
+        apply_v1_compat_output_modifiers(
             &mut boosted_left,
             &mut boosted_right,
             &boosted_bridge,
@@ -706,14 +719,14 @@ mod tests {
         let mut sine_phase = 0.0;
         let mut saw_phase = 0.0;
 
-        apply_output_modifiers(
+        apply_v1_compat_output_modifiers(
             &mut sine_left,
             &mut sine_right,
             &sine_bridge,
             &mut sine_phase,
             48_000.0,
         );
-        apply_output_modifiers(
+        apply_v1_compat_output_modifiers(
             &mut saw_left,
             &mut saw_right,
             &saw_bridge,
@@ -762,7 +775,7 @@ mod tests {
         let mut right = [0.2_f32, -0.4, 0.6];
         let mut phase = 0.0;
 
-        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
+        apply_v1_compat_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
 
         let expected_gain = 1.5 * 1.2;
         assert_eq!(
@@ -816,7 +829,7 @@ mod tests {
         let mut right = [0.5_f32; 16];
         let mut phase = 0.0;
 
-        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
+        apply_v1_compat_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
 
         // Legacy compact IDs are intentionally unsupported.
         let expected = 0.5;
@@ -857,7 +870,7 @@ mod tests {
         let mut right = [0.5_f32; 16];
         let mut phase = 0.0;
 
-        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
+        apply_v1_compat_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
 
         // Legacy "*_gain" aliases are intentionally unsupported.
         let expected = 0.5;
@@ -910,7 +923,7 @@ mod tests {
         let mut right = [0.5_f32; 8];
         let mut phase = 0.0;
 
-        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
+        apply_v1_compat_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
 
         // Strict canonical-only policy: legacy variants are ignored when present.
         let expected = 0.5 * 1.6;

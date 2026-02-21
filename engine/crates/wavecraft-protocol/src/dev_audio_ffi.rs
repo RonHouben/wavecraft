@@ -71,6 +71,18 @@ pub struct DevProcessorVTable {
         num_samples: u32,
     ),
 
+    /// Apply a dense plain-value parameter snapshot to the processor instance.
+    ///
+    /// Values are ordered according to `ProcessorParams::param_specs()` in the
+    /// generated plugin wrapper.
+    ///
+    /// # Safety
+    /// - `instance` must be a valid pointer from `create`
+    /// - `values_ptr` must reference `len` contiguous `f32` values
+    /// - Caller must ensure the value order matches the processor parameter order
+    pub apply_plain_values:
+        unsafe extern "C" fn(instance: *mut c_void, values_ptr: *const f32, len: usize),
+
     /// Update the processor's sample rate.
     pub set_sample_rate: extern "C" fn(instance: *mut c_void, sample_rate: f32),
 
@@ -86,8 +98,11 @@ pub struct DevProcessorVTable {
     pub drop: extern "C" fn(instance: *mut c_void),
 }
 
-/// Current vtable version. Increment on breaking changes.
-pub const DEV_PROCESSOR_VTABLE_VERSION: u32 = 1;
+/// Current vtable version.
+///
+/// v2 adds `apply_plain_values` to support block-boundary parameter injection
+/// in dev FFI mode.
+pub const DEV_PROCESSOR_VTABLE_VERSION: u32 = 2;
 
 /// FFI symbol name exported by `wavecraft_plugin!` macro.
 pub const DEV_PROCESSOR_SYMBOL: &[u8] = b"wavecraft_dev_create_processor\0";

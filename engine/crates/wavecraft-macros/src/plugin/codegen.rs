@@ -470,11 +470,18 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
 
             type __P = __ProcessorType;
             type __Params = <__P as #krate::Processor>::Params;
+            struct __DevProcessorInstance {
+                processor: __P,
+                params: __Params,
+            }
 
             extern "C" fn create() -> *mut c_void {
                 let result = ::std::panic::catch_unwind(::std::panic::AssertUnwindSafe(|| {
-                    let processor = ::std::boxed::Box::new(<__P as ::std::default::Default>::default());
-                    ::std::boxed::Box::into_raw(processor) as *mut c_void
+                    let instance = ::std::boxed::Box::new(__DevProcessorInstance {
+                        processor: <__P as ::std::default::Default>::default(),
+                        params: <__Params as #krate::ProcessorParams>::from_param_defaults(),
+                    });
+                    ::std::boxed::Box::into_raw(instance) as *mut c_void
                 }));
                 match result {
                     Ok(ptr) => ptr,
@@ -492,27 +499,81 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                     if instance.is_null() || channels.is_null() || num_channels == 0 || num_samples == 0 {
                         return;
                     }
-                    let processor = unsafe { &mut *(instance as *mut __P) };
+                    let instance = unsafe { &mut *(instance as *mut __DevProcessorInstance) };
                     let num_ch = num_channels as usize;
                     let num_samp = num_samples as usize;
 
-                    // Build &mut [&mut [f32]] from raw pointers.
-                    // SAFETY: Caller guarantees valid pointers and bounds (documented in vtable).
-                    // Note: Vec allocation is acceptable here — this runs in the dev audio server
-                    // context (not a DAW audio thread), where latency requirements are softer.
-                    let mut channel_slices: ::std::vec::Vec<&mut [f32]> = (0..num_ch)
-                        .map(|ch| unsafe {
-                            let ptr = *channels.add(ch);
-                            ::std::slice::from_raw_parts_mut(ptr, num_samp)
-                        })
-                        .collect();
-
                     let transport = #krate::Transport::default();
-                    let params = <__Params as #krate::ProcessorParams>::from_param_defaults();
 
-                    #krate::Processor::process(processor, &mut channel_slices, &transport, &params);
+                    // Build stack-local channel slices for the current block.
+                    // Wavecraft dev audio currently targets mono/stereo.
+                    match num_ch {
+                        1 => {
+                            let ch0_ptr = unsafe { *channels.add(0) };
+                            if ch0_ptr.is_null() {
+                                return;
+                            }
+
+                            let ch0 = unsafe { ::std::slice::from_raw_parts_mut(ch0_ptr, num_samp) };
+                            let mut channel_slices: [&mut [f32]; 1] = [ch0];
+                            #krate::Processor::process(
+                                &mut instance.processor,
+                                &mut channel_slices,
+                                &transport,
+                                &instance.params,
+                            );
+                        }
+                        2 => {
+                            let ch0_ptr = unsafe { *channels.add(0) };
+                            let ch1_ptr = unsafe { *channels.add(1) };
+                            if ch0_ptr.is_null() || ch1_ptr.is_null() {
+                                return;
+                            }
+
+                            let ch0 = unsafe { ::std::slice::from_raw_parts_mut(ch0_ptr, num_samp) };
+                            let ch1 = unsafe { ::std::slice::from_raw_parts_mut(ch1_ptr, num_samp) };
+                            let mut channel_slices: [&mut [f32]; 2] = [ch0, ch1];
+                            #krate::Processor::process(
+                                &mut instance.processor,
+                                &mut channel_slices,
+                                &transport,
+                                &instance.params,
+                            );
+                        }
+                        _ => {
+                            // Unsupported channel topology in dev-FFI path.
+                        }
+                    }
                 }));
                 // If panic occurred, audio buffer is left unmodified (pass-through)
+            }
+
+            unsafe extern "C" fn apply_plain_values(
+                instance: *mut c_void,
+                values_ptr: *const f32,
+                len: usize,
+            ) {
+                let _ = ::std::panic::catch_unwind(::std::panic::AssertUnwindSafe(|| {
+                    if instance.is_null() {
+                        return;
+                    }
+
+                    if values_ptr.is_null() && len != 0 {
+                        return;
+                    }
+
+                    let instance = unsafe { &mut *(instance as *mut __DevProcessorInstance) };
+                    let values: &[f32] = if len == 0 {
+                        &[]
+                    } else {
+                        unsafe { ::std::slice::from_raw_parts(values_ptr, len) }
+                    };
+
+                    <__Params as #krate::ProcessorParams>::apply_plain_values(
+                        &mut instance.params,
+                        values,
+                    );
+                }));
             }
 
             extern "C" fn set_sample_rate(instance: *mut c_void, sample_rate: f32) {
@@ -520,8 +581,8 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                     if instance.is_null() {
                         return;
                     }
-                    let processor = unsafe { &mut *(instance as *mut __P) };
-                    #krate::Processor::set_sample_rate(processor, sample_rate);
+                    let instance = unsafe { &mut *(instance as *mut __DevProcessorInstance) };
+                    #krate::Processor::set_sample_rate(&mut instance.processor, sample_rate);
                 }));
             }
 
@@ -530,15 +591,17 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                     if instance.is_null() {
                         return;
                     }
-                    let processor = unsafe { &mut *(instance as *mut __P) };
-                    #krate::Processor::reset(processor);
+                    let instance = unsafe { &mut *(instance as *mut __DevProcessorInstance) };
+                    #krate::Processor::reset(&mut instance.processor);
                 }));
             }
 
             extern "C" fn drop_fn(instance: *mut c_void) {
                 let _ = ::std::panic::catch_unwind(::std::panic::AssertUnwindSafe(|| {
                     if !instance.is_null() {
-                        let _ = unsafe { ::std::boxed::Box::from_raw(instance as *mut __P) };
+                        let _ = unsafe {
+                            ::std::boxed::Box::from_raw(instance as *mut __DevProcessorInstance)
+                        };
                     }
                 }));
             }
@@ -547,6 +610,7 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                 version: #krate::__internal::DEV_PROCESSOR_VTABLE_VERSION,
                 create,
                 process,
+                apply_plain_values,
                 set_sample_rate,
                 reset,
                 drop: drop_fn,
