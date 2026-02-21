@@ -1,14 +1,18 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { OscilloscopeChannelView, OscilloscopeFrame, OscilloscopeTriggerMode } from './types';
+import { focusRingClass } from './utils/classNames';
 
 const WIDTH = 640;
 const HEIGHT = 220;
 const PADDING = 10;
 
-const LEFT_COLOR = '#22c55e';
-const RIGHT_COLOR = '#3b82f6';
-const GRID_COLOR = '#334155';
-const AXIS_COLOR = '#64748b';
+// Canvas drawing cannot consume Tailwind classes directly, so these values mirror
+// existing design tokens (meter.safe, accent, plugin.border, gray-500, plugin.dark).
+const LEFT_COLOR = '#4caf50';
+const RIGHT_COLOR = '#4a9eff';
+const GRID_COLOR = 'rgba(68, 68, 68, 0.65)';
+const AXIS_COLOR = '#6b7280';
+const BACKGROUND_COLOR = '#1a1a1a';
 
 interface OscilloscopeProcessorProps {
   readonly connected: boolean;
@@ -56,7 +60,7 @@ export function OscilloscopeProcessor({
 
     const drawGrid = (): void => {
       context.clearRect(0, 0, WIDTH, HEIGHT);
-      context.fillStyle = '#111827';
+      context.fillStyle = BACKGROUND_COLOR;
       context.fillRect(0, 0, WIDTH, HEIGHT);
 
       context.strokeStyle = GRID_COLOR;
@@ -163,7 +167,7 @@ export function OscilloscopeProcessor({
           <select
             id="osc-view-select"
             data-testid="osc-channel-view"
-            className="rounded border border-plugin-border bg-plugin-dark px-2 py-1 text-xs text-gray-200"
+            className={`rounded border border-plugin-border bg-plugin-dark px-2 py-1 text-xs text-gray-200 focus:border-accent ${focusRingClass}`}
             value={channelView}
             onChange={(event) => {
               setChannelView(event.target.value as OscilloscopeChannelView);
@@ -183,7 +187,7 @@ export function OscilloscopeProcessor({
           <select
             id="osc-trigger-mode-select"
             data-testid="osc-trigger-mode"
-            className="rounded border border-plugin-border bg-plugin-dark px-2 py-1 text-xs text-gray-200"
+            className={`rounded border border-plugin-border bg-plugin-dark px-2 py-1 text-xs text-gray-200 focus:border-accent ${focusRingClass}`}
             value={triggerMode}
             onChange={(event) => {
               setTriggerMode(event.target.value as OscilloscopeTriggerMode);

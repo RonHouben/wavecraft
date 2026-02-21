@@ -6,6 +6,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import type { MeterFrame } from './types';
+import { focusRingClass } from './utils/classNames';
 
 const METER_FLOOR_DB = -60;
 const METER_RANGE_DB = 60; // 0 to -60 dB
@@ -122,7 +123,7 @@ export function Meter({ connected, frame }: Readonly<MeterProps>): React.JSX.Ele
         {(clippedL || clippedR) && (
           <button
             data-testid="meter-clip-button"
-            className="animate-clip-pulse cursor-pointer select-none rounded border-none bg-meter-clip px-2 py-0.5 text-[10px] font-bold text-white hover:bg-meter-clip-dark active:scale-95"
+            className={`animate-clip-pulse cursor-pointer select-none rounded border-none bg-meter-clip px-2 py-0.5 text-[10px] font-bold text-white hover:bg-meter-clip-dark active:scale-95 ${focusRingClass}`}
             onClick={handleResetClip}
             title="Click to reset"
             type="button"

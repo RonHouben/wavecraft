@@ -10,6 +10,37 @@ import globals from 'globals';
 export default [
   // Base JavaScript rules
   js.configs.recommended,
+
+  // Guardrail: disallow raw IPC method strings in app source
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/**/*.test.{ts,tsx}', 'src/**/__mocks__/**', 'src/**/*mock*.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "Literal[value='getParameter']",
+          message: 'Use canonical IPC constants instead of raw method strings.',
+        },
+        {
+          selector: "Literal[value='setParameter']",
+          message: 'Use canonical IPC constants instead of raw method strings.',
+        },
+        {
+          selector: "Literal[value='getMeterFrame']",
+          message: 'Use canonical IPC constants instead of raw method strings.',
+        },
+        {
+          selector: "Literal[value='getAudioStatus']",
+          message: 'Use canonical IPC constants instead of raw method strings.',
+        },
+        {
+          selector: "Literal[value='ping']",
+          message: 'Use canonical IPC constants instead of raw method strings.',
+        },
+      ],
+    },
+  },
   
   // TypeScript files
   {

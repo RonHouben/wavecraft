@@ -65,4 +65,20 @@ describe('Meter', () => {
     // Component renders successfully
     expect(screen.getByText('Levels')).toBeInTheDocument();
   });
+
+  it('applies shared focus-visible classes to clip reset button', () => {
+    const clippedFrame = {
+      peak_l: 1.1,
+      peak_r: 0.2,
+      rms_l: 0.9,
+      rms_r: 0.1,
+      timestamp: Date.now(),
+    };
+
+    render(<Meter connected frame={clippedFrame} />);
+
+    const clipButton = screen.getByTestId('meter-clip-button');
+    expect(clipButton).toHaveClass('focus-visible:ring-2');
+    expect(clipButton).toHaveClass('focus-visible:ring-accent');
+  });
 });

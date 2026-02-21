@@ -51,6 +51,15 @@ describe('OscilloscopeProcessor', () => {
     expect(screen.getByTestId('osc-trigger-mode')).toHaveValue('risingZeroCrossing');
   });
 
+  it('applies shared focus-visible classes to select controls', () => {
+    render(<OscilloscopeProcessor connected frame={frame} />);
+
+    expect(screen.getByTestId('osc-channel-view')).toHaveClass('focus-visible:ring-2');
+    expect(screen.getByTestId('osc-channel-view')).toHaveClass('focus-visible:ring-accent');
+    expect(screen.getByTestId('osc-trigger-mode')).toHaveClass('focus-visible:ring-2');
+    expect(screen.getByTestId('osc-trigger-mode')).toHaveClass('focus-visible:ring-accent');
+  });
+
   it('shows no-signal label when frame reports no signal', () => {
     const noSignalFrame = {
       points_l: new Array(1024).fill(0),

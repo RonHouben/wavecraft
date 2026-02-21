@@ -5,6 +5,7 @@
  */
 
 import type { Transport, NotificationCallback } from './Transport';
+import { IpcMethods } from '../ipc/constants';
 import type { IpcResponse } from '../types/ipc';
 
 export class MockTransport implements Transport {
@@ -80,7 +81,7 @@ export class MockTransport implements Transport {
    */
   private getMockResult(method: string, _params?: unknown): unknown {
     switch (method) {
-      case 'getParameter':
+      case IpcMethods.GET_PARAMETER:
         return {
           value: 0,
           default: 0,
@@ -89,12 +90,12 @@ export class MockTransport implements Transport {
           name: 'Mock Parameter',
         };
 
-      case 'getAllParameters':
+      case IpcMethods.GET_ALL_PARAMETERS:
         return {
           parameters: [],
         };
 
-      case 'getMeterFrame':
+      case IpcMethods.GET_METER_FRAME:
         return {
           frame: {
             peak_l: 0,
@@ -105,7 +106,7 @@ export class MockTransport implements Transport {
           },
         };
 
-      case 'getOscilloscopeFrame':
+      case IpcMethods.GET_OSCILLOSCOPE_FRAME:
         return {
           frame: {
             points_l: new Array(1024).fill(0),
@@ -117,13 +118,13 @@ export class MockTransport implements Transport {
           },
         };
 
-      case 'requestResize':
+      case IpcMethods.REQUEST_RESIZE:
         return { accepted: true };
 
-      case 'setParameter':
+      case IpcMethods.SET_PARAMETER:
         return {};
 
-      case 'ping':
+      case IpcMethods.PING:
         return {};
 
       default:
