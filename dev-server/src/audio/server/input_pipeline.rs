@@ -10,6 +10,7 @@ use super::device_setup::InputStreamBuildContext;
 pub(super) struct InputCallbackPipeline {
     frame_counter: u64,
     oscillator_phase: f32,
+    tone_filter_state: super::output_modifiers::StereoToneFilterState,
     left_buf: Vec<f32>,
     right_buf: Vec<f32>,
     interleave_buf: Vec<f32>,
@@ -27,6 +28,7 @@ impl InputCallbackPipeline {
         Self {
             frame_counter: 0,
             oscillator_phase: 0.0,
+            tone_filter_state: super::output_modifiers::StereoToneFilterState::default(),
             left_buf: vec![0.0f32; context.buffer_size],
             right_buf: vec![0.0f32; context.buffer_size],
             interleave_buf: vec![0.0f32; context.buffer_size * 2],
@@ -64,12 +66,13 @@ impl InputCallbackPipeline {
         // Apply runtime output modifiers from lock-free parameters.
         // This provides immediate control for source generators in
         // browser dev mode while FFI parameter injection is evolving.
-        super::output_modifiers::apply_output_modifiers(
+        super::output_modifiers::apply_output_modifiers_with_state(
             left,
             right,
             &self.param_bridge,
             &mut self.oscillator_phase,
             self.actual_sample_rate,
+            &mut self.tone_filter_state,
         );
 
         // Re-borrow after process()

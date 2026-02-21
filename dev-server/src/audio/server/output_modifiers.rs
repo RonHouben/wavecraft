@@ -1,9 +1,21 @@
 use wavecraft_processors::{Waveform, generate_waveform_sample};
 
 use super::super::atomic_params::AtomicParameterBridge;
+use std::f32::consts::PI;
 
 const GAIN_MULTIPLIER_MIN: f32 = 0.0;
 const GAIN_MULTIPLIER_MAX: f32 = 2.0;
+
+const TONE_FILTER_MODE_PARAM_ID: &str = "tone_filter_mode";
+const TONE_FILTER_CUTOFF_PARAM_ID: &str = "tone_filter_cutoff_hz";
+const TONE_FILTER_RESONANCE_Q_PARAM_ID: &str = "tone_filter_resonance_q";
+const TONE_FILTER_BYPASS_PARAM_ID: &str = "tone_filter_bypass";
+
+const TONE_FILTER_MIN_CUTOFF_HZ: f32 = 20.0;
+const TONE_FILTER_DEFAULT_CUTOFF_HZ: f32 = 1_000.0;
+const TONE_FILTER_MIN_Q: f32 = 0.1;
+const TONE_FILTER_MAX_Q: f32 = 10.0;
+const TONE_FILTER_DEFAULT_Q: f32 = 0.707;
 
 // Canonical IDs for gain controls; input trim keeps a temporary legacy fallback
 // during the InputGain -> InputTrim migration for hot-reload compatibility.
@@ -20,12 +32,89 @@ const OSCILLATOR_LEVEL_MIN: f32 = 0.0;
 const OSCILLATOR_LEVEL_MAX: f32 = 1.0;
 const OSCILLATOR_LEVEL_FALLBACK: f32 = 0.0;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+enum ToneFilterMode {
+    #[default]
+    LowPass,
+    HighPass,
+    BandPass,
+}
+
+impl ToneFilterMode {
+    fn from_index(index: i32) -> Self {
+        match index {
+            1 => Self::HighPass,
+            2 => Self::BandPass,
+            _ => Self::LowPass,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct BiquadState {
+    x1: f32,
+    x2: f32,
+    y1: f32,
+    y2: f32,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct BiquadCoefficients {
+    b0: f32,
+    b1: f32,
+    b2: f32,
+    a1: f32,
+    a2: f32,
+}
+
+impl BiquadState {
+    #[inline]
+    fn process_sample(&mut self, input: f32, coeffs: BiquadCoefficients) -> f32 {
+        let output = coeffs.b0 * input + coeffs.b1 * self.x1 + coeffs.b2 * self.x2
+            - coeffs.a1 * self.y1
+            - coeffs.a2 * self.y2;
+
+        self.x2 = self.x1;
+        self.x1 = input;
+        self.y2 = self.y1;
+        self.y1 = output;
+
+        output
+    }
+}
+
+#[derive(Debug, Default)]
+pub(super) struct StereoToneFilterState {
+    left: BiquadState,
+    right: BiquadState,
+}
+
+#[cfg(test)]
 pub(super) fn apply_output_modifiers(
     left: &mut [f32],
     right: &mut [f32],
     param_bridge: &AtomicParameterBridge,
     oscillator_phase: &mut f32,
     sample_rate: f32,
+) {
+    let mut tone_filter_state = StereoToneFilterState::default();
+    apply_output_modifiers_with_state(
+        left,
+        right,
+        param_bridge,
+        oscillator_phase,
+        sample_rate,
+        &mut tone_filter_state,
+    );
+}
+
+pub(super) fn apply_output_modifiers_with_state(
+    left: &mut [f32],
+    right: &mut [f32],
+    param_bridge: &AtomicParameterBridge,
+    oscillator_phase: &mut f32,
+    sample_rate: f32,
+    tone_filter_state: &mut StereoToneFilterState,
 ) {
     let input_trim_bypassed = read_bypass_state(param_bridge, INPUT_TRIM_BYPASS_PARAM_ID);
     let input_gain = if input_trim_bypassed {
@@ -83,6 +172,8 @@ pub(super) fn apply_output_modifiers(
         *oscillator_phase = phase;
     }
 
+    apply_tone_filter(left, right, param_bridge, sample_rate, tone_filter_state);
+
     apply_gain(left, right, combined_gain);
 }
 
@@ -133,6 +224,119 @@ fn apply_gain(left: &mut [f32], right: &mut [f32], gain: f32) {
     }
 }
 
+fn apply_tone_filter(
+    left: &mut [f32],
+    right: &mut [f32],
+    param_bridge: &AtomicParameterBridge,
+    sample_rate_hz: f32,
+    state: &mut StereoToneFilterState,
+) {
+    if !has_tone_filter_controls(param_bridge) {
+        return;
+    }
+
+    if read_bypass_state(param_bridge, TONE_FILTER_BYPASS_PARAM_ID) {
+        return;
+    }
+
+    let mode = read_tone_filter_mode(param_bridge);
+    let cutoff_hz = read_tone_filter_cutoff_hz(param_bridge);
+    let resonance_q = read_tone_filter_resonance_q(param_bridge);
+    let coeffs = compute_tone_filter_coefficients(sample_rate_hz, cutoff_hz, resonance_q, mode);
+
+    for sample in left.iter_mut() {
+        *sample = state.left.process_sample(*sample, coeffs);
+    }
+
+    for sample in right.iter_mut() {
+        *sample = state.right.process_sample(*sample, coeffs);
+    }
+}
+
+fn has_tone_filter_controls(param_bridge: &AtomicParameterBridge) -> bool {
+    param_bridge.read(TONE_FILTER_MODE_PARAM_ID).is_some()
+        || param_bridge.read(TONE_FILTER_CUTOFF_PARAM_ID).is_some()
+        || param_bridge
+            .read(TONE_FILTER_RESONANCE_Q_PARAM_ID)
+            .is_some()
+        || param_bridge.read(TONE_FILTER_BYPASS_PARAM_ID).is_some()
+}
+
+fn read_tone_filter_mode(param_bridge: &AtomicParameterBridge) -> ToneFilterMode {
+    let mode_index = param_bridge
+        .read(TONE_FILTER_MODE_PARAM_ID)
+        .filter(|value| value.is_finite())
+        .map_or(0, |value| value.round() as i32);
+
+    ToneFilterMode::from_index(mode_index)
+}
+
+fn read_tone_filter_cutoff_hz(param_bridge: &AtomicParameterBridge) -> f32 {
+    param_bridge
+        .read(TONE_FILTER_CUTOFF_PARAM_ID)
+        .filter(|value| value.is_finite())
+        .unwrap_or(TONE_FILTER_DEFAULT_CUTOFF_HZ)
+}
+
+fn read_tone_filter_resonance_q(param_bridge: &AtomicParameterBridge) -> f32 {
+    param_bridge
+        .read(TONE_FILTER_RESONANCE_Q_PARAM_ID)
+        .filter(|value| value.is_finite())
+        .unwrap_or(TONE_FILTER_DEFAULT_Q)
+}
+
+fn compute_tone_filter_coefficients(
+    sample_rate_hz: f32,
+    cutoff_hz: f32,
+    resonance_q: f32,
+    mode: ToneFilterMode,
+) -> BiquadCoefficients {
+    let sample_rate_hz = sample_rate_hz.max(1.0);
+    let nyquist_hz = (sample_rate_hz * 0.5).max(TONE_FILTER_MIN_CUTOFF_HZ + 1.0);
+    let cutoff_hz = cutoff_hz.clamp(TONE_FILTER_MIN_CUTOFF_HZ, nyquist_hz - 1.0);
+    let q = resonance_q.clamp(TONE_FILTER_MIN_Q, TONE_FILTER_MAX_Q);
+
+    let omega = 2.0 * PI * cutoff_hz / sample_rate_hz;
+    let sin_omega = omega.sin();
+    let cos_omega = omega.cos();
+    let alpha = sin_omega / (2.0 * q);
+
+    let (b0, b1, b2, a0, a1, a2) = match mode {
+        ToneFilterMode::LowPass => (
+            (1.0 - cos_omega) * 0.5,
+            1.0 - cos_omega,
+            (1.0 - cos_omega) * 0.5,
+            1.0 + alpha,
+            -2.0 * cos_omega,
+            1.0 - alpha,
+        ),
+        ToneFilterMode::HighPass => (
+            (1.0 + cos_omega) * 0.5,
+            -(1.0 + cos_omega),
+            (1.0 + cos_omega) * 0.5,
+            1.0 + alpha,
+            -2.0 * cos_omega,
+            1.0 - alpha,
+        ),
+        ToneFilterMode::BandPass => (
+            alpha,
+            0.0,
+            -alpha,
+            1.0 + alpha,
+            -2.0 * cos_omega,
+            1.0 - alpha,
+        ),
+    };
+
+    BiquadCoefficients {
+        b0: b0 / a0,
+        b1: b1 / a0,
+        b2: b2 / a0,
+        a1: a1 / a0,
+        a2: a2 / a0,
+    }
+}
+
 fn normalize_oscillator_frequency(value: f32) -> f32 {
     if value.is_finite() {
         value.clamp(OSCILLATOR_FREQUENCY_MIN_HZ, OSCILLATOR_FREQUENCY_MAX_HZ)
@@ -162,7 +366,7 @@ fn advance_phase(phase: &mut f32, phase_delta: f32) {
 
 #[cfg(test)]
 mod tests {
-    use super::apply_output_modifiers;
+    use super::{StereoToneFilterState, apply_output_modifiers, apply_output_modifiers_with_state};
     use crate::audio::atomic_params::AtomicParameterBridge;
     use wavecraft_protocol::{ParameterInfo, ParameterType};
 
@@ -724,5 +928,314 @@ mod tests {
         assert!(enabled_peak > bypassed_peak * 1.5);
         assert_eq!(enabled_left, enabled_right);
         assert_eq!(bypassed_left, bypassed_right);
+    }
+
+    #[test]
+    fn output_modifiers_tone_filter_mode_cutoff_and_q_affect_signal() {
+        let highpass_bridge = AtomicParameterBridge::new(&[
+            ParameterInfo {
+                id: "tone_filter_mode".to_string(),
+                name: "Tone Filter Mode".to_string(),
+                param_type: ParameterType::Enum,
+                value: 1.0,
+                default: 1.0,
+                min: 0.0,
+                max: 2.0,
+                unit: None,
+                group: Some("ToneFilter".to_string()),
+                variants: Some(vec![
+                    "LowPass".to_string(),
+                    "HighPass".to_string(),
+                    "BandPass".to_string(),
+                ]),
+            },
+            ParameterInfo {
+                id: "tone_filter_cutoff_hz".to_string(),
+                name: "Tone Filter Cutoff".to_string(),
+                param_type: ParameterType::Float,
+                value: 1_000.0,
+                default: 1_000.0,
+                min: 20.0,
+                max: 20_000.0,
+                unit: Some("Hz".to_string()),
+                group: Some("ToneFilter".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "tone_filter_resonance_q".to_string(),
+                name: "Tone Filter Resonance".to_string(),
+                param_type: ParameterType::Float,
+                value: 0.707,
+                default: 0.707,
+                min: 0.1,
+                max: 10.0,
+                unit: Some("Q".to_string()),
+                group: Some("ToneFilter".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "tone_filter_bypass".to_string(),
+                name: "Tone Filter Bypass".to_string(),
+                param_type: ParameterType::Bool,
+                value: 0.0,
+                default: 0.0,
+                min: 0.0,
+                max: 1.0,
+                unit: None,
+                group: Some("ToneFilter".to_string()),
+                variants: None,
+            },
+        ]);
+
+        let lowpass_bridge = AtomicParameterBridge::new(&[
+            ParameterInfo {
+                id: "tone_filter_mode".to_string(),
+                name: "Tone Filter Mode".to_string(),
+                param_type: ParameterType::Enum,
+                value: 0.0,
+                default: 0.0,
+                min: 0.0,
+                max: 2.0,
+                unit: None,
+                group: Some("ToneFilter".to_string()),
+                variants: Some(vec![
+                    "LowPass".to_string(),
+                    "HighPass".to_string(),
+                    "BandPass".to_string(),
+                ]),
+            },
+            ParameterInfo {
+                id: "tone_filter_cutoff_hz".to_string(),
+                name: "Tone Filter Cutoff".to_string(),
+                param_type: ParameterType::Float,
+                value: 1_000.0,
+                default: 1_000.0,
+                min: 20.0,
+                max: 20_000.0,
+                unit: Some("Hz".to_string()),
+                group: Some("ToneFilter".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "tone_filter_resonance_q".to_string(),
+                name: "Tone Filter Resonance".to_string(),
+                param_type: ParameterType::Float,
+                value: 2.5,
+                default: 2.5,
+                min: 0.1,
+                max: 10.0,
+                unit: Some("Q".to_string()),
+                group: Some("ToneFilter".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "tone_filter_bypass".to_string(),
+                name: "Tone Filter Bypass".to_string(),
+                param_type: ParameterType::Bool,
+                value: 0.0,
+                default: 0.0,
+                min: 0.0,
+                max: 1.0,
+                unit: None,
+                group: Some("ToneFilter".to_string()),
+                variants: None,
+            },
+        ]);
+
+        let mut highpass_left = [1.0_f32; 256];
+        let mut highpass_right = [1.0_f32; 256];
+        let mut lowpass_left = [1.0_f32; 256];
+        let mut lowpass_right = [1.0_f32; 256];
+        let mut highpass_phase = 0.0;
+        let mut lowpass_phase = 0.0;
+        let mut highpass_filter_state = StereoToneFilterState::default();
+        let mut lowpass_filter_state = StereoToneFilterState::default();
+
+        apply_output_modifiers_with_state(
+            &mut highpass_left,
+            &mut highpass_right,
+            &highpass_bridge,
+            &mut highpass_phase,
+            48_000.0,
+            &mut highpass_filter_state,
+        );
+        apply_output_modifiers_with_state(
+            &mut lowpass_left,
+            &mut lowpass_right,
+            &lowpass_bridge,
+            &mut lowpass_phase,
+            48_000.0,
+            &mut lowpass_filter_state,
+        );
+
+        let highpass_tail = highpass_left.last().copied().unwrap_or_default().abs();
+        let lowpass_tail = lowpass_left.last().copied().unwrap_or_default().abs();
+
+        assert!(
+            lowpass_tail > highpass_tail,
+            "low-pass should preserve more DC than high-pass"
+        );
+        assert_ne!(
+            lowpass_left, highpass_left,
+            "mode/cutoff/q should alter filter response"
+        );
+        assert_eq!(highpass_left, highpass_right);
+        assert_eq!(lowpass_left, lowpass_right);
+    }
+
+    #[test]
+    fn output_modifiers_tone_filter_bypass_disables_filter_processing() {
+        let filtered_bridge = AtomicParameterBridge::new(&[
+            ParameterInfo {
+                id: "tone_filter_mode".to_string(),
+                name: "Tone Filter Mode".to_string(),
+                param_type: ParameterType::Enum,
+                value: 0.0,
+                default: 0.0,
+                min: 0.0,
+                max: 2.0,
+                unit: None,
+                group: Some("ToneFilter".to_string()),
+                variants: Some(vec![
+                    "LowPass".to_string(),
+                    "HighPass".to_string(),
+                    "BandPass".to_string(),
+                ]),
+            },
+            ParameterInfo {
+                id: "tone_filter_cutoff_hz".to_string(),
+                name: "Tone Filter Cutoff".to_string(),
+                param_type: ParameterType::Float,
+                value: 500.0,
+                default: 500.0,
+                min: 20.0,
+                max: 20_000.0,
+                unit: Some("Hz".to_string()),
+                group: Some("ToneFilter".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "tone_filter_resonance_q".to_string(),
+                name: "Tone Filter Resonance".to_string(),
+                param_type: ParameterType::Float,
+                value: 0.707,
+                default: 0.707,
+                min: 0.1,
+                max: 10.0,
+                unit: Some("Q".to_string()),
+                group: Some("ToneFilter".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "tone_filter_bypass".to_string(),
+                name: "Tone Filter Bypass".to_string(),
+                param_type: ParameterType::Bool,
+                value: 0.0,
+                default: 0.0,
+                min: 0.0,
+                max: 1.0,
+                unit: None,
+                group: Some("ToneFilter".to_string()),
+                variants: None,
+            },
+        ]);
+
+        let bypassed_bridge = AtomicParameterBridge::new(&[
+            ParameterInfo {
+                id: "tone_filter_mode".to_string(),
+                name: "Tone Filter Mode".to_string(),
+                param_type: ParameterType::Enum,
+                value: 0.0,
+                default: 0.0,
+                min: 0.0,
+                max: 2.0,
+                unit: None,
+                group: Some("ToneFilter".to_string()),
+                variants: Some(vec![
+                    "LowPass".to_string(),
+                    "HighPass".to_string(),
+                    "BandPass".to_string(),
+                ]),
+            },
+            ParameterInfo {
+                id: "tone_filter_cutoff_hz".to_string(),
+                name: "Tone Filter Cutoff".to_string(),
+                param_type: ParameterType::Float,
+                value: 500.0,
+                default: 500.0,
+                min: 20.0,
+                max: 20_000.0,
+                unit: Some("Hz".to_string()),
+                group: Some("ToneFilter".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "tone_filter_resonance_q".to_string(),
+                name: "Tone Filter Resonance".to_string(),
+                param_type: ParameterType::Float,
+                value: 0.707,
+                default: 0.707,
+                min: 0.1,
+                max: 10.0,
+                unit: Some("Q".to_string()),
+                group: Some("ToneFilter".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "tone_filter_bypass".to_string(),
+                name: "Tone Filter Bypass".to_string(),
+                param_type: ParameterType::Bool,
+                value: 1.0,
+                default: 1.0,
+                min: 0.0,
+                max: 1.0,
+                unit: None,
+                group: Some("ToneFilter".to_string()),
+                variants: None,
+            },
+        ]);
+
+        let mut filtered_left = [0.0_f32; 256];
+        let mut filtered_right = [0.0_f32; 256];
+        let mut bypassed_left = [0.0_f32; 256];
+        let mut bypassed_right = [0.0_f32; 256];
+        for (index, sample) in filtered_left.iter_mut().enumerate() {
+            *sample = if index % 2 == 0 { 1.0 } else { -1.0 };
+        }
+        filtered_right.copy_from_slice(&filtered_left);
+        bypassed_left.copy_from_slice(&filtered_left);
+        bypassed_right.copy_from_slice(&filtered_left);
+
+        let original_bypassed_left = bypassed_left;
+        let original_bypassed_right = bypassed_right;
+
+        let mut filtered_phase = 0.0;
+        let mut bypassed_phase = 0.0;
+        let mut filtered_filter_state = StereoToneFilterState::default();
+        let mut bypassed_filter_state = StereoToneFilterState::default();
+
+        apply_output_modifiers_with_state(
+            &mut filtered_left,
+            &mut filtered_right,
+            &filtered_bridge,
+            &mut filtered_phase,
+            48_000.0,
+            &mut filtered_filter_state,
+        );
+        apply_output_modifiers_with_state(
+            &mut bypassed_left,
+            &mut bypassed_right,
+            &bypassed_bridge,
+            &mut bypassed_phase,
+            48_000.0,
+            &mut bypassed_filter_state,
+        );
+
+        assert_eq!(bypassed_left, original_bypassed_left);
+        assert_eq!(bypassed_right, original_bypassed_right);
+        assert_ne!(
+            filtered_left, bypassed_left,
+            "filtered output should differ from bypassed output"
+        );
     }
 }
