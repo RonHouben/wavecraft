@@ -20,6 +20,7 @@ _param-discovery = [
 [dependencies]
 wavecraft-protocol.workspace = true
 wavecraft-dsp.workspace = true
+wavecraft-processors.workspace = true
 wavecraft-metering.workspace = true
 wavecraft-bridge.workspace = true
 wavecraft-macros.workspace = true

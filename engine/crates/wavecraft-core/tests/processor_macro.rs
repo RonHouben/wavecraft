@@ -7,12 +7,16 @@ use wavecraft_dsp::{Processor, Transport};
 wavecraft_processor!(InputGain => Gain);
 wavecraft_processor!(OutputGain => Gain);
 wavecraft_processor!(Bypass => Passthrough);
+wavecraft_processor!(ToneFilter => Filter);
+wavecraft_processor!(SoftClip => Saturator);
 
 #[test]
 fn test_processor_macro_generates_default() {
     let _input_gain = InputGain::default();
     let _output_gain = OutputGain::default();
     let _bypass = Bypass::default();
+    let _tone_filter = ToneFilter::default();
+    let _soft_clip = SoftClip::default();
 }
 
 #[test]
@@ -64,4 +68,36 @@ fn test_passthrough_wrapper() {
     assert_eq!(buffer[0][1], 3.0);
     assert_eq!(buffer[1][0], 4.0);
     assert_eq!(buffer[1][1], 5.0);
+}
+
+#[test]
+fn test_filter_wrapper_supports_stateful_processor_methods() {
+    let mut filter = ToneFilter::default();
+
+    filter.set_sample_rate(48_000.0);
+
+    let mut mono = [1.0_f32, 1.0_f32, 1.0_f32, 1.0_f32];
+    let mut buffer = [&mut mono[..]];
+    let transport = Transport::default();
+    let params = <ToneFilter as Processor>::Params::default();
+
+    filter.process(&mut buffer, &transport, &params);
+    filter.reset();
+
+    assert!(buffer[0].iter().all(|sample| sample.is_finite()));
+}
+
+#[test]
+fn test_saturator_wrapper_processes_audio() {
+    let mut saturator = SoftClip::default();
+
+    let mut mono = [2.0_f32, -2.0_f32];
+    let mut buffer = [&mut mono[..]];
+    let transport = Transport::default();
+    let params = <SoftClip as Processor>::Params::default();
+
+    saturator.process(&mut buffer, &transport, &params);
+
+    assert!(buffer[0][0].abs() < 2.0);
+    assert!(buffer[0][1].abs() < 2.0);
 }

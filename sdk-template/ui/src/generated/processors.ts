@@ -10,18 +10,26 @@ import { registerAvailableProcessors } from '@wavecraft/core';
 declare global {
   interface WavecraftProcessorIdMap {
     __wavecraft_internal_processors_augmented__: true;
+    bypass_stage: true;
     example_processor: true;
+    input_trim: true;
     oscillator: true;
     oscilloscope_tap: true;
     output_gain: true;
+    soft_clip: true;
+    tone_filter: true;
   }
 }
 
 const PROCESSOR_IDS = [
+  'bypass_stage',
   'example_processor',
+  'input_trim',
   'oscillator',
   'oscilloscope_tap',
   'output_gain',
+  'soft_clip',
+  'tone_filter',
 ] as const;
 
 registerAvailableProcessors(PROCESSOR_IDS);

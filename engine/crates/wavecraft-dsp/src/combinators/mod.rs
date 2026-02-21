@@ -12,19 +12,44 @@ pub use chain::Chain;
 /// # Single Processor (Zero Overhead)
 ///
 /// ```rust,no_run
-/// use wavecraft_dsp::builtins::GainDsp;
+/// use wavecraft_dsp::{Processor, Transport};
 /// use wavecraft_dsp::SignalChain;
 ///
-/// type Single = SignalChain![GainDsp]; // Compiles to just `GainDsp`, no wrapper
+/// #[derive(Default)]
+/// struct Noop;
+///
+/// impl Processor for Noop {
+///     type Params = ();
+///
+///     fn process(&mut self, _buffer: &mut [&mut [f32]], _transport: &Transport, _params: &Self::Params) {}
+/// }
+///
+/// type Single = SignalChain![Noop]; // Compiles to just `Noop`, no wrapper
 /// ```
 ///
 /// # Multiple Processors
 ///
 /// ```rust,no_run
-/// use wavecraft_dsp::builtins::{GainDsp, PassthroughDsp};
-/// use wavecraft_dsp::SignalChain;
+/// use wavecraft_dsp::{Processor, SignalChain, Transport};
 ///
-/// type Multiple = SignalChain![GainDsp, PassthroughDsp];
+/// #[derive(Default)]
+/// struct A;
+/// #[derive(Default)]
+/// struct B;
+///
+/// impl Processor for A {
+///     type Params = ();
+///
+///     fn process(&mut self, _buffer: &mut [&mut [f32]], _transport: &Transport, _params: &Self::Params) {}
+/// }
+///
+/// impl Processor for B {
+///     type Params = ();
+///
+///     fn process(&mut self, _buffer: &mut [&mut [f32]], _transport: &Transport, _params: &Self::Params) {}
+/// }
+///
+/// type Multiple = SignalChain![A, B];
 /// ```
 #[macro_export]
 macro_rules! SignalChain {
@@ -47,14 +72,16 @@ macro_rules! SignalChain {
 /// # Migration
 ///
 /// ```rust,no_run
-/// use wavecraft_dsp::builtins::GainDsp;
 /// use wavecraft_dsp::SignalChain;
 ///
+/// #[derive(Default)]
+/// struct Noop;
+///
 /// // Old (deprecated):
-/// // type MyChain = Chain![GainDsp];
+/// // type MyChain = Chain![Noop];
 ///
 /// // New (recommended):
-/// type MyChain = SignalChain![GainDsp];
+/// type MyChain = SignalChain![Noop];
 /// ```
 #[deprecated(since = "0.9.0", note = "use `SignalChain!` instead")]
 #[macro_export]

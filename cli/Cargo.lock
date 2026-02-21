@@ -1891,7 +1891,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-bridge"
-version = "0.12.6"
+version = "0.12.7"
 dependencies = [
  "libloading",
  "serde",
@@ -1927,7 +1927,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-dsp"
-version = "0.12.6"
+version = "0.12.7"
 dependencies = [
  "wavecraft-macros",
  "wavecraft-protocol",
@@ -1935,7 +1935,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-macros"
-version = "0.12.6"
+version = "0.12.7"
 dependencies = [
  "convert_case",
  "proc-macro2",
@@ -1945,7 +1945,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-processors"
-version = "0.12.6"
+version = "0.12.7"
 dependencies = [
  "rtrb",
  "wavecraft-dsp",
@@ -1954,7 +1954,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-protocol"
-version = "0.12.6"
+version = "0.12.7"
 dependencies = [
  "paste",
  "serde",

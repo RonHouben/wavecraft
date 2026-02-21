@@ -1,10 +1,4 @@
-//! Built-in DSP processors ready to use.
+//! Legacy stub module.
 //!
-//! This module provides common audio processors with ProcessorParams
-//! implementations, enabling them to work with the declarative DSL.
-
-pub mod gain;
-pub mod passthrough;
-
-pub use gain::{GainDsp, GainParams};
-pub use passthrough::{PassthroughDsp, PassthroughParams};
+//! Built-in processor implementations were moved to
+//! `wavecraft-processors` top-level modules.
