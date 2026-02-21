@@ -16,7 +16,6 @@ use processors::ExampleProcessor;
 // Wrapper names are converted to snake_case and prefixed into parameter IDs
 // (e.g. `OutputGain` contributes the `output_gain_*` prefix).
 wavecraft_processor!(InputTrim => Gain);
-wavecraft_processor!(BypassStage => Passthrough);
 wavecraft_processor!(ToneFilter => Filter);
 wavecraft_processor!(SoftClip => Saturator);
 wavecraft_processor!(OutputGain => Gain);
@@ -28,14 +27,12 @@ wavecraft_processor!(OutputGain => Gain);
 wavecraft_plugin! {
     name: "My First Plugin",
     signal: SignalChain![
-        InputTrim,
-        // Generator semantics: additive when enabled, passthrough no-op when disabled.
         Oscillator,
+        InputTrim,
         ExampleProcessor,
         ToneFilter,
         SoftClip,
-        BypassStage,
+        OutputGain,
         OscilloscopeTap,
-        OutputGain
     ],
 }

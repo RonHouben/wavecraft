@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   useConnectionStatus,
   useOscilloscopeFrame,
-  useHasProcessor,
+  useHasProcessorInSignalChain,
   type OscilloscopeChannelView,
   type OscilloscopeFrame,
   type OscilloscopeTriggerMode,
@@ -17,14 +17,16 @@ const RIGHT_COLOR = '#3b82f6';
 const GRID_COLOR = '#334155';
 const AXIS_COLOR = '#64748b';
 
-interface OscilloscopeProps {
+interface OscilloscopeProcessorProps {
   hideWhenNotInSignalChain?: boolean;
 }
 
-export function Oscilloscope(props: Readonly<OscilloscopeProps>): React.JSX.Element | null {
+export function OscilloscopeProcessor({
+  hideWhenNotInSignalChain,
+}: Readonly<OscilloscopeProcessorProps>): React.JSX.Element | null {
   const { connected } = useConnectionStatus();
   const frame = useOscilloscopeFrame();
-  const hasProcessorInSignalChain = useHasProcessor('oscilloscope_tap');
+  const hasProcessorInSignalChain = useHasProcessorInSignalChain('oscilloscope_tap');
 
   const [channelView, setChannelView] = useState<OscilloscopeChannelView>('overlay');
   const [triggerMode, setTriggerMode] = useState<OscilloscopeTriggerMode>('risingZeroCrossing');
@@ -155,7 +157,7 @@ export function Oscilloscope(props: Readonly<OscilloscopeProps>): React.JSX.Elem
     };
   }, [channelView, connected]);
 
-  if (props.hideWhenNotInSignalChain && !hasProcessorInSignalChain) {
+  if (hideWhenNotInSignalChain && !hasProcessorInSignalChain) {
     return null;
   }
 

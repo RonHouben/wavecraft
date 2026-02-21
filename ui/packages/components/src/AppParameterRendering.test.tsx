@@ -4,12 +4,12 @@ import {
   ConnectionStatus,
   LatencyMonitor,
   Meter,
-  OscillatorControl,
+  OscillatorProcessor,
   ParameterGroup,
   ParameterSlider,
   VersionBadge,
 } from './index';
-import { useAllParameters, useParameterGroups, useWindowResizeSync } from '@wavecraft/core';
+import { useAllParameters, useWindowResizeSync } from '@wavecraft/core';
 
 interface TestParameter {
   id: string;
@@ -31,7 +31,7 @@ const DEDICATED_PARAMETER_IDS = new Set([
 function TestApp(): JSX.Element {
   const { params, isLoading } = useAllParameters();
   const genericParams = params.filter((param) => !DEDICATED_PARAMETER_IDS.has(param.id));
-  const groups = useParameterGroups(genericParams);
+  const groups = genericParams.length > 0 ? [{ name: 'Main', parameters: genericParams }] : [];
 
   useWindowResizeSync();
 
@@ -39,7 +39,7 @@ function TestApp(): JSX.Element {
     <div>
       <ConnectionStatus />
       <VersionBadge />
-      <OscillatorControl />
+      <OscillatorProcessor />
       {isLoading
         ? null
         : groups.length > 0
@@ -52,13 +52,11 @@ function TestApp(): JSX.Element {
 }
 
 const mockUseAllParameters = vi.hoisted(() => vi.fn());
-const mockUseParameterGroups = vi.hoisted(() => vi.fn());
 const mockUseMeterFrame = vi.hoisted(() => vi.fn());
 const mockUseWindowResizeSync = vi.hoisted(() => vi.fn());
 
 vi.mock('@wavecraft/core', () => ({
   useAllParameters: mockUseAllParameters,
-  useParameterGroups: mockUseParameterGroups,
   useMeterFrame: mockUseMeterFrame,
   useWindowResizeSync: mockUseWindowResizeSync,
 }));
@@ -72,7 +70,7 @@ vi.mock('@wavecraft/components', () => ({
   VersionBadge: () => <div data-testid="version-badge" />,
   ConnectionStatus: () => <div data-testid="connection-status" />,
   LatencyMonitor: () => <div data-testid="latency-monitor" />,
-  OscillatorControl: () => <div data-testid="oscillator-control" />,
+  OscillatorProcessor: () => <div data-testid="oscillator-control" />,
 }));
 
 describe('App parameter rendering', () => {
@@ -121,7 +119,6 @@ describe('App parameter rendering', () => {
 
   beforeEach(() => {
     mockUseAllParameters.mockReturnValue({ params: baseParams, isLoading: false });
-    mockUseParameterGroups.mockImplementation(() => []);
     mockUseMeterFrame.mockReturnValue(undefined);
     mockUseWindowResizeSync.mockImplementation(() => undefined);
   });
@@ -130,32 +127,16 @@ describe('App parameter rendering', () => {
     render(<TestApp />);
 
     expect(screen.getByTestId('oscillator-control')).toBeInTheDocument();
-    expect(screen.getByTestId('slider-gain')).toBeInTheDocument();
+    expect(screen.getByTestId('group-Main')).toBeInTheDocument();
     expect(screen.queryByTestId('slider-oscillator_enabled')).not.toBeInTheDocument();
     expect(screen.queryByTestId('slider-oscillator_frequency')).not.toBeInTheDocument();
     expect(screen.queryByTestId('slider-oscillator_level')).not.toBeInTheDocument();
-
-    const lastCall = mockUseParameterGroups.mock.calls[
-      mockUseParameterGroups.mock.calls.length - 1
-    ] as [TestParameter[]] | undefined;
-    const groupedInput = lastCall?.[0];
-    expect(groupedInput?.map((param) => param.id)).toEqual(['gain']);
   });
 
   it('filters oscillator_enabled before grouped rendering as well', () => {
-    mockUseParameterGroups.mockImplementation((parameters: TestParameter[]) => [
-      { name: 'Main', parameters },
-    ]);
-
     render(<TestApp />);
 
     expect(screen.getByTestId('group-Main')).toBeInTheDocument();
     expect(screen.queryByTestId('slider-gain')).not.toBeInTheDocument();
-
-    const lastCall = mockUseParameterGroups.mock.calls[
-      mockUseParameterGroups.mock.calls.length - 1
-    ] as [TestParameter[]] | undefined;
-    const groupedInput = lastCall?.[0];
-    expect(groupedInput?.map((param) => param.id)).toEqual(['gain']);
   });
 });

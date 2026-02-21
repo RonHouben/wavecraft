@@ -16,6 +16,7 @@ This project uses specialized agents with distinct responsibilities that hand of
 | **DocWriter**          | Creates and updates all documentation                                                 | All markdown files in `docs/`                         |
 | **Search**             | Deep codebase research and analysis                                                   | Search results, code explanations                     |
 | **Cleaner**            | Investigates and cleans up code/doc noise, dead code, duplicates, missed abstractions | Clean code changes, cleanup reports                   |
+| **UX Designer**        | Designs and implements UI/UX changes; owns the frontend design system and React components | Code changes in `ui/`, `sdk-template/ui/`        |
 
 ## Standard Feature Development Flow
 
@@ -122,6 +123,30 @@ For **bug fixes** and **minor improvements** that don't require architectural ch
 
 ---
 
+## UI/UX Change Workflow
+
+For **UI/UX changes** — React component work, design system adjustments, accessibility improvements, and visual redesigns — route to the **UX Designer** agent.
+
+**Workflow path:**
+
+1. **Orchestrator** routes the UI/UX task to UX Designer
+2. **UX Designer** researches existing patterns → proposes UX approach → implements (following required skill order)
+3. **UX Designer** hands off to **Tester** for visual and functional validation
+4. **Tester** returns results; if issues are found, UX Designer iterates
+5. **UX Designer** hands back to **Orchestrator** on completion
+
+**Scope:** `ui/` and `sdk-template/ui/` only. Rust engine code is out of scope for this workflow.
+
+**When to use:**
+
+- New React components or changes to existing components
+- TailwindCSS / design system token updates
+- Accessibility improvements
+- Layout and interaction redesigns
+- Visual consistency fixes
+
+---
+
 ## Handoff Summary
 
 **Note:** The Orchestrator agent coordinates these handoffs. Agents can hand off directly (when context is clear) or route through Orchestrator (recommended for phase transitions).
@@ -144,6 +169,9 @@ For **bug fixes** and **minor improvements** that don't require architectural ch
 | Orchestrator → Coder     | "Fix findings"            | QA issues                 |
 | Orchestrator → Architect | "Update docs"             | Implementation review     |
 | Orchestrator → PO        | "Archive feature"         | Complete feature          |
+| Orchestrator → UX Designer | "Implement UI/UX change" | UI/UX task description    |
+| UX Designer → Tester     | "Test UI changes"         | Implemented UI changes    |
+| UX Designer → Orchestrator | "UI/UX implementation complete" | Code changes + verification notes |
 
 **Direct handoffs** (bypass Orchestrator when appropriate):
 
@@ -192,7 +220,9 @@ The **Coder** agent is responsible for creating Pull Requests using the `create-
 ### Editing Permissions
 
 | Agent | Can Edit Code? | Can Edit Docs? | Can Edit Roadmap? | Can Edit Archived Specs? |
-|-------|----------------|----------------|-------------------|--------------------------||| Orchestrator | ❌ | ❌ | ❌ | ❌ || PO | ❌ | ❌ | ✅ (exclusive) | ❌ |
+|-------|----------------|----------------|-------------------|--------------------------|
+| Orchestrator | ❌ | ❌ | ❌ | ❌ |
+| PO | ❌ | ❌ | ✅ (exclusive) | ❌ |
 | Architect | ❌ | ❌ | ❌ | ❌ |
 | Planner | ❌ | ❌ | ❌ | ❌ |
 | Coder | ✅ | ✅ | ❌ | ❌ |
@@ -201,6 +231,7 @@ The **Coder** agent is responsible for creating Pull Requests using the `create-
 | DocWriter | ❌ | ✅ (only `.md` in `docs/`) | ❌ | ❌ |
 | Search | ❌ | ❌ | ❌ | ❌ |
 | Cleaner | ✅ | ✅ | ❌ | ❌ |
+| UX Designer | ✅ (UI only) | ✅ | ❌ | ❌ |
 
 ### Models & Tools
 
@@ -216,6 +247,7 @@ The **Coder** agent is responsible for creating Pull Requests using the `create-
 | **DocWriter**    | Claude Opus 4.6 → Claude Sonnet 4.5 → GPT-5.2       | read, search, edit, web, agent                                   | ❌           |
 | **Search**       | GPT-5.3-Codex → GPT-5.2-Codex → Claude Opus 4.6     | read, search, web                                                | ❌           |
 | **Cleaner**      | GPT-5.3-Codex → Claude Opus 4.6 → Gemini 2.5 Pro    | read, search, edit, execute, agent, todo, web, memory            | ✅           |
+| **UX Designer**  | GPT-5.3-Codex → GPT-5.2-Codex → Claude Opus 4.6     | read, search, edit, execute, todo, agent                         | ✅           |
 
 ### Subagent Invocation
 
@@ -223,7 +255,7 @@ Each agent can only invoke specific subagents:
 
 | Agent            | Can Invoke                                                            |
 | ---------------- | --------------------------------------------------------------------- |
-| **Orchestrator** | PO, Architect, Planner, Coder, Tester, QA, DocWriter, Search, Cleaner |
+| **Orchestrator** | PO, Architect, Planner, Coder, Tester, QA, DocWriter, Search, Cleaner, UX Designer |
 | **PO**           | Orchestrator, Architect, DocWriter, Search                            |
 | **Architect**    | Orchestrator, Planner, PO, DocWriter, Search                          |
 | **Planner**      | Orchestrator, DocWriter, Search                                       |
@@ -233,6 +265,7 @@ Each agent can only invoke specific subagents:
 | **DocWriter**    | Orchestrator, Search                                                  |
 | **Search**       | — (none)                                                              |
 | **Cleaner**      | Orchestrator, Search, Architect, Tester, DocWriter                    |
+| **UX Designer**  | Orchestrator, Search, Tester, DocWriter                               |
 
 **Notes:**
 
@@ -242,6 +275,7 @@ Each agent can only invoke specific subagents:
 - Only Coder and Tester have terminal execution access.
 - PO can only edit `docs/roadmap.md` and `docs/backlog.md`.
 - Cleaner can edit code and docs for cleanup/refactoring only. It cannot add features or change behavior. It has terminal execution access for running `cargo xtask ci-check`.
+- UX Designer owns the frontend design system and React components in `ui/` and `sdk-template/ui/`. It follows a required skill invocation order for all UI tasks (see [UX Designer Skill Invocation Order](#ux-designer-skill-invocation-order)).
 
 ### Search Delegation Pattern
 
@@ -267,6 +301,16 @@ Four agents (Architect, Planner, Tester, QA) don't have `edit` tools but are res
 
 **Composition:** An agent may invoke Search for research AND DocWriter for persistence in the same workflow. Always: Search → generate content → DocWriter.
 
+### UX Designer Skill Invocation Order
+
+For every UI task, the UX Designer must invoke skills in this exact order:
+
+1. **`ui-ux-change-workflow`** — defines and drives the end-to-end UI change path
+2. **`design-token-compliance`** — normalizes spacing, color, typography, and interaction states to existing design tokens
+3. **`ui-accessibility-review`** — pre-handoff accessibility gate (WCAG-minded keyboard, ARIA, and contrast checks)
+
+> **Exception (narrow):** For tiny copy-only text edits with no layout, style, interaction, or semantic impact, steps 2–3 may be minimized. Step 1 still applies.
+
 ---
 
 ## When to Invoke Each Agent
@@ -281,6 +325,7 @@ Four agents (Architect, Planner, Tester, QA) don't have `edit` tools but are res
 - **Use DocWriter** when: Documentation needs creating or updating (invoked as subagent by other agents)
 - **Use Search** when: Deep codebase research needed, finding patterns across files (invoked as subagent)
 - **Use Cleaner** when: Codebase needs cleanup — dead code removal, AI slop cleaning, duplicate consolidation, missed abstraction usage, documentation noise reduction
+- **Use UX Designer** when: UI/UX changes are needed — React component work, design system updates, accessibility improvements, layout or visual consistency fixes in `ui/` or `sdk-template/ui/`
 
 ## Testing Workflow
 

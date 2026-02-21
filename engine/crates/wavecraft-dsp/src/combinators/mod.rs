@@ -2,14 +2,14 @@
 
 mod chain;
 
-pub use chain::Chain;
+pub use chain::{Bypassed, Chain};
 
 /// Combines processors into a serial signal chain.
 ///
 /// Preferred macro for building DSP chains in Wavecraft.
 /// Use `SignalChain!` for consistency with the `wavecraft_plugin!` DSL.
 ///
-/// # Single Processor (Zero Overhead)
+/// # Single Processor
 ///
 /// ```rust,no_run
 /// use wavecraft_dsp::{Processor, Transport};
@@ -24,7 +24,7 @@ pub use chain::Chain;
 ///     fn process(&mut self, _buffer: &mut [&mut [f32]], _transport: &Transport, _params: &Self::Params) {}
 /// }
 ///
-/// type Single = SignalChain![Noop]; // Compiles to just `Noop`, no wrapper
+/// type Single = SignalChain![Noop];
 /// ```
 ///
 /// # Multiple Processors
@@ -53,13 +53,13 @@ pub use chain::Chain;
 /// ```
 #[macro_export]
 macro_rules! SignalChain {
-    // Single processor: no wrapping, zero overhead
+    // Single processor: wrap with bypass support
     ($single:ty) => {
-        $single
+        $crate::combinators::Bypassed<$single>
     };
-    // Multiple: nest into Chain<A, Chain<B, ...>>
+    // Multiple: nest into Chain<Bypassed<A>, Chain<Bypassed<B>, ...>>
     ($first:ty, $($rest:ty),+ $(,)?) => {
-        $crate::combinators::Chain<$first, $crate::SignalChain![$($rest),+]>
+        $crate::combinators::Chain<$crate::combinators::Bypassed<$first>, $crate::SignalChain![$($rest),+]>
     };
 }
 

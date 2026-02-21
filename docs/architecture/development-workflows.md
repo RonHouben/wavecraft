@@ -279,22 +279,7 @@ The `AtomicParameterBridge` enables lock-free parameter flow from the browser UI
 3. **Audio thread** calls `bridge.apply_plain_values(params)` at each block boundary — **before** `FfiProcessor::process()` — injecting all pending parameter updates into the processor via the v2 vtable's `apply_plain_values` function pointer
 
 This is the **default Dev FFI v2 flow**: parameter values are injected at block boundaries before every `process()` call. Plugins must export a v2-compatible vtable (via `wavecraft_plugin!`) to use this path.
-
-**V1 compatibility mode (migration only — non-default, explicit opt-in):**
-
-```bash
-WAVECRAFT_DEV_FFI_V1_COMPAT=1 wavecraft start
-```
-
-Setting `WAVECRAFT_DEV_FFI_V1_COMPAT=1` enables v1 compatibility mode: `apply_plain_values` is skipped and processor-internal parameter injection is disabled. Temporary post-process compatibility modifiers may still reflect selected parameter changes on the audio thread, but this is not equivalent to full v2 injection and must not be relied upon for correctness. This mode exists **solely** for plugins that have not yet migrated to the v2 vtable. It is:
-
-- **Not the default.** The default path is v2 (`apply_plain_values` injection).
-- **Explicit opt-in only.** It must never be set implicitly or as a fallback in tooling.
-- **Inconsistent with the pre-1.0 strict contract policy.** Processor-internal injection is disabled; only limited parameter reflection via post-process compatibility modifiers may occur — not a substitute for v2 injection.
-
-The CLI prints a deprecation warning when `WAVECRAFT_DEV_FFI_V1_COMPAT=1` is active.
-
-> ⚠️ **Sunset notice:** V1 compat mode is temporary and is slated for removal once v2 vtable adoption reaches parity and burn-in confidence is established. Plugins should migrate to the v2 vtable (`wavecraft_plugin!` macro) as soon as possible.
+Pre-1.0 policy is now strict v2-only: compatibility toggles and v1 runtime fallback paths are removed. If a plugin exports an incompatible vtable version, startup fails fast with actionable diagnostics and requires rebuilding the plugin with the current SDK.
 
 ### Audio Runtime Status Contract (Browser Dev)
 

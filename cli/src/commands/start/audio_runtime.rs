@@ -15,9 +15,6 @@ use wavecraft_dev_server::{AtomicParameterBridge, DevServerHost, WsHandle};
 use wavecraft_protocol::{AudioDiagnosticCode, AudioRuntimePhase, AudioRuntimeStatus};
 
 #[cfg(feature = "audio-dev")]
-const DEV_FFI_V1_COMPAT_ENV: &str = "WAVECRAFT_DEV_FFI_V1_COMPAT";
-
-#[cfg(feature = "audio-dev")]
 pub(super) struct AudioStartupSuccess {
     handle: wavecraft_dev_server::AudioHandle,
     sample_rate: f32,
@@ -272,18 +269,6 @@ pub(super) fn start_audio_runtime(
     Option<wavecraft_dev_server::AudioHandle>,
     Option<super::PluginLoader>,
 )> {
-    if is_dev_ffi_v1_compat_enabled() {
-        println!(
-            "{}",
-            style(format!(
-                "⚠ {}=1 enabled: using temporary v1 compatibility mode (migration only). \
-                 v2 plain-value injection is disabled for this run.",
-                DEV_FFI_V1_COMPAT_ENV
-            ))
-            .yellow()
-        );
-    }
-
     let initializing_status =
         wavecraft_dev_server::audio_status(AudioRuntimePhase::Initializing, None, None);
 
@@ -414,13 +399,6 @@ pub(super) fn start_audio_runtime(
     };
 
     Ok((audio_handle, runtime_loader))
-}
-
-#[cfg(feature = "audio-dev")]
-fn is_dev_ffi_v1_compat_enabled() -> bool {
-    std::env::var(DEV_FFI_V1_COMPAT_ENV)
-        .map(|value| value == "1")
-        .unwrap_or(false)
 }
 
 #[cfg(all(test, feature = "audio-dev"))]

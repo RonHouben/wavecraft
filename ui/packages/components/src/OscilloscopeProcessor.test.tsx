@@ -1,18 +1,18 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Oscilloscope } from './Oscilloscope';
+import { OscilloscopeProcessor } from './OscilloscopeProcessor';
 
 const mockUseConnectionStatus = vi.hoisted(() => vi.fn());
 const mockUseOscilloscopeFrame = vi.hoisted(() => vi.fn());
-const mockUseHasProcessor = vi.hoisted(() => vi.fn());
+const mockUseHasProcessorInSignalChain = vi.hoisted(() => vi.fn());
 
 vi.mock('@wavecraft/core', () => ({
   useConnectionStatus: mockUseConnectionStatus,
   useOscilloscopeFrame: mockUseOscilloscopeFrame,
-  useHasProcessor: mockUseHasProcessor,
+  useHasProcessorInSignalChain: mockUseHasProcessorInSignalChain,
 }));
 
-describe('Oscilloscope', () => {
+describe('OscilloscopeProcessor', () => {
   beforeEach(() => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
       clearRect: vi.fn(),
@@ -27,7 +27,7 @@ describe('Oscilloscope', () => {
     } as unknown as CanvasRenderingContext2D);
 
     mockUseConnectionStatus.mockReturnValue({ connected: true, transport: 'websocket' });
-    mockUseHasProcessor.mockReturnValue(true);
+    mockUseHasProcessorInSignalChain.mockReturnValue(true);
     mockUseOscilloscopeFrame.mockReturnValue({
       points_l: new Array(1024).fill(0).map((_, idx) => Math.sin((idx / 1024) * Math.PI * 2)),
       points_r: new Array(1024).fill(0).map((_, idx) => Math.cos((idx / 1024) * Math.PI * 2)),
@@ -43,13 +43,13 @@ describe('Oscilloscope', () => {
   });
 
   it('defaults to overlay channel view', () => {
-    render(<Oscilloscope />);
+    render(<OscilloscopeProcessor />);
     expect(screen.getByTestId('osc-channel-view')).toHaveValue('overlay');
-    expect(mockUseHasProcessor).toHaveBeenCalledWith('oscilloscope_tap');
+    expect(mockUseHasProcessorInSignalChain).toHaveBeenCalledWith('oscilloscope_tap');
   });
 
   it('supports channel view switching', () => {
-    render(<Oscilloscope />);
+    render(<OscilloscopeProcessor />);
 
     const select = screen.getByTestId('osc-channel-view');
     fireEvent.change(select, { target: { value: 'left' } });
@@ -60,7 +60,7 @@ describe('Oscilloscope', () => {
   });
 
   it('defaults trigger mode control to rising zero-crossing', () => {
-    render(<Oscilloscope />);
+    render(<OscilloscopeProcessor />);
     expect(screen.getByTestId('osc-trigger-mode')).toHaveValue('risingZeroCrossing');
   });
 
@@ -74,7 +74,7 @@ describe('Oscilloscope', () => {
       trigger_mode: 'risingZeroCrossing',
     });
 
-    render(<Oscilloscope />);
+    render(<OscilloscopeProcessor />);
 
     expect(screen.getByTestId('osc-no-signal')).toHaveTextContent('No signal');
     expect(screen.getByTestId('oscilloscope-canvas')).toBeInTheDocument();
@@ -88,7 +88,7 @@ describe('Oscilloscope', () => {
       });
     const cancelSpy = vi.spyOn(globalThis, 'cancelAnimationFrame');
 
-    const { unmount } = render(<Oscilloscope />);
+    const { unmount } = render(<OscilloscopeProcessor />);
     unmount();
 
     expect(rafSpy).toHaveBeenCalled();

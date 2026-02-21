@@ -6,10 +6,15 @@
  */
 
 import React from 'react';
-import type { ParameterGroup as ParameterGroupType } from '@wavecraft/core';
+import type { ParameterInfo } from '@wavecraft/core';
 import { ParameterSlider } from './ParameterSlider';
 import { ParameterSelect } from './ParameterSelect';
 import { ParameterToggle } from './ParameterToggle';
+
+type ParameterGroupType = {
+  name: string;
+  parameters: ParameterInfo[];
+};
 
 export interface ParameterGroupProps {
   /** The parameter group to display */

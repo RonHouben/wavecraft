@@ -100,7 +100,7 @@ mod tests {
     #[test]
     fn derives_snake_case_processor_id_from_type_name() {
         let processor_type: Type = parse_quote!(OscilloscopeTap);
-        let id = naming::processor_id_from_type(&processor_type);
+        let id = naming::type_prefix(&processor_type);
 
         assert_eq!(id, "oscilloscope_tap");
     }
@@ -108,9 +108,23 @@ mod tests {
     #[test]
     fn derives_id_from_path_terminal_segment() {
         let processor_type: Type = parse_quote!(my::dsp::InputGain);
-        let id = naming::processor_id_from_type(&processor_type);
+        let id = naming::type_prefix(&processor_type);
 
         assert_eq!(id, "input_gain");
+    }
+
+    #[test]
+    fn derives_instance_id_prefixes_for_repeated_types() {
+        let processor_types: Vec<Type> = vec![
+            parse_quote!(Gain),
+            parse_quote!(Gain),
+            parse_quote!(my::dsp::Gain),
+            parse_quote!(OutputGain),
+        ];
+
+        let prefixes = naming::instance_id_prefixes(&processor_types);
+
+        assert_eq!(prefixes, vec!["gain", "gain_2", "gain_3", "output_gain"]);
     }
 
     #[test]
@@ -152,12 +166,51 @@ mod tests {
         );
         assert!(
             normalized.contains("__WavecraftRuntimeParam::Int(")
-                && normalized.contains("IntParam::new(spec.name"),
+                && normalized.contains("IntParam::new(param_name"),
             "generated code should use IntParam for stepped/enum params to expose step_count"
         );
         assert!(
             normalized.contains("with_value_to_string(::std::sync::Arc::new(move|value|"),
             "generated enum params should expose display labels through value_to_string"
+        );
+        assert!(
+            normalized.contains("Bypassed<Oscillator>"),
+            "generated runtime parameter discovery should include bypass wrapper params"
+        );
+        assert!(
+            normalized.contains("spec.id_suffix==\"bypass\""),
+            "generated runtime parameter naming should special-case bypass display names"
+        );
+    }
+
+    #[test]
+    fn generated_param_map_uses_unique_runtime_ids_for_repeated_processor_types() {
+        let input_tokens = quote! {
+            name: "Test Plugin",
+            signal: SignalChain![Gain, Gain],
+        };
+
+        let plugin_def: super::parse::PluginDef =
+            syn::parse2(input_tokens).expect("plugin definition should parse");
+        let output = expand_wavecraft_plugin(plugin_def).expect("plugin should expand");
+        let generated = output.to_string();
+        let normalized = generated
+            .chars()
+            .filter(|c| !c.is_whitespace())
+            .collect::<String>();
+
+        assert!(
+            normalized.contains("format!(\"{}_{}\",\"gain\",spec.id_suffix)"),
+            "first repeated processor instance should keep legacy-compatible 'gain' prefix"
+        );
+        assert!(
+            normalized.contains("format!(\"{}_{}\",\"gain_2\",spec.id_suffix)"),
+            "second repeated processor instance should use deterministic unique 'gain_2' prefix"
+        );
+        assert!(
+            normalized.contains("id:\"gain\".to_string()")
+                && normalized.contains("id:\"gain_2\".to_string()"),
+            "processor metadata IDs should be unique for repeated processor types"
         );
     }
 }

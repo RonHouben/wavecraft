@@ -102,8 +102,8 @@ export type { UseParameterResult } from './hooks/useParameter';
 export { useAllParameters } from './hooks/useAllParameters';
 export type { UseAllParametersResult } from './hooks/useAllParameters';
 
-export { useParameterGroups } from './hooks/useParameterGroups';
-export type { ParameterGroup } from './hooks/useParameterGroups';
+export { useAllParametersFor } from './hooks/useAllParameterFor';
+export type { UseAllParameterForResult } from './hooks/useAllParameterFor';
 
 export { useConnectionStatus } from './hooks/useConnectionStatus';
 export type { ConnectionStatus, TransportType } from './hooks/useConnectionStatus';
@@ -117,14 +117,21 @@ export { useAudioStatus } from './hooks/useAudioStatus';
 export type { UseAudioStatusResult } from './hooks/useAudioStatus';
 
 export { useRequestResize } from './hooks/useRequestResize';
-export { useHasProcessor } from './hooks/useHasProcessor';
+export { useHasProcessorInSignalChain } from './hooks/useHasProcessor';
 export { useAvailableProcessors } from './hooks/useAvailableProcessors';
+export { useProcessorBypass } from './hooks/useProcessorBypass';
+export type { UseProcessorBypassResult } from './hooks/useProcessorBypass';
 
 export { requestResize, useWindowResizeSync } from './hooks/useWindowResizeSync';
 export type { RequestResizeParams, RequestResizeResult } from './hooks/useWindowResizeSync';
 
 // Runtime processor registry (used by generated processors module)
 export { registerAvailableProcessors } from './processors/registry';
+export {
+  getProcessorBypassParamId,
+  isBypassParameterId,
+  PROCESSOR_BYPASS_SUFFIX,
+} from './processors/bypass';
 
 // =============================================================================
 // Metering API

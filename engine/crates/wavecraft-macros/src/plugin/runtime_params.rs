@@ -6,15 +6,24 @@ pub(super) fn runtime_param_blocks(
     signal_processors: &[Type],
     krate: &Path,
 ) -> Vec<proc_macro2::TokenStream> {
+    let instance_id_prefixes = naming::instance_id_prefixes(signal_processors);
+
     signal_processors
         .iter()
-        .map(|processor_type| {
-            let id_prefix = naming::type_prefix(processor_type);
+        .zip(instance_id_prefixes)
+        .map(|(processor_type, id_prefix)| {
+            let processor_display_name = naming::processor_display_name_from_type(processor_type);
             quote! {
                 {
-                    let specs = <<#processor_type as #krate::Processor>::Params as #krate::ProcessorParams>::param_specs();
+                    let specs = <<#krate::Bypassed<#processor_type> as #krate::Processor>::Params as #krate::ProcessorParams>::param_specs();
 
                     for spec in specs.iter() {
+                        let param_name = if spec.id_suffix == "bypass" {
+                            format!("{} Bypass", #processor_display_name)
+                        } else {
+                            spec.name.to_string()
+                        };
+
                         match &spec.range {
                             ParamRange::Linear { min, max } => {
                                 let range = #krate::__nih::FloatRange::Linear {
@@ -23,7 +32,7 @@ pub(super) fn runtime_param_blocks(
                                 };
                                 params.push(
                                     __WavecraftRuntimeParam::Float(
-                                        #krate::__nih::FloatParam::new(spec.name, spec.default as f32, range)
+                                        #krate::__nih::FloatParam::new(param_name, spec.default as f32, range)
                                             .with_unit(spec.unit)
                                     )
                                 );
@@ -36,7 +45,7 @@ pub(super) fn runtime_param_blocks(
                                 };
                                 params.push(
                                     __WavecraftRuntimeParam::Float(
-                                        #krate::__nih::FloatParam::new(spec.name, spec.default as f32, range)
+                                        #krate::__nih::FloatParam::new(param_name, spec.default as f32, range)
                                             .with_unit(spec.unit)
                                     )
                                 );
@@ -46,7 +55,7 @@ pub(super) fn runtime_param_blocks(
                                 params.push(
                                     __WavecraftRuntimeParam::Int(
                                         #krate::__nih::IntParam::new(
-                                            spec.name,
+                                            param_name,
                                             default,
                                             #krate::__nih::IntRange::Linear {
                                                 min: *min,
@@ -66,7 +75,7 @@ pub(super) fn runtime_param_blocks(
                                 params.push(
                                     __WavecraftRuntimeParam::Int(
                                         #krate::__nih::IntParam::new(
-                                            spec.name,
+                                            param_name,
                                             default,
                                             #krate::__nih::IntRange::Linear {
                                                 min: 0,

@@ -18,6 +18,11 @@ use wavecraft_protocol::{
 #[cfg(feature = "audio")]
 use crate::audio::atomic_params::AtomicParameterBridge;
 
+#[cfg(feature = "audio")]
+const INPUT_TRIM_LEVEL_PARAM_ID: &str = "input_trim_level";
+#[cfg(feature = "audio")]
+const LEGACY_INPUT_GAIN_LEVEL_PARAM_ID: &str = "input_gain_level";
+
 /// Development server host for browser-based UI testing
 ///
 /// This implementation stores parameter values locally and optionally
@@ -118,7 +123,24 @@ impl DevServerHost {
     /// Returns an error if parameter replacement fails (e.g., unrecoverable
     /// lock poisoning).
     pub fn replace_parameters(&self, new_params: Vec<ParameterInfo>) -> Result<(), String> {
-        self.inner.replace_parameters(new_params)
+        self.inner.replace_parameters(new_params)?;
+
+        #[cfg(feature = "audio")]
+        if let Some(ref bridge) = self.param_bridge {
+            for parameter in self.inner.get_all_parameters() {
+                bridge.write(&parameter.id, parameter.value);
+
+                // Keep both legacy and canonical input trim aliases synchronized
+                // across hot-reloads to prevent stale bridge slots.
+                if parameter.id == INPUT_TRIM_LEVEL_PARAM_ID {
+                    bridge.write(LEGACY_INPUT_GAIN_LEVEL_PARAM_ID, parameter.value);
+                } else if parameter.id == LEGACY_INPUT_GAIN_LEVEL_PARAM_ID {
+                    bridge.write(INPUT_TRIM_LEVEL_PARAM_ID, parameter.value);
+                }
+            }
+        }
+
+        Ok(())
     }
 
     /// Store the latest metering snapshot for polling-based consumers.
@@ -169,6 +191,16 @@ impl ParameterHost for DevServerHost {
             && let Some(ref bridge) = self.param_bridge
         {
             bridge.write(id, value);
+
+            // Hot-reload compatibility: if the parameter model is renamed from
+            // input_gain_level -> input_trim_level (or vice-versa), the bridge
+            // may still contain the old key until full restart. Mirror writes
+            // across both IDs so audible gain control remains live.
+            if id == INPUT_TRIM_LEVEL_PARAM_ID {
+                bridge.write(LEGACY_INPUT_GAIN_LEVEL_PARAM_ID, value);
+            } else if id == LEGACY_INPUT_GAIN_LEVEL_PARAM_ID {
+                bridge.write(INPUT_TRIM_LEVEL_PARAM_ID, value);
+            }
         }
 
         result
