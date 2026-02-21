@@ -12,7 +12,9 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use wavecraft_protocol::ParameterInfo;
 
-const PARAM_ORDERING: Ordering = Ordering::Relaxed;
+// Dev-mode correctness first: use SeqCst to minimize visibility surprises
+// across callback and websocket threads while debugging parameter propagation.
+const PARAM_ORDERING: Ordering = Ordering::SeqCst;
 
 /// Lock-free bridge for passing parameter values from the WebSocket thread
 /// to the audio thread.

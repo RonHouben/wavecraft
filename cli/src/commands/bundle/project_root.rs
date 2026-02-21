@@ -1,9 +1,26 @@
 use anyhow::{bail, Result};
 use std::path::{Path, PathBuf};
 
+use crate::sdk_detect::detect_sdk_repo;
+
 pub(super) fn resolve_project_root(start_dir: &Path, install: bool) -> Result<PathBuf> {
+    resolve_project_root_with_sdk_hint(start_dir, install, detect_sdk_repo())
+}
+
+fn resolve_project_root_with_sdk_hint(
+    start_dir: &Path,
+    install: bool,
+    sdk_crates_dir_hint: Option<PathBuf>,
+) -> Result<PathBuf> {
     if let Some(root) = find_wavecraft_project_root(start_dir) {
         return Ok(root);
+    }
+
+    if install {
+        if let Some(sdk_root) = resolve_sdk_dev_repo_root(start_dir, sdk_crates_dir_hint.as_deref())
+        {
+            return Ok(sdk_root);
+        }
     }
 
     let command_suffix = if install { " --install" } else { "" };
@@ -21,6 +38,31 @@ pub(super) fn resolve_project_root(start_dir: &Path, install: bool) -> Result<Pa
         start_dir.display(),
         command_suffix
     );
+}
+
+fn resolve_sdk_dev_repo_root(start_dir: &Path, sdk_crates_dir: Option<&Path>) -> Option<PathBuf> {
+    let sdk_crates_dir = sdk_crates_dir?;
+    let sdk_root = sdk_crates_dir.parent()?.parent()?.to_path_buf();
+
+    if same_canonical_path(start_dir, &sdk_root) {
+        Some(sdk_root)
+    } else {
+        None
+    }
+}
+
+fn same_canonical_path(left: &Path, right: &Path) -> bool {
+    let left = match left.canonicalize() {
+        Ok(path) => path,
+        Err(_) => return false,
+    };
+
+    let right = match right.canonicalize() {
+        Ok(path) => path,
+        Err(_) => return false,
+    };
+
+    left == right
 }
 
 pub(super) fn find_wavecraft_project_root(start_dir: &Path) -> Option<PathBuf> {
@@ -83,5 +125,61 @@ mod tests {
         assert!(message.contains("wavecraft bundle --install"));
         assert!(message.contains("ui/package.json"));
         assert!(message.contains("engine/Cargo.toml"));
+    }
+
+    #[test]
+    fn resolve_project_root_prefers_generated_project_over_sdk_dev_hint() {
+        let temp = TempDir::new().expect("temp dir should be created");
+        let plugin_root = temp.path().join("my-plugin");
+
+        fs::create_dir_all(plugin_root.join("ui/src")).expect("ui src dir");
+        fs::create_dir_all(plugin_root.join("engine")).expect("engine dir");
+        fs::write(plugin_root.join("ui/package.json"), "{}").expect("ui package");
+        fs::write(
+            plugin_root.join("engine/Cargo.toml"),
+            "[package]\nname='demo'",
+        )
+        .expect("engine cargo");
+
+        let sdk_root = temp.path().join("sdk");
+        let sdk_crates = sdk_root.join("engine/crates");
+        fs::create_dir_all(&sdk_crates).expect("sdk crates dir");
+
+        let resolved =
+            resolve_project_root_with_sdk_hint(&plugin_root.join("ui/src"), true, Some(sdk_crates))
+                .expect("should resolve plugin project root");
+
+        assert_eq!(resolved, plugin_root);
+    }
+
+    #[test]
+    fn resolve_project_root_install_uses_sdk_dev_root_when_cwd_is_repo_root() {
+        let temp = TempDir::new().expect("temp dir should be created");
+        let sdk_root = temp.path().join("wavecraft");
+        let sdk_crates = sdk_root.join("engine/crates");
+        fs::create_dir_all(&sdk_crates).expect("sdk crates dir");
+
+        let resolved = resolve_project_root_with_sdk_hint(&sdk_root, true, Some(sdk_crates))
+            .expect("should resolve sdk repo root for install");
+
+        assert_eq!(resolved, sdk_root);
+    }
+
+    #[test]
+    fn resolve_project_root_install_still_errors_for_unrelated_directory() {
+        let temp = TempDir::new().expect("temp dir should be created");
+        let sdk_root = temp.path().join("wavecraft");
+        let sdk_crates = sdk_root.join("engine/crates");
+        fs::create_dir_all(&sdk_crates).expect("sdk crates dir");
+
+        let unrelated = temp.path().join("somewhere-else");
+        fs::create_dir_all(&unrelated).expect("unrelated dir");
+
+        let result = resolve_project_root_with_sdk_hint(&unrelated, true, Some(sdk_crates));
+
+        assert!(result.is_err());
+        let message = result.expect_err("should fail").to_string();
+        assert!(message.contains("Invalid project context"));
+        assert!(message.contains("wavecraft bundle --install"));
     }
 }

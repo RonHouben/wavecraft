@@ -123,7 +123,24 @@ impl DevServerHost {
     /// Returns an error if parameter replacement fails (e.g., unrecoverable
     /// lock poisoning).
     pub fn replace_parameters(&self, new_params: Vec<ParameterInfo>) -> Result<(), String> {
-        self.inner.replace_parameters(new_params)
+        self.inner.replace_parameters(new_params)?;
+
+        #[cfg(feature = "audio")]
+        if let Some(ref bridge) = self.param_bridge {
+            for parameter in self.inner.get_all_parameters() {
+                bridge.write(&parameter.id, parameter.value);
+
+                // Keep both legacy and canonical input trim aliases synchronized
+                // across hot-reloads to prevent stale bridge slots.
+                if parameter.id == INPUT_TRIM_LEVEL_PARAM_ID {
+                    bridge.write(LEGACY_INPUT_GAIN_LEVEL_PARAM_ID, parameter.value);
+                } else if parameter.id == LEGACY_INPUT_GAIN_LEVEL_PARAM_ID {
+                    bridge.write(INPUT_TRIM_LEVEL_PARAM_ID, parameter.value);
+                }
+            }
+        }
+
+        Ok(())
     }
 
     /// Store the latest metering snapshot for polling-based consumers.
