@@ -133,8 +133,11 @@ enum Commands {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+    dispatch(cli.command)
+}
 
-    match cli.command {
+fn dispatch(command: Commands) -> Result<()> {
+    match command {
         Commands::Create {
             name,
             vendor,
@@ -143,52 +146,54 @@ fn main() -> Result<()> {
             output,
             no_git,
             local_sdk,
-        } => {
-            let cmd = CreateCommand {
-                name,
-                vendor,
-                email,
-                url,
-                output,
-                no_git,
-                sdk_version: SDK_VERSION.to_string(),
-                local_sdk,
-            };
-            cmd.execute()?;
-        }
-
+        } => run_create(name, vendor, email, url, output, no_git, local_sdk),
         Commands::Start {
             port,
             ui_port,
             install,
             no_install,
-        } => {
-            let cmd = StartCommand {
-                port,
-                ui_port,
-                install,
-                no_install,
-            };
-            cmd.execute()?;
-        }
-
-        Commands::Bundle { install } => {
-            let cmd = BundleCommand { install };
-            cmd.execute()?;
-        }
-
-        Commands::Update { skip_self } => {
-            commands::update::run(skip_self)?;
-        }
-
-        Commands::ExtractParams { dylib_path } => {
-            commands::extract_params::execute(dylib_path)?;
-        }
-
+        } => run_start(port, ui_port, install, no_install),
+        Commands::Bundle { install } => run_bundle(install),
+        Commands::Update { skip_self } => commands::update::run(skip_self),
+        Commands::ExtractParams { dylib_path } => commands::extract_params::execute(dylib_path),
         Commands::ExtractProcessors { dylib_path } => {
-            commands::extract_processors::execute(dylib_path)?;
+            commands::extract_processors::execute(dylib_path)
         }
     }
+}
 
-    Ok(())
+fn run_create(
+    name: String,
+    vendor: Option<String>,
+    email: Option<String>,
+    url: Option<String>,
+    output: Option<PathBuf>,
+    no_git: bool,
+    local_sdk: bool,
+) -> Result<()> {
+    CreateCommand {
+        name,
+        vendor,
+        email,
+        url,
+        output,
+        no_git,
+        sdk_version: SDK_VERSION.to_string(),
+        local_sdk,
+    }
+    .execute()
+}
+
+fn run_start(port: u16, ui_port: u16, install: bool, no_install: bool) -> Result<()> {
+    StartCommand {
+        port,
+        ui_port,
+        install,
+        no_install,
+    }
+    .execute()
+}
+
+fn run_bundle(install: bool) -> Result<()> {
+    BundleCommand { install }.execute()
 }

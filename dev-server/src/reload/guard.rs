@@ -5,6 +5,8 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
+const STATE_ORDERING: Ordering = Ordering::SeqCst;
+
 /// Concurrency control for rebuild operations.
 ///
 /// Ensures only one build runs at a time, with at most one pending.
@@ -24,21 +26,32 @@ impl BuildGuard {
 
     /// Try to start a build. Returns true if acquired.
     pub fn try_start(&self) -> bool {
-        self.building
-            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
-            .is_ok()
+        try_transition(&self.building, false, true)
     }
 
     /// Mark a pending rebuild request (received during active build).
     pub fn mark_pending(&self) {
-        self.pending.store(true, Ordering::SeqCst);
+        store_state(&self.pending, true);
     }
 
     /// Complete current build. Returns true if a pending build should start.
     pub fn complete(&self) -> bool {
-        self.building.store(false, Ordering::SeqCst);
-        self.pending.swap(false, Ordering::SeqCst)
+        store_state(&self.building, false);
+        take_state(&self.pending)
     }
+}
+
+fn try_transition(flag: &AtomicBool, current: bool, new: bool) -> bool {
+    flag.compare_exchange(current, new, STATE_ORDERING, STATE_ORDERING)
+        .is_ok()
+}
+
+fn store_state(flag: &AtomicBool, value: bool) {
+    flag.store(value, STATE_ORDERING);
+}
+
+fn take_state(flag: &AtomicBool) -> bool {
+    flag.swap(false, STATE_ORDERING)
 }
 
 impl Default for BuildGuard {

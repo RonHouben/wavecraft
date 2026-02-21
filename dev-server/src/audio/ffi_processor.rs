@@ -54,16 +54,17 @@ impl FfiProcessor {
             vtable: *vtable,
         })
     }
-}
 
-impl DevAudioProcessor for FfiProcessor {
-    fn process(&mut self, channels: &mut [&mut [f32]]) {
+    fn process_dimensions(channels: &[&mut [f32]]) -> Option<(u32, u32)> {
         let num_channels = channels.len() as u32;
         if num_channels == 0 || channels[0].is_empty() {
-            return;
+            return None;
         }
-        let num_samples = channels[0].len() as u32;
 
+        Some((num_channels, channels[0].len() as u32))
+    }
+
+    fn prepare_channel_ptrs(channels: &mut [&mut [f32]]) -> Option<[*mut f32; 2]> {
         // Real-time safety: use a stack-allocated array instead of Vec.
         // Wavecraft targets stereo (2 channels). Guard against unexpected
         // multi-channel input to avoid out-of-bounds access.
@@ -72,15 +73,40 @@ impl DevAudioProcessor for FfiProcessor {
                 num_channels = channels.len(),
                 "FfiProcessor::process() received more than 2 channels; skipping"
             );
-            return;
+            return None;
         }
 
         // Build fixed-size array of channel pointers for the C-ABI call.
         // No heap allocation — this lives on the stack.
         let mut ptrs: [*mut f32; 2] = [std::ptr::null_mut(); 2];
-        for (i, ch) in channels.iter_mut().enumerate() {
-            ptrs[i] = ch.as_mut_ptr();
+        for (index, channel) in channels.iter_mut().enumerate() {
+            ptrs[index] = channel.as_mut_ptr();
         }
+
+        Some(ptrs)
+    }
+}
+
+impl DevAudioProcessor for FfiProcessor {
+    fn process(&mut self, channels: &mut [&mut [f32]]) {
+        let Some((num_channels, num_samples)) = Self::process_dimensions(channels) else {
+            return;
+        };
+
+        debug_assert!(
+            !self.instance.is_null(),
+            "FFI processor instance should be valid"
+        );
+        debug_assert!(
+            channels
+                .iter()
+                .all(|channel| channel.len() == num_samples as usize),
+            "FFI processor expects channel slices with equal lengths"
+        );
+
+        let Some(mut ptrs) = Self::prepare_channel_ptrs(channels) else {
+            return;
+        };
 
         (self.vtable.process)(self.instance, ptrs.as_mut_ptr(), num_channels, num_samples);
     }

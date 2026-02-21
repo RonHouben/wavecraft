@@ -26,10 +26,7 @@ impl NewCommand {
         validate_crate_name(&self.name)?;
 
         // Determine output directory
-        let output_dir = self
-            .output
-            .clone()
-            .unwrap_or_else(|| PathBuf::from(&self.name));
+        let output_dir = self.resolve_output_dir();
 
         if output_dir.exists() {
             anyhow::bail!(
@@ -39,12 +36,7 @@ impl NewCommand {
         }
 
         // Use defaults for missing fields
-        let vendor = self
-            .vendor
-            .clone()
-            .unwrap_or_else(|| "Your Company".to_string());
-        let email = self.email.clone();
-        let url = self.url.clone();
+        let (vendor, email, url) = self.resolve_metadata_defaults();
 
         // Resolve SDK path if --local-sdk is set
         let sdk_path = if self.local_sdk {
@@ -64,13 +56,7 @@ impl NewCommand {
         );
 
         // Extract template with progress bar
-        let pb = ProgressBar::new_spinner();
-        pb.set_style(
-            ProgressStyle::default_spinner()
-                .template("{spinner:.green} {msg}")
-                .unwrap(),
-        );
-        pb.set_message("Creating project...");
+        let pb = spinner("Creating project...");
 
         extract_template(&output_dir, &vars).context("Failed to extract template")?;
 
@@ -99,14 +85,24 @@ impl NewCommand {
         Ok(())
     }
 
+    fn resolve_output_dir(&self) -> PathBuf {
+        self.output
+            .clone()
+            .unwrap_or_else(|| PathBuf::from(&self.name))
+    }
+
+    fn resolve_metadata_defaults(&self) -> (String, Option<String>, Option<String>) {
+        (
+            self.vendor
+                .clone()
+                .unwrap_or_else(|| "Your Company".to_string()),
+            self.email.clone(),
+            self.url.clone(),
+        )
+    }
+
     fn init_git(&self, dir: &PathBuf) -> Result<()> {
-        let pb = ProgressBar::new_spinner();
-        pb.set_style(
-            ProgressStyle::default_spinner()
-                .template("{spinner:.green} {msg}")
-                .unwrap(),
-        );
-        pb.set_message("Initializing git repository...");
+        let pb = spinner("Initializing git repository...");
 
         let init_status = Command::new("git")
             .args(["init"])
@@ -161,6 +157,17 @@ impl NewCommand {
 
         Ok(())
     }
+}
+
+fn spinner(message: &str) -> ProgressBar {
+    let pb = ProgressBar::new_spinner();
+    pb.set_style(
+        ProgressStyle::default_spinner()
+            .template("{spinner:.green} {msg}")
+            .expect("spinner template should be valid"),
+    );
+    pb.set_message(message.to_string());
+    pb
 }
 
 fn find_local_sdk_path() -> Result<PathBuf> {

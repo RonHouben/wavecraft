@@ -1,7 +1,7 @@
 use anyhow::{bail, Context, Result};
 use console::style;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::{Command, ExitStatus, Stdio};
 
 use crate::project::ProjectMarkers;
 
@@ -30,13 +30,8 @@ impl BundleCommand {
             );
         }
 
-        let delegated_args: &[&str] = if self.install {
-            &["xtask", "bundle", "--install"]
-        } else {
-            &["xtask", "bundle"]
-        };
-
-        let delegated_display = format!("cargo {}", delegated_args.join(" "));
+        let delegated_args = delegated_bundle_args(self.install);
+        let delegated_display = delegated_command_display(delegated_args);
 
         println!(
             "{} Delegating to generated project: {}",
@@ -54,15 +49,10 @@ impl BundleCommand {
             .with_context(|| format!("Failed to run delegated command `{}`", delegated_display))?;
 
         if !status.success() {
-            let code = status.code().map_or_else(
-                || "terminated by signal".to_string(),
-                |value| value.to_string(),
-            );
-
             bail!(
                 "Delegated command failed: `{}` (exit: {}).",
                 delegated_display,
-                code,
+                format_exit_status(status),
             );
         }
 
@@ -73,6 +63,24 @@ impl BundleCommand {
         }
         Ok(())
     }
+}
+
+fn delegated_bundle_args(install: bool) -> &'static [&'static str] {
+    if install {
+        &["xtask", "bundle", "--install"]
+    } else {
+        &["xtask", "bundle"]
+    }
+}
+
+fn delegated_command_display(args: &[&str]) -> String {
+    format!("cargo {}", args.join(" "))
+}
+
+fn format_exit_status(status: ExitStatus) -> String {
+    status
+        .code()
+        .map_or_else(|| "terminated by signal".to_string(), |value| value.to_string())
 }
 
 fn resolve_project_root(start_dir: &Path) -> Result<PathBuf> {
@@ -101,8 +109,11 @@ fn find_wavecraft_project_root(start_dir: &Path) -> Option<PathBuf> {
 }
 
 fn is_wavecraft_project_root(path: &Path) -> bool {
-    path.join("ui").join("package.json").is_file()
-        && path.join("engine").join("Cargo.toml").is_file()
+    has_project_marker(path, "ui/package.json") && has_project_marker(path, "engine/Cargo.toml")
+}
+
+fn has_project_marker(path: &Path, marker: &str) -> bool {
+    path.join(marker).is_file()
 }
 
 #[cfg(test)]

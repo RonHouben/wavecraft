@@ -177,15 +177,7 @@ impl RebuildPipeline {
                         && let Err(e) = writer(&params)
                     {
                         ts_types_ok = false;
-                        println!(
-                            "  {} Failed to regenerate TypeScript parameter types: {}",
-                            style("⚠").yellow(),
-                            e
-                        );
-                        println!(
-                            "  {} Save a Rust source file to retry, or restart the dev server",
-                            style("  ↳").dim(),
-                        );
+                        log_regeneration_failure("TypeScript parameter types", &e);
                     }
 
                     if let (Some(processors), Some(writer)) = (
@@ -194,15 +186,7 @@ impl RebuildPipeline {
                     ) && let Err(e) = writer(processors)
                     {
                         processor_types_ok = false;
-                        println!(
-                            "  {} Failed to regenerate TypeScript processor types: {}",
-                            style("⚠").yellow(),
-                            e
-                        );
-                        println!(
-                            "  {} Save a Rust source file to retry, or restart the dev server",
-                            style("  ↳").dim(),
-                        );
+                        log_regeneration_failure("TypeScript processor types", &e);
                     }
 
                     println!("  {} Updating parameter host...", style("→").dim());
@@ -480,4 +464,17 @@ fn panic_message(payload: Box<dyn Any + Send>) -> String {
     } else {
         "Unknown panic".to_string()
     }
+}
+
+fn log_regeneration_failure(target: &str, error: &anyhow::Error) {
+    println!(
+        "  {} Failed to regenerate {}: {}",
+        style("⚠").yellow(),
+        target,
+        error
+    );
+    println!(
+        "  {} Save a Rust source file to retry, or restart the dev server",
+        style("  ↳").dim(),
+    );
 }

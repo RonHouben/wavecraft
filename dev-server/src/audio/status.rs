@@ -14,13 +14,7 @@ pub fn status(
     sample_rate: Option<f32>,
     buffer_size: Option<u32>,
 ) -> AudioRuntimeStatus {
-    AudioRuntimeStatus {
-        phase,
-        diagnostic: None,
-        sample_rate,
-        buffer_size,
-        updated_at_ms: now_millis(),
-    }
+    build_status(phase, None, sample_rate, buffer_size)
 }
 
 /// Build a status snapshot with structured diagnostics.
@@ -32,13 +26,27 @@ pub fn status_with_diagnostic(
     sample_rate: Option<f32>,
     buffer_size: Option<u32>,
 ) -> AudioRuntimeStatus {
-    AudioRuntimeStatus {
+    build_status(
         phase,
-        diagnostic: Some(AudioDiagnostic {
+        Some(AudioDiagnostic {
             code,
             message: message.into(),
             hint: hint.map(ToOwned::to_owned),
         }),
+        sample_rate,
+        buffer_size,
+    )
+}
+
+fn build_status(
+    phase: AudioRuntimePhase,
+    diagnostic: Option<AudioDiagnostic>,
+    sample_rate: Option<f32>,
+    buffer_size: Option<u32>,
+) -> AudioRuntimeStatus {
+    AudioRuntimeStatus {
+        phase,
+        diagnostic,
         sample_rate,
         buffer_size,
         updated_at_ms: now_millis(),

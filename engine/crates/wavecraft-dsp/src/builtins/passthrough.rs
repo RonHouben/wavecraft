@@ -1,4 +1,4 @@
-//! Passthrough processor - does nothing (useful for testing and placeholders).
+//! Passthrough processor that leaves input audio unchanged.
 
 use crate::traits::{Processor, ProcessorParams, Transport};
 
@@ -12,7 +12,7 @@ impl ProcessorParams for PassthroughParams {
     }
 }
 
-/// Passthrough processor - does not modify the audio signal.
+/// Passthrough processor that does not modify the audio signal.
 ///
 /// This processor is useful for:
 /// - Testing signal chain composition
@@ -46,22 +46,22 @@ impl Processor for PassthroughDsp {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_passthrough() {
+    fn assert_passthrough_unchanged(mut input: [f32; 4]) {
         let mut processor = PassthroughDsp;
-        let original = [0.5, -0.5, 0.25, -0.25];
-        let mut data = original;
-        let mut buffer = [&mut data[..]];
+        let original = input;
+        let mut buffer = [&mut input[..]];
 
         let params = PassthroughParams;
         let transport = Transport::default();
 
         processor.process(&mut buffer, &transport, &params);
 
-        // Data should be unchanged
-        for (i, &sample) in data.iter().enumerate() {
-            assert_eq!(sample, original[i]);
-        }
+        assert_eq!(input, original);
+    }
+
+    #[test]
+    fn test_passthrough() {
+        assert_passthrough_unchanged([0.5, -0.5, 0.25, -0.25]);
     }
 
     #[test]

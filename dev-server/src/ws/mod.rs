@@ -13,13 +13,19 @@ use tokio_tungstenite::{accept_async, tungstenite::protocol::Message};
 use tracing::{debug, error, info, warn};
 use wavecraft_bridge::{IpcHandler, ParameterHost};
 use wavecraft_protocol::{
-    AudioRuntimeStatus, IpcNotification, IpcResponse, NOTIFICATION_AUDIO_STATUS_CHANGED,
+    AudioRuntimeStatus, IpcNotification, IpcRequest, IpcResponse, METHOD_REGISTER_AUDIO,
+    NOTIFICATION_AUDIO_STATUS_CHANGED, NOTIFICATION_METER_UPDATE, NOTIFICATION_PARAMETER_CHANGED,
+    SetParameterParams,
 };
+
+const NOTIFICATION_PARAMETERS_CHANGED: &str = "parametersChanged";
+
+type BrowserClientTx = tokio::sync::mpsc::Sender<String>;
 
 /// Shared state for tracking connected clients
 struct ServerState {
     /// Connected browser clients (for broadcasting meter updates)
-    browser_clients: Arc<RwLock<Vec<tokio::sync::mpsc::Sender<String>>>>,
+    browser_clients: Arc<RwLock<Vec<BrowserClientTx>>>,
     /// Audio client ID (if connected)
     audio_client: Arc<RwLock<Option<String>>>,
 }
@@ -97,10 +103,7 @@ pub struct WsServer<H: ParameterHost + 'static> {
     state: Arc<ServerState>,
 }
 
-fn build_set_parameter_notification(
-    request: &wavecraft_protocol::IpcRequest,
-    response: &str,
-) -> Option<String> {
+fn build_set_parameter_notification(request: &IpcRequest, response: &str) -> Option<String> {
     if request.method != wavecraft_protocol::METHOD_SET_PARAMETER {
         return None;
     }
@@ -111,11 +114,10 @@ fn build_set_parameter_notification(
     }
 
     let params = request.params.clone()?;
-    let set_params =
-        serde_json::from_value::<wavecraft_protocol::SetParameterParams>(params).ok()?;
+    let set_params = serde_json::from_value::<SetParameterParams>(params).ok()?;
 
     serde_json::to_string(&IpcNotification::new(
-        wavecraft_protocol::NOTIFICATION_PARAMETER_CHANGED,
+        NOTIFICATION_PARAMETER_CHANGED,
         serde_json::json!({
             "id": set_params.id,
             "value": set_params.value,
@@ -151,9 +153,8 @@ impl<H: ParameterHost + 'static> WsServer<H> {
     /// This is used by the hot-reload pipeline to notify the UI that
     /// parameters have been updated and should be re-fetched.
     pub async fn broadcast_parameters_changed(&self) -> Result<(), serde_json::Error> {
-        use wavecraft_protocol::IpcNotification;
-
-        let notification = IpcNotification::new("parametersChanged", serde_json::json!({}));
+        let notification =
+            IpcNotification::new(NOTIFICATION_PARAMETERS_CHANGED, serde_json::json!({}));
         let json = serde_json::to_string(&notification)?;
 
         broadcast_to_browser_clients(
@@ -258,11 +259,11 @@ async fn handle_connection<H: ParameterHost>(
                 debug!("Received from {}: {}", addr, json);
 
                 // Try to parse as IPC request for structured routing
-                let parsed_req = serde_json::from_str::<wavecraft_protocol::IpcRequest>(&json);
+                let parsed_req = serde_json::from_str::<IpcRequest>(&json);
 
                 if let Ok(ref req) = parsed_req {
                     // Handle registerAudio
-                    if req.method == "registerAudio" {
+                    if req.method == METHOD_REGISTER_AUDIO {
                         is_audio_client = true;
                         info!("Audio client registered: {}", addr);
 
@@ -298,7 +299,7 @@ async fn handle_connection<H: ParameterHost>(
                     }
 
                     // Handle meterUpdate from audio client
-                    if is_audio_client && req.method == "meterUpdate" {
+                    if is_audio_client && req.method == NOTIFICATION_METER_UPDATE {
                         // Broadcast to all browser clients
                         broadcast_to_browser_clients(
                             &state,

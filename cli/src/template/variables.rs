@@ -2,6 +2,10 @@ use anyhow::Result;
 use heck::{ToPascalCase, ToSnakeCase, ToTitleCase};
 use regex::{escape, Regex};
 use std::path::PathBuf;
+use std::sync::LazyLock;
+
+static UNREPLACED_TEMPLATE_VARIABLE_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\{\{\s*(\w+)\s*\}\}").expect("valid unreplaced variable regex"));
 
 /// Template variables that get replaced during project generation.
 #[derive(Debug, Clone)]
@@ -49,22 +53,10 @@ impl TemplateVariables {
 
     /// Applies template variables to a string, replacing all {{variable}} placeholders.
     pub fn apply(&self, content: &str) -> Result<String> {
-        let mut result = content.to_string();
-
-        // Replace all variables (allowing optional whitespace inside the braces)
-        result = Self::replace_variable(result, "plugin_name", &self.plugin_name);
-        result = Self::replace_variable(result, "plugin_name_snake", &self.plugin_name_snake);
-        result = Self::replace_variable(result, "plugin_name_pascal", &self.plugin_name_pascal);
-        result = Self::replace_variable(result, "plugin_name_title", &self.plugin_name_title);
-        result = Self::replace_variable(result, "author_name", &self.author_name);
-        result = Self::replace_variable(result, "author_email", &self.author_email);
-        result = Self::replace_variable(result, "homepage", &self.homepage);
-        result = Self::replace_variable(result, "sdk_version", &self.sdk_version);
-        result = Self::replace_variable(result, "year", &self.year);
+        let result = self.apply_all_replacements(content);
 
         // Check for unreplaced variables
-        let unreplaced = Regex::new(r"\{\{\s*(\w+)\s*\}\}").unwrap();
-        if let Some(captures) = unreplaced.captures(&result) {
+        if let Some(captures) = UNREPLACED_TEMPLATE_VARIABLE_REGEX.captures(&result) {
             let var_name = &captures[1];
             anyhow::bail!("Unreplaced template variable: {{{{{}}}}}", var_name);
         }
@@ -72,10 +64,32 @@ impl TemplateVariables {
         Ok(result)
     }
 
-    fn replace_variable(result: String, name: &str, value: &str) -> String {
+    fn apply_all_replacements(&self, content: &str) -> String {
+        self.replacements()
+            .into_iter()
+            .fold(content.to_string(), |acc, (name, value)| {
+                Self::replace_variable(&acc, name, value)
+            })
+    }
+
+    fn replacements(&self) -> [(&str, &str); 9] {
+        [
+            ("plugin_name", &self.plugin_name),
+            ("plugin_name_snake", &self.plugin_name_snake),
+            ("plugin_name_pascal", &self.plugin_name_pascal),
+            ("plugin_name_title", &self.plugin_name_title),
+            ("author_name", &self.author_name),
+            ("author_email", &self.author_email),
+            ("homepage", &self.homepage),
+            ("sdk_version", &self.sdk_version),
+            ("year", &self.year),
+        ]
+    }
+
+    fn replace_variable(result: &str, name: &str, value: &str) -> String {
         let pattern = format!("\\{{\\{{\\s*{}\\s*\\}}\\}}", escape(name));
         let re = Regex::new(&pattern).expect("valid template variable regex");
-        re.replace_all(&result, value).to_string()
+        re.replace_all(result, value).to_string()
     }
 }
 

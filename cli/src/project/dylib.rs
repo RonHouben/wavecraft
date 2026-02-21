@@ -18,6 +18,14 @@ fn debug_dir_candidates(engine_dir: &Path) -> Vec<PathBuf> {
     dirs
 }
 
+fn format_debug_dirs(engine_dir: &Path) -> String {
+    debug_dir_candidates(engine_dir)
+        .into_iter()
+        .map(|path| format!("  - {}", path.display()))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 /// Find the plugin dylib in the engine's target directory.
 ///
 /// This function handles:
@@ -42,11 +50,7 @@ pub fn find_plugin_dylib(engine_dir: &Path) -> Result<PathBuf> {
     if debug_dirs.is_empty() {
         anyhow::bail!(
             "Build output directory not found. Tried:\n{}\nRun `cargo build` first.",
-            debug_dir_candidates(engine_dir)
-                .into_iter()
-                .map(|p| format!("  - {}", p.display()))
-                .collect::<Vec<_>>()
-                .join("\n")
+            format_debug_dirs(engine_dir)
         );
     }
 
@@ -125,11 +129,7 @@ pub fn resolve_debug_dir(engine_dir: &Path) -> Result<PathBuf> {
 
     anyhow::bail!(
         "Build output directory not found. Tried:\n{}\nRun `cargo build` first.",
-        debug_dir_candidates(engine_dir)
-            .into_iter()
-            .map(|p| format!("  - {}", p.display()))
-            .collect::<Vec<_>>()
-            .join("\n")
+        format_debug_dirs(engine_dir)
     );
 }
 

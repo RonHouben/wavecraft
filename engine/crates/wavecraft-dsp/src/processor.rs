@@ -5,6 +5,13 @@
 
 use crate::gain::db_to_linear;
 
+#[inline]
+fn apply_gain_to_channel(channel: &mut [f32], gain_linear: f32) {
+    for sample in channel.iter_mut() {
+        *sample *= gain_linear;
+    }
+}
+
 /// Reference gain processor implementation for VstKit.
 ///
 /// This struct maintains processing state and provides a simple gain effect.
@@ -62,22 +69,28 @@ impl GainProcessor {
         );
 
         let gain_linear = db_to_linear(gain_db);
-
-        // Apply gain to left channel
-        for sample in left.iter_mut() {
-            *sample *= gain_linear;
-        }
-
-        // Apply gain to right channel
-        for sample in right.iter_mut() {
-            *sample *= gain_linear;
-        }
+        apply_gain_to_channel(left, gain_linear);
+        apply_gain_to_channel(right, gain_linear);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn assert_buffer_close(actual: &[f32], expected: &[f32], tolerance: f32, label: &str) {
+        assert_eq!(actual.len(), expected.len(), "{} length mismatch", label);
+
+        for (i, (actual_sample, expected_sample)) in actual.iter().zip(expected.iter()).enumerate()
+        {
+            assert!(
+                (actual_sample - expected_sample).abs() < tolerance,
+                "{} sample {} has incorrect value",
+                label,
+                i
+            );
+        }
+    }
 
     #[test]
     fn test_passthrough_at_0db() {
@@ -90,18 +103,8 @@ mod tests {
 
         processor.process(&mut left, &mut right, 0.0);
 
-        for (i, (l, r)) in left.iter().zip(right.iter()).enumerate() {
-            assert!(
-                (l - left_original[i]).abs() < 1e-6,
-                "Left sample {} changed at 0dB gain",
-                i
-            );
-            assert!(
-                (r - right_original[i]).abs() < 1e-6,
-                "Right sample {} changed at 0dB gain",
-                i
-            );
-        }
+        assert_buffer_close(&left, &left_original, 1e-6, "Left");
+        assert_buffer_close(&right, &right_original, 1e-6, "Right");
     }
 
     #[test]
@@ -114,18 +117,9 @@ mod tests {
         processor.process(&mut left, &mut right, -6.0);
 
         let expected_gain = db_to_linear(-6.0);
-        for (i, (l, r)) in left.iter().zip(right.iter()).enumerate() {
-            assert!(
-                (l - expected_gain).abs() < 0.001,
-                "Left sample {} has incorrect gain",
-                i
-            );
-            assert!(
-                (r - expected_gain).abs() < 0.001,
-                "Right sample {} has incorrect gain",
-                i
-            );
-        }
+        let expected = [expected_gain; 4];
+        assert_buffer_close(&left, &expected, 0.001, "Left");
+        assert_buffer_close(&right, &expected, 0.001, "Right");
     }
 
     #[test]

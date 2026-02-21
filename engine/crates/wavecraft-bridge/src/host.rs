@@ -4,6 +4,7 @@
 //! and the actual parameter storage (typically in the plugin or DAW host).
 
 use crate::error::BridgeError;
+use std::sync::Arc;
 use wavecraft_protocol::{AudioRuntimeStatus, MeterFrame, OscilloscopeFrame, ParameterInfo};
 
 /// Trait for objects that store and manage parameters.
@@ -163,30 +164,35 @@ pub trait ParameterHost: Send + Sync {
 /// RebuildPipeline for parameter replacement).
 impl<T: ParameterHost> ParameterHost for std::sync::Arc<T> {
     fn get_parameter(&self, id: &str) -> Option<ParameterInfo> {
-        (**self).get_parameter(id)
+        forward_host(self).get_parameter(id)
     }
 
     fn set_parameter(&self, id: &str, value: f32) -> Result<(), BridgeError> {
-        (**self).set_parameter(id, value)
+        forward_host(self).set_parameter(id, value)
     }
 
     fn get_all_parameters(&self) -> Vec<ParameterInfo> {
-        (**self).get_all_parameters()
+        forward_host(self).get_all_parameters()
     }
 
     fn get_meter_frame(&self) -> Option<MeterFrame> {
-        (**self).get_meter_frame()
+        forward_host(self).get_meter_frame()
     }
 
     fn get_oscilloscope_frame(&self) -> Option<OscilloscopeFrame> {
-        (**self).get_oscilloscope_frame()
+        forward_host(self).get_oscilloscope_frame()
     }
 
     fn request_resize(&self, width: u32, height: u32) -> bool {
-        (**self).request_resize(width, height)
+        forward_host(self).request_resize(width, height)
     }
 
     fn get_audio_status(&self) -> Option<AudioRuntimeStatus> {
-        (**self).get_audio_status()
+        forward_host(self).get_audio_status()
     }
+}
+
+#[inline]
+fn forward_host<T: ParameterHost>(host: &Arc<T>) -> &T {
+    host.as_ref()
 }

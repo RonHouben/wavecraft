@@ -33,7 +33,7 @@ impl std::fmt::Display for PluginLoaderError {
             Self::LibraryLoad(e) => write!(f, "Failed to load plugin library: {}", e),
             Self::SymbolNotFound(name) => write!(f, "Symbol not found: {}", name),
             Self::NullPointer(func) => write!(f, "FFI function {} returned null", func),
-            Self::JsonParse(e) => write!(f, "Failed to parse parameter JSON: {}", e),
+            Self::JsonParse(e) => write!(f, "Failed to parse JSON payload: {}", e),
             Self::InvalidUtf8(e) => write!(f, "Invalid UTF-8 in FFI response: {}", e),
             Self::FileRead(e) => write!(f, "Failed to read file: {}", e),
             Self::VtableVersionMismatch { found, expected } => write!(
@@ -77,6 +77,25 @@ where
     let c_str = unsafe { CStr::from_ptr(json_ptr) };
     let json_str = c_str.to_str().map_err(PluginLoaderError::InvalidUtf8)?;
     serde_json::from_str(json_str).map_err(PluginLoaderError::JsonParse)
+}
+
+fn load_json_via_ffi<T>(
+    get_json: unsafe extern "C" fn() -> *mut c_char,
+    free_string: unsafe extern "C" fn(*mut c_char),
+    function_name: &'static str,
+) -> Result<T, PluginLoaderError>
+where
+    T: serde::de::DeserializeOwned,
+{
+    // SAFETY: Both function pointers come from validated dynamic-library symbols
+    // with matching ABI. `free_string` is called exactly once for the pointer
+    // returned by `get_json`.
+    unsafe {
+        let json_ptr = get_json();
+        let parsed = parse_json_from_ffi::<T>(json_ptr, function_name)?;
+        free_string(json_ptr);
+        Ok(parsed)
+    }
 }
 
 /// Plugin loader that extracts parameter metadata and the
@@ -170,23 +189,17 @@ impl PluginParamLoader {
         //   the string is NUL-terminated (allocated by `CString::into_raw`).
         // - `free_string()` deallocates the string originally created by
         //   `CString::into_raw` — matching allocator, called exactly once.
-        let params = unsafe {
-            let json_ptr = get_params_json();
-            let parsed =
-                parse_json_from_ffi::<Vec<ParameterInfo>>(json_ptr, "wavecraft_get_params_json")?;
-            free_string(json_ptr);
-            parsed
-        };
+        let params = load_json_via_ffi::<Vec<ParameterInfo>>(
+            *get_params_json,
+            *free_string,
+            "wavecraft_get_params_json",
+        )?;
 
-        let processors = unsafe {
-            let json_ptr = get_processors_json();
-            let parsed = parse_json_from_ffi::<Vec<ProcessorInfo>>(
-                json_ptr,
-                "wavecraft_get_processors_json",
-            )?;
-            free_string(json_ptr);
-            parsed
-        };
+        let processors = load_json_via_ffi::<Vec<ProcessorInfo>>(
+            *get_processors_json,
+            *free_string,
+            "wavecraft_get_processors_json",
+        )?;
 
         // Load and validate audio processor vtable (required for current SDK dev mode)
         let dev_processor_vtable = Self::load_processor_vtable(&library)?;
@@ -230,13 +243,11 @@ impl PluginParamLoader {
         };
 
         // SAFETY: See `load()` for detailed rationale on FFI safety.
-        let params = unsafe {
-            let json_ptr = get_params_json();
-            let parsed =
-                parse_json_from_ffi::<Vec<ParameterInfo>>(json_ptr, "wavecraft_get_params_json")?;
-            free_string(json_ptr);
-            parsed
-        };
+        let params = load_json_via_ffi::<Vec<ParameterInfo>>(
+            *get_params_json,
+            *free_string,
+            "wavecraft_get_params_json",
+        )?;
 
         Ok(params)
     }
@@ -269,15 +280,11 @@ impl PluginParamLoader {
         };
 
         // SAFETY: See load() for FFI safety rationale.
-        let processors = unsafe {
-            let json_ptr = get_processors_json();
-            let parsed = parse_json_from_ffi::<Vec<ProcessorInfo>>(
-                json_ptr,
-                "wavecraft_get_processors_json",
-            )?;
-            free_string(json_ptr);
-            parsed
-        };
+        let processors = load_json_via_ffi::<Vec<ProcessorInfo>>(
+            *get_processors_json,
+            *free_string,
+            "wavecraft_get_processors_json",
+        )?;
 
         Ok(processors)
     }

@@ -17,6 +17,47 @@ use crate::ws::WsServer;
 #[cfg(feature = "audio")]
 use crate::audio::server::AudioHandle;
 
+fn log_rust_file_change(paths: &[PathBuf]) {
+    let timestamp = chrono::Local::now().format("%H:%M:%S");
+    if paths.len() == 1 {
+        println!(
+            "[{}] File changed: {}",
+            timestamp,
+            paths[0].file_name().unwrap_or_default().to_string_lossy()
+        );
+    } else {
+        println!("[{}] {} files changed", timestamp, paths.len());
+    }
+}
+
+fn report_rebuild_result(result: Result<Result<()>, tokio::task::JoinError>) {
+    match result {
+        Ok(Ok(())) => {
+            // Success - continue watching
+        }
+        Ok(Err(e)) => {
+            eprintln!("  {} Rebuild failed: {:#}", console::style("✗").red(), e);
+        }
+        Err(join_err) => {
+            eprintln!(
+                "  {} Hot-reload pipeline panicked: {}\n  {} Continuing to watch for changes...",
+                console::style("✗").red(),
+                join_err,
+                console::style("→").cyan()
+            );
+        }
+    }
+}
+
+async fn handle_rust_files_changed(paths: Vec<PathBuf>, pipeline: &Arc<RebuildPipeline>) {
+    log_rust_file_change(&paths);
+
+    // Trigger rebuild with panic recovery
+    let pipeline = Arc::clone(pipeline);
+    let result = tokio::spawn(async move { pipeline.handle_change().await }).await;
+    report_rebuild_result(result);
+}
+
 /// Development session managing WebSocket server, file watcher, and rebuild pipeline.
 ///
 /// Components are owned in the correct order for proper drop semantics:
@@ -106,38 +147,7 @@ impl DevSession {
 
                         match event {
                             WatchEvent::RustFilesChanged(paths) => {
-                                // Print changed file(s)
-                                let timestamp = chrono::Local::now().format("%H:%M:%S");
-                                if paths.len() == 1 {
-                                    println!(
-                                        "[{}] File changed: {}",
-                                        timestamp,
-                                        paths[0].file_name().unwrap_or_default().to_string_lossy()
-                                    );
-                                } else {
-                                    println!("[{}] {} files changed", timestamp, paths.len());
-                                }
-
-                                // Trigger rebuild with panic recovery
-                                let pipeline = Arc::clone(&pipeline);
-                                let result = tokio::spawn(async move { pipeline.handle_change().await }).await;
-
-                                match result {
-                                    Ok(Ok(())) => {
-                                        // Success - continue watching
-                                    }
-                                    Ok(Err(e)) => {
-                                        eprintln!("  {} Rebuild failed: {:#}", console::style("✗").red(), e);
-                                    }
-                                    Err(join_err) => {
-                                        eprintln!(
-                                            "  {} Hot-reload pipeline panicked: {}\n  {} Continuing to watch for changes...",
-                                            console::style("✗").red(),
-                                            join_err,
-                                            console::style("→").cyan()
-                                        );
-                                    }
-                                }
+                                handle_rust_files_changed(paths, &pipeline).await;
                             }
                         }
                     }

@@ -42,6 +42,7 @@ pub mod ws;
 #[cfg(feature = "audio")]
 pub mod audio;
 
+// Core server orchestration exports.
 pub use host::DevServerHost;
 pub use reload::guard::BuildGuard;
 pub use reload::rebuild::{RebuildCallbacks, RebuildPipeline};
@@ -49,13 +50,11 @@ pub use reload::watcher::{FileWatcher, WatchEvent};
 pub use session::DevSession;
 pub use ws::{WsHandle, WsServer};
 
+// Optional audio-runtime exports (enabled by `audio` feature).
 #[cfg(feature = "audio")]
-pub use audio::atomic_params::AtomicParameterBridge;
-#[cfg(feature = "audio")]
-pub use audio::ffi_processor::{DevAudioProcessor, FfiProcessor};
-#[cfg(feature = "audio")]
-pub use audio::server::{AudioConfig, AudioHandle, AudioServer};
-#[cfg(feature = "audio")]
-pub use audio::status::{
-    status as audio_status, status_with_diagnostic as audio_status_with_diagnostic,
+pub use audio::{
+    atomic_params::AtomicParameterBridge,
+    ffi_processor::{DevAudioProcessor, FfiProcessor},
+    server::{AudioConfig, AudioHandle, AudioServer},
+    status::{status as audio_status, status_with_diagnostic as audio_status_with_diagnostic},
 };

@@ -20,9 +20,7 @@ pub enum WatchEvent {
 
 /// File watcher with debouncing for Rust source files
 pub struct FileWatcher {
-    #[allow(dead_code)] // Kept alive for the lifetime of the watcher
-    debouncer: Debouncer<notify::RecommendedWatcher, RecommendedCache>,
-    #[allow(dead_code)] // Kept alive for the lifetime of the watcher
+    _debouncer: Debouncer<notify::RecommendedWatcher, RecommendedCache>,
     _shutdown_rx: watch::Receiver<bool>,
 }
 
@@ -41,8 +39,8 @@ impl FileWatcher {
         tx: mpsc::UnboundedSender<WatchEvent>,
         shutdown_rx: watch::Receiver<bool>,
     ) -> Result<Self> {
-        let engine_dir_clone = engine_dir.to_path_buf();
-        let engine_dir = Arc::new(engine_dir_clone.clone());
+        let engine_dir_path = engine_dir.to_path_buf();
+        let watched_root = Arc::new(engine_dir_path.clone());
         let shutdown_rx_for_events = shutdown_rx.clone();
 
         let mut debouncer = new_debouncer(
@@ -51,7 +49,7 @@ impl FileWatcher {
             move |result: DebounceEventResult| {
                 Self::handle_events(
                     result,
-                    Arc::clone(&engine_dir),
+                    Arc::clone(&watched_root),
                     &tx,
                     &shutdown_rx_for_events,
                 );
@@ -59,17 +57,17 @@ impl FileWatcher {
         )?;
 
         // Watch engine/src recursively
-        let src_path = engine_dir_clone.join("src");
+        let src_path = engine_dir_path.join("src");
         debouncer.watch(&src_path, RecursiveMode::Recursive)?;
 
         // Watch engine/Cargo.toml non-recursively
-        let cargo_toml = engine_dir_clone.join("Cargo.toml");
+        let cargo_toml = engine_dir_path.join("Cargo.toml");
         if cargo_toml.exists() {
             debouncer.watch(&cargo_toml, RecursiveMode::NonRecursive)?;
         }
 
         Ok(Self {
-            debouncer,
+            _debouncer: debouncer,
             _shutdown_rx: shutdown_rx,
         })
     }
@@ -89,7 +87,7 @@ impl FileWatcher {
             Ok(events) => events,
             Err(errors) => {
                 for error in errors {
-                    eprintln!("File watcher error: {:?}", error);
+                    eprintln!("Warning: file watcher error: {:?}", error);
                 }
                 return;
             }
@@ -140,16 +138,19 @@ impl FileWatcher {
         };
 
         // Ignore editor temp files
-        if file_name.ends_with(".swp")
-            || file_name.ends_with(".swo")
-            || file_name.ends_with('~')
-            || file_name.starts_with(".#")
-        {
+        if Self::is_editor_temp_file(&file_name) {
             return false;
         }
 
         // Accept .rs files and Cargo.toml
         file_name.ends_with(".rs") || file_name == "Cargo.toml"
+    }
+
+    fn is_editor_temp_file(file_name: &str) -> bool {
+        file_name.ends_with(".swp")
+            || file_name.ends_with(".swo")
+            || file_name.ends_with('~')
+            || file_name.starts_with(".#")
     }
 }
 

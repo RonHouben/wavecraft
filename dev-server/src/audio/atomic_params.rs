@@ -12,6 +12,8 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use wavecraft_protocol::ParameterInfo;
 
+const PARAM_ORDERING: Ordering = Ordering::Relaxed;
+
 /// Lock-free bridge for passing parameter values from the WebSocket thread
 /// to the audio thread.
 ///
@@ -40,8 +42,8 @@ impl AtomicParameterBridge {
     /// eventual visibility. The audio thread will see the update at the
     /// next block boundary.
     pub fn write(&self, id: &str, value: f32) {
-        if let Some(atomic) = self.params.get(id) {
-            atomic.store(value, Ordering::Relaxed);
+        if let Some(atomic) = self.lookup_param(id) {
+            atomic.store(value, PARAM_ORDERING);
         }
     }
 
@@ -50,7 +52,12 @@ impl AtomicParameterBridge {
     /// Returns `None` if the parameter ID is unknown. Uses
     /// `Ordering::Relaxed` — single atomic load, no allocation.
     pub fn read(&self, id: &str) -> Option<f32> {
-        self.params.get(id).map(|a| a.load(Ordering::Relaxed))
+        self.lookup_param(id)
+            .map(|atomic| atomic.load(PARAM_ORDERING))
+    }
+
+    fn lookup_param(&self, id: &str) -> Option<&Arc<AtomicF32>> {
+        self.params.get(id)
     }
 }
 

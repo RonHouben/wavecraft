@@ -23,7 +23,7 @@ pub struct Transport {
 /// This trait provides metadata about a processor's parameters,
 /// enabling automatic UI generation and nih-plug integration.
 ///
-/// Typically implemented via `#[derive(ProcessorParams)]` rather than manually.
+/// This is typically implemented via `#[derive(ProcessorParams)]` rather than manually.
 pub trait ProcessorParams: Default + Send + Sync + 'static {
     /// Returns the parameter specifications for this processor.
     fn param_specs() -> &'static [ParamSpec];
@@ -46,7 +46,7 @@ pub trait ProcessorParams: Default + Send + Sync + 'static {
     fn apply_plain_values(&mut self, _values: &[f32]) {}
 }
 
-/// Specification for a single parameter.
+/// Specification for a single processor parameter.
 #[derive(Debug, Clone)]
 pub struct ParamSpec {
     /// Display name of the parameter (e.g., "Frequency").
@@ -76,7 +76,7 @@ pub enum ParamRange {
     Linear { min: f64, max: f64 },
 
     /// Skewed range with exponential/logarithmic scaling.
-    /// Factor > 1.0 = logarithmic, factor < 1.0 = exponential.
+    /// `factor > 1.0` produces logarithmic-style skew; `factor < 1.0` produces exponential-style skew.
     Skewed { min: f64, max: f64, factor: f64 },
 
     /// Integer stepped range (for enums, switches).

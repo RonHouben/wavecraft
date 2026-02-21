@@ -141,7 +141,15 @@ impl OscilloscopeTap {
         }
 
         let right = if right.is_empty() { left } else { right };
+        let max_abs = self.capture_frame_samples(left, right);
+        let no_signal = max_abs < self.no_signal_threshold;
+        self.update_history();
+        let trigger_start = self.resolve_trigger_start(no_signal);
+        self.copy_aligned_window(trigger_start);
+        self.publish_frame(no_signal);
+    }
 
+    fn capture_frame_samples(&mut self, left: &[f32], right: &[f32]) -> f32 {
         // Downsample or upsample source block into fixed 1024-point frame.
         let left_len = left.len();
         let right_len = right.len();
@@ -159,8 +167,10 @@ impl OscilloscopeTap {
             max_abs = max_abs.max(l.abs()).max(r.abs());
         }
 
-        let no_signal = max_abs < self.no_signal_threshold;
+        max_abs
+    }
 
+    fn update_history(&mut self) {
         // Keep a rolling three-frame history so the trigger-aligned frame can
         // always be extracted as a contiguous 1024-sample window without
         // wrapping or synthetic tail padding.
@@ -173,29 +183,39 @@ impl OscilloscopeTap {
 
         self.history_frames_filled =
             (self.history_frames_filled + 1).min(OSCILLOSCOPE_HISTORY_FRAMES);
+    }
 
-        let min_trigger_start = match self.history_frames_filled {
+    fn minimum_trigger_start(&self) -> Option<usize> {
+        match self.history_frames_filled {
             0 | 1 => None,
             // Avoid index 1024 during startup while oldest history is still zero-filled.
             2 => Some(OSCILLOSCOPE_FRAME_POINTS + 1),
             _ => Some(1),
-        };
+        }
+    }
 
-        let trigger_start = if no_signal {
-            OSCILLOSCOPE_HISTORY_TAIL_START
-        } else if let Some(min_start) = min_trigger_start {
+    fn resolve_trigger_start(&self, no_signal: bool) -> usize {
+        if no_signal {
+            return OSCILLOSCOPE_HISTORY_TAIL_START;
+        }
+
+        if let Some(min_start) = self.minimum_trigger_start() {
             self.find_rising_zero_crossing_in_history(min_start)
                 .unwrap_or(OSCILLOSCOPE_HISTORY_TAIL_START)
         } else {
             OSCILLOSCOPE_HISTORY_TAIL_START
-        };
+        }
+    }
 
+    fn copy_aligned_window(&mut self, trigger_start: usize) {
         let end = trigger_start + OSCILLOSCOPE_FRAME_POINTS;
         self.aligned_l
             .copy_from_slice(&self.history_l[trigger_start..end]);
         self.aligned_r
             .copy_from_slice(&self.history_r[trigger_start..end]);
+    }
 
+    fn publish_frame(&mut self, no_signal: bool) {
         let frame = OscilloscopeFrameSnapshot {
             points_l: self.aligned_l,
             points_r: self.aligned_r,

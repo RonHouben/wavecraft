@@ -1,8 +1,10 @@
-# Implementation Progress — oscillator-passthrough-mix
+# Archived
 
-**Milestone:** 18.11  
-**Date:** 2026-02-18  
-**Branch:** `bugfix/oscillator-passthrough-mix`
+This feature spec has been archived.
+
+Canonical file: `docs/feature-specs/_archive/oscillator-passthrough-mix/implementation-progress.md`
+
+Please read/update the archived file only.
 
 ## Summary
 

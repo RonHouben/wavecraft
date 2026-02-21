@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, Output};
 
 use crate::sdk_detect;
 use crate::template::{extract_template, variables::TemplateVariables};
@@ -27,10 +27,7 @@ impl CreateCommand {
         validate_crate_name(&self.name)?;
 
         // Determine output directory
-        let output_dir = self
-            .output
-            .clone()
-            .unwrap_or_else(|| PathBuf::from(&self.name));
+        let output_dir = self.resolve_output_dir();
 
         if output_dir.exists() {
             anyhow::bail!(
@@ -40,18 +37,7 @@ impl CreateCommand {
         }
 
         // Use defaults for missing fields
-        let author_name = self
-            .vendor
-            .clone()
-            .unwrap_or_else(|| "Your Name".to_string());
-        let author_email = self
-            .email
-            .clone()
-            .unwrap_or_else(|| "your.email@example.com".to_string());
-        let homepage = self
-            .url
-            .clone()
-            .unwrap_or_else(|| "https://yourproject.com".to_string());
+        let (author_name, author_email, homepage) = self.default_author_metadata();
 
         // Resolve SDK path:
         // 1. Explicit --local-sdk flag (manual override)
@@ -136,13 +122,9 @@ impl CreateCommand {
         );
         pb.set_message("Initializing git repository...");
 
-        let init_status = Command::new("git")
-            .args(["init"])
-            .current_dir(dir)
-            .output()
-            .context("Failed to run git init")?;
+        let status = self.run_git_init(dir)?;
 
-        if !init_status.status.success() {
+        if !Self::git_init_succeeded(&status) {
             pb.finish_with_message("Git initialization failed (continuing...)");
             eprintln!(
                 "{}",
@@ -188,6 +170,38 @@ impl CreateCommand {
         }
 
         Ok(())
+    }
+
+    fn resolve_output_dir(&self) -> PathBuf {
+        self.output
+            .clone()
+            .unwrap_or_else(|| PathBuf::from(&self.name))
+    }
+
+    fn default_author_metadata(&self) -> (String, String, String) {
+        (
+            self.vendor
+                .clone()
+                .unwrap_or_else(|| "Your Name".to_string()),
+            self.email
+                .clone()
+                .unwrap_or_else(|| "your.email@example.com".to_string()),
+            self.url
+                .clone()
+                .unwrap_or_else(|| "https://yourproject.com".to_string()),
+        )
+    }
+
+    fn run_git_init(&self, dir: &PathBuf) -> Result<Output> {
+        Command::new("git")
+            .args(["init"])
+            .current_dir(dir)
+            .output()
+            .context("Failed to run git init")
+    }
+
+    fn git_init_succeeded(output: &Output) -> bool {
+        output.status.success()
     }
 }
 
