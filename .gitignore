@@ -12,6 +12,7 @@
 /ui/packages/core/dist
 /dev-server/target
 /target/tmp
+*.png
 
 # SDK template — build artifacts
 /sdk-template/engine/target/
