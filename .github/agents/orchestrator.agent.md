@@ -5,8 +5,7 @@ model:
   - Claude Opus 4.6 (copilot)
   - Claude Sonnet 4.6 (copilot)
 tools: ['read', 'search', 'agent', 'web', 'todo', 'memory', 'excalidraw/*']
-description: Workflow coordinator for Wavecraft feature development. Routes work between specialized agents (PO, Architect, Planner, Coder, UX Designer, Tester, QA, DocWriter, Search). Does not make product, architectural, or implementation decisions—only coordinates handoffs.
-agents: [po, architect, planner, coder, ux-designer, tester, qa, docwriter, search]
+agents: ['*']
 user-invokable: true
 handoffs:
   - label: Requirements Phase
