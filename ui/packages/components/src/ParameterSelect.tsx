@@ -5,6 +5,7 @@
 import React, { useEffect } from 'react';
 import { useParameter, logger } from '@wavecraft/core';
 import type { ParameterId } from '@wavecraft/core';
+import { focusRingClass, interactionStateClass } from './utils/classNames';
 
 export interface ParameterSelectProps {
   /** Parameter ID to bind to. */
@@ -66,7 +67,7 @@ export function ParameterSelect({ id }: Readonly<ParameterSelectProps>): React.J
         onChange={handleChange}
         disabled={hasNoVariants}
         aria-describedby={helperTextId}
-        className="w-full rounded border border-plugin-border bg-plugin-dark px-3 py-2 text-sm text-gray-200 outline-none focus:border-accent"
+        className={`w-full rounded border border-plugin-border bg-plugin-dark px-3 py-2 text-sm text-gray-200 focus:border-accent ${focusRingClass} ${interactionStateClass}`}
       >
         {variantOptions.map((option) => (
           <option key={`${id}-${option.label}-${option.value}`} value={option.value}>

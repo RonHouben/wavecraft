@@ -5,6 +5,7 @@
 import React from 'react';
 import { useParameter, logger } from '@wavecraft/core';
 import type { ParameterId } from '@wavecraft/core';
+import { focusRingClass, interactionStateClass } from './utils/classNames';
 
 interface ParameterSliderProps {
   readonly id: ParameterId;
@@ -78,7 +79,7 @@ export function ParameterSlider({ id }: ParameterSliderProps): React.JSX.Element
         step="0.001"
         value={numericValue}
         onChange={handleChange}
-        className="slider-thumb h-1.5 w-full appearance-none rounded-sm bg-plugin-border outline-none"
+        className={`slider-thumb h-1.5 w-full appearance-none rounded-sm bg-plugin-border ${focusRingClass} ${interactionStateClass}`}
       />
     </div>
   );

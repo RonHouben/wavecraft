@@ -10,6 +10,60 @@ import globals from 'globals';
 export default [
   // Base JavaScript rules
   js.configs.recommended,
+
+  // Guardrail: prevent direct filesystem imports from core package internals
+  {
+    files: ['packages/components/src/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '../core/*',
+                '../../core/*',
+                '../../../core/*',
+                'packages/core/*',
+              ],
+              message:
+                'Presentational components must not import core internals. Use package public APIs and props boundaries.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  // Guardrail: disallow raw IPC method strings outside core package
+  {
+    files: ['packages/components/src/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "Literal[value='getParameter']",
+          message: 'Use canonical IPC constants instead of raw method strings.',
+        },
+        {
+          selector: "Literal[value='setParameter']",
+          message: 'Use canonical IPC constants instead of raw method strings.',
+        },
+        {
+          selector: "Literal[value='getMeterFrame']",
+          message: 'Use canonical IPC constants instead of raw method strings.',
+        },
+        {
+          selector: "Literal[value='getAudioStatus']",
+          message: 'Use canonical IPC constants instead of raw method strings.',
+        },
+        {
+          selector: "Literal[value='ping']",
+          message: 'Use canonical IPC constants instead of raw method strings.',
+        },
+      ],
+    },
+  },
   
   // TypeScript files
   {

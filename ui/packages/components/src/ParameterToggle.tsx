@@ -5,6 +5,7 @@
 import React from 'react';
 import { useParameter, logger } from '@wavecraft/core';
 import type { ParameterId } from '@wavecraft/core';
+import { focusRingClass, interactionStateClass } from './utils/classNames';
 
 interface ParameterToggleProps {
   readonly id: ParameterId;
@@ -45,14 +46,14 @@ export function ParameterToggle({ id }: ParameterToggleProps): React.JSX.Element
       </label>
       <button
         id={`toggle-${id}`}
-        className={`relative h-[26px] w-[50px] cursor-pointer rounded-full border-none outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-plugin-surface ${
+        className={`relative h-[26px] w-[50px] cursor-pointer rounded-full border-none motion-safe:transition-colors motion-safe:duration-200 ${focusRingClass} ${interactionStateClass} ${
           isOn ? 'bg-accent hover:bg-accent-light' : 'bg-gray-600 hover:bg-gray-500'
         }`}
         onClick={handleToggle}
         aria-pressed={isOn}
       >
         <span
-          className={`absolute top-[3px] h-5 w-5 rounded-full bg-white transition-[left] duration-200 ${
+          className={`absolute top-[3px] h-5 w-5 rounded-full bg-white motion-safe:transition-[left] motion-safe:duration-200 ${
             isOn ? 'left-[27px]' : 'left-[3px]'
           }`}
         ></span>

@@ -4,6 +4,7 @@
 
 import React, { useState } from 'react';
 import { useRequestResize } from '@wavecraft/core';
+import { focusRingClass, interactionStateClass } from './utils/classNames';
 
 const PRESET_SIZES = [
   { name: 'Small', width: 600, height: 400 },
@@ -46,7 +47,7 @@ export function ResizeControls(): React.JSX.Element {
             key={preset.name}
             onClick={() => handleResize(preset.width, preset.height)}
             disabled={isLoading}
-            className="flex cursor-pointer flex-col items-center justify-center rounded-md border border-gray-300 bg-white p-3 font-medium text-gray-800 transition-all duration-200 hover:-translate-y-px hover:border-blue-500 hover:bg-gray-100 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+            className={`flex cursor-pointer flex-col items-center justify-center rounded-md border border-gray-300 bg-white p-3 font-medium text-gray-800 motion-safe:transition-all motion-safe:duration-200 hover:-translate-y-px hover:border-blue-500 hover:bg-gray-100 hover:shadow-md ${focusRingClass} ${interactionStateClass}`}
           >
             {preset.name}
             <span className="mt-1 text-[11px] text-gray-500">
