@@ -4,23 +4,23 @@ This project uses specialized agents with distinct responsibilities that hand of
 
 ## Agent Roles
 
-| Agent                  | Role                                                                                  | Key Outputs                                           |
-| ---------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| **Orchestrator**       | Workflow coordinator, routes work between agents                                      | Phase tracking, handoff decisions                     |
-| **PO** (Product Owner) | Owns product vision, roadmap, feature prioritization                                  | User stories, `docs/roadmap.md`                       |
-| **Architect**          | Designs system architecture, enforces technical constraints                           | Low-level designs in `docs/feature-specs/{feature}/`  |
-| **Planner**            | Creates detailed implementation plans                                                 | `docs/feature-specs/{feature}/implementation-plan.md` |
-| **Coder**              | Implements features, writes production code                                           | Code changes, PRs                                     |
-| **Tester**             | Runs local CI pipeline, executes manual tests                                         | `docs/feature-specs/{feature}/test-plan.md`           |
-| **QA**                 | Static analysis, code quality verification                                            | QA reports                                            |
-| **DocWriter**          | Creates and updates all documentation                                                 | All markdown files in `docs/`                         |
-| **Search**             | Deep codebase research and analysis                                                   | Search results, code explanations                     |
-| **Cleaner**            | Investigates and cleans up code/doc noise, dead code, duplicates, missed abstractions | Clean code changes, cleanup reports                   |
-| **UX Designer**        | Designs and implements UI/UX changes; owns the frontend design system and React components | Code changes in `ui/`, `sdk-template/ui/`        |
+| Agent                  | Role                                                                                       | Key Outputs                                           |
+| ---------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| **Orchestrator**       | Workflow coordinator, routes work between agents                                           | Phase tracking, handoff decisions                     |
+| **PO** (Product Owner) | Owns product vision, roadmap, feature prioritization                                       | User stories, `docs/roadmap.md`                       |
+| **Architect**          | Designs system architecture, enforces technical constraints                                | Low-level designs in `docs/feature-specs/{feature}/`  |
+| **Planner**            | Creates detailed implementation plans                                                      | `docs/feature-specs/{feature}/implementation-plan.md` |
+| **Coder**              | Implements features, writes production code                                                | Code changes, PRs                                     |
+| **Tester**             | Runs local CI pipeline, executes manual tests                                              | `docs/feature-specs/{feature}/test-plan.md`           |
+| **QA**                 | Static analysis, code quality verification                                                 | QA reports                                            |
+| **DocWriter**          | Creates and updates all documentation                                                      | All markdown files in `docs/`                         |
+| **Search**             | Deep codebase research and analysis                                                        | Search results, code explanations                     |
+| **Cleaner**            | Investigates and cleans up code/doc noise, dead code, duplicates, missed abstractions      | Clean code changes, cleanup reports                   |
+| **UX Designer**        | Designs and implements UI/UX changes; owns the frontend design system and React components | Code changes in `ui/`, `sdk-template/ui/`             |
 
 ## Standard Feature Development Flow
 
-**Note:** The Orchestrator agent serves as the central coordinator for this workflow, routing work between specialized agents. Users can start with either the Orchestrator (recommended for full features) or go directly to a specific agent for targeted work.
+**Note:** The Orchestrator agent serves as the central coordinator for this workflow, routing work between specialized agents. Users can start with either the Orchestrator (recommended for full features) or go directly to a specific agent for targeted work. **This full flow — including the Planner phase and `implementation-plan.md` — is required for complex work and new features.** For bug fixes and minor improvements, use the [Lightweight Workflow](#lightweight-workflow-for-bug-fixes) instead.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -94,7 +94,7 @@ For **bug fixes** and **minor improvements** that don't require architectural ch
 
 - `user-stories.md` — Not needed for bug fixes
 - `low-level-design-{feature}.md` — No architectural changes
-- `implementation-plan.md` — Bug fixes are typically small enough to not require detailed planning
+- `implementation-plan.md` — Omitted by design; Coder proceeds directly from bug context or LLD (if one exists)
 
 **Workflow:**
 
@@ -120,6 +120,26 @@ For **bug fixes** and **minor improvements** that don't require architectural ch
 - API changes
 - Architectural modifications
 - Breaking changes
+
+### When to Require Planner + `implementation-plan.md`
+
+Use this table to decide whether the Planner phase and `implementation-plan.md` are required before handing off to Coder:
+
+| Condition                                          | Planner required? | Workflow             |
+| -------------------------------------------------- | :---------------: | -------------------- |
+| New feature or user story                          |      ✅ Yes       | Full workflow        |
+| API or IPC contract change                         |      ✅ Yes       | Full workflow        |
+| Architectural modification                         |      ✅ Yes       | Full workflow        |
+| Breaking change                                    |      ✅ Yes       | Full workflow        |
+| Complex refactor spanning multiple crates/packages |      ✅ Yes       | Full workflow        |
+| Bug fix with clear reproduction steps              |       ❌ No       | Lightweight workflow |
+| Performance optimization (no behavior change)      |       ❌ No       | Lightweight workflow |
+| Refactoring without behavior changes               |       ❌ No       | Lightweight workflow |
+| Documentation update                               |       ❌ No       | Lightweight workflow |
+| Dependency update                                  |       ❌ No       | Lightweight workflow |
+| Minor improvement scoped to a single crate or file |       ❌ No       | Lightweight workflow |
+
+**Rule of thumb:** If you can describe the complete change in ≤3 sentences without ambiguity, the Planner phase is optional and Coder can proceed directly from the LLD or issue context.
 
 ---
 
@@ -151,27 +171,27 @@ For **UI/UX changes** — React component work, design system adjustments, acces
 
 **Note:** The Orchestrator agent coordinates these handoffs. Agents can hand off directly (when context is clear) or route through Orchestrator (recommended for phase transitions).
 
-| From                     | To                        | Trigger                   | What Gets Passed |
-| ------------------------ | ------------------------- | ------------------------- | ---------------- |
-| Orchestrator → PO        | "Define requirements"     | User's feature request    |
-| PO → Orchestrator        | "Requirements complete"   | User stories document     |
-| Orchestrator → Architect | "Create design"           | User stories              |
-| Architect → Orchestrator | "Design complete"         | Low-level design document |
-| Orchestrator → Planner   | "Create plan"             | Low-level design          |
-| Planner → Orchestrator   | "Plan complete"           | Implementation plan       |
-| Orchestrator → Coder     | "Start implementation"    | Implementation plan       |
-| Coder → Orchestrator     | "Implementation complete" | Code + PR + progress doc  |
-| Orchestrator → Tester    | "Test implementation"     | Completed implementation  |
-| Tester → Orchestrator    | "Tests complete/failed"   | Test results + test plan  |
-| Orchestrator → Coder     | "Fix issues"              | Test failures             |
-| Orchestrator → QA        | "Quality review"          | All tests passing         |
-| QA → Orchestrator        | "QA complete/issues"      | QA report                 |
-| Orchestrator → Coder     | "Fix findings"            | QA issues                 |
-| Orchestrator → Architect | "Update docs"             | Implementation review     |
-| Orchestrator → PO        | "Archive feature"         | Complete feature          |
-| Orchestrator → UX Designer | "Implement UI/UX change" | UI/UX task description    |
-| UX Designer → Tester     | "Test UI changes"         | Implemented UI changes    |
-| UX Designer → Orchestrator | "UI/UX implementation complete" | Code changes + verification notes |
+| From                       | To                                     | Trigger                                           | What Gets Passed |
+| -------------------------- | -------------------------------------- | ------------------------------------------------- | ---------------- |
+| Orchestrator → PO          | "Define requirements"                  | User's feature request                            |
+| PO → Orchestrator          | "Requirements complete"                | User stories document                             |
+| Orchestrator → Architect   | "Create design"                        | User stories                                      |
+| Architect → Orchestrator   | "Design complete"                      | Low-level design document                         |
+| Orchestrator → Planner     | "Create plan" _(full workflow only)_   | Low-level design                                  |
+| Planner → Orchestrator     | "Plan complete" _(full workflow only)_ | Implementation plan                               |
+| Orchestrator → Coder       | "Start implementation"                 | LLD or implementation plan (if Planner phase ran) |
+| Coder → Orchestrator       | "Implementation complete"              | Code + PR + progress doc                          |
+| Orchestrator → Tester      | "Test implementation"                  | Completed implementation                          |
+| Tester → Orchestrator      | "Tests complete/failed"                | Test results + test plan                          |
+| Orchestrator → Coder       | "Fix issues"                           | Test failures                                     |
+| Orchestrator → QA          | "Quality review"                       | All tests passing                                 |
+| QA → Orchestrator          | "QA complete/issues"                   | QA report                                         |
+| Orchestrator → Coder       | "Fix findings"                         | QA issues                                         |
+| Orchestrator → Architect   | "Update docs"                          | Implementation review                             |
+| Orchestrator → PO          | "Archive feature"                      | Complete feature                                  |
+| Orchestrator → UX Designer | "Implement UI/UX change"               | UI/UX task description                            |
+| UX Designer → Tester       | "Test UI changes"                      | Implemented UI changes                            |
+| UX Designer → Orchestrator | "UI/UX implementation complete"        | Code changes + verification notes                 |
 
 **Direct handoffs** (bypass Orchestrator when appropriate):
 
@@ -187,7 +207,7 @@ All feature documentation lives in `docs/feature-specs/{feature}/`:
 docs/feature-specs/{feature}/
 ├── user-stories.md              # PO: User requirements
 ├── low-level-design-{feature}.md # Architect: Technical design
-├── implementation-plan.md       # Planner: Step-by-step plan
+├── implementation-plan.md       # Planner: Step-by-step plan (required for new features; optional for bug fixes/minor work)
 ├── implementation-progress.md   # Coder: Progress tracking
 ├── test-plan.md                 # Tester: Test cases & results
 └── QA-report.md                 # QA: Quality review & findings
@@ -219,19 +239,19 @@ The **Coder** agent is responsible for creating Pull Requests using the `create-
 
 ### Editing Permissions
 
-| Agent | Can Edit Code? | Can Edit Docs? | Can Edit Roadmap? | Can Edit Archived Specs? |
-|-------|----------------|----------------|-------------------|--------------------------|
-| Orchestrator | ❌ | ❌ | ❌ | ❌ |
-| PO | ❌ | ❌ | ✅ (exclusive) | ❌ |
-| Architect | ❌ | ❌ | ❌ | ❌ |
-| Planner | ❌ | ❌ | ❌ | ❌ |
-| Coder | ✅ | ✅ | ❌ | ❌ |
-| Tester | ❌ | ❌ | ❌ | ❌ |
-| QA | ❌ | ❌ | ❌ | ❌ |
-| DocWriter | ❌ | ✅ (only `.md` in `docs/`) | ❌ | ❌ |
-| Search | ❌ | ❌ | ❌ | ❌ |
-| Cleaner | ✅ | ✅ | ❌ | ❌ |
-| UX Designer | ✅ (UI only) | ✅ | ❌ | ❌ |
+| Agent        | Can Edit Code? | Can Edit Docs?             | Can Edit Roadmap? | Can Edit Archived Specs? |
+| ------------ | -------------- | -------------------------- | ----------------- | ------------------------ |
+| Orchestrator | ❌             | ❌                         | ❌                | ❌                       |
+| PO           | ❌             | ❌                         | ✅ (exclusive)    | ❌                       |
+| Architect    | ❌             | ❌                         | ❌                | ❌                       |
+| Planner      | ❌             | ❌                         | ❌                | ❌                       |
+| Coder        | ✅             | ✅                         | ❌                | ❌                       |
+| Tester       | ❌             | ❌                         | ❌                | ❌                       |
+| QA           | ❌             | ❌                         | ❌                | ❌                       |
+| DocWriter    | ❌             | ✅ (only `.md` in `docs/`) | ❌                | ❌                       |
+| Search       | ❌             | ❌                         | ❌                | ❌                       |
+| Cleaner      | ✅             | ✅                         | ❌                | ❌                       |
+| UX Designer  | ✅ (UI only)   | ✅                         | ❌                | ❌                       |
 
 ### Models & Tools
 
@@ -253,19 +273,19 @@ The **Coder** agent is responsible for creating Pull Requests using the `create-
 
 Each agent can only invoke specific subagents:
 
-| Agent            | Can Invoke                                                            |
-| ---------------- | --------------------------------------------------------------------- |
+| Agent            | Can Invoke                                                                         |
+| ---------------- | ---------------------------------------------------------------------------------- |
 | **Orchestrator** | PO, Architect, Planner, Coder, Tester, QA, DocWriter, Search, Cleaner, UX Designer |
-| **PO**           | Orchestrator, Architect, DocWriter, Search                            |
-| **Architect**    | Orchestrator, Planner, PO, DocWriter, Search                          |
-| **Planner**      | Orchestrator, DocWriter, Search                                       |
-| **Coder**        | Orchestrator, Tester, DocWriter, Search                               |
-| **Tester**       | Orchestrator, Coder, QA, DocWriter, Search                            |
-| **QA**           | Orchestrator, Coder, Architect, DocWriter, Search                     |
-| **DocWriter**    | Orchestrator, Search                                                  |
-| **Search**       | — (none)                                                              |
-| **Cleaner**      | Orchestrator, Search, Architect, Tester, DocWriter                    |
-| **UX Designer**  | Orchestrator, Search, Tester, DocWriter                               |
+| **PO**           | Orchestrator, Architect, DocWriter, Search                                         |
+| **Architect**    | Orchestrator, Planner, PO, DocWriter, Search                                       |
+| **Planner**      | Orchestrator, DocWriter, Search                                                    |
+| **Coder**        | Orchestrator, Tester, DocWriter, Search                                            |
+| **Tester**       | Orchestrator, Coder, QA, DocWriter, Search                                         |
+| **QA**           | Orchestrator, Coder, Architect, DocWriter, Search                                  |
+| **DocWriter**    | Orchestrator, Search                                                               |
+| **Search**       | — (none)                                                                           |
+| **Cleaner**      | Orchestrator, Search, Architect, Tester, DocWriter                                 |
+| **UX Designer**  | Orchestrator, Search, Tester, DocWriter                                            |
 
 **Notes:**
 
