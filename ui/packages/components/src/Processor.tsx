@@ -3,10 +3,9 @@
  */
 
 import React from 'react';
-import { ParameterSlider } from './ParameterSlider';
-import { ParameterSelect } from './ParameterSelect';
-import { ParameterToggle } from './ParameterToggle';
 import type { ParameterInfo } from './types';
+import { parameterListClass, sectionHeadingClass, surfaceCardClass } from './utils/classNames';
+import { renderParameter } from './utils/renderParameter';
 
 export interface ProcessorParameter extends ParameterInfo {
   readonly onChange: (value: number | boolean) => void | Promise<void>;
@@ -21,55 +20,11 @@ export interface ProcessorProps {
 
 export function Processor({ id, title, parameters }: Readonly<ProcessorProps>): React.JSX.Element {
   return (
-    <div className="space-y-2 rounded-lg border border-plugin-border bg-plugin-surface p-4">
-      <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400">
-        {title ?? id}
-      </h3>
+    <div className={`space-y-2 ${surfaceCardClass}`}>
+      <h3 className={sectionHeadingClass}>{title ?? id}</h3>
 
-      <div className="space-y-3">
-        {parameters.map((param) => {
-          switch (param.type) {
-            case 'bool':
-              return (
-                <ParameterToggle
-                  key={param.id}
-                  id={param.id}
-                  name={param.name}
-                  value={Boolean(param.value)}
-                  disabled={param.disabled}
-                  onChange={param.onChange}
-                />
-              );
-            case 'enum':
-              return (
-                <ParameterSelect
-                  key={param.id}
-                  id={param.id}
-                  name={param.name}
-                  value={typeof param.value === 'number' ? param.value : 0}
-                  options={param.variants ?? []}
-                  disabled={param.disabled}
-                  onChange={param.onChange}
-                />
-              );
-            case 'float':
-              return (
-                <ParameterSlider
-                  key={param.id}
-                  id={param.id}
-                  name={param.name}
-                  value={typeof param.value === 'number' ? param.value : 0}
-                  min={param.min}
-                  max={param.max}
-                  unit={param.unit}
-                  disabled={param.disabled}
-                  onChange={param.onChange as (value: number) => void | Promise<void>}
-                />
-              );
-            default:
-              return null;
-          }
-        })}
+      <div className={parameterListClass}>
+        {parameters.map((param) => renderParameter(param, param.id))}
       </div>
     </div>
   );

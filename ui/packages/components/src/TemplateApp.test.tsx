@@ -28,23 +28,11 @@ vi.mock('@wavecraft/components', async () => {
   };
 });
 
-vi.mock('../../../../sdk-template/ui/src/processors/OscillatorProcessor', () => ({
-  OscillatorProcessor: () => <div data-testid="oscillator-control" />,
-}));
 vi.mock('../../../../sdk-template/ui/src/processors/OscilloscopeProcessor', () => ({
   OscilloscopeProcessor: () => <div data-testid="oscilloscope" />,
 }));
-vi.mock('../../../../sdk-template/ui/src/processors/InputTrimProcessor', () => ({
-  InputTrimProcessor: () => <div data-testid="processor-input-trim" />,
-}));
-vi.mock('../../../../sdk-template/ui/src/processors/OutputGainProcessor', () => ({
-  OutputGainProcessor: () => <div data-testid="processor-output-gain" />,
-}));
-vi.mock('../../../../sdk-template/ui/src/processors/SoftClipProcessor', () => ({
-  SoftClipProcessor: () => <div data-testid="processor-soft-clip" />,
-}));
-vi.mock('../../../../sdk-template/ui/src/processors/ToneFilterProcessor', () => ({
-  ToneFilterProcessor: () => <div data-testid="processor-tone-filter" />,
+vi.mock('../../../../sdk-template/ui/src/processors/SmartProcessor', () => ({
+  SmartProcessor: ({ id }: { id: string }) => <div data-testid={`processor-${id}`} />,
 }));
 
 vi.mock('../../../../sdk-template/ui/src/processors/ExampleProcessor', () => ({
@@ -68,12 +56,12 @@ describe('sdk-template App layout', () => {
 
     render(<App />);
 
-    expect(screen.getByTestId('oscillator-control')).toBeInTheDocument();
-    expect(screen.getByTestId('processor-input-trim')).toBeInTheDocument();
-    expect(screen.getByTestId('processor-tone-filter')).toBeInTheDocument();
-    expect(screen.getByTestId('processor-soft-clip')).toBeInTheDocument();
+    expect(screen.getByTestId('processor-oscillator')).toBeInTheDocument();
+    expect(screen.getByTestId('processor-input_trim')).toBeInTheDocument();
+    expect(screen.getByTestId('processor-tone_filter')).toBeInTheDocument();
+    expect(screen.getByTestId('processor-soft_clip')).toBeInTheDocument();
     expect(screen.getByTestId('processor-example')).toBeInTheDocument();
-    expect(screen.getByTestId('processor-output-gain')).toBeInTheDocument();
+    expect(screen.getByTestId('processor-output_gain')).toBeInTheDocument();
     expect(screen.getByLabelText('Resize window')).toBeInTheDocument();
   });
 });

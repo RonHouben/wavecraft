@@ -9,6 +9,7 @@ import {
 } from '@wavecraft/core';
 import { type JSX } from 'react';
 import { ExampleProcessor } from './processors/ExampleProcessor';
+import { SmartProcessor } from './processors/SmartProcessor';
 import {
   Meter,
   VersionBadge,
@@ -16,12 +17,7 @@ import {
   LatencyMonitor,
   ResizeHandle,
 } from '@wavecraft/components';
-import { OscillatorProcessor } from './processors/OscillatorProcessor';
 import { OscilloscopeProcessor } from './processors/OscilloscopeProcessor';
-import { InputTrimProcessor } from './processors/InputTrimProcessor';
-import { OutputGainProcessor } from './processors/OutputGainProcessor';
-import { SoftClipProcessor } from './processors/SoftClipProcessor';
-import { ToneFilterProcessor } from './processors/ToneFilterProcessor';
 
 export function App(): JSX.Element {
   useWindowResizeSync();
@@ -53,12 +49,12 @@ export function App(): JSX.Element {
         {/* Main Content */}
         <div className="flex flex-1 flex-col gap-6">
           <div className="grid grid-cols-1 gap-4">
-            <OscillatorProcessor hideWhenNotInSignalChain />
-            <InputTrimProcessor hideWhenNotInSignalChain />
-            <ToneFilterProcessor hideWhenNotInSignalChain />
-            <SoftClipProcessor hideWhenNotInSignalChain />
+            <SmartProcessor id="oscillator" title="Oscillator" hideWhenNotInSignalChain />
+            <SmartProcessor id="input_trim" title="Input Trim" hideWhenNotInSignalChain />
+            <SmartProcessor id="tone_filter" title="Tone Filter" hideWhenNotInSignalChain />
+            <SmartProcessor id="soft_clip" title="Soft Clip" hideWhenNotInSignalChain />
             <ExampleProcessor hideWhenNotInSignalChain />
-            <OutputGainProcessor hideWhenNotInSignalChain />
+            <SmartProcessor id="output_gain" title="Output Gain" hideWhenNotInSignalChain />
             <OscilloscopeProcessor hideWhenNotInSignalChain />
           </div>
 

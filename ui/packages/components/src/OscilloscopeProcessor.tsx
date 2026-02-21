@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { OscilloscopeChannelView, OscilloscopeFrame, OscilloscopeTriggerMode } from './types';
-import { focusRingClass } from './utils/classNames';
+import { focusRingClass, surfaceCardClass } from './utils/classNames';
 
 const WIDTH = 640;
 const HEIGHT = 220;
@@ -153,10 +153,7 @@ export function OscilloscopeProcessor({
   }, [channelView, connected]);
 
   return (
-    <div
-      data-testid="oscilloscope"
-      className="rounded-lg border border-plugin-border bg-plugin-surface p-4"
-    >
+    <div data-testid="oscilloscope" className={surfaceCardClass}>
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
           Oscilloscope

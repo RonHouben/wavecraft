@@ -6,10 +6,9 @@
  */
 
 import React from 'react';
-import { ParameterSlider } from './ParameterSlider';
-import { ParameterSelect } from './ParameterSelect';
-import { ParameterToggle } from './ParameterToggle';
 import type { ProcessorParameter } from './Processor';
+import { parameterListClass, sectionHeadingClass } from './utils/classNames';
+import { renderParameter } from './utils/renderParameter';
 
 type ParameterGroupType = {
   name: string;
@@ -42,44 +41,11 @@ export function ParameterGroup({ group }: Readonly<ParameterGroupProps>): React.
   return (
     <div className="space-y-2">
       {/* Group header */}
-      <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400">{group.name}</h3>
+      <h3 className={sectionHeadingClass}>{group.name}</h3>
 
       {/* Parameter list */}
-      <div className="space-y-3">
-        {group.parameters.map((param) =>
-          param.type === 'bool' ? (
-            <ParameterToggle
-              key={param.id}
-              id={param.id}
-              name={param.name}
-              value={Boolean(param.value)}
-              disabled={param.disabled}
-              onChange={param.onChange}
-            />
-          ) : param.type === 'enum' ? (
-            <ParameterSelect
-              key={param.id}
-              id={param.id}
-              name={param.name}
-              value={typeof param.value === 'number' ? param.value : 0}
-              options={param.variants ?? []}
-              disabled={param.disabled}
-              onChange={param.onChange as (value: number) => void | Promise<void>}
-            />
-          ) : (
-            <ParameterSlider
-              key={param.id}
-              id={param.id}
-              name={param.name}
-              value={typeof param.value === 'number' ? param.value : 0}
-              min={param.min}
-              max={param.max}
-              unit={param.unit}
-              disabled={param.disabled}
-              onChange={param.onChange as (value: number) => void | Promise<void>}
-            />
-          )
-        )}
+      <div className={parameterListClass}>
+        {group.parameters.map((param) => renderParameter(param, param.id))}
       </div>
     </div>
   );

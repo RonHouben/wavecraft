@@ -5,7 +5,7 @@
  * runtime audio phase and diagnostics from `getAudioStatus` + `audioStatusChanged`.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { logger } from '../logger/Logger';
 import { IpcBridge } from '../ipc/IpcBridge';
 import { IpcEvents } from '../ipc/constants';
@@ -15,6 +15,7 @@ import {
   type AudioRuntimePhase,
   type AudioRuntimeStatus,
 } from '../types/ipc';
+import { _usePollingSubscription } from './_usePollingSubscription';
 
 export interface UseAudioStatusResult {
   /** Runtime audio phase. `null` means status unavailable/disconnected. */
@@ -32,7 +33,7 @@ export interface UseAudioStatusResult {
 export function useAudioStatus(): UseAudioStatusResult {
   const [status, setStatus] = useState<AudioRuntimeStatus | null>(null);
 
-  useEffect(() => {
+  _usePollingSubscription(() => {
     const bridge = IpcBridge.getInstance();
     let mounted = true;
 

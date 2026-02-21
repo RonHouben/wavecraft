@@ -12,10 +12,13 @@ export type { ParameterSliderProps } from './ParameterSlider';
 export { ParameterGroup } from './ParameterGroup';
 export { Processor } from './Processor';
 export type { ProcessorProps, ProcessorParameter } from './Processor';
-export { InputTrimProcessor } from './InputTrimProcessor';
-export { OutputGainProcessor } from './OutputGainProcessor';
-export { SoftClipProcessor } from './SoftClipProcessor';
-export { ToneFilterProcessor } from './ToneFilterProcessor';
+export {
+  InputTrimProcessor,
+  OutputGainProcessor,
+  SoftClipProcessor,
+  ToneFilterProcessor,
+  OscillatorProcessor,
+} from './compat';
 export { ParameterToggle } from './ParameterToggle';
 export type { ParameterToggleProps } from './ParameterToggle';
 export { ParameterSelect } from './ParameterSelect';
@@ -27,7 +30,6 @@ export { ConnectionStatus } from './ConnectionStatus';
 export type { ConnectionStatusProps } from './ConnectionStatus';
 export { LatencyMonitor } from './LatencyMonitor';
 export type { LatencyMonitorProps } from './LatencyMonitor';
-export { OscillatorProcessor } from './OscillatorProcessor';
 export { OscilloscopeProcessor } from './OscilloscopeProcessor';
 
 // Resize components

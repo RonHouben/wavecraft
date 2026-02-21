@@ -211,6 +211,21 @@ All automated and manual checks passed with no failures. The QA blocker retest (
 
 ---
 
+## Follow-up: final-plan execution batch (S1–S7, 2026-02-21)
+
+- This batch executed the final minimization slices from `implementation-plan-final.md` and `low-level-design-ui-ux-refactor-final.md`.
+- Regression focus for this batch:
+  - class/token deduplication and motion-safe transitions
+  - shared parameter rendering extraction
+  - meter channel consolidation with preserved test IDs
+  - wrapper deletion + compat shims
+  - polling/subscription helper consolidation
+  - `WavecraftProvider` private-module decomposition
+  - template wrapper collapse to direct `SmartProcessor`
+- Verification outcomes for this batch are reported in the implementation run summary (targeted tests + full CI checks).
+
+---
+
 ## Related Documents
 
 - [High-Level Design](../../architecture/high-level-design.md) — Architecture overview

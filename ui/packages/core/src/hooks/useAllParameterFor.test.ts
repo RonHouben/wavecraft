@@ -10,7 +10,7 @@ vi.mock('./useAllParameters', () => ({
   useAllParameters: useAllParametersMock,
 }));
 
-describe('useAllParametersFor', () => {
+describe('useParametersForProcessor', () => {
   beforeEach(() => {
     useAllParametersMock.mockReset();
     reloadMock.mockClear();
@@ -71,7 +71,7 @@ describe('useAllParametersFor', () => {
     expect(result.current.reload).toBe(reloadMock);
   });
 
-  it('keeps useAllParametersFor as an alias to useParametersForProcessor', () => {
+  it('useAllParametersFor alias resolves to the same hook result shape', () => {
     const { result } = renderHook(() => useAllParametersFor('input_trim'));
     const { result: canonicalResult } = renderHook(() => useParametersForProcessor('input_trim'));
 

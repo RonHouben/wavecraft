@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { OscillatorProcessor } from './OscillatorProcessor';
+import { InputTrimProcessor, OscillatorProcessor } from './compat';
 import type { ProcessorParameter } from './Processor';
 
 const mockProcessor = vi.hoisted(() =>
@@ -53,5 +53,17 @@ describe('OscillatorProcessor', () => {
     expect(mockProcessor).toHaveBeenCalledTimes(2);
     expect(mockProcessor.mock.calls[0]?.[0]).toMatchObject({ id: 'oscillator' });
     expect(mockProcessor.mock.calls[1]?.[0]).toMatchObject({ id: 'oscillator' });
+  });
+
+  it('keeps input trim compat wrapper wired to processor id', () => {
+    render(<InputTrimProcessor parameters={parameters} />);
+
+    const lastCallIndex = mockProcessor.mock.calls.length - 1;
+    const props = mockProcessor.mock.calls[lastCallIndex]?.[0] as
+      | { id: string; parameters: ProcessorParameter[] }
+      | undefined;
+    expect(props).toBeDefined();
+    expect(props).toMatchObject({ id: 'input_trim', parameters });
+    expect(screen.getByTestId('processor')).toHaveAttribute('data-processor-id', 'input_trim');
   });
 });

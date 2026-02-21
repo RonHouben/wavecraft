@@ -2,10 +2,11 @@
  * useMeterFrame - Hook for polling audio meter data
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { IpcBridge } from '../ipc/IpcBridge';
 import { IpcMethods } from '../ipc/constants';
 import type { MeterFrame, GetMeterFrameResult } from '../types/metering';
+import { _usePollingSubscription } from './_usePollingSubscription';
 
 /**
  * Hook to poll meter frames at a specified interval
@@ -16,7 +17,7 @@ import type { MeterFrame, GetMeterFrameResult } from '../types/metering';
 export function useMeterFrame(intervalMs = 50): MeterFrame | null {
   const [frame, setFrame] = useState<MeterFrame | null>(null);
 
-  useEffect(() => {
+  _usePollingSubscription(() => {
     let isMounted = true;
     const bridge = IpcBridge.getInstance();
 

@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { focusRingClass, interactionStateClass } from './utils/classNames';
+import { focusRingClass, interactionStateClass, surfaceCardClass } from './utils/classNames';
 
 export interface ParameterSliderProps {
   readonly id: string;
@@ -46,10 +46,7 @@ export function ParameterSlider({
   const displayValue = formatParameterValue(value, unit);
 
   return (
-    <div
-      data-testid={`param-${id}`}
-      className="mb-4 rounded-lg border border-plugin-border bg-plugin-surface p-4"
-    >
+    <div data-testid={`param-${id}`} className={`mb-4 ${surfaceCardClass}`}>
       <div className="mb-2 flex items-center justify-between">
         <label
           data-testid={`param-${id}-label`}
