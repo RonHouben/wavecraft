@@ -83,7 +83,7 @@ impl BundleCommand {
             )
         })?;
 
-        metadata_refresh::refresh_generated_types(&project, &package_name)?;
+        metadata_refresh::refresh_generated_types(project, &package_name)?;
 
         ui_assets::build_ui_assets(&project.ui_dir)?;
         ui_assets::sync_ui_dist_into_wavecraft_nih_plug(

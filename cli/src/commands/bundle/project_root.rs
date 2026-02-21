@@ -44,25 +44,29 @@ fn resolve_sdk_dev_repo_root(start_dir: &Path, sdk_crates_dir: Option<&Path>) ->
     let sdk_crates_dir = sdk_crates_dir?;
     let sdk_root = sdk_crates_dir.parent()?.parent()?.to_path_buf();
 
-    if same_canonical_path(start_dir, &sdk_root) {
+    if is_same_or_descendant_path(start_dir, &sdk_root) {
         Some(sdk_root)
     } else {
         None
     }
 }
 
-fn same_canonical_path(left: &Path, right: &Path) -> bool {
-    let left = match left.canonicalize() {
-        Ok(path) => path,
-        Err(_) => return false,
+fn canonicalize(path: &Path) -> Option<PathBuf> {
+    path.canonicalize().ok()
+}
+
+fn is_same_or_descendant_path(path: &Path, root: &Path) -> bool {
+    let path = match canonicalize(path) {
+        Some(path) => path,
+        None => return false,
     };
 
-    let right = match right.canonicalize() {
-        Ok(path) => path,
-        Err(_) => return false,
+    let root = match canonicalize(root) {
+        Some(path) => path,
+        None => return false,
     };
 
-    left == right
+    path == root || path.starts_with(&root)
 }
 
 pub(super) fn find_wavecraft_project_root(start_dir: &Path) -> Option<PathBuf> {
@@ -161,6 +165,22 @@ mod tests {
 
         let resolved = resolve_project_root_with_sdk_hint(&sdk_root, true, Some(sdk_crates))
             .expect("should resolve sdk repo root for install");
+
+        assert_eq!(resolved, sdk_root);
+    }
+
+    #[test]
+    fn resolve_project_root_install_uses_sdk_dev_root_when_cwd_is_inside_repo() {
+        let temp = TempDir::new().expect("temp dir should be created");
+        let sdk_root = temp.path().join("wavecraft");
+        let sdk_crates = sdk_root.join("engine/crates");
+        let nested = sdk_root.join("cli/src");
+
+        fs::create_dir_all(&sdk_crates).expect("sdk crates dir");
+        fs::create_dir_all(&nested).expect("nested sdk dir");
+
+        let resolved = resolve_project_root_with_sdk_hint(&nested, true, Some(sdk_crates))
+            .expect("should resolve sdk repo root for nested sdk cwd");
 
         assert_eq!(resolved, sdk_root);
     }

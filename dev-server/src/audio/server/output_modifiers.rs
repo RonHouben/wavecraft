@@ -8,6 +8,7 @@ const GAIN_MULTIPLIER_MAX: f32 = 2.0;
 // Canonical IDs for gain controls; input trim keeps a temporary legacy fallback
 // during the InputGain -> InputTrim migration for hot-reload compatibility.
 const INPUT_TRIM_PARAM_ID: &str = "input_trim_level";
+const INPUT_TRIM_BYPASS_PARAM_ID: &str = "input_trim_bypass";
 const LEGACY_INPUT_GAIN_PARAM_ID: &str = "input_gain_level";
 const OUTPUT_GAIN_PARAM_ID: &str = "output_gain_level";
 const OSCILLATOR_WAVEFORM_PARAM_ID: &str = "oscillator_waveform";
@@ -26,11 +27,16 @@ pub(super) fn apply_output_modifiers(
     oscillator_phase: &mut f32,
     sample_rate: f32,
 ) {
-    let input_gain = read_gain_multiplier_with_fallback(
-        param_bridge,
-        INPUT_TRIM_PARAM_ID,
-        LEGACY_INPUT_GAIN_PARAM_ID,
-    );
+    let input_trim_bypassed = read_bypass_state(param_bridge, INPUT_TRIM_BYPASS_PARAM_ID);
+    let input_gain = if input_trim_bypassed {
+        1.0
+    } else {
+        read_gain_multiplier_with_fallback(
+            param_bridge,
+            INPUT_TRIM_PARAM_ID,
+            LEGACY_INPUT_GAIN_PARAM_ID,
+        )
+    };
     let output_gain = read_gain_multiplier(param_bridge, OUTPUT_GAIN_PARAM_ID);
     let combined_gain = input_gain * output_gain;
 
@@ -108,6 +114,12 @@ fn read_gain_multiplier_with_fallback(
     }
 
     1.0
+}
+
+fn read_bypass_state(param_bridge: &AtomicParameterBridge, id: &str) -> bool {
+    param_bridge
+        .read(id)
+        .is_some_and(|value| value.is_finite() && value >= 0.5)
 }
 
 fn apply_gain(left: &mut [f32], right: &mut [f32], gain: f32) {
@@ -202,6 +214,7 @@ mod tests {
         waveform: f32,
         enabled: f32,
         input_trim_level: f32,
+        input_trim_bypass: f32,
         output_gain_level: f32,
     ) -> AtomicParameterBridge {
         AtomicParameterBridge::new(&[
@@ -271,6 +284,18 @@ mod tests {
                 variants: None,
             },
             ParameterInfo {
+                id: "input_trim_bypass".to_string(),
+                name: "Input Trim Bypass".to_string(),
+                param_type: ParameterType::Bool,
+                value: input_trim_bypass,
+                default: input_trim_bypass,
+                unit: None,
+                min: 0.0,
+                max: 1.0,
+                group: Some("InputTrim".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
                 id: "output_gain_level".to_string(),
                 name: "Level".to_string(),
                 param_type: ParameterType::Float,
@@ -287,7 +312,7 @@ mod tests {
 
     #[test]
     fn output_modifiers_generate_runtime_oscillator_from_frequency_and_level() {
-        let bridge = oscillator_bridge(880.0, 0.75, 0.0, 1.0, 1.0, 1.0);
+        let bridge = oscillator_bridge(880.0, 0.75, 0.0, 1.0, 1.0, 0.0, 1.0);
         let mut left = [0.0_f32; 128];
         let mut right = [0.0_f32; 128];
         let mut phase = 0.0;
@@ -309,7 +334,7 @@ mod tests {
 
     #[test]
     fn output_modifiers_level_zero_produces_silence() {
-        let bridge = oscillator_bridge(440.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+        let bridge = oscillator_bridge(440.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0);
         let mut left = [0.1_f32; 64];
         let mut right = [0.1_f32; 64];
         let mut phase = 0.0;
@@ -322,8 +347,8 @@ mod tests {
 
     #[test]
     fn output_modifiers_frequency_change_changes_waveform() {
-        let low_freq_bridge = oscillator_bridge(220.0, 0.5, 0.0, 1.0, 1.0, 1.0);
-        let high_freq_bridge = oscillator_bridge(1760.0, 0.5, 0.0, 1.0, 1.0, 1.0);
+        let low_freq_bridge = oscillator_bridge(220.0, 0.5, 0.0, 1.0, 1.0, 0.0, 1.0);
+        let high_freq_bridge = oscillator_bridge(1760.0, 0.5, 0.0, 1.0, 1.0, 0.0, 1.0);
 
         let mut low_left = [0.0_f32; 256];
         let mut low_right = [0.0_f32; 256];
@@ -358,8 +383,8 @@ mod tests {
 
     #[test]
     fn output_modifiers_apply_input_trim_and_output_gain_levels() {
-        let unity_bridge = oscillator_bridge(880.0, 0.5, 0.0, 1.0, 1.0, 1.0);
-        let boosted_bridge = oscillator_bridge(880.0, 0.5, 0.0, 1.0, 1.5, 2.0);
+        let unity_bridge = oscillator_bridge(880.0, 0.5, 0.0, 1.0, 1.0, 0.0, 1.0);
+        let boosted_bridge = oscillator_bridge(880.0, 0.5, 0.0, 1.0, 1.5, 0.0, 2.0);
 
         let mut unity_left = [0.0_f32; 256];
         let mut unity_right = [0.0_f32; 256];
@@ -398,8 +423,8 @@ mod tests {
 
     #[test]
     fn output_modifiers_waveform_change_changes_shape() {
-        let sine_bridge = oscillator_bridge(440.0, 0.5, 0.0, 1.0, 1.0, 1.0);
-        let saw_bridge = oscillator_bridge(440.0, 0.5, 2.0, 1.0, 1.0, 1.0);
+        let sine_bridge = oscillator_bridge(440.0, 0.5, 0.0, 1.0, 1.0, 0.0, 1.0);
+        let saw_bridge = oscillator_bridge(440.0, 0.5, 2.0, 1.0, 1.0, 0.0, 1.0);
 
         let mut sine_left = [0.0_f32; 256];
         let mut sine_right = [0.0_f32; 256];
@@ -659,5 +684,45 @@ mod tests {
         let expected = 0.5 * 1.8;
         assert!(left.iter().all(|sample| (*sample - expected).abs() < 1e-6));
         assert!(right.iter().all(|sample| (*sample - expected).abs() < 1e-6));
+    }
+
+    #[test]
+    fn output_modifiers_bypass_skips_input_trim_gain() {
+        let enabled_trim = oscillator_bridge(880.0, 0.5, 0.0, 1.0, 1.7, 0.0, 1.0);
+        let bypassed_trim = oscillator_bridge(880.0, 0.5, 0.0, 1.0, 1.7, 1.0, 1.0);
+
+        let mut enabled_left = [0.0_f32; 256];
+        let mut enabled_right = [0.0_f32; 256];
+        let mut bypassed_left = [0.0_f32; 256];
+        let mut bypassed_right = [0.0_f32; 256];
+
+        let mut enabled_phase = 0.0;
+        let mut bypassed_phase = 0.0;
+
+        apply_output_modifiers(
+            &mut enabled_left,
+            &mut enabled_right,
+            &enabled_trim,
+            &mut enabled_phase,
+            48_000.0,
+        );
+        apply_output_modifiers(
+            &mut bypassed_left,
+            &mut bypassed_right,
+            &bypassed_trim,
+            &mut bypassed_phase,
+            48_000.0,
+        );
+
+        let enabled_peak = enabled_left
+            .iter()
+            .fold(0.0_f32, |acc, sample| acc.max(sample.abs()));
+        let bypassed_peak = bypassed_left
+            .iter()
+            .fold(0.0_f32, |acc, sample| acc.max(sample.abs()));
+
+        assert!(enabled_peak > bypassed_peak * 1.5);
+        assert_eq!(enabled_left, enabled_right);
+        assert_eq!(bypassed_left, bypassed_right);
     }
 }

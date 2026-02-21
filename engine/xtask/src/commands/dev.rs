@@ -12,6 +12,7 @@ use xtask::paths;
 
 const CTRL_C_POLL_INTERVAL: Duration = Duration::from_millis(100);
 const SHUTDOWN_GRACE_PERIOD: Duration = Duration::from_secs(5);
+const START_XTASK_DELEGATION_GUARD_ENV: &str = "WAVECRAFT_START_FROM_XTASK";
 
 /// Run the development server via `wavecraft start` CLI command.
 ///
@@ -55,6 +56,7 @@ pub fn run(port: u16, verbose: bool) -> Result<()> {
 
     let mut child = Command::new("cargo")
         .args(&args)
+        .env(START_XTASK_DELEGATION_GUARD_ENV, "1")
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .spawn()
