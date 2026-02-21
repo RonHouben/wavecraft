@@ -1,7 +1,7 @@
 import React from 'react';
-import { useAllParameters, useHasProcessorInSignalChain } from '@wavecraft/core';
+import { useAllParametersFor, useHasProcessorInSignalChain } from '@wavecraft/core';
 import { Processor } from './Processor';
-import { parametersForProcessor, processorGroupName } from './processorControlUtils';
+import { ProcessorId } from '@wavecraft/core';
 
 export interface OutputGainProcessorProps {
   readonly hideWhenNotInSignalChain?: boolean;
@@ -10,24 +10,14 @@ export interface OutputGainProcessorProps {
 export function OutputGainProcessor(
   props: Readonly<OutputGainProcessorProps>
 ): React.JSX.Element | null {
-  const hasProcessorInSignalChain = useHasProcessorInSignalChain('output_gain');
-  const { params } = useAllParameters();
+  const id: ProcessorId = 'output_gain';
 
-  if (props.hideWhenNotInSignalChain && !hasProcessorInSignalChain) {
+  const hasProcessorInSignalChain = useHasProcessorInSignalChain(id);
+  const { params } = useAllParametersFor(id);
+
+  if ((props.hideWhenNotInSignalChain && !hasProcessorInSignalChain) || !params) {
     return null;
   }
 
-  const groupParameters = parametersForProcessor(params, 'output_gain');
-  if (groupParameters.length === 0) {
-    return null;
-  }
-
-  return (
-    <Processor
-      group={{
-        name: processorGroupName('output_gain', 'Output Gain'),
-        parameters: groupParameters,
-      }}
-    />
-  );
+  return <Processor id={id} />;
 }

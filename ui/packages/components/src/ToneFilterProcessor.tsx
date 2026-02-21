@@ -1,7 +1,7 @@
 import React from 'react';
-import { useAllParameters, useHasProcessorInSignalChain } from '@wavecraft/core';
+import { useHasProcessorInSignalChain, useAllParametersFor } from '@wavecraft/core';
 import { Processor } from './Processor';
-import { parametersForProcessor, processorGroupName } from './processorControlUtils';
+import { ProcessorId } from '@wavecraft/core';
 
 export interface ToneFilterProcessorProps {
   readonly hideWhenNotInSignalChain?: boolean;
@@ -10,24 +10,14 @@ export interface ToneFilterProcessorProps {
 export function ToneFilterProcessor(
   props: Readonly<ToneFilterProcessorProps>
 ): React.JSX.Element | null {
-  const hasProcessorInSignalChain = useHasProcessorInSignalChain('tone_filter');
-  const { params } = useAllParameters();
+  const id: ProcessorId = 'tone_filter';
 
-  if (props.hideWhenNotInSignalChain && !hasProcessorInSignalChain) {
+  const hasProcessorInSignalChain = useHasProcessorInSignalChain(id);
+  const { params } = useAllParametersFor(id);
+
+  if ((props.hideWhenNotInSignalChain && !hasProcessorInSignalChain) || !params) {
     return null;
   }
 
-  const groupParameters = parametersForProcessor(params, 'tone_filter');
-  if (groupParameters.length === 0) {
-    return null;
-  }
-
-  return (
-    <Processor
-      group={{
-        name: processorGroupName('tone_filter', 'Tone Filter'),
-        parameters: groupParameters,
-      }}
-    />
-  );
+  return <Processor id={id} />;
 }

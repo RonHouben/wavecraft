@@ -1,7 +1,7 @@
 import React from 'react';
-import { useAllParameters, useHasProcessorInSignalChain } from '@wavecraft/core';
+import { useAllParametersFor, useHasProcessorInSignalChain } from '@wavecraft/core';
 import { Processor } from './Processor';
-import { parametersForProcessor, processorGroupName } from './processorControlUtils';
+import { ProcessorId } from '@wavecraft/core';
 
 export interface SoftClipProcessorProps {
   readonly hideWhenNotInSignalChain?: boolean;
@@ -10,24 +10,14 @@ export interface SoftClipProcessorProps {
 export function SoftClipProcessor(
   props: Readonly<SoftClipProcessorProps>
 ): React.JSX.Element | null {
-  const hasProcessorInSignalChain = useHasProcessorInSignalChain('soft_clip');
-  const { params } = useAllParameters();
+  const id: ProcessorId = 'soft_clip';
 
-  if (props.hideWhenNotInSignalChain && !hasProcessorInSignalChain) {
+  const hasProcessorInSignalChain = useHasProcessorInSignalChain(id);
+  const { params } = useAllParametersFor(id);
+
+  if ((props.hideWhenNotInSignalChain && !hasProcessorInSignalChain) || !params) {
     return null;
   }
 
-  const groupParameters = parametersForProcessor(params, 'soft_clip');
-  if (groupParameters.length === 0) {
-    return null;
-  }
-
-  return (
-    <Processor
-      group={{
-        name: processorGroupName('soft_clip', 'Soft Clip'),
-        parameters: groupParameters,
-      }}
-    />
-  );
+  return <Processor id={id} />;
 }

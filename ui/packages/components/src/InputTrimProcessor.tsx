@@ -1,7 +1,7 @@
 import React from 'react';
-import { useAllParameters, useHasProcessorInSignalChain } from '@wavecraft/core';
+import { useAllParametersFor, useHasProcessorInSignalChain } from '@wavecraft/core';
 import { Processor } from './Processor';
-import { parametersForProcessor, processorGroupName } from './processorControlUtils';
+import { ProcessorId } from '@wavecraft/core';
 
 export interface InputTrimProcessorProps {
   readonly hideWhenNotInSignalChain?: boolean;
@@ -10,24 +10,13 @@ export interface InputTrimProcessorProps {
 export function InputTrimProcessor(
   props: Readonly<InputTrimProcessorProps>
 ): React.JSX.Element | null {
-  const hasProcessorInSignalChain = useHasProcessorInSignalChain('input_trim');
-  const { params } = useAllParameters();
+  const id: ProcessorId = 'input_trim';
+  const hasProcessorInSignalChain = useHasProcessorInSignalChain(id);
+  const { params } = useAllParametersFor(id);
 
-  if (props.hideWhenNotInSignalChain && !hasProcessorInSignalChain) {
+  if ((props.hideWhenNotInSignalChain && !hasProcessorInSignalChain) || !params) {
     return null;
   }
 
-  const groupParameters = parametersForProcessor(params, 'input_trim');
-  if (groupParameters.length === 0) {
-    return null;
-  }
-
-  return (
-    <Processor
-      group={{
-        name: processorGroupName('input_trim', 'Input Trim'),
-        parameters: groupParameters,
-      }}
-    />
-  );
+  return <Processor id={id} />;
 }

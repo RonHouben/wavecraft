@@ -8,6 +8,7 @@ import { ParameterSlider } from './ParameterSlider';
 import { ParameterSelect } from './ParameterSelect';
 import { logger } from '@wavecraft/core';
 import { ProcessorId } from '@wavecraft/core';
+import { ParameterToggle } from './ParameterToggle';
 
 export interface ProcessorProps {
   /** Processor ID for fetching all processor-owned parameters. */
@@ -25,7 +26,7 @@ export function Processor({ id }: Readonly<ProcessorProps>): React.JSX.Element {
         {params.map((param) => {
           switch (param.type) {
             case 'bool':
-              return <ParameterSelect key={param.id} id={param.id} />;
+              return <ParameterToggle key={param.id} id={param.id} />;
             case 'enum':
               return <ParameterSelect key={param.id} id={param.id} />;
             case 'float':
