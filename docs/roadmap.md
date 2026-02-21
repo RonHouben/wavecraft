@@ -8,12 +8,12 @@ This document tracks implementation progress against the milestones defined in t
 
 ```
 ┌──────────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP          v0.13.0 |  96%  │
+│  WAVECRAFT ROADMAP          v0.13.0 |  100% │
 ├──────────────────────────────────────────────┤
 │  ✅ M1-M18.11 Foundation → Passthrough Fix  │
-│  🚧 M19       Codebase Refactor Sweep       │
+│  ✅ M19       Codebase Refactor Sweep       │
 ├──────────────────────────────────────────────┤
-│  [███████████████████████░] 25/26          │
+│  [████████████████████████] 26/26          │
 └──────────────────────────────────────────────┘
 ```
 
@@ -1647,11 +1647,11 @@ In newly created Wavecraft projects, enabling `Oscillator` in the signal chain c
 
 ---
 
-## Milestone 19: Codebase Refactor Sweep 🚧
+## Milestone 19: Codebase Refactor Sweep ✅
 
 > **Goal:** Systematic refactoring sweep across the codebase to improve code quality, decompose large files, extract abstractions, and improve maintainability. Includes the `wavecraft_plugin!` macro refactor from the backlog.
 
-**Status:** 🚧 In Progress
+**Status:** ✅ Complete
 
 **Approach:** Tiered sweep — deep refactor on hotspot files (>500 lines), quick scan on medium files (200-500 lines), automated lint pass on the rest. Minor quality-of-life improvements (error messages, naming) allowed alongside structural changes.
 
@@ -1660,29 +1660,29 @@ In newly created Wavecraft projects, enabling `Oscillator` in the signal chain c
 | Task                                                                 | Status | Notes                                                              |
 | -------------------------------------------------------------------- | ------ | ------------------------------------------------------------------ |
 | **Tier 1: Deep Refactor (8 files >500 lines)**                       |        |                                                                    |
-| `cli/src/commands/start.rs` (1,640 lines)                            | ⏳     | Split into phases: server setup, UI build, codegen, file watching  |
-| `cli/src/commands/bundle_command.rs` (1,140 lines)                   | ⏳     | Extract format-specific bundling, signing, validation              |
-| `engine/crates/wavecraft-macros/src/plugin.rs` (1,016 lines)         | ⏳     | Split into parse/metadata/codegen modules (from backlog)           |
-| `cli/src/template/mod.rs` (992 lines)                                | ⏳     | Extract template rendering, variable substitution, file operations |
-| `dev-server/src/audio/server.rs` (923 lines)                         | ⏳     | Extract audio device management, stream setup, callback logic      |
-| `engine/crates/wavecraft-protocol/src/ipc.rs` (746 lines)            | ⏳     | Separate message types, serialization, contract validation         |
-| `cli/src/commands/update.rs` (669 lines)                             | ⏳     | Extract self-update, dependency update, version resolution         |
-| `engine/crates/wavecraft-nih_plug/src/editor/windows.rs` (598 lines) | ⏳     | Review platform abstraction opportunities with macos.rs            |
+| `cli/src/commands/start.rs` (1,640 lines)                            | ✅     | Refactored per tiered sweep goals                                  |
+| `cli/src/commands/bundle_command.rs` (1,140 lines)                   | ✅     | Refactored per tiered sweep goals                                  |
+| `engine/crates/wavecraft-macros/src/plugin.rs` (1,016 lines)         | ✅     | Refactored per tiered sweep goals                                  |
+| `cli/src/template/mod.rs` (992 lines)                                | ✅     | Refactored per tiered sweep goals                                  |
+| `dev-server/src/audio/server.rs` (923 lines)                         | ✅     | Refactored per tiered sweep goals                                  |
+| `engine/crates/wavecraft-protocol/src/ipc.rs` (746 lines)            | ✅     | Refactored per tiered sweep goals                                  |
+| `cli/src/commands/update.rs` (669 lines)                             | ✅     | Refactored per tiered sweep goals                                  |
+| `engine/crates/wavecraft-nih_plug/src/editor/windows.rs` (598 lines) | ✅     | Refactored per tiered sweep goals                                  |
 | **Tier 2: Quick Scan (~20 medium files)**                            |        |                                                                    |
-| Naming consistency audit                                             | ⏳     | Per coding standards                                               |
-| Dead code removal                                                    | ⏳     | Unused imports, unreachable branches, commented-out code           |
-| Obvious extraction opportunities                                     | ⏳     | Helper functions, shared constants, repeated patterns              |
-| Error handling consistency                                           | ⏳     | Consistent error types, actionable messages                        |
+| Naming consistency audit                                             | ✅     | Completed per coding standards                                     |
+| Dead code removal                                                    | ✅     | Applied across targeted sweep areas                                |
+| Obvious extraction opportunities                                     | ✅     | Applied where high-value and low-risk                              |
+| Error handling consistency                                           | ✅     | Improved with actionable and consistent messaging                   |
 | **Tier 3: Automated Lint Pass**                                      |        |                                                                    |
-| `cargo fmt` + `cargo clippy`                                         | ⏳     | All Rust code                                                      |
-| ESLint + Prettier                                                    | ⏳     | All TypeScript code                                                |
+| `cargo fmt` + `cargo clippy`                                         | ✅     | Validation completed                                               |
+| ESLint + Prettier                                                    | ✅     | Validation completed                                               |
 | **Quality-of-Life**                                                  |        |                                                                    |
-| CLI error message improvements                                       | ⏳     | Actionable guidance in error output                                |
-| Public API doc comment review                                        | ⏳     | Clarity improvements where unclear                                 |
+| CLI error message improvements                                       | ✅     | Applied during sweep where appropriate                             |
+| Public API doc comment review                                        | ✅     | Clarity improvements applied where needed                          |
 | **Lessons Learned**                                                  |        |                                                                    |
-| Track recurring patterns during refactor                             | ⏳     | Anti-patterns, effective abstractions, naming gaps                 |
-| Create `lessons-learned.md` with findings                            | ⏳     | Top 5+ patterns with before/after examples                         |
-| Propose coding standards updates                                     | ⏳     | DocWriter applies approved updates to `coding-standards*.md`       |
+| Track recurring patterns during refactor                             | ✅     | Findings captured during implementation and QA hardening           |
+| Create `lessons-learned.md` with findings                            | ✅     | Completed as part of closeout artifacts                            |
+| Propose coding standards updates                                     | ✅     | Recommendations prepared from sweep findings                       |
 
 **Acceptance Criteria:**
 
@@ -1746,6 +1746,7 @@ In newly created Wavecraft projects, enabling `Oscillator` in the signal chain c
 
 | Date       | Update                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-02-21 | **Feature closeout complete: `codebase-refactor-sweep`** — roadmap finalized after implementation, post-QA hardening, and completion of test/QA artifacts. Milestone 19 marked ✅ complete. Progress updated to **26/26 (100%)**.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | 2026-02-19 | **Milestone 19 added: Codebase Refactor Sweep.** Systematic tiered refactoring of ~26K lines across 162 source files. Tier 1: deep decomposition of 8 hotspot files (>500 lines each, including `wavecraft_plugin!` macro refactor promoted from backlog). Tier 2: quick scan of ~20 medium files for naming, dead code, extraction opportunities. Tier 3: automated lint pass on remaining ~130 files. Minor QoL improvements allowed (error messages, naming). Single mega-PR delivery. Acceptance criteria: no Tier 1 file >400 lines post-refactor, all tests passing. User stories created at `docs/feature-specs/codebase-refactor-sweep/user-stories.md`. Progress updated to **25/26 (96%)**.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 2026-02-18 | **Feature closeout complete: `oscillator-passthrough-mix`** — roadmap finalized after user Ableton validation + QA PASS. Milestone 18.11 marked ✅ complete, references updated to archived spec path, and feature-spec documentation archived to `docs/feature-specs/_archive/oscillator-passthrough-mix/`. Progress updated to **25/25 (100%)**.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | 2026-02-18 | **Milestone 18.11 added (High-priority bug): Oscillator passthrough mix behavior.** Added a roadmap item for generated projects where enabling `Oscillator` can mute incoming DAW signal in Ableton. Defined expected behavior (oscillator + DAW signal simultaneously audible), linked user stories (now archived) at `docs/feature-specs/_archive/oscillator-passthrough-mix/user-stories.md`, and set next handoff to Architect for canonical signal-path design. Progress updated to **24/25 (96%)** to reflect new open work.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
@@ -1890,15 +1891,16 @@ In newly created Wavecraft projects, enabling `Oscillator` in the signal chain c
 23. ✅ **Milestone 18.9**: Rust Hot-Reload for Dev Mode — Automatic Rust rebuild + parameter reload workflow validated manually
 24. ✅ **Milestone 18.10**: TypeScript Parameter ID Autocompletion — Build-time generated typed parameter IDs (v0.13.0)
 25. ✅ **Milestone 18.11**: Oscillator Must Not Block DAW Passthrough — Fix generated project signal-chain behavior
+26. ✅ **Milestone 19**: Codebase Refactor Sweep — Tiered refactor and quality sweep complete
 
 ### Up Next
 
-1. 🚧 **Milestone 19**: Codebase Refactor Sweep — Tiered refactor of 162 files (deep on 8 hotspots, quick scan on ~20, lint pass on rest)
+1. 📝 **Backlog promotion**: Prioritize and promote the next highest-value item from `docs/backlog.md`
 
 ### Immediate Tasks
 
-1. 🚧 **M19 Codebase Refactor Sweep:** Hand off to Architect for low-level design, then Planner for implementation plan
-2. 📝 **Pre-release validation:** MT4 (native plugin DAW testing) deferred from M18.7 — smoke test in Ableton before final release window
-3. 📝 **Architecture-doc sync follow-up (`processor-presence-hook`)**: apply Architect-identified updates in `docs/architecture/development-workflows.md`, `docs/architecture/sdk-architecture.md`, `docs/architecture/high-level-design.md`, and `docs/architecture/declarative-plugin-dsl.md` (post-archival follow-up)
+1. 📝 **Pre-release validation:** MT4 (native plugin DAW testing) deferred from M18.7 — smoke test in Ableton before final release window
+2. 📝 **Architecture-doc sync follow-up (`processor-presence-hook`)**: apply Architect-identified updates in `docs/architecture/development-workflows.md`, `docs/architecture/sdk-architecture.md`, `docs/architecture/high-level-design.md`, and `docs/architecture/declarative-plugin-dsl.md` (post-archival follow-up)
+3. 📝 **Feature archival step:** move `docs/feature-specs/codebase-refactor-sweep/` to `docs/feature-specs/_archive/codebase-refactor-sweep/` before manual PR merge
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (crates.io publication, additional example plugins, etc.)
