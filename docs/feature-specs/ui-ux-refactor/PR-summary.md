@@ -72,9 +72,9 @@ All documents in `docs/feature-specs/ui-ux-refactor/`:
 | Document | Role |
 |---|---|
 | [user-stories.md](./user-stories.md) | Requirements and acceptance criteria |
-| [low-level-design-ui-ux-refactor.md](./low-level-design-ui-ux-refactor.md) | Technical design decisions across all phases |
+| [low-level-design-ui-ux-refactor-final.md](./low-level-design-ui-ux-refactor-final.md) | Technical design decisions across all phases |
 | [ux-improvement-plan.md](./ux-improvement-plan.md) | Phased UX execution guidance |
-| [implementation-plan.md](./implementation-plan.md) | Step-by-step phase breakdown |
+| [implementation-plan-final.md](./implementation-plan-final.md) | Step-by-step phase breakdown |
 | [implementation-progress.md](./implementation-progress.md) | Phase completion status |
 | [test-plan.md](./test-plan.md) | Full test matrix, results, and release recommendation |
 | [token-audit.md](./token-audit.md) | Ad-hoc token inventory from Phase 2 |

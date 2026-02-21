@@ -3,8 +3,8 @@
 ## Related Documents
 
 - [User Stories](./user-stories.md) — Feature requirements and acceptance criteria
-- [Low-Level Design](./low-level-design-ui-ux-refactor.md) — Technical design decisions
-- [Implementation Plan](./implementation-plan.md) — Step-by-step execution plan
+- [Low-Level Design](./low-level-design-ui-ux-refactor-final.md) — Technical design decisions
+- [Implementation Plan](./implementation-plan-final.md) — Step-by-step execution plan
 - [Implementation Progress](./implementation-progress.md) — Phase completion status
 - [Baseline Notes Phase 0.1](./baseline-notes-phase-0.1.md) — Visual baseline capture metadata
 - [High-Level Design](../../architecture/high-level-design.md) — Architecture overview

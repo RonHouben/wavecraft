@@ -3,7 +3,7 @@
 ## Related Documents
 
 - [User Stories](./user-stories.md) — Requirements and acceptance criteria
-- [Low-Level Design](./low-level-design-ui-ux-refactor.md) — Architecture decisions and hard boundary rules
+- [Low-Level Design](./low-level-design-ui-ux-refactor-final.md) — Architecture decisions and hard boundary rules
 - [UX Improvement Plan](./ux-improvement-plan.md) — Phased UX execution guidance
 - [High-Level Design](../../architecture/high-level-design.md) — Architecture overview
 - [Coding Standards](../../architecture/coding-standards.md) — Conventions hub

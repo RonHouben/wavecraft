@@ -16,7 +16,7 @@ Static analysis and code-quality review of the `ui-ux-refactor` feature branch. 
 
 ### 1. Wrapper-shim conversions
 
-All legacy wrapper components have been converted to shim equivalents. Shims correctly delegate to the new component API without introducing additional re-renders or prop-drilling. No dead wrapper files remain in `ui/packages/components/src/` or `sdk-template/ui/src/`.
+All legacy wrapper components have been converted to shim equivalents. Shims correctly delegate to the new component API without introducing additional re-renders or prop-drilling. Wrapper files are retained as deprecated shim re-exports for compatibility; they are not removed.
 
 **Status:** ✅ Validated
 
@@ -71,8 +71,8 @@ The deprecation shims introduced in this refactor are intentionally temporary. M
 
 ## Related Documents
 
-- [Low-Level Design](./low-level-design-ui-ux-refactor.md)
-- [Implementation Plan](./implementation-plan.md)
+- [Low-Level Design](./low-level-design-ui-ux-refactor-final.md)
+- [Implementation Plan](./implementation-plan-final.md)
 - [Test Plan](./test-plan.md)
 - [High-Level Design](../../architecture/high-level-design.md)
 - [Coding Standards](../../architecture/coding-standards.md)
