@@ -5,7 +5,7 @@ model:
   - GPT-5.3-Codex (copilot)
   - Claude Opus 4.6 (copilot)
   - Gemini 2.5 Pro (copilot)
-tools: ['agent', 'search', 'read', 'web', 'todo', 'memory']
+tools: ['agent', 'search', 'read', 'web', 'todo', 'memory', 'vscode']
 agents: [orchestrator, coder, architect, docwriter, search]
 user-invokable: true
 handoffs:

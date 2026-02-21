@@ -6,7 +6,17 @@ model:
   - GPT-5.2-Codex (copilot)
   - Claude Opus 4.6 (copilot)
 tools:
-  ['read', 'search', 'edit', 'execute', 'todo', 'agent', 'web', 'playwright/*']
+  [
+    'read',
+    'search',
+    'edit',
+    'execute',
+    'todo',
+    'agent',
+    'web',
+    'playwright/*',
+    'vscode'
+  ]
 agents: [orchestrator, search, tester, docwriter]
 user-invokable: true
 handoffs:

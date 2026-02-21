@@ -5,7 +5,7 @@ model:
   - GPT-5.3-Codex (copilot)
   - GPT-5.2-Codex (copilot)
   - Claude Opus 4.6 (copilot)
-tools: ['read', 'search', 'web', 'todo', 'memory']
+tools: ['read', 'search', 'web', 'todo', 'memory', 'vscode']
 agents: []
 user-invokable: false
 ---
