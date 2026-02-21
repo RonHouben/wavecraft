@@ -39,7 +39,7 @@ export function Processor({
               return <ParameterSelect key={param.id} id={param.id} />;
             case 'float':
               return <ParameterSlider key={param.id} id={param.id} />;
-            default:
+            default: {
               const msg = `Unknown processor parameter type ${param.type}`;
 
               logger.error(msg, {
@@ -49,6 +49,7 @@ export function Processor({
               });
 
               throw new Error(msg);
+            }
           }
         })}
       </div>

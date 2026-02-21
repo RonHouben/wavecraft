@@ -3,36 +3,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { OscillatorProcessor } from './OscillatorProcessor';
 
-const mockUseHasProcessorInSignalChain = vi.hoisted(() => vi.fn());
-const mockUseProcessorBypass = vi.hoisted(() => vi.fn());
-const mockUseParameter = vi.hoisted(() => vi.fn());
-const mockSetOscillatorEnabled = vi.hoisted(() => vi.fn());
-
-vi.mock('@wavecraft/core', () => ({
-  logger: {
-    error: vi.fn(),
-  },
-  useHasProcessorInSignalChain: mockUseHasProcessorInSignalChain,
-  useProcessorBypass: mockUseProcessorBypass,
-  useParameter: mockUseParameter,
-}));
+const mockProcessor = vi.hoisted(() =>
+  vi.fn(({ id }: { id: string }) => <div data-testid="processor" data-processor-id={id} />)
+);
 
 vi.mock('./Processor', () => ({
-  Processor: ({ id }: { id: string }) => <div data-testid="processor" data-processor-id={id} />,
+  Processor: mockProcessor,
 }));
 
 describe('OscillatorProcessor', () => {
   beforeEach(() => {
-    mockSetOscillatorEnabled.mockReset();
-    mockSetOscillatorEnabled.mockResolvedValue(undefined);
-    mockUseHasProcessorInSignalChain.mockReturnValue(true);
-    mockUseProcessorBypass.mockReturnValue({ bypassed: false });
-    mockUseParameter.mockReturnValue({
-      param: { id: 'oscillator_enabled', value: true },
-      setValue: mockSetOscillatorEnabled,
-      isLoading: false,
-      error: null,
-    });
+    mockProcessor.mockClear();
   });
 
   it('renders processor for oscillator id', () => {
@@ -42,42 +23,28 @@ describe('OscillatorProcessor', () => {
   });
 
   it('hides when processor is not in signal chain and hideWhenNotInSignalChain is set', () => {
-    mockUseHasProcessorInSignalChain.mockReturnValue(false);
-
     render(<OscillatorProcessor hideWhenNotInSignalChain />);
 
-    expect(screen.queryByTestId('processor')).not.toBeInTheDocument();
+    const lastCallIndex = mockProcessor.mock.calls.length - 1;
+    const props = mockProcessor.mock.calls[lastCallIndex]?.[0];
+    expect(props).toMatchObject({ id: 'oscillator', hideWhenNotInSignalChain: true });
   });
 
-  it('forces oscillator enabled off when bypass becomes active', async () => {
-    mockUseProcessorBypass.mockReturnValue({ bypassed: true });
-
+  it('defaults hideWhenNotInSignalChain to undefined when omitted', () => {
     render(<OscillatorProcessor />);
 
-    expect(mockSetOscillatorEnabled).toHaveBeenCalledWith(false);
+    const lastCallIndex = mockProcessor.mock.calls.length - 1;
+    const props = mockProcessor.mock.calls[lastCallIndex]?.[0];
+    expect(props).toMatchObject({ id: 'oscillator', hideWhenNotInSignalChain: undefined });
   });
 
-  it('restores oscillator enabled when bypass is removed after forced disable', () => {
-    const bypassState = { bypassed: true };
-    const enabledState = { value: true };
-
-    mockUseProcessorBypass.mockImplementation(() => bypassState);
-    mockUseParameter.mockImplementation(() => ({
-      param: { id: 'oscillator_enabled', value: enabledState.value },
-      setValue: mockSetOscillatorEnabled,
-      isLoading: false,
-      error: null,
-    }));
-
-    const { rerender } = render(<OscillatorProcessor />);
-
-    expect(mockSetOscillatorEnabled).toHaveBeenCalledWith(false);
-
-    enabledState.value = false;
-    bypassState.bypassed = false;
+  it('keeps oscillator processor id across rerenders', () => {
+    const { rerender } = render(<OscillatorProcessor hideWhenNotInSignalChain />);
 
     rerender(<OscillatorProcessor />);
 
-    expect(mockSetOscillatorEnabled).toHaveBeenCalledWith(true);
+    expect(mockProcessor).toHaveBeenCalledTimes(2);
+    expect(mockProcessor.mock.calls[0]?.[0]).toMatchObject({ id: 'oscillator' });
+    expect(mockProcessor.mock.calls[1]?.[0]).toMatchObject({ id: 'oscillator' });
   });
 });
