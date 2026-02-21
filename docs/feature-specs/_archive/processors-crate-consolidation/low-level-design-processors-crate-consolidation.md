@@ -43,7 +43,7 @@ This increased coupling and made ownership ambiguous for prelude/macro exports.
 - `wavecraft-nih_plug` prelude re-exports processors from `wavecraft-processors`.
 
 ### 4) DSP crate cleanup
-`wavecraft-dsp` drops built-in implementation ownership and retains only minimal legacy module stubs/documentation where needed for migration clarity.
+`wavecraft-dsp` drops built-in implementation ownership and removes legacy built-in stub modules entirely.
 
 ## Before/After (Ownership)
 - **Before:** Built-in processor implementations were treated as part of `wavecraft-dsp` ownership.

@@ -78,8 +78,8 @@ All SDK crates use the `wavecraft-*` naming convention for clear identification:
 | `wavecraft-protocol`   | IPC contracts, parameter types, JSON-RPC definitions, FFI vtable contract (`DevProcessorVTable`)                                                                                                                                                                                              | ✅ crates.io                    | Implements `ParamSet` trait                                                                              |
 | `wavecraft-bridge`     | IPC handler, `ParameterHost` trait, `PluginParamLoader` (dlopen + parameter metadata + processor metadata + dev vtable loading)                                                                                                                                                               | ✅ crates.io                    | CLI uses for plugin loading                                                                              |
 | `wavecraft-metering`   | Real-time safe SPSC ring buffer for audio → UI metering                                                                                                                                                                                                                                       | ✅ crates.io                    | Uses `MeterProducer` in DSP                                                                              |
-| `wavecraft-dsp`        | DSP primitives, `Processor` trait, built-in processors                                                                                                                                                                                                                                        | ✅ crates.io                    | Implements `Processor` trait                                                                             |
-| `wavecraft-processors` | Reusable SDK-owned processor implementations (for example, `Oscillator`) used by templates and plugin projects; complements `wavecraft-dsp` primitives                                                                                                                                        | ✅ crates.io                    | Imported by user plugins when they want SDK-provided processors                                          |
+| `wavecraft-dsp`        | DSP primitives, `Processor` trait, contracts, and combinators (no concrete built-in processors)                                                                                                                                                                                               | ✅ crates.io                    | Implements `Processor` trait                                                                             |
+| `wavecraft-processors` | Concrete built-in processors (`Gain`, `Passthrough`, `Oscillator`, etc.) with flat crate-root exports. Owns all concrete built-in implementations; complements `wavecraft-dsp` contracts                                                                                                      | ✅ crates.io                    | Imported by user plugins when they want SDK-provided processors; `wavecraft_processor!` aliases resolve here |
 | `wavecraft-dev-server` | Unified dev server at `dev-server/` (repo root): WebSocket server, `DevAudioProcessor` trait, `FfiProcessor` wrapper, `AudioServer` (full-duplex), `AtomicParameterBridge`, hot-reload, file watching. Feature-gated audio (`default = ["audio"]`). CLI uses with `default-features = false`. | ❌ Standalone (publish = false) | CLI uses for dev mode                                                                                    |
 | `sdk-template`         | Canonical plugin scaffold at repository root. Used both for CLI template embedding and SDK-mode development (`cargo xtask dev` after running `scripts/setup-dev-template.sh`).                                                                                                                | ❌ Internal scaffold            | Source of truth for generated projects and SDK contributor workflow                                      |
 
@@ -160,8 +160,8 @@ The SDK exposes a minimal, stable API through the `wavecraft::prelude` module (w
 ```rust
 // wavecraft::prelude re-exports (via wavecraft-nih_plug)
 pub use nih_plug::prelude::*;  // From wavecraft-nih_plug
-pub use wavecraft_dsp::{Processor, ProcessorParams, Transport, builtins};
-pub use wavecraft_processors::{Oscillator, OscillatorParams};
+pub use wavecraft_dsp::{Processor, ProcessorParams, Transport};
+pub use wavecraft_processors::{Gain, Passthrough, Oscillator, OscillatorParams};  // built-in aliases resolve here
 pub use wavecraft_protocol::{ParamId, ParameterInfo, ParameterType, db_to_linear};
 pub use wavecraft_metering::{MeterConsumer, MeterFrame, MeterProducer, create_meter_channel};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -207,7 +207,7 @@ pub use wavecraft_core::{wavecraft_processor, wavecraft_plugin};
 
 **Macros:**
 
-- **`wavecraft_processor!`** — Creates named wrappers around built-in DSP processors (not for custom types):
+- **`wavecraft_processor!`** — Creates named wrappers around built-in processors from `wavecraft_processors` (not for custom types). The aliases (`Gain`, `Passthrough`, etc.) resolve to `wavecraft_processors::*`:
 
   ```rust
   wavecraft_processor!(InputGain => Gain);

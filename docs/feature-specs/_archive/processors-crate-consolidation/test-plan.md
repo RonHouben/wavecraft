@@ -42,7 +42,7 @@
 ## Files Verified
 - `engine/crates/wavecraft-processors/src/lib.rs`
 - `engine/crates/wavecraft-dsp/src/lib.rs`
-- `engine/crates/wavecraft-dsp/src/builtins/mod.rs`
+- `engine/crates/wavecraft-dsp/src/` (verified no `builtins/` stub module remains)
 - `engine/crates/wavecraft-core/src/prelude.rs`
 - `engine/crates/wavecraft-core/src/macros.rs`
 - `engine/crates/wavecraft-nih_plug/src/prelude.rs`

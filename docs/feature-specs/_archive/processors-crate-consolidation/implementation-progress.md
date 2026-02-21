@@ -23,13 +23,11 @@ Evidence:
 ### 2) `wavecraft-dsp` ownership narrowed
 - `wavecraft-dsp` now exposes contracts/combinators only.
 - Built-in implementation ownership was removed.
-- Legacy built-in module footprint in `wavecraft-dsp` reduced to migration stubs/docs where retained.
+- Legacy built-in stub modules in `wavecraft-dsp` were fully removed.
 
 Evidence:
 - `engine/crates/wavecraft-dsp/src/lib.rs`
-- `engine/crates/wavecraft-dsp/src/builtins/mod.rs`
-- `engine/crates/wavecraft-dsp/src/builtins/gain.rs`
-- `engine/crates/wavecraft-dsp/src/builtins/passthrough.rs`
+- `engine/crates/wavecraft-dsp/src/` (no `builtins/` stub module)
 
 ### 3) Macro/prelude rewiring
 - `wavecraft-core` prelude re-exports built-ins from `wavecraft_processors`.
