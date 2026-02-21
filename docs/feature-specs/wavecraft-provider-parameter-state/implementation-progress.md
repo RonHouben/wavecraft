@@ -22,3 +22,4 @@ Implemented as a **single cohesive change set** on `feature/ui-ux-refactor` for 
   - Existing `useAllParametersFor` consumers continue to work.
   - New canonical API is `useParametersForProcessor`.
 - Direct singleton writes in template components were removed in favor of provider actions.
+- Although the feature spec outlined phased implementation steps, execution was intentionally consolidated into a single PR (`#100`) to keep provider/state migration, compatibility alias preservation, and cross-hook regression coverage reviewable as one atomic change set.

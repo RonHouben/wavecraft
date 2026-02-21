@@ -75,6 +75,39 @@ function updateParameterValue(
   return changed ? next : params;
 }
 
+function rollbackParameterValueIfCurrentMatches(
+  params: ParameterInfo[],
+  changedId: ParameterId,
+  expectedCurrentValue: ParameterValue,
+  rollbackValue: ParameterValue
+): ParameterInfo[] {
+  let changed = false;
+
+  const next = params.map((param) => {
+    if (param.id !== changedId) {
+      return param;
+    }
+
+    const normalizedExpected = normalizeValue(param.type, expectedCurrentValue);
+    if (param.value !== normalizedExpected) {
+      return param;
+    }
+
+    const normalizedRollback = normalizeValue(param.type, rollbackValue);
+    if (param.value === normalizedRollback) {
+      return param;
+    }
+
+    changed = true;
+    return {
+      ...param,
+      value: normalizedRollback,
+    };
+  });
+
+  return changed ? next : params;
+}
+
 async function attemptFetch(client: ParameterClient, attempt: number): Promise<FetchAttemptResult> {
   try {
     if (attempt > 0) {
@@ -230,7 +263,14 @@ export function WavecraftProvider({ children }: Readonly<WavecraftProviderProps>
         setError(null);
       } catch (err) {
         if (previousValue !== undefined) {
-          setParams((prev) => updateParameterValue(prev, id, previousValue as ParameterValue));
+          setParams((prev) =>
+            rollbackParameterValueIfCurrentMatches(
+              prev,
+              id,
+              optimisticValue,
+              previousValue as ParameterValue
+            )
+          );
         }
 
         const writeError = toError(err);

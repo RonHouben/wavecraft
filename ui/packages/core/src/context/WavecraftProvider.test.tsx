@@ -147,4 +147,121 @@ describe('WavecraftProvider', () => {
       expect(gain?.value).toBe(0.5);
     });
   });
+
+  it('does not clobber newer external state during failed optimistic rollback race', async () => {
+    const client = ParameterClient.getInstance();
+    vi.spyOn(client, 'getAllParameters').mockResolvedValue(initialParams);
+
+    let rejectWrite: ((error: Error) => void) | null = null;
+    vi.spyOn(client, 'setParameter').mockImplementation(
+      () =>
+        new Promise<void>((_, reject) => {
+          rejectWrite = (error: Error) => reject(error);
+        })
+    );
+
+    const { result } = renderHook(() => useAllParameters(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    const callback = onParamChangedCallback;
+    if (!callback) {
+      throw new Error('Expected parameter change callback to be registered');
+    }
+
+    let pendingWrite!: Promise<void>;
+    act(() => {
+      pendingWrite = result.current.setParameter('gain', 1);
+    });
+
+    const writeErrorResult = (pendingWrite as Promise<void>).catch((error: unknown) => error);
+
+    await waitFor(() => {
+      const gain = result.current.params.find((param) => param.id === 'gain');
+      expect(gain?.value).toBe(1);
+    });
+
+    await act(async () => {
+      callback('gain', 0.9);
+    });
+
+    await waitFor(() => {
+      const gain = result.current.params.find((param) => param.id === 'gain');
+      expect(gain?.value).toBe(0.9);
+    });
+
+    if (!rejectWrite) {
+      throw new Error('Expected write promise reject handler to be captured');
+    }
+
+    await act(async () => {
+      rejectWrite?.(new Error('Write failed'));
+    });
+
+    const writeError = await writeErrorResult;
+    expect(writeError).toBeInstanceOf(Error);
+    expect((writeError as Error).message).toContain('Write failed');
+
+    await waitFor(() => {
+      const gain = result.current.params.find((param) => param.id === 'gain');
+      expect(gain?.value).toBe(0.9);
+    });
+  });
+
+  it('fetches parameters after reconnect when mounted disconnected', async () => {
+    mockTransport.setConnected(false);
+    const client = ParameterClient.getInstance();
+    const getAllSpy = vi.spyOn(client, 'getAllParameters').mockResolvedValue(initialParams);
+
+    const { result } = renderHook(() => useAllParameters(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(true);
+    });
+    expect(getAllSpy).not.toHaveBeenCalled();
+
+    await act(async () => {
+      mockTransport.setConnected(true);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.params).toHaveLength(1);
+    });
+
+    expect(getAllSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('sets timeout error after 15 seconds when connection never becomes available', async () => {
+    vi.useFakeTimers();
+
+    try {
+      mockTransport.setConnected(false);
+      const client = ParameterClient.getInstance();
+      const getAllSpy = vi.spyOn(client, 'getAllParameters').mockResolvedValue(initialParams);
+
+      const { result } = renderHook(() => useAllParameters(), { wrapper });
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(14_999);
+      });
+
+      expect(result.current.error).toBeNull();
+      expect(result.current.isLoading).toBe(true);
+      expect(getAllSpy).not.toHaveBeenCalled();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1);
+      });
+
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.error?.message).toContain(
+        'Could not connect to dev server within 15 seconds'
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

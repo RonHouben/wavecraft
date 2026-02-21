@@ -112,3 +112,30 @@ No functional issues found in scoped verification.
 - [x] Scoped behavior requirements validated
 - [x] Artifact persisted to file
 - **Ready for release**: YES (from tester verification perspective)
+---
+
+## Retest Addendum (Post-QA Blocker Fix)
+
+- **Date**: 2026-02-21
+- **Scope**: QA-blocker retest for CAS rollback/lifecycle fixes in `WavecraftProvider`
+- **Branch/Commit**: `feature/ui-ux-refactor` @ `ecc1ab6`
+
+### Commands and Outcomes
+
+1. `git branch --show-current && git rev-parse --short HEAD && git status --short`
+   - **Result**: ✅ PASS
+
+2. Targeted Vitest run:
+   - `packages/core/src/context/WavecraftProvider.test.tsx`
+   - `packages/core/src/hooks/useAllParameters.test.ts`
+   - `packages/core/src/hooks/useParameter.test.ts`
+   - `packages/core/src/hooks/useAllParameterFor.test.ts`
+   - `packages/components/src/TemplateApp.test.tsx`
+   - **Result**: ✅ PASS (5 files, 17 tests, 0 failures)
+
+3. `cargo xtask ci-check`
+   - **Result**: ✅ PASS (UI suite: 28 files, 101 tests)
+
+### Conclusion
+
+Retest PASS; no blocker regressions observed.
