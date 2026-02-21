@@ -286,11 +286,11 @@ This is the **default Dev FFI v2 flow**: parameter values are injected at block 
 WAVECRAFT_DEV_FFI_V1_COMPAT=1 wavecraft start
 ```
 
-Setting `WAVECRAFT_DEV_FFI_V1_COMPAT=1` enables v1 compatibility mode: parameter values are loaded from the `AtomicParameterBridge` but `apply_plain_values` is not called, meaning parameter updates do not reach the processor. This mode exists **solely** for plugins that have not yet migrated to the v2 vtable. It is:
+Setting `WAVECRAFT_DEV_FFI_V1_COMPAT=1` enables v1 compatibility mode: `apply_plain_values` is skipped and processor-internal parameter injection is disabled. Temporary post-process compatibility modifiers may still reflect selected parameter changes on the audio thread, but this is not equivalent to full v2 injection and must not be relied upon for correctness. This mode exists **solely** for plugins that have not yet migrated to the v2 vtable. It is:
 
 - **Not the default.** The default path is v2 (`apply_plain_values` injection).
 - **Explicit opt-in only.** It must never be set implicitly or as a fallback in tooling.
-- **Inconsistent with the pre-1.0 strict contract policy.** Using v1 compat mode means the audio thread cannot observe parameter changes — a known behavioral gap.
+- **Inconsistent with the pre-1.0 strict contract policy.** Processor-internal injection is disabled; only limited parameter reflection via post-process compatibility modifiers may occur — not a substitute for v2 injection.
 
 The CLI prints a deprecation warning when `WAVECRAFT_DEV_FFI_V1_COMPAT=1` is active.
 
