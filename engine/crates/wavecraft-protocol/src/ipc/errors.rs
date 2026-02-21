@@ -43,12 +43,29 @@ impl IpcError {
         }
     }
 
-    /// Create an error with additional data
-    pub fn with_data(code: i32, message: impl Into<String>, data: impl Serialize) -> Self {
-        Self {
+    /// Try to create an error with additional data.
+    pub fn try_with_data(
+        code: i32,
+        message: impl Into<String>,
+        data: impl Serialize,
+    ) -> serde_json::Result<Self> {
+        Ok(Self {
             code,
             message: message.into(),
-            data: Some(serde_json::to_value(data).unwrap()),
+            data: Some(serde_json::to_value(data)?),
+        })
+    }
+
+    /// Create an error with additional data
+    pub fn with_data(code: i32, message: impl Into<String>, data: impl Serialize) -> Self {
+        let message = message.into();
+        match Self::try_with_data(code, message.clone(), data) {
+            Ok(error) => error,
+            Err(_) => Self {
+                code,
+                message,
+                data: None,
+            },
         }
     }
 

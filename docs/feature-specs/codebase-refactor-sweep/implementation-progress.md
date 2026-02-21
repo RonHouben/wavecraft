@@ -3192,3 +3192,40 @@
 - No tracked lint/format auto-fix changes were produced by the Tier 3 gate commands.
 - Tier 3 lint/format commit **not needed**.
 - Push for Tier 3 lint/format commit: **not applicable**.
+
+---
+
+## Architect/QA hardening follow-ups — panic safety + Windows module canonicalization
+
+### Scope
+
+- Replace panic-capable protocol constructor paths with fallible `try_*` variants and non-panicking wrappers.
+- Remove duplicate Windows editor module entrypoint (`windows.rs` vs `windows/mod.rs`) to keep a single canonical module path.
+
+### Files Touched
+
+- `engine/crates/wavecraft-protocol/src/ipc/envelope.rs`
+  - Added `IpcResponse::try_success(...)` and `IpcNotification::try_new(...)`.
+  - Reworked `success(...)`/`new(...)` wrappers to avoid panics on serialization failure.
+- `engine/crates/wavecraft-protocol/src/ipc/errors.rs`
+  - Added `IpcError::try_with_data(...)`.
+  - Reworked `with_data(...)` wrapper to avoid panics and preserve message/code on fallback.
+- `engine/crates/wavecraft-protocol/src/ipc.rs`
+  - Added targeted tests for failure-path hardening (`try_*` error return + non-panicking wrapper behavior).
+- `engine/crates/wavecraft-nih_plug/src/editor/windows.rs`
+  - Rewired duplicate module file into a compatibility shim that re-exports `editor/windows/mod.rs`.
+  - Canonical Windows implementation path remains `editor/windows/mod.rs` referenced by `editor/mod.rs`.
+
+### Invariants
+
+- [x] JSON-RPC wire format compatibility preserved.
+- [x] Existing public constructor APIs preserved (ergonomic wrappers remain available).
+- [x] Panic paths replaced with fallible handling/fallback behavior.
+- [x] Windows module behavior unchanged; duplicate entrypoint now forwards to canonical module to prevent drift risk.
+
+### Validation
+
+- `cargo fmt --manifest-path engine/Cargo.toml --all` — **PASSED**
+- `cargo clippy --manifest-path engine/Cargo.toml --all-targets -- -D warnings` — **PASSED**
+- `cargo test --manifest-path engine/Cargo.toml` — **PASSED**
+- `cargo xtask ci-check` — **PASSED**

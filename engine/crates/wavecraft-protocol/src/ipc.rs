@@ -44,6 +44,19 @@ pub use methods::{
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde::Serialize;
+    use serde::ser::Error as _;
+
+    struct FailingSerialize;
+
+    impl Serialize for FailingSerialize {
+        fn serialize<S>(&self, _serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            Err(S::Error::custom("intentional serialization failure"))
+        }
+    }
 
     #[test]
     fn test_request_serialization() {
@@ -222,5 +235,43 @@ mod tests {
 
         let json = serde_json::to_string(&info).expect("parameter info should serialize");
         assert!(!json.contains("\"variants\""));
+    }
+
+    #[test]
+    fn try_success_returns_error_on_serialize_failure() {
+        let result = IpcResponse::try_success(RequestId::Number(1), FailingSerialize);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn success_does_not_panic_on_serialize_failure() {
+        let response = IpcResponse::success(RequestId::Number(1), FailingSerialize);
+        assert!(response.result.is_none());
+        assert!(response.error.is_some());
+    }
+
+    #[test]
+    fn try_notification_returns_error_on_serialize_failure() {
+        let result = IpcNotification::try_new(NOTIFICATION_PARAMETER_CHANGED, FailingSerialize);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn notification_new_does_not_panic_on_serialize_failure() {
+        let notification = IpcNotification::new(NOTIFICATION_PARAMETER_CHANGED, FailingSerialize);
+        assert!(notification.params.is_none());
+    }
+
+    #[test]
+    fn try_with_data_returns_error_on_serialize_failure() {
+        let result = IpcError::try_with_data(ERROR_INTERNAL, "test", FailingSerialize);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn with_data_does_not_panic_on_serialize_failure() {
+        let error = IpcError::with_data(ERROR_INTERNAL, "test", FailingSerialize);
+        assert!(error.data.is_none());
+        assert_eq!(error.message, "test");
     }
 }

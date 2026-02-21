@@ -68,13 +68,25 @@ impl IpcRequest {
 }
 
 impl IpcResponse {
-    /// Create a success response
-    pub fn success(id: RequestId, result: impl Serialize) -> Self {
-        Self {
+    /// Try to create a success response.
+    pub fn try_success(id: RequestId, result: impl Serialize) -> serde_json::Result<Self> {
+        Ok(Self {
             jsonrpc: "2.0".to_string(),
             id,
-            result: Some(serde_json::to_value(result).unwrap()),
+            result: Some(serde_json::to_value(result)?),
             error: None,
+        })
+    }
+
+    /// Create a success response
+    pub fn success(id: RequestId, result: impl Serialize) -> Self {
+        let id_for_fallback = id.clone();
+        match Self::try_success(id, result) {
+            Ok(response) => response,
+            Err(err) => Self::error(
+                id_for_fallback,
+                IpcError::internal_error(format!("Failed to serialize success response: {err}")),
+            ),
         }
     }
 
@@ -90,12 +102,25 @@ impl IpcResponse {
 }
 
 impl IpcNotification {
-    /// Create a new notification
-    pub fn new(method: impl Into<String>, params: impl Serialize) -> Self {
-        Self {
+    /// Try to create a new notification.
+    pub fn try_new(method: impl Into<String>, params: impl Serialize) -> serde_json::Result<Self> {
+        Ok(Self {
             jsonrpc: "2.0".to_string(),
             method: method.into(),
-            params: Some(serde_json::to_value(params).unwrap()),
+            params: Some(serde_json::to_value(params)?),
+        })
+    }
+
+    /// Create a new notification
+    pub fn new(method: impl Into<String>, params: impl Serialize) -> Self {
+        let method = method.into();
+        match Self::try_new(method.clone(), params) {
+            Ok(notification) => notification,
+            Err(_) => Self {
+                jsonrpc: "2.0".to_string(),
+                method,
+                params: None,
+            },
         }
     }
 }
