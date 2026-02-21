@@ -27,13 +27,12 @@ wavecraft_processor!(OutputGain => Gain);
 wavecraft_plugin! {
     name: "My First Plugin",
     signal: SignalChain![
-        InputTrim,
-        // Generator semantics: additive when enabled, passthrough no-op when disabled.
         Oscillator,
+        InputTrim,
         ExampleProcessor,
         ToneFilter,
         SoftClip,
+        OutputGain,
         OscilloscopeTap,
-        OutputGain
     ],
 }

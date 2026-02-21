@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { useAllParametersFor } from '@wavecraft/core';
+import { useAllParametersFor, useHasProcessorInSignalChain } from '@wavecraft/core';
 import { ParameterSlider } from './ParameterSlider';
 import { ParameterSelect } from './ParameterSelect';
 import { logger } from '@wavecraft/core';
@@ -11,12 +11,20 @@ import { ProcessorId } from '@wavecraft/core';
 import { ParameterToggle } from './ParameterToggle';
 
 export interface ProcessorProps {
-  /** Processor ID for fetching all processor-owned parameters. */
   readonly id: ProcessorId;
+  readonly hideWhenNotInSignalChain?: boolean;
 }
 
-export function Processor({ id }: Readonly<ProcessorProps>): React.JSX.Element {
+export function Processor({
+  id,
+  hideWhenNotInSignalChain,
+}: Readonly<ProcessorProps>): React.JSX.Element | null {
+  const hasProcessorInSignalChain = useHasProcessorInSignalChain(id);
   const { params } = useAllParametersFor(id);
+
+  if ((hideWhenNotInSignalChain && !hasProcessorInSignalChain) || !params) {
+    return null;
+  }
 
   return (
     <div className="border-green-200! border-spacing-300 bg-blue-100">

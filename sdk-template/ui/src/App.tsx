@@ -33,12 +33,12 @@ export function App(): JSX.Element {
       <div className="flex flex-1 flex-col gap-6">
         <div className="grid grid-cols-1 gap-4">
           <OscillatorProcessor hideWhenNotInSignalChain />
-          <OscilloscopeProcessor hideWhenNotInSignalChain />
           <InputTrimProcessor hideWhenNotInSignalChain />
           <ToneFilterProcessor hideWhenNotInSignalChain />
           <SoftClipProcessor hideWhenNotInSignalChain />
           <ExampleProcessor hideWhenNotInSignalChain />
           <OutputGainProcessor hideWhenNotInSignalChain />
+          <OscilloscopeProcessor hideWhenNotInSignalChain />
         </div>
 
         {/* Metering Section */}

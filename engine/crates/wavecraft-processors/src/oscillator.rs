@@ -209,6 +209,7 @@ impl Processor for Oscillator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use wavecraft_dsp::Bypassed;
 
     fn test_params(enabled: bool) -> OscillatorParams {
         OscillatorParams {
@@ -365,6 +366,48 @@ mod tests {
             assert!((additive_component_left - left_osc_only[i]).abs() < 1e-6);
             assert!((additive_component_right - right_osc_only[i]).abs() < 1e-6);
         }
+    }
+
+    #[test]
+    fn oscillator_bypass_wrapper_mutes_generator_output() {
+        let mut wrapped = Bypassed::new(Oscillator::default());
+        wrapped.set_sample_rate(48_000.0);
+
+        type WrappedParams = <Bypassed<Oscillator> as Processor>::Params;
+        let bypassed_params = WrappedParams {
+            inner: test_params(true),
+            bypassed: true,
+        };
+
+        // Allow bypass transition to settle to a stable bypassed state.
+        for _ in 0..4 {
+            let mut left = [0.0_f32; 128];
+            let mut right = [0.0_f32; 128];
+            let mut buffer = [&mut left[..], &mut right[..]];
+
+            wrapped.process(&mut buffer, &Transport::default(), &bypassed_params);
+        }
+
+        let mut left = [0.0_f32; 128];
+        let mut right = [0.0_f32; 128];
+        let mut buffer = [&mut left[..], &mut right[..]];
+        wrapped.process(&mut buffer, &Transport::default(), &bypassed_params);
+
+        let peak_left = left
+            .iter()
+            .fold(0.0_f32, |acc, sample| acc.max(sample.abs()));
+        let peak_right = right
+            .iter()
+            .fold(0.0_f32, |acc, sample| acc.max(sample.abs()));
+
+        assert!(
+            peak_left <= 1e-6,
+            "expected bypassed oscillator to contribute no left-channel signal"
+        );
+        assert!(
+            peak_right <= 1e-6,
+            "expected bypassed oscillator to contribute no right-channel signal"
+        );
     }
 
     #[test]

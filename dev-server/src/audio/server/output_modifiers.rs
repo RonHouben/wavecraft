@@ -5,8 +5,10 @@ use super::super::atomic_params::AtomicParameterBridge;
 const GAIN_MULTIPLIER_MIN: f32 = 0.0;
 const GAIN_MULTIPLIER_MAX: f32 = 2.0;
 
-// Strict runtime policy: canonical IDs only (no alias/legacy fallbacks).
-const INPUT_GAIN_PARAM_ID: &str = "input_gain_level";
+// Canonical IDs for gain controls; input trim keeps a temporary legacy fallback
+// during the InputGain -> InputTrim migration for hot-reload compatibility.
+const INPUT_TRIM_PARAM_ID: &str = "input_trim_level";
+const LEGACY_INPUT_GAIN_PARAM_ID: &str = "input_gain_level";
 const OUTPUT_GAIN_PARAM_ID: &str = "output_gain_level";
 const OSCILLATOR_WAVEFORM_PARAM_ID: &str = "oscillator_waveform";
 
@@ -24,7 +26,11 @@ pub(super) fn apply_output_modifiers(
     oscillator_phase: &mut f32,
     sample_rate: f32,
 ) {
-    let input_gain = read_gain_multiplier(param_bridge, INPUT_GAIN_PARAM_ID);
+    let input_gain = read_gain_multiplier_with_fallback(
+        param_bridge,
+        INPUT_TRIM_PARAM_ID,
+        LEGACY_INPUT_GAIN_PARAM_ID,
+    );
     let output_gain = read_gain_multiplier(param_bridge, OUTPUT_GAIN_PARAM_ID);
     let combined_gain = input_gain * output_gain;
 
@@ -76,6 +82,26 @@ pub(super) fn apply_output_modifiers(
 
 fn read_gain_multiplier(param_bridge: &AtomicParameterBridge, id: &str) -> f32 {
     if let Some(value) = param_bridge.read(id)
+        && value.is_finite()
+    {
+        return value.clamp(GAIN_MULTIPLIER_MIN, GAIN_MULTIPLIER_MAX);
+    }
+
+    1.0
+}
+
+fn read_gain_multiplier_with_fallback(
+    param_bridge: &AtomicParameterBridge,
+    primary_id: &str,
+    fallback_id: &str,
+) -> f32 {
+    if let Some(value) = param_bridge.read(primary_id)
+        && value.is_finite()
+    {
+        return value.clamp(GAIN_MULTIPLIER_MIN, GAIN_MULTIPLIER_MAX);
+    }
+
+    if let Some(value) = param_bridge.read(fallback_id)
         && value.is_finite()
     {
         return value.clamp(GAIN_MULTIPLIER_MIN, GAIN_MULTIPLIER_MAX);
@@ -175,7 +201,7 @@ mod tests {
         level: f32,
         waveform: f32,
         enabled: f32,
-        input_gain_level: f32,
+        input_trim_level: f32,
         output_gain_level: f32,
     ) -> AtomicParameterBridge {
         AtomicParameterBridge::new(&[
@@ -233,15 +259,15 @@ mod tests {
                 variants: None,
             },
             ParameterInfo {
-                id: "input_gain_level".to_string(),
+                id: "input_trim_level".to_string(),
                 name: "Level".to_string(),
                 param_type: ParameterType::Float,
-                value: input_gain_level,
-                default: input_gain_level,
+                value: input_trim_level,
+                default: input_trim_level,
                 unit: Some("x".to_string()),
                 min: 0.0,
                 max: 2.0,
-                group: Some("InputGain".to_string()),
+                group: Some("InputTrim".to_string()),
                 variants: None,
             },
             ParameterInfo {
@@ -331,7 +357,7 @@ mod tests {
     }
 
     #[test]
-    fn output_modifiers_apply_input_and_output_gain_levels() {
+    fn output_modifiers_apply_input_trim_and_output_gain_levels() {
         let unity_bridge = oscillator_bridge(880.0, 0.5, 0.0, 1.0, 1.0, 1.0);
         let boosted_bridge = oscillator_bridge(880.0, 0.5, 0.0, 1.0, 1.5, 2.0);
 
@@ -410,7 +436,7 @@ mod tests {
     fn output_modifiers_apply_gain_without_oscillator_params() {
         let bridge = AtomicParameterBridge::new(&[
             ParameterInfo {
-                id: "input_gain_level".to_string(),
+                id: "input_trim_level".to_string(),
                 name: "Level".to_string(),
                 param_type: ParameterType::Float,
                 value: 1.5,
@@ -418,7 +444,7 @@ mod tests {
                 unit: Some("x".to_string()),
                 min: 0.0,
                 max: 2.0,
-                group: Some("InputGain".to_string()),
+                group: Some("InputTrim".to_string()),
                 variants: None,
             },
             ParameterInfo {
@@ -472,7 +498,7 @@ mod tests {
                 unit: Some("x".to_string()),
                 min: 0.0,
                 max: 2.0,
-                group: Some("InputGain".to_string()),
+                group: Some("InputTrim".to_string()),
                 variants: None,
             },
             ParameterInfo {
@@ -513,7 +539,7 @@ mod tests {
                 unit: Some("x".to_string()),
                 min: 0.0,
                 max: 2.0,
-                group: Some("InputGain".to_string()),
+                group: Some("InputTrim".to_string()),
                 variants: None,
             },
             ParameterInfo {
@@ -546,7 +572,7 @@ mod tests {
     fn output_modifiers_use_canonical_ids_even_when_legacy_variants_exist() {
         let bridge = AtomicParameterBridge::new(&[
             ParameterInfo {
-                id: "input_gain_level".to_string(),
+                id: "input_trim_level".to_string(),
                 name: "Level".to_string(),
                 param_type: ParameterType::Float,
                 value: 1.6,
@@ -554,7 +580,7 @@ mod tests {
                 unit: Some("x".to_string()),
                 min: 0.0,
                 max: 2.0,
-                group: Some("InputGain".to_string()),
+                group: Some("InputTrim".to_string()),
                 variants: None,
             },
             ParameterInfo {
@@ -566,7 +592,7 @@ mod tests {
                 unit: Some("x".to_string()),
                 min: 0.0,
                 max: 2.0,
-                group: Some("InputGain".to_string()),
+                group: Some("InputTrim".to_string()),
                 variants: None,
             },
             ParameterInfo {
@@ -591,6 +617,46 @@ mod tests {
 
         // Strict canonical-only policy: legacy variants are ignored when present.
         let expected = 0.5 * 1.6;
+        assert!(left.iter().all(|sample| (*sample - expected).abs() < 1e-6));
+        assert!(right.iter().all(|sample| (*sample - expected).abs() < 1e-6));
+    }
+
+    #[test]
+    fn output_modifiers_use_legacy_input_gain_when_canonical_missing() {
+        let bridge = AtomicParameterBridge::new(&[
+            ParameterInfo {
+                id: "input_gain_level".to_string(),
+                name: "Level".to_string(),
+                param_type: ParameterType::Float,
+                value: 1.8,
+                default: 1.8,
+                unit: Some("x".to_string()),
+                min: 0.0,
+                max: 2.0,
+                group: Some("InputTrim".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "output_gain_level".to_string(),
+                name: "Level".to_string(),
+                param_type: ParameterType::Float,
+                value: 1.0,
+                default: 1.0,
+                unit: Some("x".to_string()),
+                min: 0.0,
+                max: 2.0,
+                group: Some("OutputGain".to_string()),
+                variants: None,
+            },
+        ]);
+
+        let mut left = [0.5_f32; 8];
+        let mut right = [0.5_f32; 8];
+        let mut phase = 0.0;
+
+        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
+
+        let expected = 0.5 * 1.8;
         assert!(left.iter().all(|sample| (*sample - expected).abs() < 1e-6));
         assert!(right.iter().all(|sample| (*sample - expected).abs() < 1e-6));
     }

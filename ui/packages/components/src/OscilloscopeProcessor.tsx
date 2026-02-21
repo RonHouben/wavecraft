@@ -21,9 +21,9 @@ interface OscilloscopeProcessorProps {
   hideWhenNotInSignalChain?: boolean;
 }
 
-export function OscilloscopeProcessor(
-  props: Readonly<OscilloscopeProcessorProps>
-): React.JSX.Element | null {
+export function OscilloscopeProcessor({
+  hideWhenNotInSignalChain,
+}: Readonly<OscilloscopeProcessorProps>): React.JSX.Element | null {
   const { connected } = useConnectionStatus();
   const frame = useOscilloscopeFrame();
   const hasProcessorInSignalChain = useHasProcessorInSignalChain('oscilloscope_tap');
@@ -157,7 +157,7 @@ export function OscilloscopeProcessor(
     };
   }, [channelView, connected]);
 
-  if (props.hideWhenNotInSignalChain && !hasProcessorInSignalChain) {
+  if (hideWhenNotInSignalChain && !hasProcessorInSignalChain) {
     return null;
   }
 
