@@ -1,4 +1,5 @@
 use wavecraft_processors::{Waveform, generate_waveform_sample};
+use wavecraft_protocol::db_to_linear;
 
 use super::super::atomic_params::AtomicParameterBridge;
 use std::f32::consts::PI;
@@ -16,6 +17,12 @@ const TONE_FILTER_DEFAULT_CUTOFF_HZ: f32 = 1_000.0;
 const TONE_FILTER_MIN_Q: f32 = 0.1;
 const TONE_FILTER_MAX_Q: f32 = 10.0;
 const TONE_FILTER_DEFAULT_Q: f32 = 0.707;
+
+const SOFT_CLIP_BYPASS_PARAM_ID: &str = "soft_clip_bypass";
+const SOFT_CLIP_DRIVE_PARAM_ID: &str = "soft_clip_drive_db";
+const SOFT_CLIP_OUTPUT_TRIM_PARAM_ID: &str = "soft_clip_output_trim_db";
+const SOFT_CLIP_MIN_GAIN_DB: f32 = -24.0;
+const SOFT_CLIP_MAX_GAIN_DB: f32 = 24.0;
 
 // Canonical IDs for gain controls; input trim keeps a temporary legacy fallback
 // during the InputGain -> InputTrim migration for hot-reload compatibility.
@@ -173,6 +180,7 @@ pub(super) fn apply_output_modifiers_with_state(
     }
 
     apply_tone_filter(left, right, param_bridge, sample_rate, tone_filter_state);
+    apply_soft_clip(left, right, param_bridge);
 
     apply_gain(left, right, combined_gain);
 }
@@ -251,6 +259,66 @@ fn apply_tone_filter(
     for sample in right.iter_mut() {
         *sample = state.right.process_sample(*sample, coeffs);
     }
+}
+
+fn apply_soft_clip(left: &mut [f32], right: &mut [f32], param_bridge: &AtomicParameterBridge) {
+    if !has_soft_clip_controls(param_bridge) {
+        return;
+    }
+
+    if read_bypass_state(param_bridge, SOFT_CLIP_BYPASS_PARAM_ID) {
+        return;
+    }
+
+    let drive_db = read_soft_clip_db(
+        param_bridge,
+        SOFT_CLIP_DRIVE_PARAM_ID,
+        0.0,
+        SOFT_CLIP_MIN_GAIN_DB,
+        SOFT_CLIP_MAX_GAIN_DB,
+    );
+    let output_trim_db = read_soft_clip_db(
+        param_bridge,
+        SOFT_CLIP_OUTPUT_TRIM_PARAM_ID,
+        0.0,
+        SOFT_CLIP_MIN_GAIN_DB,
+        SOFT_CLIP_MAX_GAIN_DB,
+    );
+
+    let drive = db_to_linear(drive_db);
+    let output_trim = db_to_linear(output_trim_db);
+
+    for (left_sample, right_sample) in left.iter_mut().zip(right.iter_mut()) {
+        let left_driven = *left_sample * drive;
+        let right_driven = *right_sample * drive;
+        *left_sample = soft_clip(left_driven) * output_trim;
+        *right_sample = soft_clip(right_driven) * output_trim;
+    }
+}
+
+fn has_soft_clip_controls(param_bridge: &AtomicParameterBridge) -> bool {
+    param_bridge.read(SOFT_CLIP_BYPASS_PARAM_ID).is_some()
+        || param_bridge.read(SOFT_CLIP_DRIVE_PARAM_ID).is_some()
+        || param_bridge.read(SOFT_CLIP_OUTPUT_TRIM_PARAM_ID).is_some()
+}
+
+fn read_soft_clip_db(
+    param_bridge: &AtomicParameterBridge,
+    id: &str,
+    default: f32,
+    min: f32,
+    max: f32,
+) -> f32 {
+    param_bridge
+        .read(id)
+        .filter(|value| value.is_finite())
+        .map(|value| value.clamp(min, max))
+        .unwrap_or(default)
+}
+
+#[inline]
+fn soft_clip(input: f32) -> f32 {
+    input / (1.0 + input.abs())
 }
 
 fn has_tone_filter_controls(param_bridge: &AtomicParameterBridge) -> bool {
@@ -1237,5 +1305,230 @@ mod tests {
             filtered_left, bypassed_left,
             "filtered output should differ from bypassed output"
         );
+    }
+
+    #[test]
+    fn output_modifiers_soft_clip_drive_and_output_trim_affect_signal() {
+        let neutral_bridge = AtomicParameterBridge::new(&[
+            ParameterInfo {
+                id: "soft_clip_bypass".to_string(),
+                name: "Soft Clip Bypass".to_string(),
+                param_type: ParameterType::Bool,
+                value: 0.0,
+                default: 0.0,
+                min: 0.0,
+                max: 1.0,
+                unit: None,
+                group: Some("SoftClip".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "soft_clip_drive_db".to_string(),
+                name: "Drive".to_string(),
+                param_type: ParameterType::Float,
+                value: 0.0,
+                default: 0.0,
+                min: -24.0,
+                max: 24.0,
+                unit: Some("dB".to_string()),
+                group: Some("SoftClip".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "soft_clip_output_trim_db".to_string(),
+                name: "Output Trim".to_string(),
+                param_type: ParameterType::Float,
+                value: 0.0,
+                default: 0.0,
+                min: -24.0,
+                max: 24.0,
+                unit: Some("dB".to_string()),
+                group: Some("SoftClip".to_string()),
+                variants: None,
+            },
+        ]);
+
+        let heavy_drive_bridge = AtomicParameterBridge::new(&[
+            ParameterInfo {
+                id: "soft_clip_bypass".to_string(),
+                name: "Soft Clip Bypass".to_string(),
+                param_type: ParameterType::Bool,
+                value: 0.0,
+                default: 0.0,
+                min: 0.0,
+                max: 1.0,
+                unit: None,
+                group: Some("SoftClip".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "soft_clip_drive_db".to_string(),
+                name: "Drive".to_string(),
+                param_type: ParameterType::Float,
+                value: 18.0,
+                default: 18.0,
+                min: -24.0,
+                max: 24.0,
+                unit: Some("dB".to_string()),
+                group: Some("SoftClip".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "soft_clip_output_trim_db".to_string(),
+                name: "Output Trim".to_string(),
+                param_type: ParameterType::Float,
+                value: -12.0,
+                default: -12.0,
+                min: -24.0,
+                max: 24.0,
+                unit: Some("dB".to_string()),
+                group: Some("SoftClip".to_string()),
+                variants: None,
+            },
+        ]);
+
+        let mut neutral_left = [0.8_f32, -0.8, 0.6, -0.6];
+        let mut neutral_right = neutral_left;
+        let mut heavy_left = [0.8_f32, -0.8, 0.6, -0.6];
+        let mut heavy_right = heavy_left;
+        let mut neutral_phase = 0.0;
+        let mut heavy_phase = 0.0;
+
+        apply_output_modifiers(
+            &mut neutral_left,
+            &mut neutral_right,
+            &neutral_bridge,
+            &mut neutral_phase,
+            48_000.0,
+        );
+        apply_output_modifiers(
+            &mut heavy_left,
+            &mut heavy_right,
+            &heavy_drive_bridge,
+            &mut heavy_phase,
+            48_000.0,
+        );
+
+        // Neutral soft clip at 0 dB/0 dB still applies gentle non-linearity,
+        // but heavy drive + negative trim should clearly reduce output level.
+        let neutral_peak = neutral_left
+            .iter()
+            .fold(0.0_f32, |acc, sample| acc.max(sample.abs()));
+        let heavy_peak = heavy_left
+            .iter()
+            .fold(0.0_f32, |acc, sample| acc.max(sample.abs()));
+
+        assert!(heavy_peak < neutral_peak);
+        assert_eq!(neutral_left, neutral_right);
+        assert_eq!(heavy_left, heavy_right);
+    }
+
+    #[test]
+    fn output_modifiers_soft_clip_bypass_skips_processing() {
+        let bypassed_bridge = AtomicParameterBridge::new(&[
+            ParameterInfo {
+                id: "soft_clip_bypass".to_string(),
+                name: "Soft Clip Bypass".to_string(),
+                param_type: ParameterType::Bool,
+                value: 1.0,
+                default: 1.0,
+                min: 0.0,
+                max: 1.0,
+                unit: None,
+                group: Some("SoftClip".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "soft_clip_drive_db".to_string(),
+                name: "Drive".to_string(),
+                param_type: ParameterType::Float,
+                value: 24.0,
+                default: 24.0,
+                min: -24.0,
+                max: 24.0,
+                unit: Some("dB".to_string()),
+                group: Some("SoftClip".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "soft_clip_output_trim_db".to_string(),
+                name: "Output Trim".to_string(),
+                param_type: ParameterType::Float,
+                value: -24.0,
+                default: -24.0,
+                min: -24.0,
+                max: 24.0,
+                unit: Some("dB".to_string()),
+                group: Some("SoftClip".to_string()),
+                variants: None,
+            },
+        ]);
+
+        let enabled_bridge = AtomicParameterBridge::new(&[
+            ParameterInfo {
+                id: "soft_clip_bypass".to_string(),
+                name: "Soft Clip Bypass".to_string(),
+                param_type: ParameterType::Bool,
+                value: 0.0,
+                default: 0.0,
+                min: 0.0,
+                max: 1.0,
+                unit: None,
+                group: Some("SoftClip".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "soft_clip_drive_db".to_string(),
+                name: "Drive".to_string(),
+                param_type: ParameterType::Float,
+                value: 24.0,
+                default: 24.0,
+                min: -24.0,
+                max: 24.0,
+                unit: Some("dB".to_string()),
+                group: Some("SoftClip".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "soft_clip_output_trim_db".to_string(),
+                name: "Output Trim".to_string(),
+                param_type: ParameterType::Float,
+                value: -24.0,
+                default: -24.0,
+                min: -24.0,
+                max: 24.0,
+                unit: Some("dB".to_string()),
+                group: Some("SoftClip".to_string()),
+                variants: None,
+            },
+        ]);
+
+        let mut bypassed_left = [0.5_f32, -0.5, 0.25, -0.25];
+        let mut bypassed_right = bypassed_left;
+        let mut enabled_left = [0.5_f32, -0.5, 0.25, -0.25];
+        let mut enabled_right = enabled_left;
+        let expected_bypassed_left = bypassed_left;
+        let expected_bypassed_right = bypassed_right;
+        let mut bypassed_phase = 0.0;
+        let mut enabled_phase = 0.0;
+
+        apply_output_modifiers(
+            &mut bypassed_left,
+            &mut bypassed_right,
+            &bypassed_bridge,
+            &mut bypassed_phase,
+            48_000.0,
+        );
+        apply_output_modifiers(
+            &mut enabled_left,
+            &mut enabled_right,
+            &enabled_bridge,
+            &mut enabled_phase,
+            48_000.0,
+        );
+
+        assert_eq!(bypassed_left, expected_bypassed_left);
+        assert_eq!(bypassed_right, expected_bypassed_right);
+        assert_ne!(enabled_left, bypassed_left);
     }
 }
