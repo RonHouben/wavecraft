@@ -232,21 +232,22 @@ After parameter discovery completes, the CLI also attempts to load an FFI vtable
 
 The `DevProcessorVTable` (`wavecraft-protocol`) is a `#[repr(C)]` struct with `extern "C"` function pointers:
 
-| Function          | Purpose                                                        |
-| ----------------- | -------------------------------------------------------------- |
-| `create`          | Heap-allocate a new processor instance (returns `*mut c_void`) |
-| `process`         | Process deinterleaved audio buffers in-place                   |
-| `set_sample_rate` | Update the processor's sample rate                             |
-| `reset`           | Clear processor state (delay lines, filters, etc.)             |
-| `drop`            | Free the processor instance                                    |
+| Function             | Purpose                                                                                 |
+| -------------------- | --------------------------------------------------------------------------------------- |
+| `create`             | Heap-allocate a new processor instance (returns `*mut c_void`)                          |
+| `process`            | Process deinterleaved audio buffers in-place                                            |
+| `apply_plain_values` | **(v2)** Inject pending parameter values at block boundary before `process()` is called |
+| `set_sample_rate`    | Update the processor's sample rate                                                      |
+| `reset`              | Clear processor state (delay lines, filters, etc.)                                      |
+| `drop`               | Free the processor instance                                                             |
 
-The vtable includes a `version` field (`DEV_PROCESSOR_VTABLE_VERSION`) so the CLI can detect incompatible changes and fail fast with actionable diagnostics instead of invoking undefined behavior.
+The vtable includes a `version` field (`DEV_PROCESSOR_VTABLE_VERSION`) so the CLI can detect incompatible changes and fail fast with actionable diagnostics instead of invoking undefined behavior. The v2 vtable adds `apply_plain_values`, which is now the required default for parameter injection in dev mode.
 
 #### Key Components
 
 > **Note:** `wavecraft-dev-server` is a standalone crate at `dev-server/` (repository root), not under `engine/crates/`. It bridges CLI and engine concerns and is never distributed to end users.
 
-- **`DevProcessorVTable`** (`wavecraft-protocol`): Versioned C-ABI vtable defining the FFI contract between user cdylib and CLI.
+- **`DevProcessorVTable`** (`wavecraft-protocol`): Versioned C-ABI vtable defining the FFI contract between user cdylib and CLI. v2 adds `apply_plain_values`, called at each block boundary before `process()` to inject pending parameter values.
 - **`wavecraft_dev_create_processor`** (`wavecraft-macros` generated): FFI symbol exported by `wavecraft_plugin!` that returns the vtable. Every `extern "C"` function is wrapped in `catch_unwind` for panic safety.
 - **`PluginParamLoader`** (`wavecraft-bridge`): Loads the vtable alongside parameters via `try_load_processor_vtable()`. Missing/incompatible vtable in SDK mode is treated as a contract violation and fails fast with remediation guidance.
 - **`DevAudioProcessor`** trait (`wavecraft-dev-server`): Simplified audio processing trait without associated types — compatible with both FFI and direct Rust usage.
@@ -269,15 +270,31 @@ Pre-1.0 SDK development prioritizes fast iteration and strict contracts over bac
 
 If a temporary compatibility path is introduced for migration, it must be explicit and opt-in (for example, a dedicated CLI flag or environment variable) and must never be the default behavior.
 
-#### Parameter Sync in Dev Mode
+#### Parameter Sync in Dev Mode (Dev FFI v2)
 
 The `AtomicParameterBridge` enables lock-free parameter flow from the browser UI to the audio thread:
 
 1. **UI** sends `setParameter("gain", 0.75)` via WebSocket
 2. **WS thread** calls `DevServerHost::set_parameter()` which writes to both `InMemoryParameterHost` (for IPC queries) and `AtomicParameterBridge` (for audio thread)
-3. **Audio thread** reads `bridge.read("gain")` via `AtomicF32::load(Relaxed)` at block boundaries
+3. **Audio thread** calls `bridge.apply_plain_values(params)` at each block boundary — **before** `FfiProcessor::process()` — injecting all pending parameter updates into the processor via the v2 vtable's `apply_plain_values` function pointer
 
-The FFI vtable v1 `process()` does not accept parameters directly. The bridge infrastructure is in place for future vtable v2 which will add a `set_parameter` function pointer. Currently, parameter values are available to the audio callback but not injected into the processor (documented known limitation of the `wavecraft_plugin!` macro).
+This is the **default Dev FFI v2 flow**: parameter values are injected at block boundaries before every `process()` call. Plugins must export a v2-compatible vtable (via `wavecraft_plugin!`) to use this path.
+
+**V1 compatibility mode (migration only — non-default, explicit opt-in):**
+
+```bash
+WAVECRAFT_DEV_FFI_V1_COMPAT=1 wavecraft start
+```
+
+Setting `WAVECRAFT_DEV_FFI_V1_COMPAT=1` enables v1 compatibility mode: parameter values are loaded from the `AtomicParameterBridge` but `apply_plain_values` is not called, meaning parameter updates do not reach the processor. This mode exists **solely** for plugins that have not yet migrated to the v2 vtable. It is:
+
+- **Not the default.** The default path is v2 (`apply_plain_values` injection).
+- **Explicit opt-in only.** It must never be set implicitly or as a fallback in tooling.
+- **Inconsistent with the pre-1.0 strict contract policy.** Using v1 compat mode means the audio thread cannot observe parameter changes — a known behavioral gap.
+
+The CLI prints a deprecation warning when `WAVECRAFT_DEV_FFI_V1_COMPAT=1` is active.
+
+> ⚠️ **Sunset notice:** V1 compat mode is temporary and is slated for removal once v2 vtable adoption reaches parity and burn-in confidence is established. Plugins should migrate to the v2 vtable (`wavecraft_plugin!` macro) as soon as possible.
 
 ### Audio Runtime Status Contract (Browser Dev)
 

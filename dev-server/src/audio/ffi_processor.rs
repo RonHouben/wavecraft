@@ -4,6 +4,7 @@
 //! cdylib) to a safe Rust trait that the audio server can drive.
 
 use std::ffi::c_void;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use wavecraft_protocol::DevProcessorVTable;
 
 /// Simplified audio processor trait for dev mode.
@@ -14,6 +15,9 @@ use wavecraft_protocol::DevProcessorVTable;
 pub trait DevAudioProcessor: Send + 'static {
     /// Process deinterleaved audio in-place.
     fn process(&mut self, channels: &mut [&mut [f32]]);
+
+    /// Apply plain parameter values in canonical generation order.
+    fn apply_plain_values(&mut self, values: &[f32]);
 
     /// Update the processor's sample rate.
     fn set_sample_rate(&mut self, sample_rate: f32);
@@ -30,6 +34,9 @@ pub trait DevAudioProcessor: Send + 'static {
 pub struct FfiProcessor {
     instance: *mut c_void,
     vtable: DevProcessorVTable,
+    supports_plain_values: bool,
+    unsupported_channel_count: AtomicU32,
+    unsupported_channel_flag: AtomicBool,
 }
 
 // SAFETY: The processor instance is only accessed from the cpal audio
@@ -52,6 +59,9 @@ impl FfiProcessor {
         Some(Self {
             instance,
             vtable: *vtable,
+            supports_plain_values: vtable.version >= 2,
+            unsupported_channel_count: AtomicU32::new(0),
+            unsupported_channel_flag: AtomicBool::new(false),
         })
     }
 
@@ -64,15 +74,17 @@ impl FfiProcessor {
         Some((num_channels, channels[0].len() as u32))
     }
 
-    fn prepare_channel_ptrs(channels: &mut [&mut [f32]]) -> Option<[*mut f32; 2]> {
+    fn prepare_channel_ptrs(&self, channels: &mut [&mut [f32]]) -> Option<[*mut f32; 2]> {
         // Real-time safety: use a stack-allocated array instead of Vec.
         // Wavecraft targets stereo (2 channels). Guard against unexpected
         // multi-channel input to avoid out-of-bounds access.
         if channels.len() > 2 {
-            tracing::error!(
-                num_channels = channels.len(),
-                "FfiProcessor::process() received more than 2 channels; skipping"
-            );
+            // Real-time safe reporting: set a one-shot flag and count events.
+            // A non-RT path can poll and report via `take_unsupported_channel_count`
+            // and `take_unsupported_channel_flag` if needed.
+            self.unsupported_channel_count
+                .fetch_add(1, Ordering::Relaxed);
+            self.unsupported_channel_flag.store(true, Ordering::Relaxed);
             return None;
         }
 
@@ -84,6 +96,18 @@ impl FfiProcessor {
         }
 
         Some(ptrs)
+    }
+
+    /// Non-RT diagnostic hook: returns and resets the count of callback
+    /// invocations that were skipped due to receiving more than 2 channels.
+    pub fn take_unsupported_channel_count(&self) -> u32 {
+        self.unsupported_channel_count.swap(0, Ordering::Relaxed)
+    }
+
+    /// Non-RT diagnostic hook: returns whether any unsupported channel event
+    /// occurred since the last call, then clears the flag.
+    pub fn take_unsupported_channel_flag(&self) -> bool {
+        self.unsupported_channel_flag.swap(false, Ordering::Relaxed)
     }
 }
 
@@ -104,11 +128,24 @@ impl DevAudioProcessor for FfiProcessor {
             "FFI processor expects channel slices with equal lengths"
         );
 
-        let Some(mut ptrs) = Self::prepare_channel_ptrs(channels) else {
+        let Some(mut ptrs) = self.prepare_channel_ptrs(channels) else {
             return;
         };
 
         (self.vtable.process)(self.instance, ptrs.as_mut_ptr(), num_channels, num_samples);
+    }
+
+    fn apply_plain_values(&mut self, values: &[f32]) {
+        if !self.supports_plain_values {
+            return;
+        }
+
+        // SAFETY: `self.instance` originates from the loaded vtable `create` function,
+        // `values.as_ptr()` is valid for `values.len()` elements for this call, and
+        // the plugin owns interpretation of plain-value order.
+        unsafe {
+            (self.vtable.apply_plain_values)(self.instance, values.as_ptr(), values.len());
+        }
     }
 
     fn set_sample_rate(&mut self, sample_rate: f32) {
@@ -133,7 +170,6 @@ impl Drop for FfiProcessor {
 mod tests {
     use super::*;
     use std::sync::Mutex;
-    use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
     // Mutex to serialize tests that share static mock flags.
     // This prevents race conditions when tests run in parallel.
@@ -145,6 +181,8 @@ mod tests {
     static SET_SAMPLE_RATE_CALLED: AtomicBool = AtomicBool::new(false);
     static RESET_CALLED: AtomicBool = AtomicBool::new(false);
     static DROP_CALLED: AtomicBool = AtomicBool::new(false);
+    static APPLY_PLAIN_VALUES_CALLED: AtomicBool = AtomicBool::new(false);
+    static APPLY_PLAIN_VALUES_LEN: AtomicU32 = AtomicU32::new(0);
     static PROCESS_CHANNELS: AtomicU32 = AtomicU32::new(0);
     static PROCESS_SAMPLES: AtomicU32 = AtomicU32::new(0);
 
@@ -154,6 +192,8 @@ mod tests {
         SET_SAMPLE_RATE_CALLED.store(false, Ordering::SeqCst);
         RESET_CALLED.store(false, Ordering::SeqCst);
         DROP_CALLED.store(false, Ordering::SeqCst);
+        APPLY_PLAIN_VALUES_CALLED.store(false, Ordering::SeqCst);
+        APPLY_PLAIN_VALUES_LEN.store(0, Ordering::SeqCst);
         PROCESS_CHANNELS.store(0, Ordering::SeqCst);
         PROCESS_SAMPLES.store(0, Ordering::SeqCst);
     }
@@ -192,11 +232,21 @@ mod tests {
         DROP_CALLED.store(true, Ordering::SeqCst);
     }
 
+    unsafe extern "C" fn mock_apply_plain_values(
+        _instance: *mut c_void,
+        _values_ptr: *const f32,
+        len: usize,
+    ) {
+        APPLY_PLAIN_VALUES_CALLED.store(true, Ordering::SeqCst);
+        APPLY_PLAIN_VALUES_LEN.store(len as u32, Ordering::SeqCst);
+    }
+
     fn mock_vtable() -> DevProcessorVTable {
         DevProcessorVTable {
             version: wavecraft_protocol::DEV_PROCESSOR_VTABLE_VERSION,
             create: mock_create,
             process: mock_process,
+            apply_plain_values: mock_apply_plain_values,
             set_sample_rate: mock_set_sample_rate,
             reset: mock_reset,
             drop: mock_drop,
@@ -244,6 +294,19 @@ mod tests {
     }
 
     #[test]
+    fn test_ffi_processor_apply_plain_values() {
+        let _guard = TEST_LOCK.lock().unwrap();
+        reset_flags();
+        let vtable = mock_vtable();
+
+        let mut processor = FfiProcessor::new(&vtable).expect("create should succeed");
+        processor.apply_plain_values(&[0.1, 0.2, 0.3]);
+
+        assert!(APPLY_PLAIN_VALUES_CALLED.load(Ordering::SeqCst));
+        assert_eq!(APPLY_PLAIN_VALUES_LEN.load(Ordering::SeqCst), 3);
+    }
+
+    #[test]
     fn test_ffi_processor_null_create_returns_none() {
         let _guard = TEST_LOCK.lock().unwrap();
         reset_flags();
@@ -273,6 +336,36 @@ mod tests {
             !PROCESS_CALLED.load(Ordering::SeqCst),
             "Should not call vtable.process with empty channels"
         );
+
+        drop(processor);
+    }
+
+    #[test]
+    fn test_ffi_processor_multichannel_records_rt_safe_diagnostic() {
+        let _guard = TEST_LOCK.lock().unwrap();
+        reset_flags();
+        let vtable = mock_vtable();
+        let mut processor = FfiProcessor::new(&vtable).expect("create should succeed");
+
+        // More than 2 channels should skip processing and record diagnostics.
+        PROCESS_CALLED.store(false, Ordering::SeqCst);
+        let mut ch1 = vec![0.0f32; 16];
+        let mut ch2 = vec![0.0f32; 16];
+        let mut ch3 = vec![0.0f32; 16];
+        let mut channels: Vec<&mut [f32]> = vec![&mut ch1, &mut ch2, &mut ch3];
+
+        processor.process(&mut channels);
+
+        assert!(
+            !PROCESS_CALLED.load(Ordering::SeqCst),
+            "Should not call vtable.process when channel count > 2"
+        );
+        assert!(processor.take_unsupported_channel_flag());
+        assert_eq!(processor.take_unsupported_channel_count(), 1);
+
+        // Hooks are one-shot/resetting.
+        assert!(!processor.take_unsupported_channel_flag());
+        assert_eq!(processor.take_unsupported_channel_count(), 0);
 
         drop(processor);
     }

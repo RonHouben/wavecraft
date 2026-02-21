@@ -22,6 +22,7 @@ const PARAM_ORDERING: Ordering = Ordering::Relaxed;
 /// values change. This makes reads fully lock-free and real-time safe.
 pub struct AtomicParameterBridge {
     params: HashMap<String, Arc<AtomicF32>>,
+    ordered_params: Vec<Arc<AtomicF32>>,
 }
 
 impl AtomicParameterBridge {
@@ -29,11 +30,24 @@ impl AtomicParameterBridge {
     ///
     /// Each parameter gets an `AtomicF32` initialized to its default value.
     pub fn new(parameters: &[ParameterInfo]) -> Self {
-        let params = parameters
-            .iter()
-            .map(|p| (p.id.clone(), Arc::new(AtomicF32::new(p.default))))
-            .collect();
-        Self { params }
+        let mut params = HashMap::with_capacity(parameters.len());
+        let mut ordered_params = Vec::with_capacity(parameters.len());
+
+        for parameter in parameters {
+            let atomic = Arc::new(AtomicF32::new(parameter.default));
+            params.insert(parameter.id.clone(), Arc::clone(&atomic));
+            ordered_params.push(atomic);
+        }
+
+        Self {
+            params,
+            ordered_params,
+        }
+    }
+
+    /// Returns the dense plain-value parameter count in generation order.
+    pub fn parameter_count(&self) -> usize {
+        self.ordered_params.len()
     }
 
     /// Write a parameter value (called from WebSocket thread).
@@ -54,6 +68,19 @@ impl AtomicParameterBridge {
     pub fn read(&self, id: &str) -> Option<f32> {
         self.lookup_param(id)
             .map(|atomic| atomic.load(PARAM_ORDERING))
+    }
+
+    /// Copy all parameters into `output` in stable generation order.
+    ///
+    /// Returns the number of copied values (`min(output.len(), parameter_count())`).
+    ///
+    /// This is real-time safe and allocation-free, suitable for audio callback use.
+    pub fn copy_all_to(&self, output: &mut [f32]) -> usize {
+        let count = output.len().min(self.ordered_params.len());
+        for (idx, atomic) in self.ordered_params.iter().take(count).enumerate() {
+            output[idx] = atomic.load(PARAM_ORDERING);
+        }
+        count
     }
 
     fn lookup_param(&self, id: &str) -> Option<&Arc<AtomicF32>> {
@@ -184,5 +211,26 @@ mod tests {
 
         writer.join().expect("writer thread should not panic");
         reader.join().expect("reader thread should not panic");
+    }
+
+    #[test]
+    fn test_copy_all_to_preserves_parameter_order() {
+        let bridge = AtomicParameterBridge::new(&test_params());
+        bridge.write("gain", 0.75);
+        bridge.write("mix", 0.25);
+
+        let mut values = [0.0_f32; 2];
+        let copied = bridge.copy_all_to(&mut values);
+
+        assert_eq!(copied, 2);
+        assert!((values[0] - 0.75).abs() < f32::EPSILON);
+        assert!((values[1] - 0.25).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_parameter_count_matches_metadata_len() {
+        let params = test_params();
+        let bridge = AtomicParameterBridge::new(&params);
+        assert_eq!(bridge.parameter_count(), params.len());
     }
 }
