@@ -24,7 +24,7 @@ Reference documents:
   - Preserved existing meter test IDs (`meter-L`, `meter-R`, channel sub-elements) and clip reset behavior.
 
 - S4 — ✅ Complete
-  - Deleted thin wrappers in `@wavecraft/components`:
+  - Replaced thin wrappers in `@wavecraft/components` with deprecated compat shim re-exports (duplicate implementations removed):
     - `InputTrimProcessor.tsx`
     - `OutputGainProcessor.tsx`
     - `SoftClipProcessor.tsx`
@@ -53,7 +53,7 @@ Reference documents:
 
 - S7 — ✅ Complete
   - Collapsed template wrapper usage in `sdk-template/ui/src/App.tsx` to direct `SmartProcessor` calls with inline `id`/`title`.
-  - Deleted thin template wrappers:
+  - Replaced thin template wrappers with deprecated compat shim re-exports (duplicate implementations removed):
     - `InputTrimProcessor.tsx`
     - `OutputGainProcessor.tsx`
     - `OscillatorProcessor.tsx`
@@ -67,3 +67,15 @@ Reference documents:
   - No `docs/roadmap.md` edits.
   - No archived spec edits.
   - No public API expansion in `@wavecraft/core`.
+
+## Completion delta — focused cleanup pass (2026-02-21)
+
+- Removed remaining redundant wrapper implementations that were still present after prior S4/S7 work by converting wrappers to compat re-exports:
+  - `ui/packages/components/src/{InputTrimProcessor,OutputGainProcessor,SoftClipProcessor,ToneFilterProcessor,OscillatorProcessor}.tsx` → re-export from `compat.ts`
+  - `sdk-template/ui/src/processors/{InputTrimProcessor,OutputGainProcessor,OscillatorProcessor,SoftClipProcessor,ToneFilterProcessor}.tsx` → re-export from `compat.tsx`
+- Kept unique processors intentionally:
+  - `sdk-template/ui/src/processors/ExampleProcessor.tsx` (template example behavior)
+  - `sdk-template/ui/src/processors/OscilloscopeProcessor.tsx` (runtime hook + render logic; non-thin wrapper)
+- Confirmed compatibility strategy remains barrel-based through `ui/packages/components/src/compat.ts` and `ui/packages/components/src/index.ts`.
+- Updated wrapper compatibility coverage to import deprecated wrappers from the package barrel (`./index`) in `ui/packages/components/src/OscillatorProcessor.test.tsx`.
+- No roadmap or archived-spec modifications.

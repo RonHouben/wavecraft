@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { InputTrimProcessor, OscillatorProcessor } from './compat';
+import { InputTrimProcessor, OscillatorProcessor } from './index';
 import type { ProcessorParameter } from './Processor';
 
 const mockProcessor = vi.hoisted(() =>

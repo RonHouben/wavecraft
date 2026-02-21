@@ -231,3 +231,36 @@ All automated and manual checks passed with no failures. The QA blocker retest (
 - [High-Level Design](../../architecture/high-level-design.md) — Architecture overview
 - [Coding Standards](../../architecture/coding-standards.md) — Code conventions
 - [Roadmap](../../roadmap.md) — Milestone tracking
+
+---
+
+## Follow-up: final tester verification batch (wrapper shims + core decomposition + ci-check hang fix) — 2026-02-21
+
+### Commands Run
+
+```bash
+cd ui && npm test -- packages/components/src/OscillatorProcessor.test.tsx packages/components/src/Processor.test.tsx packages/components/src/TemplateApp.test.tsx packages/core/src/context/WavecraftProvider.test.tsx packages/core/src/hooks/useParameter.test.ts packages/core/src/hooks/useAllParameters.test.ts packages/core/src/hooks/useAllParameterFor.test.ts
+```
+
+```bash
+cargo xtask ci-check
+```
+
+```bash
+cargo xtask ci-check --full
+```
+
+### Outcomes
+
+| Check                                                   | Result  |
+| ------------------------------------------------------- | ------- |
+| Targeted tests (7 files, 23 tests)                      | ✅ PASS |
+| `cargo xtask ci-check`                                  | ✅ PASS |
+| `cargo xtask ci-check --full`                           | ✅ PASS |
+| Template validation                                     | ✅ PASS |
+| Git-source startup smoke path in `validate_template.rs` | ✅ PASS |
+| CD dry-run                                              | ✅ PASS |
+
+### Final Verdict
+
+✅ **PASS**
