@@ -142,6 +142,15 @@ mod tests {
             "generated code should apply live plain values when building processor params"
         );
         assert!(
+            normalized.contains("struct__DevProcessorInstance{processor:__P,params:__Params,}"),
+            "generated dev FFI wrapper should keep a per-instance processor+params cache"
+        );
+        assert!(
+            normalized.contains("DevProcessorVTable{version:")
+                && normalized.contains("process,apply_plain_values,set_sample_rate"),
+            "generated dev FFI vtable should register apply_plain_values in v2 layout"
+        );
+        assert!(
             normalized.contains("__WavecraftRuntimeParam::Int(")
                 && normalized.contains("IntParam::new(spec.name"),
             "generated code should use IntParam for stepped/enum params to expose step_count"
