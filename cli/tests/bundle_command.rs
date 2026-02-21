@@ -97,6 +97,53 @@ fn test_bundle_install_detects_project_root_from_subdirectory() {
 }
 
 #[test]
+fn test_bundle_in_sdk_context_without_install_shows_monorepo_guidance() {
+    let temp = TempDir::new().expect("temp dir should be created");
+    let root = temp.path();
+
+    fs::create_dir_all(root.join("ui")).expect("ui dir");
+    fs::create_dir_all(root.join("engine/crates/wavecraft-core")).expect("core crate dir");
+    fs::create_dir_all(root.join("sdk-template/ui")).expect("template ui dir");
+    fs::create_dir_all(root.join("sdk-template/engine")).expect("template engine dir");
+    fs::create_dir_all(root.join("cli")).expect("cli dir");
+
+    fs::write(root.join("ui/package.json"), "{}\n").expect("ui package");
+    fs::write(
+        root.join("engine/Cargo.toml"),
+        "[workspace]\nmembers = [\"crates/*\"]\n",
+    )
+    .expect("engine cargo");
+    fs::write(
+        root.join("engine/crates/wavecraft-core/Cargo.toml"),
+        "[package]\nname = \"wavecraft-core\"\nversion = \"0.1.0\"\n",
+    )
+    .expect("core crate cargo");
+    fs::write(
+        root.join("cli/Cargo.toml"),
+        "[package]\nname = \"wavecraft\"\nversion = \"0.1.0\"\n",
+    )
+    .expect("cli cargo");
+    fs::write(root.join("sdk-template/ui/package.json"), "{}\n").expect("template ui package");
+    fs::write(
+        root.join("sdk-template/engine/Cargo.toml"),
+        "[package]\nname = \"wavecraft-dev-template\"\nversion = \"0.1.0\"\n",
+    )
+    .expect("template engine cargo");
+
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wavecraft"));
+    cmd.current_dir(root.join("engine"));
+    cmd.arg("bundle");
+
+    let output = cmd.output().expect("Failed to execute wavecraft binary");
+    assert!(!output.status.success());
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("generated plugin project"));
+    assert!(stderr.contains("wavecraft bundle --install"));
+    assert!(stderr.contains("target/tmp"));
+}
+
+#[test]
 fn test_bundle_delegates_build_ui_before_bundle() {
     let temp = TempDir::new().expect("temp dir should be created");
     let root = create_minimal_project(temp.path());

@@ -26,7 +26,24 @@ pub fn run_with_features(
     verbose: bool,
 ) -> Result<()> {
     let engine_dir = paths::engine_dir()?;
-    let package_name = resolve_bundle_package(package, &engine_dir)?;
+    let package_name = match resolve_bundle_package(package, &engine_dir) {
+        Ok(name) => name,
+        Err(err)
+            if package.is_none()
+                && err
+                    .to_string()
+                    .contains("No bundleable plugin crate found in engine workspace") =>
+        {
+            print_warning(
+                "No bundleable plugin crate was found in this engine workspace; skipping bundle.",
+            );
+            print_info(
+                "If you're building a generated plugin project, use `wavecraft bundle --install` from that project root.",
+            );
+            return Ok(());
+        }
+        Err(err) => return Err(err),
+    };
 
     if package.is_none() {
         print_info(&format!(
@@ -208,7 +225,14 @@ fn discover_bundleable_packages(engine_dir: &Path) -> Result<Vec<String>> {
             })
             .unwrap_or(false);
 
+        let is_publishable = manifest_toml
+            .get("package")
+            .and_then(|package| package.get("publish"))
+            .and_then(|value| value.as_bool())
+            .unwrap_or(true);
+
         if is_bundleable
+            && is_publishable
             && let Some(package_name) = manifest_toml
                 .get("package")
                 .and_then(|package| package.get("name"))
@@ -262,6 +286,26 @@ mod tests {
             .expect("discover_bundleable_packages should succeed");
 
         assert_eq!(packages, vec!["wavecraft-nih_plug"]);
+    }
+
+    #[test]
+    fn discover_bundleable_packages_ignores_non_publishable_cdylib_crates() {
+        let temp = TempDir::new().expect("failed to create temp dir");
+        let engine_dir = temp.path().join("engine");
+        let crates_dir = engine_dir.join("crates");
+
+        std::fs::create_dir_all(crates_dir.join("internal-plugin"))
+            .expect("failed to create crate directory");
+        std::fs::write(
+            crates_dir.join("internal-plugin").join("Cargo.toml"),
+            "[package]\nname = \"internal-plugin\"\nversion = \"0.1.0\"\npublish = false\n\n[lib]\ncrate-type = [\"cdylib\"]\n",
+        )
+        .expect("failed to write Cargo.toml");
+
+        let packages = discover_bundleable_packages(&engine_dir)
+            .expect("discover_bundleable_packages should succeed");
+
+        assert!(packages.is_empty());
     }
 
     #[test]
