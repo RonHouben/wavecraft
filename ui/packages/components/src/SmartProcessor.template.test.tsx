@@ -43,7 +43,6 @@ describe('sdk-template SmartProcessor primitive migration', () => {
 
   it('renders primitive controls and forwards parameter changes', () => {
     const params: ParameterInfo[] = [
-      makeParameter({ id: 'oscillator_bypass', name: 'Bypass', type: 'bool', value: true }),
       makeParameter({
         id: 'oscillator_waveform',
         name: 'Waveform',
@@ -58,6 +57,7 @@ describe('sdk-template SmartProcessor primitive migration', () => {
         unit: 'Hz',
         value: 440,
       }),
+      makeParameter({ id: 'oscillator_bypass', name: 'Bypass', type: 'bool', value: true }),
       makeParameter({
         id: 'oscillator_level',
         name: 'Output Level',
@@ -78,6 +78,9 @@ describe('sdk-template SmartProcessor primitive migration', () => {
     });
 
     render(<SmartProcessor id="oscillator" title="Oscillator" />);
+
+    const controlsContainer = document.querySelector('section .relative.space-y-3');
+    expect(controlsContainer?.firstElementChild).toHaveTextContent('Bypass');
 
     fireEvent.click(screen.getByRole('switch', { name: 'Bypass' }));
     fireEvent.click(screen.getByRole('button', { name: 'Square' }));
@@ -130,7 +133,9 @@ describe('sdk-template SmartProcessor primitive migration', () => {
 
     mockUseHasProcessorInSignalChain.mockReturnValue(true);
     mockUseParametersForProcessor.mockReturnValue({
-      params: [makeParameter({ id: 'oscillator_bypass', name: 'Bypass', type: 'bool', value: true })],
+      params: [
+        makeParameter({ id: 'oscillator_bypass', name: 'Bypass', type: 'bool', value: true }),
+      ],
       isLoading: false,
       error: null,
       setParameter: mockSetParameter,

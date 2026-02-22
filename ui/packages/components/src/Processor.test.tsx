@@ -20,21 +20,21 @@ describe('Processor', () => {
   it('renders bypass and processor parameters in a single processor section', () => {
     const parameters: ProcessorParameter[] = [
       {
-        id: 'tone_filter_bypass',
-        name: 'Bypass',
-        type: 'bool',
-        value: false,
-        default: false,
-        min: 0,
-        max: 1,
-        onChange: vi.fn(),
-      },
-      {
         id: 'tone_filter_cutoff_hz',
         name: 'Cutoff',
         type: 'float',
         value: 0.5,
         default: 0.5,
+        min: 0,
+        max: 1,
+        onChange: vi.fn(),
+      },
+      {
+        id: 'tone_filter_bypass',
+        name: 'Bypass',
+        type: 'bool',
+        value: false,
+        default: false,
         min: 0,
         max: 1,
         onChange: vi.fn(),

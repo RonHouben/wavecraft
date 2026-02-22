@@ -20,6 +20,10 @@ interface SmartProcessorParameter extends ParameterInfo {
   readonly disabled?: boolean;
 }
 
+function isBypassParameter(param: Pick<ParameterInfo, 'id'>): boolean {
+  return param.id.endsWith('_bypass');
+}
+
 function isFaderParameter(param: Pick<ParameterInfo, 'id' | 'name' | 'unit'>): boolean {
   const faderHintRegex = /(level|gain|trim|volume|db)/i;
   return faderHintRegex.test(`${param.id} ${param.name} ${param.unit ?? ''}`);
@@ -193,24 +197,27 @@ export function SmartProcessor({
   const hasProcessorInSignalChain = useHasProcessorInSignalChain(id);
   const { params, isLoading, error, setParameter } = useParametersForProcessor(id);
 
-  const processorParameters: SmartProcessorParameter[] = useMemo(
-    () =>
-      params.map((param) => ({
-        ...param,
-        onChange: async (value: number | boolean): Promise<void> => {
-          try {
-            await setParameter(param.id, value);
-          } catch (err) {
-            logger.error('Failed to set processor parameter', {
-              error: err,
-              parameterId: param.id,
-              processorId: id,
-            });
-          }
-        },
-      })),
-    [id, params, setParameter]
-  );
+  const processorParameters: SmartProcessorParameter[] = useMemo(() => {
+    const mappedParameters = params.map((param) => ({
+      ...param,
+      onChange: async (value: number | boolean): Promise<void> => {
+        try {
+          await setParameter(param.id, value);
+        } catch (err) {
+          logger.error('Failed to set processor parameter', {
+            error: err,
+            parameterId: param.id,
+            processorId: id,
+          });
+        }
+      },
+    }));
+
+    const bypassParameters = mappedParameters.filter((param) => isBypassParameter(param));
+    const regularParameters = mappedParameters.filter((param) => !isBypassParameter(param));
+
+    return [...bypassParameters, ...regularParameters];
+  }, [id, params, setParameter]);
 
   if (hideWhenNotInSignalChain && !hasProcessorInSignalChain) {
     return null;

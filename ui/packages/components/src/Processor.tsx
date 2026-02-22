@@ -18,13 +18,21 @@ export interface ProcessorProps {
   readonly parameters: ProcessorParameter[];
 }
 
+function isBypassParameter(param: Pick<ProcessorParameter, 'id'>): boolean {
+  return param.id.endsWith('_bypass');
+}
+
 export function Processor({ id, title, parameters }: Readonly<ProcessorProps>): React.JSX.Element {
+  const bypassParameters = parameters.filter((param) => isBypassParameter(param));
+  const regularParameters = parameters.filter((param) => !isBypassParameter(param));
+  const orderedParameters = [...bypassParameters, ...regularParameters];
+
   return (
     <div className={`space-y-2 ${surfaceCardClass}`}>
       <h3 className={sectionHeadingClass}>{title ?? id}</h3>
 
       <div className={parameterListClass}>
-        {parameters.map((param) => renderParameter(param, param.id))}
+        {orderedParameters.map((param) => renderParameter(param, param.id))}
       </div>
     </div>
   );
