@@ -22,8 +22,8 @@ Key outcomes:
 
 Migration-window compatibility shims have now been removed for the next minor cycle:
 
-- Removed deprecated processor wrapper re-exports from `@wavecraft/components`
-- Deleted `sdk-template/ui` legacy processor compatibility files entirely (`compat.tsx` + per-processor shim files; no tombstones retained)
+- Deleted compatibility tombstone files from `ui/packages/components/src` (`compat.ts` + per-processor shim files; no `export {}` stubs retained)
+- Deleted compatibility tombstone files from `sdk-template/ui/src/processors` (`compat.tsx` + per-processor shim files; no `export {}` stubs retained)
 - Removed deprecated `@wavecraft/core` alias hook/type exports:
   - `useAllParametersFor`
   - `UseAllParameterForResult`
