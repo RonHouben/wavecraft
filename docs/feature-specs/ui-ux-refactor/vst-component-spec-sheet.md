@@ -345,26 +345,26 @@ Use this table as the source-of-truth mapping when implementing React components
 
 #### Semantic role → Tailwind theme key → utility examples
 
-| Semantic role token       | Tailwind theme key            | Utility class examples                                                                                          |
-| ------------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `--color-bg-canvas`       | `colors.plugin.dark`          | `bg-plugin-dark`                                                                                                 |
-| `--color-bg-surface-1`    | `colors.plugin.surface`       | `bg-plugin-surface`                                                                                              |
-| `--color-bg-surface-2`    | `colors.plugin.surface`       | `bg-plugin-surface/80`, `bg-plugin-surface` + `border border-plugin-border`                                     |
-| `--color-border-default`  | `colors.plugin.border`        | `border-plugin-border`, `divide-plugin-border`                                                                   |
-| `--color-border-strong`   | `colors.plugin.border`        | `border-plugin-border/90`, `ring-1 ring-plugin-border`                                                          |
-| `--color-text-primary`    | _(base Tailwind scale)_       | `text-slate-100` (dark canvas), `text-slate-900` (light surface)                                                |
-| `--color-text-secondary`  | _(base Tailwind scale)_       | `text-slate-300` (dark), `text-slate-600` (light)                                                                |
-| `--color-text-muted`      | _(base Tailwind scale)_       | `text-slate-500`                                                                                                 |
-| `--color-accent`          | `colors.accent.DEFAULT`       | `text-accent`, `bg-accent`, `border-accent`, `ring-accent`                                                      |
-| `--color-accent-soft`     | `colors.accent.light`         | `bg-accent-light/20`, `text-accent-light`                                                                        |
-| `--color-focus-ring`      | `colors.accent.light`         | `focus-visible:ring-2 focus-visible:ring-accent-light focus-visible:ring-offset-2 focus-visible:ring-offset-plugin-dark` |
-| `--color-success`         | `colors.meter.safe`           | `text-meter-safe`, `bg-meter-safe/15`, `border-meter-safe`                                                      |
-| `--color-warning`         | `colors.meter.warning`        | `text-meter-warning`, `bg-meter-warning/15`, `border-meter-warning`                                              |
-| `--color-danger`          | `colors.meter.clip`           | `text-meter-clip`, `bg-meter-clip/15`, `border-meter-clip`                                                      |
-| `--color-meter-safe`      | `colors.meter.safe`           | `from-meter-safe to-meter-safe-light`                                                                            |
-| `--color-meter-warn`      | `colors.meter.warning`        | `via-meter-warning`                                                                                              |
-| `--color-meter-clip`      | `colors.meter.clip` / `.clip-dark` | `to-meter-clip`, `shadow-[0_0_0_1px_theme(colors.meter.clip-dark)]`                                         |
-| `--color-info`            | `colors.accent.DEFAULT`       | `text-accent`, `bg-accent/10`, `border-accent/40`                                                                |
+| Semantic role token      | Tailwind theme key                 | Utility class examples                                                                                                   |
+| ------------------------ | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `--color-bg-canvas`      | `colors.plugin.dark`               | `bg-plugin-dark`                                                                                                         |
+| `--color-bg-surface-1`   | `colors.plugin.surface`            | `bg-plugin-surface`                                                                                                      |
+| `--color-bg-surface-2`   | `colors.plugin.surface`            | `bg-plugin-surface/80`, `bg-plugin-surface` + `border border-plugin-border`                                              |
+| `--color-border-default` | `colors.plugin.border`             | `border-plugin-border`, `divide-plugin-border`                                                                           |
+| `--color-border-strong`  | `colors.plugin.border`             | `border-plugin-border/90`, `ring-1 ring-plugin-border`                                                                   |
+| `--color-text-primary`   | _(base Tailwind scale)_            | `text-slate-100` (dark canvas), `text-slate-900` (light surface)                                                         |
+| `--color-text-secondary` | _(base Tailwind scale)_            | `text-slate-300` (dark), `text-slate-600` (light)                                                                        |
+| `--color-text-muted`     | _(base Tailwind scale)_            | `text-slate-500`                                                                                                         |
+| `--color-accent`         | `colors.accent.DEFAULT`            | `text-accent`, `bg-accent`, `border-accent`, `ring-accent`                                                               |
+| `--color-accent-soft`    | `colors.accent.light`              | `bg-accent-light/20`, `text-accent-light`                                                                                |
+| `--color-focus-ring`     | `colors.accent.light`              | `focus-visible:ring-2 focus-visible:ring-accent-light focus-visible:ring-offset-2 focus-visible:ring-offset-plugin-dark` |
+| `--color-success`        | `colors.meter.safe`                | `text-meter-safe`, `bg-meter-safe/15`, `border-meter-safe`                                                               |
+| `--color-warning`        | `colors.meter.warning`             | `text-meter-warning`, `bg-meter-warning/15`, `border-meter-warning`                                                      |
+| `--color-danger`         | `colors.meter.clip`                | `text-meter-clip`, `bg-meter-clip/15`, `border-meter-clip`                                                               |
+| `--color-meter-safe`     | `colors.meter.safe`                | `from-meter-safe to-meter-safe-light`                                                                                    |
+| `--color-meter-warn`     | `colors.meter.warning`             | `via-meter-warning`                                                                                                      |
+| `--color-meter-clip`     | `colors.meter.clip` / `.clip-dark` | `to-meter-clip`, `shadow-[0_0_0_1px_theme(colors.meter.clip-dark)]`                                                      |
+| `--color-info`           | `colors.accent.DEFAULT`            | `text-accent`, `bg-accent/10`, `border-accent/40`                                                                        |
 
 Implementation note:
 
@@ -374,28 +374,28 @@ Implementation note:
 
 These roles should map to existing Tailwind scale names (no ad-hoc pixel values unless justified).
 
-| Spec token     | Tailwind scale name | Utility examples                  |
-| -------------- | ------------------- | --------------------------------- |
-| `space-1`      | `1`                 | `gap-1`, `px-1`, `mt-1`           |
-| `space-2`      | `2`                 | `gap-2`, `px-2`, `py-2`           |
-| `space-3`      | `3`                 | `gap-3`, `px-3`, `pt-3`           |
-| `space-4`      | `4`                 | `gap-4`, `p-4`, `mx-4`            |
-| `space-5`      | `5`                 | `gap-5`, `px-5`                   |
-| `space-6`      | `6`                 | `gap-6`, `p-6`, `mt-6`            |
-| `radius-sm`    | `rounded-sm`        | `rounded-sm`                      |
-| `radius-md`    | `rounded-md`        | `rounded-md`                      |
-| `radius-lg`    | `rounded-lg`        | `rounded-lg`                      |
-| `radius-xl`    | `rounded-xl`        | `rounded-xl`                      |
-| `radius-round` | `rounded-full`      | `rounded-full`                    |
-| `shadow-0`     | none                | `shadow-none`                     |
-| `shadow-1`     | small               | `shadow-sm`                       |
-| `shadow-2`     | medium              | `shadow`                          |
-| `shadow-focus` | ring emphasis       | `focus-visible:ring-2 ring-accent-light/70` |
-| `type-2xs`     | custom text size    | `text-[10px] leading-3 font-medium` |
-| `type-xs`      | `text-xs`           | `text-xs leading-4 font-medium`   |
-| `type-sm`      | `text-sm`           | `text-sm leading-4 font-medium`   |
-| `type-md`      | base                | `text-base leading-5 font-medium` |
-| `type-lg`      | lg                  | `text-lg leading-6 font-semibold` |
+| Spec token     | Tailwind scale name | Utility examples                                     |
+| -------------- | ------------------- | ---------------------------------------------------- |
+| `space-1`      | `1`                 | `gap-1`, `px-1`, `mt-1`                              |
+| `space-2`      | `2`                 | `gap-2`, `px-2`, `py-2`                              |
+| `space-3`      | `3`                 | `gap-3`, `px-3`, `pt-3`                              |
+| `space-4`      | `4`                 | `gap-4`, `p-4`, `mx-4`                               |
+| `space-5`      | `5`                 | `gap-5`, `px-5`                                      |
+| `space-6`      | `6`                 | `gap-6`, `p-6`, `mt-6`                               |
+| `radius-sm`    | `rounded-sm`        | `rounded-sm`                                         |
+| `radius-md`    | `rounded-md`        | `rounded-md`                                         |
+| `radius-lg`    | `rounded-lg`        | `rounded-lg`                                         |
+| `radius-xl`    | `rounded-xl`        | `rounded-xl`                                         |
+| `radius-round` | `rounded-full`      | `rounded-full`                                       |
+| `shadow-0`     | none                | `shadow-none`                                        |
+| `shadow-1`     | small               | `shadow-sm`                                          |
+| `shadow-2`     | medium              | `shadow`                                             |
+| `shadow-focus` | ring emphasis       | `focus-visible:ring-2 ring-accent-light/70`          |
+| `type-2xs`     | custom text size    | `text-[10px] leading-3 font-medium`                  |
+| `type-xs`      | `text-xs`           | `text-xs leading-4 font-medium`                      |
+| `type-sm`      | `text-sm`           | `text-sm leading-4 font-medium`                      |
+| `type-md`      | base                | `text-base leading-5 font-medium`                    |
+| `type-lg`      | lg                  | `text-lg leading-6 font-semibold`                    |
 | `type-xl-num`  | xl + mono tabular   | `text-xl leading-6 font-bold font-mono tabular-nums` |
 
 #### State class patterns (baseline + plugin-specific)

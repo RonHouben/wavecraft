@@ -11,6 +11,7 @@
 Full six-phase UI/UX refactor addressing architectural drift and UX inconsistency across the Wavecraft component stack. Scope is limited to `ui/packages/` and `sdk-template/ui/` — no Rust engine, DSP, or transport behavior changes.
 
 Key outcomes:
+
 - Smart/presentational boundary enforced: `@wavecraft/components` is now purely props-driven with no hook/IPC ownership
 - IPC string literals eliminated from all UI call sites; canonical `IpcMethods`/`IpcEvents` constants exported from `@wavecraft/core`
 - Hook and IPC ownership consolidated into `sdk-template/ui` smart containers
@@ -72,8 +73,8 @@ Upgrade path for downstream plugin UIs:
 
 ## Commits
 
-| Description | SHA |
-|---|---|
+| Description                                                                                   | SHA                                        |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------ |
 | Low-priority QA follow-ups resolved (focus/token cleanup, lint guard hardening, resize notes) | `7aaa90f2eb3b807c55344475cd7c9dd74b6fa1ea` |
 
 > Additional commits cover each phase incrementally. All six phases were mergeable independently.
@@ -84,18 +85,18 @@ Upgrade path for downstream plugin UIs:
 
 All documents in `docs/feature-specs/ui-ux-refactor/`:
 
-| Document | Role |
-|---|---|
-| [user-stories.md](./user-stories.md) | Requirements and acceptance criteria |
-| [low-level-design-ui-ux-refactor-final.md](./low-level-design-ui-ux-refactor-final.md) | Technical design decisions across all phases |
-| [ux-improvement-plan.md](./ux-improvement-plan.md) | Phased UX execution guidance |
-| [implementation-plan-final.md](./implementation-plan-final.md) | Step-by-step phase breakdown |
-| [implementation-progress.md](./implementation-progress.md) | Phase completion status |
-| [test-plan.md](./test-plan.md) | Full test matrix, results, and release recommendation |
-| [token-audit.md](./token-audit.md) | Ad-hoc token inventory from Phase 2 |
-| [fan-out-inventory.md](./fan-out-inventory.md) | Parameter state fan-out map from Phase 4 |
-| [resize-inventory.md](./resize-inventory.md) | Resize ownership map from Phase 5 |
-| [baseline-notes-phase-0.1.md](./baseline-notes-phase-0.1.md) | Visual baseline capture metadata |
+| Document                                                                               | Role                                                  |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| [user-stories.md](./user-stories.md)                                                   | Requirements and acceptance criteria                  |
+| [low-level-design-ui-ux-refactor-final.md](./low-level-design-ui-ux-refactor-final.md) | Technical design decisions across all phases          |
+| [ux-improvement-plan.md](./ux-improvement-plan.md)                                     | Phased UX execution guidance                          |
+| [implementation-plan-final.md](./implementation-plan-final.md)                         | Step-by-step phase breakdown                          |
+| [implementation-progress.md](./implementation-progress.md)                             | Phase completion status                               |
+| [test-plan.md](./test-plan.md)                                                         | Full test matrix, results, and release recommendation |
+| [token-audit.md](./token-audit.md)                                                     | Ad-hoc token inventory from Phase 2                   |
+| [fan-out-inventory.md](./fan-out-inventory.md)                                         | Parameter state fan-out map from Phase 4              |
+| [resize-inventory.md](./resize-inventory.md)                                           | Resize ownership map from Phase 5                     |
+| [baseline-notes-phase-0.1.md](./baseline-notes-phase-0.1.md)                           | Visual baseline capture metadata                      |
 
 ---
 
@@ -103,21 +104,21 @@ All documents in `docs/feature-specs/ui-ux-refactor/`:
 
 ### Automated (`cargo xtask ci-check`)
 
-| Check | Result |
-|---|---|
-| UI lint + typecheck (ESLint, Prettier, `tsc --noEmit`) | ✅ PASS |
-| Rust fmt + clippy | ✅ PASS |
-| Automated tests — full suite | ✅ PASS — 108/108 |
-| Automated tests — targeted blocker retest | ✅ PASS — 23/23 |
-| UI dist build (two-stage) | ✅ PASS |
+| Check                                                  | Result            |
+| ------------------------------------------------------ | ----------------- |
+| UI lint + typecheck (ESLint, Prettier, `tsc --noEmit`) | ✅ PASS           |
+| Rust fmt + clippy                                      | ✅ PASS           |
+| Automated tests — full suite                           | ✅ PASS — 108/108 |
+| Automated tests — targeted blocker retest              | ✅ PASS — 23/23   |
+| UI dist build (two-stage)                              | ✅ PASS           |
 
 ### Manual Visual and Accessibility
 
-| Category | Total | Passed | Failed |
-|---|---|---|---|
-| Manual visual checks | 10 | 10 | 0 |
-| Accessibility checks (tree snapshots) | 7 | 7 | 0 |
-| **All checks combined** | **148** | **148** | **0** |
+| Category                              | Total   | Passed  | Failed |
+| ------------------------------------- | ------- | ------- | ------ |
+| Manual visual checks                  | 10      | 10      | 0      |
+| Accessibility checks (tree snapshots) | 7       | 7       | 0      |
+| **All checks combined**               | **148** | **148** | **0**  |
 
 **Visual artifacts:** 7 baseline PNGs + 2 QA retest PNGs + 2 accessibility tree snapshots in `ui/test/visual-baseline/ui-ux-refactor/`.
 
