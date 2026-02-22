@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { ControlVisualState, PluginVisualState } from './types';
 import { focusRingClass, mergeClassNames } from './utils/classNames';
 import {
@@ -35,6 +36,7 @@ const verticalLengthClassMap: Record<NonNullable<FaderProps['size']>, string> = 
 };
 
 const SHIFT_PRECISION_HINT = 'Hold Shift for fine adjust';
+const SHIFT_DRAG_PRECISION_DIVISOR = 12;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -45,6 +47,17 @@ function isShiftPrecisionActive(event: {
   readonly getModifierState?: (keyArg: 'Shift') => boolean;
 }): boolean {
   if (event.shiftKey) {
+    return true;
+  }
+
+  return event.getModifierState?.('Shift') ?? false;
+}
+
+function resolveShiftFromChangeEvent(event: {
+  readonly shiftKey?: boolean;
+  readonly getModifierState?: (keyArg: 'Shift') => boolean;
+}): boolean {
+  if (event.shiftKey === true) {
     return true;
   }
 
@@ -96,6 +109,12 @@ export function Fader({
   unit,
   value,
 }: Readonly<FaderProps>): React.JSX.Element {
+  const isPointerDragActiveRef = useRef(false);
+  const isShiftPressedDuringDragRef = useRef(false);
+  const shiftDragAnchorRawValueRef = useRef<number | null>(null);
+  const shiftDragAnchorOutputValueRef = useRef<number | null>(null);
+  const latestOutputValueRef = useRef(value);
+
   const isLoading = state === 'loading';
   const isError = state === 'error';
   const isDisabled = disabled || isLoading || state === 'disabled';
@@ -103,6 +122,42 @@ export function Fader({
   const isVertical = orientation === 'vertical';
   const keyboardSteps = getKeyboardSteps(min, max, step);
   const clampedValue = clamp(value, min, max);
+
+  function resetShiftDragAnchors(): void {
+    shiftDragAnchorRawValueRef.current = null;
+    shiftDragAnchorOutputValueRef.current = null;
+  }
+
+  useEffect(() => {
+    latestOutputValueRef.current = clampedValue;
+  }, [clampedValue]);
+
+  useEffect(() => {
+    if (!isPointerDragActiveRef.current) {
+      return;
+    }
+
+    function handleWindowKeyDown(event: KeyboardEvent): void {
+      if (event.key === 'Shift') {
+        isShiftPressedDuringDragRef.current = true;
+      }
+    }
+
+    function handleWindowKeyUp(event: KeyboardEvent): void {
+      if (event.key === 'Shift') {
+        isShiftPressedDuringDragRef.current = false;
+        resetShiftDragAnchors();
+      }
+    }
+
+    window.addEventListener('keydown', handleWindowKeyDown);
+    window.addEventListener('keyup', handleWindowKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleWindowKeyDown);
+      window.removeEventListener('keyup', handleWindowKeyUp);
+    };
+  });
 
   return (
     <div className="group inline-flex flex-col items-center gap-2">
@@ -129,6 +184,21 @@ export function Fader({
           step={step}
           value={clampedValue}
           disabled={isDisabled}
+          onPointerDown={(event): void => {
+            isPointerDragActiveRef.current = true;
+            isShiftPressedDuringDragRef.current = event.shiftKey;
+            resetShiftDragAnchors();
+          }}
+          onPointerUp={(): void => {
+            isPointerDragActiveRef.current = false;
+            isShiftPressedDuringDragRef.current = false;
+            resetShiftDragAnchors();
+          }}
+          onPointerCancel={(): void => {
+            isPointerDragActiveRef.current = false;
+            isShiftPressedDuringDragRef.current = false;
+            resetShiftDragAnchors();
+          }}
           onKeyDown={(event): void => {
             if (isDisabled) {
               return;
@@ -160,7 +230,45 @@ export function Fader({
             }
           }}
           onChange={(event): void => {
-            onChange(Number.parseFloat(event.currentTarget.value));
+            const rawValue = Number.parseFloat(event.currentTarget.value);
+            const nativeEvent = event.nativeEvent as {
+              readonly shiftKey?: boolean;
+              readonly getModifierState?: (keyArg: 'Shift') => boolean;
+            };
+            const isShiftActiveOnEvent = resolveShiftFromChangeEvent(nativeEvent);
+
+            if (isPointerDragActiveRef.current) {
+              isShiftPressedDuringDragRef.current = isShiftActiveOnEvent;
+            }
+
+            const isShiftPrecisionMode = isPointerDragActiveRef.current
+              ? isShiftPressedDuringDragRef.current
+              : isShiftActiveOnEvent;
+
+            if (!isShiftPrecisionMode) {
+              resetShiftDragAnchors();
+              latestOutputValueRef.current = rawValue;
+              onChange(rawValue);
+              return;
+            }
+
+            if (shiftDragAnchorRawValueRef.current === null) {
+              shiftDragAnchorRawValueRef.current = rawValue;
+              shiftDragAnchorOutputValueRef.current = latestOutputValueRef.current;
+              return;
+            }
+
+            const anchorRawValue = shiftDragAnchorRawValueRef.current;
+            const anchorOutputValue =
+              shiftDragAnchorOutputValueRef.current ?? latestOutputValueRef.current;
+            const precisionValue = clamp(
+              anchorOutputValue + (rawValue - anchorRawValue) / SHIFT_DRAG_PRECISION_DIVISOR,
+              min,
+              max
+            );
+
+            latestOutputValueRef.current = precisionValue;
+            onChange(precisionValue);
           }}
           aria-busy={isLoading || undefined}
           aria-invalid={isError || undefined}

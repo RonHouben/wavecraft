@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { ControlVisualState, PluginVisualState } from './types';
 import { focusRingClass, mergeClassNames } from './utils/classNames';
 import {
@@ -36,6 +37,7 @@ const knobWidthClassMap: Record<NonNullable<KnobProps['size']>, string> = {
 const KNOB_SWEEP_START_DEG = -135;
 const KNOB_SWEEP_RANGE_DEG = 270;
 const SHIFT_PRECISION_HINT = 'Hold Shift for fine adjust';
+const SHIFT_DRAG_PRECISION_DIVISOR = 12;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -73,6 +75,17 @@ function isShiftPrecisionActive(event: {
   return event.getModifierState?.('Shift') ?? false;
 }
 
+function resolveShiftFromChangeEvent(event: {
+  readonly shiftKey?: boolean;
+  readonly getModifierState?: (keyArg: 'Shift') => boolean;
+}): boolean {
+  if (event.shiftKey === true) {
+    return true;
+  }
+
+  return event.getModifierState?.('Shift') ?? false;
+}
+
 function formatValue(value: number, unit?: string): string {
   if (!unit) {
     return value.toFixed(3);
@@ -99,6 +112,12 @@ export function Knob({
   unit,
   value,
 }: Readonly<KnobProps>): React.JSX.Element {
+  const isPointerDragActiveRef = useRef(false);
+  const isShiftPressedDuringDragRef = useRef(false);
+  const shiftDragAnchorRawValueRef = useRef<number | null>(null);
+  const shiftDragAnchorOutputValueRef = useRef<number | null>(null);
+  const latestOutputValueRef = useRef(value);
+
   const isLoading = state === 'loading';
   const isError = state === 'error';
   const isDisabled = disabled || isLoading || state === 'disabled';
@@ -115,6 +134,42 @@ export function Knob({
       onChange(nextValue);
     }
   }
+
+  function resetShiftDragAnchors(): void {
+    shiftDragAnchorRawValueRef.current = null;
+    shiftDragAnchorOutputValueRef.current = null;
+  }
+
+  useEffect(() => {
+    latestOutputValueRef.current = clampedValue;
+  }, [clampedValue]);
+
+  useEffect(() => {
+    if (!isPointerDragActiveRef.current) {
+      return;
+    }
+
+    function handleWindowKeyDown(event: KeyboardEvent): void {
+      if (event.key === 'Shift') {
+        isShiftPressedDuringDragRef.current = true;
+      }
+    }
+
+    function handleWindowKeyUp(event: KeyboardEvent): void {
+      if (event.key === 'Shift') {
+        isShiftPressedDuringDragRef.current = false;
+        resetShiftDragAnchors();
+      }
+    }
+
+    window.addEventListener('keydown', handleWindowKeyDown);
+    window.addEventListener('keyup', handleWindowKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleWindowKeyDown);
+      window.removeEventListener('keyup', handleWindowKeyUp);
+    };
+  });
 
   return (
     <div
@@ -144,6 +199,21 @@ export function Knob({
           aria-valuetext={formattedValue}
           data-state={state}
           data-plugin-state={pluginState}
+          onPointerDown={(event): void => {
+            isPointerDragActiveRef.current = true;
+            isShiftPressedDuringDragRef.current = event.shiftKey;
+            resetShiftDragAnchors();
+          }}
+          onPointerUp={(): void => {
+            isPointerDragActiveRef.current = false;
+            isShiftPressedDuringDragRef.current = false;
+            resetShiftDragAnchors();
+          }}
+          onPointerCancel={(): void => {
+            isPointerDragActiveRef.current = false;
+            isShiftPressedDuringDragRef.current = false;
+            resetShiftDragAnchors();
+          }}
           onKeyDown={(event): void => {
             if (isDisabled) {
               return;
@@ -191,7 +261,44 @@ export function Knob({
             }
           }}
           onChange={(event): void => {
-            onChange(Number.parseFloat(event.currentTarget.value));
+            const rawValue = Number.parseFloat(event.currentTarget.value);
+            const nativeEvent = event.nativeEvent as {
+              readonly shiftKey?: boolean;
+              readonly getModifierState?: (keyArg: 'Shift') => boolean;
+            };
+            const isShiftActiveOnEvent = resolveShiftFromChangeEvent(nativeEvent);
+            if (isPointerDragActiveRef.current) {
+              isShiftPressedDuringDragRef.current = isShiftActiveOnEvent;
+            }
+
+            const isShiftPrecisionMode = isPointerDragActiveRef.current
+              ? isShiftPressedDuringDragRef.current
+              : isShiftActiveOnEvent;
+
+            if (!isShiftPrecisionMode) {
+              resetShiftDragAnchors();
+              latestOutputValueRef.current = rawValue;
+              onChange(rawValue);
+              return;
+            }
+
+            if (shiftDragAnchorRawValueRef.current === null) {
+              shiftDragAnchorRawValueRef.current = rawValue;
+              shiftDragAnchorOutputValueRef.current = latestOutputValueRef.current;
+              return;
+            }
+
+            const anchorRawValue = shiftDragAnchorRawValueRef.current;
+            const anchorOutputValue =
+              shiftDragAnchorOutputValueRef.current ?? latestOutputValueRef.current;
+            const precisionValue = clamp(
+              anchorOutputValue + (rawValue - anchorRawValue) / SHIFT_DRAG_PRECISION_DIVISOR,
+              min,
+              max
+            );
+
+            latestOutputValueRef.current = precisionValue;
+            onChange(precisionValue);
           }}
           className={mergeClassNames(
             'peer absolute inset-0 z-20 h-full w-full cursor-pointer appearance-none rounded-full opacity-0',

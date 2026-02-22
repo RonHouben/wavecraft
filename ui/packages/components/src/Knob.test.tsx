@@ -2,6 +2,15 @@ import { createEvent, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { Knob } from './Knob';
 
+function fireDragChange(input: HTMLElement, value: string, shiftKey: boolean = false): void {
+  const changeEvent = createEvent.change(input, { target: { value }, shiftKey });
+  Object.defineProperty(changeEvent, 'getModifierState', {
+    configurable: true,
+    value: (keyArg: string): boolean => keyArg === 'Shift' && shiftKey,
+  });
+  fireEvent(input, changeEvent);
+}
+
 describe('Knob', () => {
   it('renders a subtle Shift precision helper hint as decorative text', () => {
     render(<Knob id="hint-knob" label="Hint" value={0.5} min={0} max={1} onChange={vi.fn()} />);
@@ -31,6 +40,75 @@ describe('Knob', () => {
     fireEvent.change(input, { target: { value: '880' } });
 
     expect(onChange).toHaveBeenCalledWith(880);
+  });
+
+  it('keeps normal pointer drag behavior unchanged when Shift is not held', () => {
+    const onChange = vi.fn();
+
+    render(<Knob id="drag-knob" label="Drag" value={0.5} min={0} max={1} onChange={onChange} />);
+
+    const input = screen.getByLabelText('Drag');
+
+    fireEvent.pointerDown(input, { shiftKey: false });
+    fireDragChange(input, '0.8', false);
+    fireEvent.pointerUp(input);
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith(0.8);
+  });
+
+  it('uses finer pointer drag increments while Shift is held', () => {
+    const onChange = vi.fn();
+
+    render(
+      <Knob
+        id="shift-drag-knob"
+        label="Shift Drag"
+        value={0.5}
+        min={0}
+        max={1}
+        onChange={onChange}
+      />
+    );
+
+    const input = screen.getByLabelText('Shift Drag');
+
+    fireEvent.pointerDown(input, { shiftKey: true });
+    fireDragChange(input, '0.8', true);
+    fireDragChange(input, '0.9', true);
+    fireEvent.pointerUp(input);
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith(0.5083333333333333);
+  });
+
+  it('adapts pointer precision mode when Shift toggles during drag', () => {
+    const onChange = vi.fn();
+
+    render(
+      <Knob
+        id="shift-toggle-drag-knob"
+        label="Shift Toggle Drag"
+        value={0.5}
+        min={0}
+        max={1}
+        onChange={onChange}
+      />
+    );
+
+    const input = screen.getByLabelText('Shift Toggle Drag');
+
+    fireEvent.pointerDown(input, { shiftKey: false });
+    fireDragChange(input, '0.8', false);
+    fireDragChange(input, '0.9', true);
+    fireDragChange(input, '1.0', true);
+    fireDragChange(input, '0.7', false);
+    fireEvent.pointerUp(input);
+
+    expect(onChange).toHaveBeenCalledTimes(3);
+    expect(onChange).toHaveBeenNthCalledWith(1, 0.8);
+    expect(onChange).toHaveBeenNthCalledWith(2, 0.8083333333333333);
+    expect(onChange).toHaveBeenNthCalledWith(3, 0.7);
   });
 
   it('disables knob and sets busy semantics in loading state', () => {

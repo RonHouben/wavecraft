@@ -2,6 +2,15 @@ import { createEvent, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { Fader } from './Fader';
 
+function fireDragChange(input: HTMLElement, value: string, shiftKey: boolean = false): void {
+  const changeEvent = createEvent.change(input, { target: { value }, shiftKey });
+  Object.defineProperty(changeEvent, 'getModifierState', {
+    configurable: true,
+    value: (keyArg: string): boolean => keyArg === 'Shift' && shiftKey,
+  });
+  fireEvent(input, changeEvent);
+}
+
 describe('Fader', () => {
   it('renders a subtle Shift precision helper hint as decorative text', () => {
     render(<Fader id="hint-fader" label="Hint" value={0.5} min={0} max={1} onChange={vi.fn()} />);
@@ -49,6 +58,75 @@ describe('Fader', () => {
     fireEvent.change(input, { target: { value: '0.8' } });
 
     expect(onChange).toHaveBeenCalledWith(0.8);
+  });
+
+  it('keeps normal pointer drag behavior unchanged when Shift is not held', () => {
+    const onChange = vi.fn();
+
+    render(<Fader id="drag-fader" label="Drag" value={50} min={0} max={100} onChange={onChange} />);
+
+    const input = screen.getByLabelText('Drag');
+
+    fireEvent.pointerDown(input, { shiftKey: false });
+    fireDragChange(input, '80', false);
+    fireEvent.pointerUp(input);
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith(80);
+  });
+
+  it('uses finer pointer drag increments while Shift is held', () => {
+    const onChange = vi.fn();
+
+    render(
+      <Fader
+        id="shift-drag-fader"
+        label="Shift Drag"
+        value={50}
+        min={0}
+        max={100}
+        onChange={onChange}
+      />
+    );
+
+    const input = screen.getByLabelText('Shift Drag');
+
+    fireEvent.pointerDown(input, { shiftKey: true });
+    fireDragChange(input, '80', true);
+    fireDragChange(input, '90', true);
+    fireEvent.pointerUp(input);
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith(50.833333333333336);
+  });
+
+  it('adapts pointer precision mode when Shift toggles during drag', () => {
+    const onChange = vi.fn();
+
+    render(
+      <Fader
+        id="shift-toggle-drag-fader"
+        label="Shift Toggle Drag"
+        value={50}
+        min={0}
+        max={100}
+        onChange={onChange}
+      />
+    );
+
+    const input = screen.getByLabelText('Shift Toggle Drag');
+
+    fireEvent.pointerDown(input, { shiftKey: false });
+    fireDragChange(input, '80', false);
+    fireDragChange(input, '90', true);
+    fireDragChange(input, '100', true);
+    fireDragChange(input, '70', false);
+    fireEvent.pointerUp(input);
+
+    expect(onChange).toHaveBeenCalledTimes(3);
+    expect(onChange).toHaveBeenNthCalledWith(1, 80);
+    expect(onChange).toHaveBeenNthCalledWith(2, 80.83333333333333);
+    expect(onChange).toHaveBeenNthCalledWith(3, 70);
   });
 
   it('applies error semantics when state is error', () => {
