@@ -62,6 +62,13 @@ describe('sdk-template App layout', () => {
     expect(screen.getByTestId('processor-soft_clip')).toBeInTheDocument();
     expect(screen.getByTestId('processor-example')).toBeInTheDocument();
     expect(screen.getByTestId('processor-output_gain')).toBeInTheDocument();
+    expect(screen.getByTestId('processor-grid')).toHaveClass(
+      'grid',
+      'grid-cols-1',
+      'gap-4',
+      'md:grid-cols-2',
+      'xl:grid-cols-4'
+    );
     expect(screen.getByLabelText('Resize window')).toBeInTheDocument();
   });
 });

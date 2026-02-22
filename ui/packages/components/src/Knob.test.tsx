@@ -114,8 +114,12 @@ describe('Knob', () => {
 
     expect(onChange).toHaveBeenCalledTimes(3);
     expect(onChange).toHaveBeenNthCalledWith(1, 0.6);
-    expect(onChange).toHaveBeenNthCalledWith(2, 0.525);
-    expect(onChange).toHaveBeenNthCalledWith(3, 0.475);
+    expect(onChange).toHaveBeenNthCalledWith(2, 0.5083333333333333);
+    expect(onChange).toHaveBeenNthCalledWith(3, 0.49166666666666664);
+
+    const normalDelta = Math.abs((onChange.mock.calls[0] as [number])[0] - 0.5);
+    const precisionDelta = Math.abs((onChange.mock.calls[1] as [number])[0] - 0.5);
+    expect(normalDelta).toBeGreaterThan(precisionDelta * 10);
   });
 
   it('uses precision mode when getModifierState reports Shift even if shiftKey is false', () => {
@@ -143,7 +147,7 @@ describe('Knob', () => {
     fireEvent(input, keyDownEvent);
 
     expect(onChange).toHaveBeenCalledTimes(1);
-    expect(onChange).toHaveBeenCalledWith(0.525);
+    expect(onChange).toHaveBeenCalledWith(0.5083333333333333);
   });
 
   it('uses adaptive keyboard steps for wide ranges while keeping page keys coarser', () => {
@@ -210,8 +214,12 @@ describe('Knob', () => {
     const [precisionArrowDownValue] = onChange.mock.calls[2] as [number];
 
     expect(normalArrowUpValue).toBeCloseTo(1133.2, 6);
-    expect(precisionArrowUpValue).toBeCloseTo(1033.3, 6);
-    expect(precisionArrowDownValue).toBeCloseTo(966.7, 6);
+    expect(precisionArrowUpValue).toBeCloseTo(1011.1, 6);
+    expect(precisionArrowDownValue).toBeCloseTo(988.9, 6);
+
+    const normalDelta = Math.abs(normalArrowUpValue - 1000);
+    const precisionDelta = Math.abs(precisionArrowUpValue - 1000);
+    expect(normalDelta).toBeGreaterThan(precisionDelta * 10);
   });
 
   it('exposes aria-valuetext with formatted unit', () => {

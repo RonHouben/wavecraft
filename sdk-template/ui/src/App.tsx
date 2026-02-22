@@ -48,7 +48,10 @@ export function App(): JSX.Element {
 
         {/* Main Content */}
         <div className="flex flex-1 flex-col gap-6 pb-14 pr-14">
-          <div className="grid grid-cols-1 gap-4">
+          <div
+            data-testid="processor-grid"
+            className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4"
+          >
             <SmartProcessor id="oscillator" title="Oscillator" hideWhenNotInSignalChain />
             <SmartProcessor id="input_trim" title="Input Trim" hideWhenNotInSignalChain />
             <SmartProcessor id="tone_filter" title="Tone Filter" hideWhenNotInSignalChain />

@@ -52,7 +52,7 @@ function getKeyboardSteps(
   const range = Math.max(0, max - min);
   const safeStep = Number.isFinite(step) && step > 0 ? step : 0.001;
   const arrowStep = Math.max(safeStep, range / 150);
-  const precisionArrowStep = arrowStep / 4;
+  const precisionArrowStep = arrowStep / 12;
 
   return {
     arrowStep,
