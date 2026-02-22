@@ -13,6 +13,7 @@
 /dev-server/target
 /target/tmp
 *.png
+artifacts
 
 # SDK template — build artifacts
 /sdk-template/engine/target/

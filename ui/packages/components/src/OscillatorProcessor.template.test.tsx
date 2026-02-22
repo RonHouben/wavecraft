@@ -37,6 +37,20 @@ function makeParameter(overrides: Partial<ParameterInfo>): ParameterInfo {
   };
 }
 
+function mockSliderRect(input: HTMLElement, top: number, height: number) {
+  return vi.spyOn(input, 'getBoundingClientRect').mockReturnValue({
+    x: 0,
+    y: top,
+    top,
+    left: 0,
+    right: 20,
+    bottom: top + height,
+    width: 20,
+    height,
+    toJSON: (): Record<string, never> => ({}),
+  } as DOMRect);
+}
+
 describe('sdk-template OscillatorProcessor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -79,6 +93,11 @@ describe('sdk-template OscillatorProcessor', () => {
     expect(screen.getByRole('heading', { name: 'Oscillator' })).toBeInTheDocument();
     expect(screen.getByRole('switch', { name: 'Bypass' })).toBeInTheDocument();
     expect(screen.getByRole('switch', { name: 'Enabled' })).toBeInTheDocument();
+    expect(screen.getByRole('slider', { name: 'Level' })).toHaveAttribute(
+      'aria-orientation',
+      'vertical'
+    );
+    expect(screen.getByRole('slider', { name: 'Level' })).toHaveClass('[writing-mode:vertical-lr]');
 
     fireEvent.click(screen.getByRole('switch', { name: 'Bypass' }));
     fireEvent.click(screen.getByRole('switch', { name: 'Enabled' }));
@@ -87,15 +106,90 @@ describe('sdk-template OscillatorProcessor', () => {
     fireEvent.change(screen.getByLabelText('Frequency'), {
       target: { value: '880' },
     });
-    fireEvent.change(screen.getByLabelText('Level'), {
-      target: { value: '-3' },
-    });
+    const levelSlider = screen.getByLabelText('Level');
+    const rectSpy = mockSliderRect(levelSlider, 100, 160);
+    fireEvent.pointerDown(levelSlider, { pointerId: 11, clientY: 180, shiftKey: false });
+    fireEvent.pointerMove(levelSlider, { pointerId: 11, clientY: 100, shiftKey: false });
+    fireEvent.pointerUp(levelSlider, { pointerId: 11, clientY: 100 });
+    rectSpy.mockRestore();
 
     expect(mockSetParameter).toHaveBeenCalledWith('oscillator_bypass', false);
     expect(mockSetParameter).toHaveBeenCalledWith('oscillator_enabled', false);
     expect(mockSetParameter).toHaveBeenCalledWith('oscillator_waveform', 1);
     expect(mockSetParameter).toHaveBeenCalledWith('oscillator_frequency', 880);
-    expect(mockSetParameter).toHaveBeenCalledWith('oscillator_level', -3);
+    expect(mockSetParameter).toHaveBeenCalledWith('oscillator_level', 0);
+  });
+
+  it('keeps oscillator level vertical when other level parameters are present', () => {
+    const params: ParameterInfo[] = [
+      makeParameter({
+        id: 'preamp_level',
+        name: 'Preamp Level',
+        type: 'float',
+        value: -9,
+        min: -24,
+        max: 0,
+        unit: 'dB',
+      }),
+      makeParameter({ id: 'oscillator_frequency', name: 'Frequency', type: 'float', value: 440 }),
+      makeParameter({
+        id: 'oscillator_level',
+        name: 'Level',
+        type: 'float',
+        value: -6,
+        min: -24,
+        max: 0,
+        unit: 'dB',
+      }),
+    ];
+
+    mockUseHasProcessorInSignalChain.mockReturnValue(true);
+    mockUseParametersForProcessor.mockReturnValue({
+      params,
+      isLoading: false,
+      error: null,
+      setParameter: mockSetParameter,
+    });
+
+    const { container } = render(<OscillatorProcessor />);
+
+    const oscillatorLevelControl =
+      container.querySelector<HTMLInputElement>('#param-oscillator_level');
+    const preampLevelControl = container.querySelector<HTMLInputElement>('#param-preamp_level');
+
+    expect(oscillatorLevelControl).not.toBeNull();
+    expect(preampLevelControl).not.toBeNull();
+    expect(oscillatorLevelControl).toHaveAttribute('aria-orientation', 'vertical');
+    expect(preampLevelControl).toHaveAttribute('aria-orientation', 'horizontal');
+  });
+
+  it('keeps level percent value in a stable-width numeric slot to avoid layout jitter', () => {
+    const params: ParameterInfo[] = [
+      makeParameter({ id: 'oscillator_frequency', name: 'Frequency', type: 'float', value: 440 }),
+      makeParameter({
+        id: 'oscillator_level',
+        name: 'Level',
+        type: 'float',
+        value: 1,
+        min: 0,
+        max: 1,
+        unit: '%',
+      }),
+    ];
+
+    mockUseHasProcessorInSignalChain.mockReturnValue(true);
+    mockUseParametersForProcessor.mockReturnValue({
+      params,
+      isLoading: false,
+      error: null,
+      setParameter: mockSetParameter,
+    });
+
+    render(<OscillatorProcessor />);
+
+    const levelValue = screen.getByText('100.0%');
+    expect(levelValue).toHaveClass('min-w-[6ch]');
+    expect(levelValue).toHaveClass('text-right');
   });
 
   it('shows a global precision hint for focused controls and switches hint text while Shift precision is active', async () => {

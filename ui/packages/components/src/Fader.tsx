@@ -35,10 +35,30 @@ const verticalLengthClassMap: Record<NonNullable<FaderProps['size']>, string> = 
   lg: 'h-[220px]',
 };
 
+const verticalFootprintClassMap: Record<NonNullable<FaderProps['size']>, string> = {
+  sm: 'w-9',
+  md: 'w-10',
+  lg: 'w-12',
+};
+
 const SHIFT_DRAG_PRECISION_DIVISOR = 12;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+function mapPointerClientYToValue(
+  clientY: number,
+  rect: Pick<DOMRectReadOnly, 'bottom' | 'height'>,
+  min: number,
+  max: number
+): number {
+  if (rect.height <= 0) {
+    return min;
+  }
+
+  const normalized = clamp((rect.bottom - clientY) / rect.height, 0, 1);
+  return min + normalized * (max - min);
 }
 
 function isShiftPrecisionActive(event: {
@@ -100,7 +120,7 @@ export function Fader({
   max,
   min,
   onChange,
-  orientation = 'vertical',
+  orientation = 'horizontal',
   pluginState,
   size = 'md',
   state = 'default',
@@ -108,6 +128,7 @@ export function Fader({
   unit,
   value,
 }: Readonly<FaderProps>): React.JSX.Element {
+  const activePointerIdRef = useRef<number | null>(null);
   const isPointerDragActiveRef = useRef(false);
   const isShiftPressedDuringDragRef = useRef(false);
   const shiftDragAnchorRawValueRef = useRef<number | null>(null);
@@ -122,6 +143,7 @@ export function Fader({
   const isVertical = orientation === 'vertical';
   const keyboardSteps = getKeyboardSteps(min, max, step);
   const clampedValue = clamp(value, min, max);
+  const verticalInputClass = `${verticalLengthClassMap[size]} w-2 [direction:rtl] [writing-mode:vertical-lr] [appearance:slider-vertical] [-webkit-appearance:slider-vertical]`;
 
   const resetShiftDragAnchors = useCallback((): void => {
     shiftDragAnchorRawValueRef.current = null;
@@ -131,6 +153,47 @@ export function Fader({
   useEffect(() => {
     latestOutputValueRef.current = clampedValue;
   }, [clampedValue]);
+
+  const emitPointerValue = useCallback(
+    (pointerMappedValue: number, isShiftPrecisionMode: boolean): void => {
+      const boundedPointerValue = clamp(pointerMappedValue, min, max);
+
+      if (!isShiftPrecisionMode) {
+        resetShiftDragAnchors();
+
+        if (boundedPointerValue === latestOutputValueRef.current) {
+          return;
+        }
+
+        latestOutputValueRef.current = boundedPointerValue;
+        onChange(boundedPointerValue);
+        return;
+      }
+
+      if (shiftDragAnchorRawValueRef.current === null) {
+        shiftDragAnchorRawValueRef.current = boundedPointerValue;
+        shiftDragAnchorOutputValueRef.current = latestOutputValueRef.current;
+        return;
+      }
+
+      const anchorRawValue = shiftDragAnchorRawValueRef.current;
+      const anchorOutputValue =
+        shiftDragAnchorOutputValueRef.current ?? latestOutputValueRef.current;
+      const precisionValue = clamp(
+        anchorOutputValue + (boundedPointerValue - anchorRawValue) / SHIFT_DRAG_PRECISION_DIVISOR,
+        min,
+        max
+      );
+
+      if (precisionValue === latestOutputValueRef.current) {
+        return;
+      }
+
+      latestOutputValueRef.current = precisionValue;
+      onChange(precisionValue);
+    },
+    [max, min, onChange, resetShiftDragAnchors]
+  );
 
   useEffect(() => {
     function handleWindowKeyDown(event: KeyboardEvent): void {
@@ -172,8 +235,10 @@ export function Fader({
 
       <div
         className={mergeClassNames(
-          'inline-flex items-center justify-center rounded-md border border-plugin-border bg-plugin-dark p-2',
-          isVertical ? verticalLengthClassMap[size] : horizontalLengthClassMap[size],
+          'relative inline-flex items-center justify-center rounded-md border border-plugin-border bg-plugin-dark p-2',
+          isVertical
+            ? `${verticalLengthClassMap[size]} ${verticalFootprintClassMap[size]}`
+            : horizontalLengthClassMap[size],
           getControlStateClass({ disabled: isDisabled, pluginState, state }),
           isPrecisionVisualActive ? 'ring-1 ring-accent/60' : '',
           isError ? 'border-meter-clip' : ''
@@ -191,17 +256,65 @@ export function Fader({
           data-precision-active={isPrecisionVisualActive ? 'true' : 'false'}
           onPointerDown={(event): void => {
             isPointerDragActiveRef.current = true;
+            activePointerIdRef.current = event.pointerId;
             isShiftPressedDuringDragRef.current = event.shiftKey;
             setIsPrecisionVisualActive(event.shiftKey);
             resetShiftDragAnchors();
+
+            if (!isVertical || isDisabled) {
+              return;
+            }
+
+            event.preventDefault();
+            event.currentTarget.setPointerCapture?.(event.pointerId);
+
+            const mappedValue = mapPointerClientYToValue(
+              event.clientY,
+              event.currentTarget.getBoundingClientRect(),
+              min,
+              max
+            );
+            emitPointerValue(mappedValue, event.shiftKey);
           }}
-          onPointerUp={(): void => {
+          onPointerMove={(event): void => {
+            if (!isVertical || isDisabled) {
+              return;
+            }
+
+            if (!isPointerDragActiveRef.current || activePointerIdRef.current !== event.pointerId) {
+              return;
+            }
+
+            event.preventDefault();
+
+            const isShiftPrecisionMode = event.shiftKey || isShiftPressedDuringDragRef.current;
+            const mappedValue = mapPointerClientYToValue(
+              event.clientY,
+              event.currentTarget.getBoundingClientRect(),
+              min,
+              max
+            );
+
+            setIsPrecisionVisualActive(isShiftPrecisionMode);
+            emitPointerValue(mappedValue, isShiftPrecisionMode);
+          }}
+          onPointerUp={(event): void => {
+            if (isVertical && activePointerIdRef.current === event.pointerId) {
+              event.currentTarget.releasePointerCapture?.(event.pointerId);
+            }
+
+            activePointerIdRef.current = null;
             isPointerDragActiveRef.current = false;
             isShiftPressedDuringDragRef.current = false;
             setIsPrecisionVisualActive(false);
             resetShiftDragAnchors();
           }}
-          onPointerCancel={(): void => {
+          onPointerCancel={(event): void => {
+            if (isVertical && activePointerIdRef.current === event.pointerId) {
+              event.currentTarget.releasePointerCapture?.(event.pointerId);
+            }
+
+            activePointerIdRef.current = null;
             isPointerDragActiveRef.current = false;
             isShiftPressedDuringDragRef.current = false;
             setIsPrecisionVisualActive(false);
@@ -253,12 +366,17 @@ export function Fader({
             setIsPrecisionVisualActive(false);
           }}
           onChange={(event): void => {
+            if (isVertical && isPointerDragActiveRef.current) {
+              return;
+            }
+
             const rawValue = Number.parseFloat(event.currentTarget.value);
             const nativeEvent = event.nativeEvent as {
               readonly shiftKey?: boolean;
               readonly getModifierState?: (keyArg: 'Shift') => boolean;
             };
             const isShiftActiveOnEvent = resolveShiftFromChangeEvent(nativeEvent);
+            const mappedValue = rawValue;
 
             if (isPointerDragActiveRef.current && isShiftActiveOnEvent) {
               isShiftPressedDuringDragRef.current = isShiftActiveOnEvent;
@@ -272,13 +390,13 @@ export function Fader({
 
             if (!isShiftPrecisionMode) {
               resetShiftDragAnchors();
-              latestOutputValueRef.current = rawValue;
-              onChange(rawValue);
+              latestOutputValueRef.current = mappedValue;
+              onChange(mappedValue);
               return;
             }
 
             if (shiftDragAnchorRawValueRef.current === null) {
-              shiftDragAnchorRawValueRef.current = rawValue;
+              shiftDragAnchorRawValueRef.current = mappedValue;
               shiftDragAnchorOutputValueRef.current = latestOutputValueRef.current;
               return;
             }
@@ -297,19 +415,20 @@ export function Fader({
           }}
           aria-busy={isLoading || undefined}
           aria-invalid={isError || undefined}
+          aria-orientation={orientation}
           data-state={state}
           data-plugin-state={pluginState}
           className={mergeClassNames(
-            'slider-thumb h-2 appearance-none rounded-sm bg-plugin-border',
+            'slider-thumb h-2 appearance-none rounded-sm',
             isPrecisionVisualActive ? 'cursor-zoom-in' : '',
             focusRingClass,
-            isVertical ? 'w-full -rotate-90' : 'w-full'
+            isVertical ? `${verticalInputClass} bg-plugin-border` : 'w-full bg-plugin-border'
           )}
         />
       </div>
 
       <div className="relative inline-flex items-center gap-1">
-        <span className="font-mono text-type-sm tabular-nums text-plugin-text-primary">
+        <span className="inline-block min-w-[6ch] text-right font-mono text-type-sm tabular-nums text-plugin-text-primary">
           {formatValue(clampedValue, unit)}
         </span>
         {badgeLabel ? (

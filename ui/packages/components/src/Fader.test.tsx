@@ -16,6 +16,20 @@ function fireDragChangeWithoutShiftMetadata(input: HTMLElement, value: string): 
   fireEvent(input, changeEvent);
 }
 
+function mockSliderRect(input: HTMLElement, top: number, height: number) {
+  return vi.spyOn(input, 'getBoundingClientRect').mockReturnValue({
+    x: 0,
+    y: top,
+    top,
+    left: 0,
+    right: 20,
+    bottom: top + height,
+    width: 20,
+    height,
+    toJSON: (): Record<string, never> => ({}),
+  } as DOMRect);
+}
+
 describe('Fader', () => {
   it('toggles precision visual-state metadata while Shift precision is active', () => {
     render(<Fader id="hint-fader" label="Hint" value={0.5} min={0} max={1} onChange={vi.fn()} />);
@@ -39,22 +53,165 @@ describe('Fader', () => {
     expect(screen.getByText('25.0%')).toBeInTheDocument();
   });
 
-  it('supports horizontal orientation', () => {
-    render(
+  it('keeps percent readout width stable with a fixed numeric slot', () => {
+    const { rerender } = render(
       <Fader
-        id="pan-fader"
-        label="Pan"
+        id="mix-stable-width"
+        label="Mix Stable Width"
         value={0}
-        min={-1}
+        min={0}
         max={1}
-        orientation="horizontal"
+        unit="%"
         onChange={vi.fn()}
       />
     );
 
+    const initialValue = screen.getByText('0.0%');
+    expect(initialValue).toHaveClass('min-w-[6ch]');
+    expect(initialValue).toHaveClass('text-right');
+
+    rerender(
+      <Fader
+        id="mix-stable-width"
+        label="Mix Stable Width"
+        value={1}
+        min={0}
+        max={1}
+        unit="%"
+        onChange={vi.fn()}
+      />
+    );
+
+    const maxValue = screen.getByText('100.0%');
+    expect(maxValue).toHaveClass('min-w-[6ch]');
+    expect(maxValue).toHaveClass('text-right');
+  });
+
+  it('defaults to horizontal orientation', () => {
+    render(<Fader id="pan-fader" label="Pan" value={0} min={-1} max={1} onChange={vi.fn()} />);
+
     const input = screen.getByLabelText('Pan');
     expect(input).toHaveClass('w-full');
+    expect(input).toHaveClass('bg-plugin-border');
     expect(input).not.toHaveClass('-rotate-90');
+  });
+
+  it('supports vertical orientation', () => {
+    render(
+      <Fader
+        id="level-fader-vertical"
+        label="Level Vertical"
+        value={0}
+        min={-1}
+        max={1}
+        orientation="vertical"
+        onChange={vi.fn()}
+      />
+    );
+
+    const input = screen.getByLabelText('Level Vertical');
+    const controlContainer = input.parentElement;
+
+    expect(controlContainer).not.toBeNull();
+    expect(controlContainer).toHaveClass('h-[160px]');
+    expect(controlContainer).toHaveClass('w-10');
+    expect(input).toHaveClass('h-[160px]');
+    expect(input).toHaveClass('w-2');
+    expect(input).toHaveClass('[direction:rtl]');
+    expect(input).toHaveClass('[writing-mode:vertical-lr]');
+    expect(input).toHaveClass('[appearance:slider-vertical]');
+    expect(input).toHaveClass('[-webkit-appearance:slider-vertical]');
+    expect(input).toHaveClass('bg-plugin-border');
+    expect(input).not.toHaveClass('w-full');
+    expect(input).not.toHaveClass('-rotate-90');
+  });
+
+  it('maps vertical pointer dragging by geometry so upward movement increases output value', () => {
+    const onChange = vi.fn();
+
+    render(
+      <Fader
+        id="vertical-drag-fader"
+        label="Vertical Drag"
+        value={0.4}
+        min={0}
+        max={1}
+        orientation="vertical"
+        onChange={onChange}
+      />
+    );
+
+    const input = screen.getByLabelText('Vertical Drag');
+
+    const rectSpy = mockSliderRect(input, 100, 160);
+
+    fireEvent.pointerDown(input, { pointerId: 1, clientY: 180, shiftKey: false });
+    fireEvent.pointerMove(input, { pointerId: 1, clientY: 100, shiftKey: false });
+    fireEvent.pointerUp(input, { pointerId: 1, clientY: 100 });
+
+    rectSpy.mockRestore();
+
+    expect(onChange).toHaveBeenCalled();
+    const calls = onChange.mock.calls as [number][];
+    expect(calls[calls.length - 1]?.[0]).toBeCloseTo(1, 10);
+  });
+
+  it('maps vertical pointer dragging by geometry so downward movement decreases output value', () => {
+    const onChange = vi.fn();
+
+    render(
+      <Fader
+        id="vertical-drag-down-fader"
+        label="Vertical Drag Down"
+        value={0.6}
+        min={0}
+        max={1}
+        orientation="vertical"
+        onChange={onChange}
+      />
+    );
+
+    const input = screen.getByLabelText('Vertical Drag Down');
+
+    const rectSpy = mockSliderRect(input, 100, 160);
+
+    fireEvent.pointerDown(input, { pointerId: 2, clientY: 120, shiftKey: false });
+    fireEvent.pointerMove(input, { pointerId: 2, clientY: 260, shiftKey: false });
+    fireEvent.pointerUp(input, { pointerId: 2, clientY: 260 });
+
+    rectSpy.mockRestore();
+
+    expect(onChange).toHaveBeenCalled();
+    const calls = onChange.mock.calls as [number][];
+    expect(calls[calls.length - 1]?.[0]).toBeCloseTo(0, 10);
+  });
+
+  it('applies slider orientation semantics for assistive technologies', () => {
+    const { rerender } = render(
+      <Fader id="a11y-fader" label="A11y" value={0.5} min={0} max={1} onChange={vi.fn()} />
+    );
+
+    expect(screen.getByRole('slider', { name: 'A11y' })).toHaveAttribute(
+      'aria-orientation',
+      'horizontal'
+    );
+
+    rerender(
+      <Fader
+        id="a11y-fader"
+        label="A11y"
+        value={0.5}
+        min={0}
+        max={1}
+        orientation="vertical"
+        onChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole('slider', { name: 'A11y' })).toHaveAttribute(
+      'aria-orientation',
+      'vertical'
+    );
   });
 
   it('calls onChange when fader value changes', () => {
@@ -279,6 +436,32 @@ describe('Fader', () => {
     expect(normalDelta).toBeCloseTo(100 / 150, 10);
     expect(precisionDelta).toBeCloseTo(100 / 150 / 12, 10);
     expect(normalDelta).toBeGreaterThan(precisionDelta * 10);
+  });
+
+  it('keeps keyboard arrow behavior intact in vertical mode', () => {
+    const onChange = vi.fn();
+
+    render(
+      <Fader
+        id="vertical-keyboard-fader"
+        label="Vertical Keyboard"
+        value={0.5}
+        min={0}
+        max={1}
+        orientation="vertical"
+        step={0.001}
+        onChange={onChange}
+      />
+    );
+
+    const input = screen.getByLabelText('Vertical Keyboard');
+
+    fireEvent.keyDown(input, { key: 'ArrowUp', shiftKey: false });
+    fireEvent.keyDown(input, { key: 'ArrowDown', shiftKey: false });
+
+    expect(onChange).toHaveBeenCalledTimes(2);
+    expect((onChange.mock.calls[0] as [number])[0]).toBeCloseTo(0.5 + 1 / 150, 10);
+    expect((onChange.mock.calls[1] as [number])[0]).toBeCloseTo(0.5 - 1 / 150, 10);
   });
 
   it('uses Shift precision mode when getModifierState reports Shift and shiftKey is false', () => {

@@ -38,6 +38,35 @@ function hasSuffix(paramId: string, suffix: string): boolean {
   return paramId.endsWith(suffix);
 }
 
+function findCanonicalParameter(
+  params: readonly OscillatorParameter[],
+  processorId: string,
+  suffix: '_bypass' | '_enabled' | '_waveform' | '_frequency' | '_level',
+  type?: OscillatorParameter['type']
+): OscillatorParameter | undefined {
+  const canonicalId = `${processorId}${suffix}`;
+
+  const canonicalMatch = params.find((param) => {
+    if (param.id !== canonicalId) {
+      return false;
+    }
+
+    return type ? param.type === type : true;
+  });
+
+  if (canonicalMatch) {
+    return canonicalMatch;
+  }
+
+  return params.find((param) => {
+    if (type && param.type !== type) {
+      return false;
+    }
+
+    return hasSuffix(param.id, suffix);
+  });
+}
+
 function getNumericValue(value: number | boolean): number {
   return typeof value === 'number' ? value : value ? 1 : 0;
 }
@@ -175,14 +204,25 @@ export function OscillatorProcessor({
     [params, setParameter]
   );
 
-  const bypassParameter = processorParameters.find((param) => hasSuffix(param.id, '_bypass'));
-  const enabledParameter = processorParameters.find((param) => hasSuffix(param.id, '_enabled'));
-  const waveformParameter = processorParameters.find((param) => hasSuffix(param.id, '_waveform'));
-  const frequencyParameter = processorParameters.find(
-    (param) => hasSuffix(param.id, '_frequency') && param.type === 'float'
+  const bypassParameter = findCanonicalParameter(processorParameters, processorId, '_bypass');
+  const enabledParameter = findCanonicalParameter(processorParameters, processorId, '_enabled');
+  const waveformParameter = findCanonicalParameter(
+    processorParameters,
+    processorId,
+    '_waveform',
+    'enum'
   );
-  const levelParameter = processorParameters.find(
-    (param) => hasSuffix(param.id, '_level') && param.type === 'float'
+  const frequencyParameter = findCanonicalParameter(
+    processorParameters,
+    processorId,
+    '_frequency',
+    'float'
+  );
+  const levelParameter = findCanonicalParameter(
+    processorParameters,
+    processorId,
+    '_level',
+    'float'
   );
 
   const knownParameterIds = new Set([
@@ -382,7 +422,7 @@ export function OscillatorProcessor({
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[auto_1fr] sm:items-end">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[auto_auto] sm:items-end sm:justify-start">
           {frequencyParameter ? (
             <div className="rounded-md border border-plugin-border bg-plugin-dark/60 p-2">
               <Knob
@@ -410,7 +450,7 @@ export function OscillatorProcessor({
                 max={levelParameter.max}
                 unit={levelParameter.unit}
                 size="sm"
-                orientation="horizontal"
+                orientation="vertical"
                 onChange={(nextValue): void => {
                   void levelParameter.onChange(nextValue);
                 }}
