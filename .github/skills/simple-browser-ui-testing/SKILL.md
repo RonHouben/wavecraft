@@ -62,11 +62,11 @@ pgrep -f "cargo xtask dev" >/dev/null || lsof -ti tcp:5173 >/dev/null
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| Port 5173 already in use | Re-run pre-check; if a server exists, reuse it instead of starting another |
-| Page does not load | Confirm `http://localhost:5173` and wait for Vite startup if you just started the server |
-| Accidentally stopped shared server | Restart with `cargo xtask dev` and rerun validation steps |
+| Issue                              | Solution                                                                                 |
+| ---------------------------------- | ---------------------------------------------------------------------------------------- |
+| Port 5173 already in use           | Re-run pre-check; if a server exists, reuse it instead of starting another               |
+| Page does not load                 | Confirm `http://localhost:5173` and wait for Vite startup if you just started the server |
+| Accidentally stopped shared server | Restart with `cargo xtask dev` and rerun validation steps                                |
 
 ## Reference
 

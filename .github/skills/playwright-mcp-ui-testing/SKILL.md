@@ -36,6 +36,7 @@ run_in_terminal(
 ```
 
 **Wait for server startup** (only when a new server was started):
+
 ```bash
 # Dev server needs ~5 seconds to compile and start Vite
 sleep 5
@@ -43,6 +44,7 @@ sleep 5
 ```
 
 **Stopping the server** (when done testing):
+
 ```bash
 # Only stop it if this session started a new instance:
 pkill -f "cargo xtask dev"
@@ -69,43 +71,43 @@ pkill -f "cargo xtask dev"
 
 ### Navigation & State
 
-| Tool | Purpose | Example |
-|------|---------|---------|
-| `browser_navigate` | Open URL | `url: "http://localhost:5173"` |
-| `browser_snapshot` | Get accessibility tree (preferred for interactions) | — |
-| `browser_take_screenshot` | Capture PNG | `type: "png"`, `filename: "meter.png"` |
-| `browser_wait_for` | Wait for text/time | `text: "Wavecraft"` or `time: 2` |
+| Tool                      | Purpose                                             | Example                                |
+| ------------------------- | --------------------------------------------------- | -------------------------------------- |
+| `browser_navigate`        | Open URL                                            | `url: "http://localhost:5173"`         |
+| `browser_snapshot`        | Get accessibility tree (preferred for interactions) | —                                      |
+| `browser_take_screenshot` | Capture PNG                                         | `type: "png"`, `filename: "meter.png"` |
+| `browser_wait_for`        | Wait for text/time                                  | `text: "Wavecraft"` or `time: 2`       |
 
 ### Interactions
 
-| Tool | Purpose | Key Parameters |
-|------|---------|----------------|
-| `browser_click` | Click element | `ref: "E123"` from snapshot |
-| `browser_type` | Type text | `ref: "E123"`, `text: "value"` |
-| `browser_hover` | Hover element | `ref: "E123"` |
-| `browser_press_key` | Keyboard input | `key: "Enter"` |
+| Tool                | Purpose        | Key Parameters                 |
+| ------------------- | -------------- | ------------------------------ |
+| `browser_click`     | Click element  | `ref: "E123"` from snapshot    |
+| `browser_type`      | Type text      | `ref: "E123"`, `text: "value"` |
+| `browser_hover`     | Hover element  | `ref: "E123"`                  |
+| `browser_press_key` | Keyboard input | `key: "Enter"`                 |
 
 ### Lifecycle
 
-| Tool | Purpose |
-|------|---------|
-| `browser_tabs` | List/create/close tabs |
-| `browser_close` | Close browser |
+| Tool            | Purpose                |
+| --------------- | ---------------------- |
+| `browser_tabs`  | List/create/close tabs |
+| `browser_close` | Close browser          |
 
 ## Test ID Selectors
 
 All Wavecraft components have `data-testid` attributes. Use with snapshot refs:
 
-| Component | Test ID | Usage |
-|-----------|---------|-------|
-| App root | `app-root` | Full page loaded |
-| Meter | `meter` | Meter container |
-| Left channel | `meter-L` | Left meter row |
-| Clip button | `meter-clip-button` | Clipping indicator |
-| Parameter | `param-{id}` | e.g., `param-gain` |
-| Slider | `param-{id}-slider` | Range input |
-| Version | `version-badge` | Version display |
-| Connection | `connection-status` | WebSocket status |
+| Component    | Test ID             | Usage              |
+| ------------ | ------------------- | ------------------ |
+| App root     | `app-root`          | Full page loaded   |
+| Meter        | `meter`             | Meter container    |
+| Left channel | `meter-L`           | Left meter row     |
+| Clip button  | `meter-clip-button` | Clipping indicator |
+| Parameter    | `param-{id}`        | e.g., `param-gain` |
+| Slider       | `param-{id}-slider` | Range input        |
+| Version      | `version-badge`     | Version display    |
+| Connection   | `connection-status` | WebSocket status   |
 
 ## Common Test Patterns
 
@@ -148,13 +150,13 @@ All Wavecraft components have `data-testid` attributes. Use with snapshot refs:
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| Page blank | Run the pre-check and confirm server is running on process/port before retrying |
-| Port 5173 already in use | Reuse the existing server; do not start a second `cargo xtask dev` |
-| Connection error | Check WebSocket server on port 9000 |
-| Element not found | Use `browser_snapshot` to see current refs |
-| Browser not installed | Run `mcp_playwright_browser_install` |
+| Issue                    | Solution                                                                        |
+| ------------------------ | ------------------------------------------------------------------------------- |
+| Page blank               | Run the pre-check and confirm server is running on process/port before retrying |
+| Port 5173 already in use | Reuse the existing server; do not start a second `cargo xtask dev`              |
+| Connection error         | Check WebSocket server on port 9000                                             |
+| Element not found        | Use `browser_snapshot` to see current refs                                      |
+| Browser not installed    | Run `mcp_playwright_browser_install`                                            |
 
 ## Reference
 
