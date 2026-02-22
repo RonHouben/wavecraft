@@ -391,4 +391,48 @@ describe('Knob', () => {
       '9756.43 Hz'
     );
   });
+
+  it('reserves a stable value-label width for wide unit ranges', () => {
+    render(
+      <Knob
+        id="freq-layout-knob"
+        label="Frequency Layout"
+        value={20}
+        min={20}
+        max={20000}
+        unit="Hz"
+        onChange={vi.fn()}
+      />
+    );
+
+    const valueLabel = screen.getByText('20.00 Hz');
+    expect(valueLabel).toHaveStyle({ width: '11ch' });
+  });
+
+  it('uses min-width sizing and avoids value-row clipping in small layout', () => {
+    render(
+      <Knob
+        id="freq-layout-small-knob"
+        label="Frequency Layout Small"
+        value={20}
+        min={20}
+        max={20000}
+        unit="Hz"
+        size="sm"
+        onChange={vi.fn()}
+      />
+    );
+
+    const input = screen.getByRole('slider', { name: 'Frequency Layout Small' });
+    const root = input.closest('.group');
+    expect(root).not.toBeNull();
+    expect(root).toHaveClass('min-w-[72px]');
+    expect(root).not.toHaveClass('w-[72px]');
+
+    const valueLabel = screen.getByText('20.00 Hz');
+    const valueRow = valueLabel.parentElement;
+    expect(valueLabel).toHaveStyle({ width: '11ch' });
+    expect(valueRow).not.toBeNull();
+    expect(valueRow).not.toHaveClass('overflow-hidden');
+  });
 });

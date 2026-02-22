@@ -9,12 +9,22 @@ Use Playwright MCP tools to visually test the Wavecraft UI during manual testing
 
 ## Prerequisites
 
-1. **Dev servers will be auto-started** by the agent using background process
+1. **Dev server pre-check is required first** (reuse existing server when available)
 2. **Playwright installed**: `cd ui && npm run playwright:install` (first time only)
 
-## Starting Dev Server (Automated)
+## Starting Dev Server (Automated, with Pre-check)
 
-The agent can start the dev server automatically without user intervention:
+Before starting any new process, the agent checks whether the server already exists:
+
+```bash
+# macOS/Linux pre-check (process OR port):
+pgrep -f "cargo xtask dev" >/dev/null || lsof -ti tcp:5173 >/dev/null
+```
+
+- Exit code `0`: server is already running → reuse it, do not start another instance
+- Exit code non-zero: server not running → start it as shown below
+
+If no server is found, the agent starts the dev server automatically without user intervention:
 
 ```bash
 # Agent runs this in background:
@@ -25,7 +35,7 @@ run_in_terminal(
 # Returns terminal_id for later status checks
 ```
 
-**Wait for server startup**:
+**Wait for server startup** (only when a new server was started):
 ```bash
 # Dev server needs ~5 seconds to compile and start Vite
 sleep 5
@@ -34,23 +44,25 @@ sleep 5
 
 **Stopping the server** (when done testing):
 ```bash
-# Kill the background process:
+# Only stop it if this session started a new instance:
 pkill -f "cargo xtask dev"
 ```
 
 ## Quick Workflow
 
 ```
-1. Start dev server:     run_in_terminal(..., isBackground=true)
-2. Wait for startup:     sleep 5
-3. Navigate to UI:       mcp_playwright_browser_navigate → http://localhost:5173
+1. Pre-check server:     pgrep -f "cargo xtask dev" || lsof -ti tcp:5173
+2. If running:           Reuse existing server
+3. If not running:       run_in_terminal(..., isBackground=true)
+4. Wait for startup:     sleep 5 (only if step 3 started a server)
+5. Navigate to UI:       mcp_playwright_browser_navigate → http://localhost:5173
                          (Playwright will fail with timeout if server isn't ready)
-4. Wait for load:        mcp_playwright_browser_wait_for → "Wavecraft" text
-5. Get page state:       mcp_playwright_browser_snapshot
-6. Take screenshot:      mcp_playwright_browser_take_screenshot
-7. Interact:             mcp_playwright_browser_click, _type, etc.
-8. Close browser:        mcp_playwright_browser_close
-9. Stop server:          pkill -f "cargo xtask dev"
+6. Wait for load:        mcp_playwright_browser_wait_for → "Wavecraft" text
+7. Get page state:       mcp_playwright_browser_snapshot
+8. Take screenshot:      mcp_playwright_browser_take_screenshot
+9. Interact:             mcp_playwright_browser_click, _type, etc.
+10. Close browser:       mcp_playwright_browser_close
+11. Stop server:         pkill -f "cargo xtask dev" (only if started in step 3)
 ```
 
 ## MCP Tool Reference
@@ -138,7 +150,8 @@ All Wavecraft components have `data-testid` attributes. Use with snapshot refs:
 
 | Issue | Solution |
 |-------|----------|
-| Page blank | Verify `cargo xtask dev` is running |
+| Page blank | Run the pre-check and confirm server is running on process/port before retrying |
+| Port 5173 already in use | Reuse the existing server; do not start a second `cargo xtask dev` |
 | Connection error | Check WebSocket server on port 9000 |
 | Element not found | Use `browser_snapshot` to see current refs |
 | Browser not installed | Run `mcp_playwright_browser_install` |

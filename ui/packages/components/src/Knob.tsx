@@ -29,9 +29,9 @@ const knobSizeClassMap: Record<NonNullable<KnobProps['size']>, string> = {
 };
 
 const knobWidthClassMap: Record<NonNullable<KnobProps['size']>, string> = {
-  sm: 'w-[72px]',
-  md: 'w-[88px]',
-  lg: 'w-[88px]',
+  sm: 'min-w-[72px]',
+  md: 'min-w-[88px]',
+  lg: 'min-w-[88px]',
 };
 
 const KNOB_SWEEP_START_DEG = -135;
@@ -97,6 +97,13 @@ function formatValue(value: number, unit?: string): string {
   return `${value.toFixed(2)} ${unit}`;
 }
 
+function getReservedValueWidthCh(min: number, max: number, unit?: string): number {
+  const minFormattedLength = formatValue(min, unit).length;
+  const maxFormattedLength = formatValue(max, unit).length;
+
+  return Math.max(minFormattedLength, maxFormattedLength);
+}
+
 export function Knob({
   disabled = false,
   id,
@@ -126,6 +133,7 @@ export function Knob({
   const angle = KNOB_SWEEP_START_DEG + normalized * KNOB_SWEEP_RANGE_DEG;
   const badgeLabel = getStateBadgeLabel(pluginState);
   const formattedValue = formatValue(clampedValue, unit);
+  const reservedValueWidthCh = getReservedValueWidthCh(min, max, unit);
   const keyboardSteps = getKeyboardSteps(min, max, step);
 
   function applyKeyboardDelta(delta: number): void {
@@ -351,7 +359,7 @@ export function Knob({
           >
             <span
               aria-hidden="true"
-              className="absolute left-1/2 top-1.5 h-2 w-2 -translate-x-1/2 rounded-full border border-plugin-dark bg-accent shadow-control"
+              className="absolute left-1/2 top-0.5 h-2 w-2 -translate-x-1/2 rounded-full border border-plugin-dark bg-accent shadow-control"
             />
           </span>
         </div>
@@ -365,7 +373,10 @@ export function Knob({
       </div>
 
       <div className="relative inline-flex w-full items-center justify-center gap-1">
-        <span className="min-w-[72px] text-center font-mono text-type-sm tabular-nums text-plugin-text-primary">
+        <span
+          className="shrink-0 whitespace-nowrap text-center font-mono text-type-sm tabular-nums text-plugin-text-primary"
+          style={{ width: `${reservedValueWidthCh}ch` }}
+        >
           {formattedValue}
         </span>
         {badgeLabel ? (
