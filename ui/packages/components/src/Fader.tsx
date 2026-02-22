@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { ControlVisualState, PluginVisualState } from './types';
 import { focusRingClass, mergeClassNames } from './utils/classNames';
 import {
@@ -123,20 +123,16 @@ export function Fader({
   const keyboardSteps = getKeyboardSteps(min, max, step);
   const clampedValue = clamp(value, min, max);
 
-  function resetShiftDragAnchors(): void {
+  const resetShiftDragAnchors = useCallback((): void => {
     shiftDragAnchorRawValueRef.current = null;
     shiftDragAnchorOutputValueRef.current = null;
-  }
+  }, []);
 
   useEffect(() => {
     latestOutputValueRef.current = clampedValue;
   }, [clampedValue]);
 
   useEffect(() => {
-    if (!isPointerDragActiveRef.current) {
-      return;
-    }
-
     function handleWindowKeyDown(event: KeyboardEvent): void {
       if (event.key === 'Shift') {
         isShiftPressedDuringDragRef.current = true;
@@ -157,7 +153,7 @@ export function Fader({
       window.removeEventListener('keydown', handleWindowKeyDown);
       window.removeEventListener('keyup', handleWindowKeyUp);
     };
-  });
+  }, [resetShiftDragAnchors]);
 
   return (
     <div className="group inline-flex flex-col items-center gap-2">
@@ -237,7 +233,7 @@ export function Fader({
             };
             const isShiftActiveOnEvent = resolveShiftFromChangeEvent(nativeEvent);
 
-            if (isPointerDragActiveRef.current) {
+            if (isPointerDragActiveRef.current && isShiftActiveOnEvent) {
               isShiftPressedDuringDragRef.current = isShiftActiveOnEvent;
             }
 

@@ -11,7 +11,6 @@ tools:
     'search',
     'execute',
     'agent',
-    'playwright/*',
     'github/*',
     'web',
     'todo',
@@ -331,26 +330,27 @@ cd engine && cargo xtask install  # Install to system for DAW testing
 cd engine && cargo run -p desktop
 ```
 
-### Phase 3b: Visual UI Testing (Playwright MCP)
+### Phase 3b: Visual UI Testing (VS Code Integrated Browser / Simple Browser)
 
-For any UI/visual change, perform Playwright screenshot-based in-app checks as a required step.
+For any UI/visual change, perform screenshot-based in-app checks in the **VS Code integrated browser (Simple Browser)** as a required step.
 
-**Skill**: Read `.github/skills/playwright-mcp-ui-testing/SKILL.md` for detailed instructions.
+**Reference:** Read `docs/guides/visual-testing.md` for detailed workflow and evidence expectations.
 
 **Quick reference:**
 
 1. **Start dev servers**: `cargo xtask dev` (from workspace root)
-2. Use `mcp_playwright_browser_navigate` → `http://localhost:5173`
-3. Use `mcp_playwright_browser_snapshot` to get element refs
-4. Use `mcp_playwright_browser_take_screenshot` for visual capture
-5. Close with `mcp_playwright_browser_close` when done
-6. **⚠️ CRITICAL: Stop dev servers**: See "Graceful Server Shutdown" below
+2. Open VS Code Command Palette → **Simple Browser: Show**
+3. Navigate to `http://localhost:5173`
+4. Validate changed UI states in-app
+5. Capture screenshots for changed/verified states
+6. Record screenshot evidence paths/references and results in `test-plan.md`
+7. **⚠️ CRITICAL: Stop dev servers**: See "Graceful Server Shutdown" below
 
 **Required scope for UI/visual changes:**
 
-- Capture screenshots of changed UI areas in-app
+- Capture screenshots of changed UI areas/states in-app using Simple Browser
 - Validate visual behavior against expected state/baseline
-- Document screenshot evidence and result in `test-plan.md`
+- Document screenshot evidence paths/references and result in `test-plan.md`
 
 **Graceful Server Shutdown:**
 
@@ -388,7 +388,7 @@ ps aux | grep "cargo xtask dev"  # Should return no results
 
 - **Always stop dev servers after visual testing** using `pkill -f "cargo xtask dev"`
 - **Run `cargo xtask ci-check` first** as the primary validation method (~52s)
-- **For any UI/visual change, run Playwright screenshot-based in-app checks before sign-off**
+- **For any UI/visual change, run VS Code integrated browser (Simple Browser) screenshot-based in-app checks before sign-off**
 - Use individual commands only to debug failures
 - Execute commands yourself to verify behavior
 - Document EVERY test result in test-plan.md
@@ -404,6 +404,7 @@ ps aux | grep "cargo xtask dev"  # Should return no results
 - **NEVER modify source code** — not even "quick fixes" or "obvious bugs"
 - **NEVER fix bugs yourself** — always hand off to the coder agent
 - Don't skip the `cargo xtask ci-check` validation
+- Don't skip screenshot evidence for UI/visual changes
 - Don't skip documenting failures
 - Don't use terminal commands, Python scripts, shell redirection, or any execute-tool action to write or edit `test-plan.md`
 - Don't assume tests pass without verification

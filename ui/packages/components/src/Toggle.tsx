@@ -21,24 +21,24 @@ export interface ToggleProps {
 interface ToggleSizeStyle {
   readonly track: string;
   readonly thumb: string;
-  readonly thumbOffsetOn: string;
+  readonly thumbTranslateOn: string;
 }
 
 const toggleSizeClassMap: Record<NonNullable<ToggleProps['size']>, ToggleSizeStyle> = {
   sm: {
     track: 'h-4 w-7',
     thumb: 'h-3 w-3 top-0.5',
-    thumbOffsetOn: 'left-[14px]',
+    thumbTranslateOn: 'translate-x-3',
   },
   md: {
     track: 'h-5 w-9',
     thumb: 'h-4 w-4 top-0.5',
-    thumbOffsetOn: 'left-[18px]',
+    thumbTranslateOn: 'translate-x-4',
   },
   lg: {
     track: 'h-6 w-11',
     thumb: 'h-5 w-5 top-0.5',
-    thumbOffsetOn: 'left-[22px]',
+    thumbTranslateOn: 'translate-x-5',
   },
 };
 
@@ -88,9 +88,9 @@ export function Toggle({
       >
         <span
           className={mergeClassNames(
-            'bg-plugin-text-primary absolute left-0.5 rounded-full motion-safe:transition-all motion-safe:duration-150',
+            'absolute left-0.5 rounded-full bg-plugin-text-primary motion-safe:transition-all motion-safe:duration-150',
             sizeStyle.thumb,
-            resolvedChecked ? sizeStyle.thumbOffsetOn : ''
+            resolvedChecked ? sizeStyle.thumbTranslateOn : ''
           )}
         />
       </button>
@@ -104,7 +104,7 @@ export function Toggle({
       {badgeLabel ? (
         <span
           className={mergeClassNames(
-            'rounded-sm border px-1 py-0.5 font-mono text-[10px] leading-none',
+            'rounded-sm border px-1 py-0.5 font-mono text-type-2xs',
             getStateBadgeClass(pluginState)
           )}
           aria-hidden="true"

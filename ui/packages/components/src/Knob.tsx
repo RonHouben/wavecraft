@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { ControlVisualState, PluginVisualState } from './types';
 import { focusRingClass, mergeClassNames } from './utils/classNames';
 import {
@@ -135,20 +135,16 @@ export function Knob({
     }
   }
 
-  function resetShiftDragAnchors(): void {
+  const resetShiftDragAnchors = useCallback((): void => {
     shiftDragAnchorRawValueRef.current = null;
     shiftDragAnchorOutputValueRef.current = null;
-  }
+  }, []);
 
   useEffect(() => {
     latestOutputValueRef.current = clampedValue;
   }, [clampedValue]);
 
   useEffect(() => {
-    if (!isPointerDragActiveRef.current) {
-      return;
-    }
-
     function handleWindowKeyDown(event: KeyboardEvent): void {
       if (event.key === 'Shift') {
         isShiftPressedDuringDragRef.current = true;
@@ -169,7 +165,7 @@ export function Knob({
       window.removeEventListener('keydown', handleWindowKeyDown);
       window.removeEventListener('keyup', handleWindowKeyUp);
     };
-  });
+  }, [resetShiftDragAnchors]);
 
   return (
     <div
@@ -267,7 +263,7 @@ export function Knob({
               readonly getModifierState?: (keyArg: 'Shift') => boolean;
             };
             const isShiftActiveOnEvent = resolveShiftFromChangeEvent(nativeEvent);
-            if (isPointerDragActiveRef.current) {
+            if (isPointerDragActiveRef.current && isShiftActiveOnEvent) {
               isShiftPressedDuringDragRef.current = isShiftActiveOnEvent;
             }
 
@@ -341,7 +337,7 @@ export function Knob({
         {badgeLabel ? (
           <span
             className={mergeClassNames(
-              'rounded-sm border px-1 py-0.5 font-mono text-[10px] leading-none',
+              'rounded-sm border px-1 py-0.5 font-mono text-type-2xs',
               getStateBadgeClass(pluginState)
             )}
             aria-hidden="true"
@@ -351,7 +347,7 @@ export function Knob({
         ) : null}
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap text-type-xs text-plugin-text-secondary opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 motion-reduce:transition-none"
+          className="pointer-events-none absolute left-0 top-full mt-1 w-full px-1 text-center text-type-xs leading-tight text-plugin-text-secondary opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 motion-reduce:transition-none"
         >
           {SHIFT_PRECISION_HINT}
         </span>

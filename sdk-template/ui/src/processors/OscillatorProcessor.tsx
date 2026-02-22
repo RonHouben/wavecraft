@@ -8,6 +8,9 @@ import { Button, Fader, Knob, Toggle } from '@wavecraft/components';
 import { useMemo } from 'react';
 import type { JSX } from 'react';
 
+// Test discoverability: this template implementation is validated in
+// ui/packages/components/src/OscillatorProcessor.template.test.tsx.
+
 export interface OscillatorProcessorProps {
   readonly hideWhenNotInSignalChain?: boolean;
 }

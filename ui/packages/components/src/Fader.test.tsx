@@ -11,6 +11,11 @@ function fireDragChange(input: HTMLElement, value: string, shiftKey: boolean = f
   fireEvent(input, changeEvent);
 }
 
+function fireDragChangeWithoutShiftMetadata(input: HTMLElement, value: string): void {
+  const changeEvent = createEvent.change(input, { target: { value } });
+  fireEvent(input, changeEvent);
+}
+
 describe('Fader', () => {
   it('renders a subtle Shift precision helper hint as decorative text', () => {
     render(<Fader id="hint-fader" label="Hint" value={0.5} min={0} max={1} onChange={vi.fn()} />);
@@ -100,6 +105,59 @@ describe('Fader', () => {
     expect(onChange).toHaveBeenCalledWith(50.833333333333336);
   });
 
+  it('keeps precision mode active during Shift drag when change events omit Shift metadata', () => {
+    const onChange = vi.fn();
+
+    render(
+      <Fader
+        id="shift-metadata-omitted-fader"
+        label="Shift Metadata Omitted"
+        value={50}
+        min={0}
+        max={100}
+        onChange={onChange}
+      />
+    );
+
+    const input = screen.getByLabelText('Shift Metadata Omitted');
+
+    fireEvent.pointerDown(input, { shiftKey: true });
+    fireDragChangeWithoutShiftMetadata(input, '80');
+    fireDragChangeWithoutShiftMetadata(input, '90');
+    fireEvent.pointerUp(input);
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith(50.833333333333336);
+  });
+
+  it('exits precision mode on Shift keyup during drag even when change events omit Shift metadata', () => {
+    const onChange = vi.fn();
+
+    render(
+      <Fader
+        id="shift-keyup-exits-fader"
+        label="Shift Keyup Exits"
+        value={50}
+        min={0}
+        max={100}
+        onChange={onChange}
+      />
+    );
+
+    const input = screen.getByLabelText('Shift Keyup Exits');
+
+    fireEvent.pointerDown(input, { shiftKey: true });
+    fireDragChangeWithoutShiftMetadata(input, '80');
+    fireDragChangeWithoutShiftMetadata(input, '90');
+    fireEvent.keyUp(window, { key: 'Shift' });
+    fireDragChangeWithoutShiftMetadata(input, '100');
+    fireEvent.pointerUp(input);
+
+    expect(onChange).toHaveBeenCalledTimes(2);
+    expect(onChange).toHaveBeenNthCalledWith(1, 50.833333333333336);
+    expect(onChange).toHaveBeenNthCalledWith(2, 100);
+  });
+
   it('adapts pointer precision mode when Shift toggles during drag', () => {
     const onChange = vi.fn();
 
@@ -118,8 +176,10 @@ describe('Fader', () => {
 
     fireEvent.pointerDown(input, { shiftKey: false });
     fireDragChange(input, '80', false);
-    fireDragChange(input, '90', true);
-    fireDragChange(input, '100', true);
+    fireEvent.keyDown(window, { key: 'Shift' });
+    fireDragChange(input, '90', false);
+    fireDragChange(input, '100', false);
+    fireEvent.keyUp(window, { key: 'Shift' });
     fireDragChange(input, '70', false);
     fireEvent.pointerUp(input);
 

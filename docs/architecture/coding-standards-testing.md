@@ -74,7 +74,7 @@ cargo xtask ci-check -F --skip-cd        # Full minus CD dry-run
 5. **CD Dry-Run** — Git-based change detection matching CD workflow path filters (`--full` only; skippable: `--skip-cd`)
 
 **Visual Testing:** For UI validation, use `cargo xtask dev` to start dev servers,
-then invoke the "playwright-mcp-ui-testing" skill for browser-based testing.
+then run required checks in the VS Code integrated browser (Simple Browser) and record screenshot evidence in the relevant `test-plan.md`.
 
 ### Running Tests
 

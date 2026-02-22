@@ -11,6 +11,11 @@ function fireDragChange(input: HTMLElement, value: string, shiftKey: boolean = f
   fireEvent(input, changeEvent);
 }
 
+function fireDragChangeWithoutShiftMetadata(input: HTMLElement, value: string): void {
+  const changeEvent = createEvent.change(input, { target: { value } });
+  fireEvent(input, changeEvent);
+}
+
 describe('Knob', () => {
   it('renders a subtle Shift precision helper hint as decorative text', () => {
     render(<Knob id="hint-knob" label="Hint" value={0.5} min={0} max={1} onChange={vi.fn()} />);
@@ -82,6 +87,59 @@ describe('Knob', () => {
     expect(onChange).toHaveBeenCalledWith(0.5083333333333333);
   });
 
+  it('keeps precision mode active during Shift drag when change events omit Shift metadata', () => {
+    const onChange = vi.fn();
+
+    render(
+      <Knob
+        id="shift-metadata-omitted-knob"
+        label="Shift Metadata Omitted"
+        value={0.5}
+        min={0}
+        max={1}
+        onChange={onChange}
+      />
+    );
+
+    const input = screen.getByLabelText('Shift Metadata Omitted');
+
+    fireEvent.pointerDown(input, { shiftKey: true });
+    fireDragChangeWithoutShiftMetadata(input, '0.8');
+    fireDragChangeWithoutShiftMetadata(input, '0.9');
+    fireEvent.pointerUp(input);
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith(0.5083333333333333);
+  });
+
+  it('exits precision mode on Shift keyup during drag even when change events omit Shift metadata', () => {
+    const onChange = vi.fn();
+
+    render(
+      <Knob
+        id="shift-keyup-exits-knob"
+        label="Shift Keyup Exits"
+        value={0.5}
+        min={0}
+        max={1}
+        onChange={onChange}
+      />
+    );
+
+    const input = screen.getByLabelText('Shift Keyup Exits');
+
+    fireEvent.pointerDown(input, { shiftKey: true });
+    fireDragChangeWithoutShiftMetadata(input, '0.8');
+    fireDragChangeWithoutShiftMetadata(input, '0.9');
+    fireEvent.keyUp(window, { key: 'Shift' });
+    fireDragChangeWithoutShiftMetadata(input, '1.0');
+    fireEvent.pointerUp(input);
+
+    expect(onChange).toHaveBeenCalledTimes(2);
+    expect(onChange).toHaveBeenNthCalledWith(1, 0.5083333333333333);
+    expect(onChange).toHaveBeenNthCalledWith(2, 1);
+  });
+
   it('adapts pointer precision mode when Shift toggles during drag', () => {
     const onChange = vi.fn();
 
@@ -100,8 +158,10 @@ describe('Knob', () => {
 
     fireEvent.pointerDown(input, { shiftKey: false });
     fireDragChange(input, '0.8', false);
-    fireDragChange(input, '0.9', true);
-    fireDragChange(input, '1.0', true);
+    fireEvent.keyDown(window, { key: 'Shift' });
+    fireDragChange(input, '0.9', false);
+    fireDragChange(input, '1.0', false);
+    fireEvent.keyUp(window, { key: 'Shift' });
     fireDragChange(input, '0.7', false);
     fireEvent.pointerUp(input);
 

@@ -2,415 +2,117 @@
 
 ## Overview
 
-This guide explains how to use Playwright MCP for visual testing of the Wavecraft UI during development. Visual testing enables screenshot capture, baseline comparison, and validation of UI components at various states.
+This guide defines the required visual UI testing workflow for Wavecraft using the **VS Code integrated browser (Simple Browser)**.
 
-For any UI/visual change, screenshot-based in-app checks with Playwright are required before testing sign-off.
+For any UI/visual change, **screenshot-based in-app checks are required before testing sign-off**.
 
-**Requirements:**
+**Required policy:**
 
-- `cargo xtask dev` running (WebSocket server + Vite)
-- Playwright MCP server configured
-- Chromium browser installed via `npm run playwright:install`
+- Run the app in dev mode via `cargo xtask dev`
+- Open `http://localhost:5173` in VS Code Simple Browser
+- Capture screenshots of changed UI states
+- Record screenshot evidence paths/references in `test-plan.md`
 
 ---
 
-## Quick Start
+## Prerequisites
 
-Use this workflow as a required testing step for UI/visual changes.
+- VS Code workspace opened at repository root
+- Dev servers available via `cargo xtask dev`
+- A feature `test-plan.md` ready to store evidence
 
-1. **Start the development servers:**
+---
+
+## Required Workflow (UI/Visual Changes)
+
+1. **Start dev servers:**
 
    ```bash
    cargo xtask dev
    ```
 
-   This starts both the WebSocket server (port 9000) and Vite dev server (port 5173).
+2. **Open the app in VS Code integrated browser (Simple Browser):**
+   - Open Command Palette
+   - Run **Simple Browser: Show**
+   - Enter: `http://localhost:5173`
 
-2. **Install Playwright (first time only):**
+3. **Validate changed UI in-app:**
+   - Verify updated states, interactions, and layout in the integrated browser
+   - Check at least the states directly affected by the change
+
+4. **Capture screenshot evidence (required):**
+   - Capture screenshots for each changed/verified state
+   - Save screenshots to a reproducible local path (for example `artifacts/visual-testing/...`)
+   - Add evidence references to `docs/feature-specs/{feature}/test-plan.md`
+
+5. **Stop dev servers after testing:**
 
    ```bash
-   cd ui
-   npm run playwright:install
+   pkill -f "cargo xtask dev"
    ```
 
-3. **Ask the agent to take a screenshot:**
-   ```
-   "Take a screenshot of the full plugin UI"
-   "Capture the meter component"
-   "Compare the current UI to the baseline"
-   ```
+---
 
-The agent uses Playwright MCP to control the browser programmatically.
+## Minimum Evidence Set
+
+For each UI/visual change, include:
+
+- At least one screenshot for the **default/steady state**
+- Screenshots for each **changed visual state** (e.g. hover/focus/active/disabled/error)
+- For responsive/layout work, screenshots at relevant sizes
+- A short pass/fail note for each captured state in `test-plan.md`
 
 ---
 
-## Test ID Registry
+## Suggested Evidence Format in `test-plan.md`
 
-All testable components have `data-testid` attributes for reliable selection.
+Use a compact table per visual test case:
 
-### Component Test IDs
-
-| Component               | Test ID             | Description                            |
-| ----------------------- | ------------------- | -------------------------------------- |
-| **App Root**            | `app-root`          | Main application container             |
-| **Meter (container)**   | `meter`             | Meter component wrapper                |
-| **Meter L Channel**     | `meter-L`           | Left channel row                       |
-| **Meter R Channel**     | `meter-R`           | Right channel row                      |
-| **Meter L Peak**        | `meter-L-peak`      | Left peak bar                          |
-| **Meter L RMS**         | `meter-L-rms`       | Left RMS bar                           |
-| **Meter R Peak**        | `meter-R-peak`      | Right peak bar                         |
-| **Meter R RMS**         | `meter-R-rms`       | Right RMS bar                          |
-| **Meter L dB Display**  | `meter-L-db`        | Left dB readout                        |
-| **Meter R dB Display**  | `meter-R-db`        | Right dB readout                       |
-| **Meter Clip Button**   | `meter-clip-button` | Clipping indicator button              |
-| **Parameter Container** | `param-{id}`        | Parameter wrapper (e.g., `param-gain`) |
-| **Parameter Label**     | `param-{id}-label`  | Parameter name label                   |
-| **Parameter Slider**    | `param-{id}-slider` | Range input element                    |
-| **Parameter Value**     | `param-{id}-value`  | Displayed value                        |
-| **Version Badge**       | `version-badge`     | Version display                        |
-| **Resize Handle**       | `resize-handle`     | Window resize button                   |
-| **Connection Status**   | `connection-status` | WebSocket status indicator             |
-
-### Playwright Selectors
-
-```typescript
-// Full page
-page.locator('[data-testid="app-root"]');
-
-// Individual component
-page.locator('[data-testid="meter"]');
-page.locator('[data-testid="meter-L"]');
-page.locator('[data-testid="param-gain"]');
-
-// Nested elements
-page.locator('[data-testid="meter-L-peak"]');
-page.locator('[data-testid="param-gain-slider"]');
-```
+| Case   | State                 | Result  | Screenshot Evidence                            |
+| ------ | --------------------- | ------- | ---------------------------------------------- |
+| VT-001 | Default               | ✅ PASS | `artifacts/visual-testing/VT-001-default.png`  |
+| VT-002 | Focus ring visible    | ✅ PASS | `artifacts/visual-testing/VT-002-focus.png`    |
+| VT-003 | Disabled button style | ❌ FAIL | `artifacts/visual-testing/VT-003-disabled.png` |
 
 ---
 
-## Baseline Storage
+## Test IDs and Stable Selection
 
-Baselines are stored externally in your user directory, not in the git repository.
+Wavecraft UI components expose `data-testid` attributes for stable targeting and verification.
 
-### Directory Structure
+Examples:
 
-```
-~/.wavecraft/
-└── visual-baselines/
-    ├── manifest.json              # Baseline metadata
-    ├── full-page/
-    │   ├── default_800x600.png
-    │   ├── metering-active_800x600.png
-    │   ├── clipping_800x600.png
-    │   ├── resized_600x400.png
-    │   ├── resized_1024x768.png
-    │   └── disconnected_800x600.png
-    └── components/
-        ├── meter/
-        │   ├── silent.png
-        │   ├── low.png
-        │   ├── medium.png
-        │   ├── high.png
-        │   └── clipping.png
-        ├── parameter-slider/
-        │   ├── minimum.png
-        │   ├── middle.png
-        │   ├── maximum.png
-        │   ├── hover.png
-        │   └── dragging.png
-        ├── version-badge/
-        │   └── default.png
-        ├── resize-handle/
-        │   ├── default.png
-        │   ├── hover.png
-        │   └── dragging.png
-        └── connection-status/
-            ├── disconnected.png
-            └── reconnecting.png
-```
+- `app-root`
+- `meter`, `meter-L`, `meter-R`
+- `param-{id}`, `param-{id}-slider`
+- `version-badge`
+- `connection-status`
 
-### Naming Convention
-
-**Full-page screenshots:**
-
-```
-{scenario}_{viewport}.png
-```
-
-- Example: `default_800x600.png`, `metering-active_800x600.png`
-
-**Component screenshots:**
-
-```
-{state}.png
-```
-
-- Example: `silent.png`, `hover.png`, `clipping.png`
-- Stored in `components/{component-name}/` subdirectory
-
----
-
-## Visual Test Scenarios
-
-### Full-Page Scenarios
-
-| ID    | Scenario        | Description                    | Setup                                |
-| ----- | --------------- | ------------------------------ | ------------------------------------ |
-| FP-01 | Default state   | Fresh load, default parameters | Navigate to app, wait for connection |
-| FP-02 | Metering active | Meters showing signal          | Play audio or inject test signal     |
-| FP-03 | Clipping state  | Clipping indicator visible     | Trigger clipping (signal > 0dB)      |
-| FP-04 | Resized small   | 600×400 viewport               | Resize window to 600×400             |
-| FP-05 | Resized large   | 1024×768 viewport              | Resize window to 1024×768            |
-| FP-06 | Disconnected    | WebSocket disconnected         | Stop WebSocket server                |
-
-### Component Scenarios
-
-#### Meter Component
-
-| State    | Description  | Setup                     |
-| -------- | ------------ | ------------------------- |
-| Silent   | No signal    | Bars at minimum           |
-| Low      | -40dB signal | ~10% bar height           |
-| Medium   | -12dB signal | ~60% bar height           |
-| High     | -3dB signal  | ~90% bar height           |
-| Clipping | 0dB+ signal  | Full bar + clip indicator |
-
-#### Parameter Slider
-
-| State    | Description      | Setup                 |
-| -------- | ---------------- | --------------------- |
-| Minimum  | Value at 0%      | Set parameter to 0.0  |
-| Middle   | Value at 50%     | Set parameter to 0.5  |
-| Maximum  | Value at 100%    | Set parameter to 1.0  |
-| Hover    | Mouse over thumb | Hover on slider thumb |
-| Dragging | Dragging thumb   | Mouse down on thumb   |
-
-#### Connection Status
-
-| State        | Description          | Setup                    |
-| ------------ | -------------------- | ------------------------ |
-| Connected    | Banner hidden        | Normal operation         |
-| Disconnected | Red banner           | Stop WebSocket server    |
-| Reconnecting | Reconnecting message | Stop then restart server |
-
----
-
-## Agent Workflow Examples
-
-### Capture Full-Page Screenshot
-
-```
-User: "Take a screenshot of the full plugin UI"
-
-Agent:
-1. Uses Playwright MCP to navigate to http://localhost:5173
-2. Waits for `[data-testid="app-root"]` to be visible
-3. Captures full-page screenshot
-4. Saves to temp location or compares to baseline
-```
-
-### Capture Component Screenshot
-
-```
-User: "Capture the meter component"
-
-Agent:
-1. Navigates to app
-2. Locates `[data-testid="meter"]`
-3. Captures screenshot of element only
-4. Compares to baseline in ~/.wavecraft/visual-baselines/components/meter/
-```
-
-### Compare to Baseline
-
-```
-User: "Compare the current meter to baseline"
-
-Agent:
-1. Captures current meter screenshot
-2. Loads baseline from ~/.wavecraft/visual-baselines/components/meter/default.png
-3. Compares using pixelmatch (0.1% threshold)
-4. Reports: PASS, FAIL (with diff %), or NO_BASELINE
-```
-
-### Save New Baseline
-
-```
-User: "Save this as the new baseline for clipping state"
-
-Agent:
-1. Captures current screenshot
-2. Saves to ~/.wavecraft/visual-baselines/components/meter/clipping.png
-3. Updates manifest.json with metadata
-```
-
----
-
-## Baseline Management
-
-### Creating Baselines
-
-When a baseline doesn't exist, the agent will prompt to save the current state as a new baseline.
-
-```
-Status: NO_BASELINE
-Message: No baseline found for 'components/meter/clipping'
-Action: Save current capture as baseline? (Y/n)
-```
-
-### Updating Baselines
-
-When UI changes are intentional, update the baseline:
-
-```
-User: "Update the baseline for the default state"
-
-Agent:
-1. Captures current state
-2. Replaces existing baseline
-3. Updates manifest.json timestamp
-```
-
-### Listing Baselines
-
-```
-User: "Show me all available baselines"
-
-Agent:
-Lists all baselines from manifest.json with:
-- ID (e.g., "full-page/default_800x600")
-- Type (full-page or component)
-- State
-- Capture date
-- App version
-```
-
----
-
-## Visual Diff Reporting
-
-When differences are detected:
-
-```
-Status: FAIL
-Message: Visual difference detected in 'components/meter/default'
-Diff: 2.3% pixels differ (threshold: 0.1%)
-
-Files:
-  Baseline: ~/.wavecraft/visual-baselines/components/meter/default.png
-  Current:  ~/.wavecraft/visual-baselines/.diff/meter_default_current.png
-  Diff:     ~/.wavecraft/visual-baselines/.diff/meter_default_diff.png
-
-Action: Review diff and either:
-  1. Fix regression in code
-  2. Update baseline if change is intentional
-```
-
-**Diff Image Legend:**
-
-- **Magenta pixels** — Significant differences
-- **Yellow pixels** — Anti-aliasing differences (usually acceptable)
-
----
-
-## Testing Meter States
-
-To test meter visualizations at specific levels:
-
-### Option A: Real Audio
-
-Play audio through the plugin and observe meter response.
-
-### Option B: CSS Override (Visual Testing Only)
-
-For purely visual validation without engine:
-
-```typescript
-// Agent injects CSS to set meter bar heights
-await page.addStyleTag({
-  content: `
-    [data-testid="meter-L-peak"] { height: 60% !important; }
-    [data-testid="meter-L-rms"] { height: 40% !important; }
-  `
-});
-```
-
-### Option C: Debug IPC (Future)
-
-Once implemented, the agent can set exact meter levels:
-
-```typescript
-// Set left channel to -12dB
-await page.evaluate(() => {
-  window.ipc.invoke('debug.setMeterLevel', { channel: 0, level: -12 });
-});
-```
+Use these IDs to guide what you validate and capture in screenshots.
 
 ---
 
 ## Troubleshooting
 
-### Browser Won't Connect
-
-**Problem:** Agent cannot navigate to `http://localhost:5173`
-
-**Solution:**
+### Simple Browser cannot load `http://localhost:5173`
 
 - Verify `cargo xtask dev` is running
-- Check Vite dev server logs
-- Try manually opening `http://localhost:5173` in browser
+- Check for port conflicts on `5173` and `9000`
+- Restart dev servers
 
-### WebSocket Connection Failed
+### UI stuck in connecting state
 
-**Problem:** UI shows "Connecting..." indefinitely
+- Confirm WebSocket server started by `cargo xtask dev`
+- Check terminal logs for startup errors
 
-**Solution:**
+### Missing screenshot evidence
 
-- Verify WebSocket server is running on port 9000
-- Check for port conflicts: `lsof -i :9000`
-- Restart `cargo xtask dev`
-
-### Baseline Not Found
-
-**Problem:** Agent reports "NO_BASELINE"
-
-**Solution:**
-
-- First time testing? Save current state as baseline
-- Check `~/.wavecraft/visual-baselines/` exists
-- Verify `manifest.json` is valid JSON
-
-### Screenshot Differences Too Sensitive
-
-**Problem:** Minor pixel differences trigger failures
-
-**Solution:**
-
-- Increase threshold in comparison (default 0.1%)
-- Ignore anti-aliasing differences (`includeAA: false`)
-- Ensure consistent viewport size
-
----
-
-## Playwright MCP Tools Reference
-
-The agent uses these Playwright MCP tools:
-
-| Tool                 | Purpose                                 |
-| -------------------- | --------------------------------------- |
-| `browser_navigate`   | Navigate to URL                         |
-| `browser_screenshot` | Capture full-page or element screenshot |
-| `browser_click`      | Click element                           |
-| `browser_type`       | Type text into input                    |
-| `browser_hover`      | Hover over element                      |
-| `browser_wait_for`   | Wait for selector/condition             |
-| `browser_evaluate`   | Execute JavaScript in page context      |
+- Testing is **not complete** until screenshot references are recorded in `test-plan.md`
 
 ---
 
 ## Related Documentation
 
-- [Implementation Plan](../feature-specs/_archive/browser-visual-testing/implementation-plan.md)
-- [Low-Level Design](../feature-specs/_archive/browser-visual-testing/low-level-design-browser-visual-testing.md)
-- [User Stories](../feature-specs/_archive/browser-visual-testing/user-stories.md)
+- [Development Workflows](../architecture/development-workflows.md)
+- [Coding Standards — Testing](../architecture/coding-standards-testing.md)
+- [Agent Development Flow](../architecture/agent-development-flow.md)

@@ -123,7 +123,7 @@ wavecraft/
 - [Coding Standards](docs/architecture/coding-standards.md) — Coding conventions overview and navigation hub for language-specific guides
 - [Agent Development Flow](docs/architecture/agent-development-flow.md) — How specialized agents collaborate through the development lifecycle
 - [Roadmap](docs/roadmap.md) — Milestone tracking and implementation progress
-- [Visual Testing Guide](docs/guides/visual-testing.md) — Playwright-based visual testing with agent-driven workflows
+- [Visual Testing Guide](docs/guides/visual-testing.md) — VS Code Simple Browser visual testing with screenshot evidence workflows
 
 ## Building
 

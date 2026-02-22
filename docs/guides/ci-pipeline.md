@@ -202,11 +202,13 @@ cargo xtask ci-check -F --skip-cd
 - Same checks as CI pipeline (docs, UI build, lint+typecheck, tests; plus template validation and CD dry-run with `--full`)
 - Recommended before every push
 
-**Visual testing** is done separately via the `playwright-mcp-ui-testing` skill:
+**Visual testing** is done separately via the VS Code integrated browser (Simple Browser) workflow:
 
 ```bash
 cargo xtask dev  # Start dev servers
-# Then use Playwright MCP for browser-based testing
+# Then open http://localhost:5173 in VS Code Simple Browser,
+# capture screenshots of changed/verified states,
+# and record screenshot evidence in test-plan.md
 ```
 
 ### Docker-Based Testing (For CI Workflow Debugging)

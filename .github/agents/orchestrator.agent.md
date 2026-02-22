@@ -31,7 +31,7 @@ handoffs:
     send: true
   - label: Testing Phase
     agent: tester
-    prompt: Test this implementation. For any UI/visual changes, run required Playwright screenshot-based in-app checks.
+    prompt: Test this implementation. For any UI/visual changes, run required VS Code integrated browser (Simple Browser) screenshot-based in-app checks and record evidence.
     send: true
   - label: QA Phase
     agent: qa
@@ -142,7 +142,7 @@ Orchestrator → Coder → Tester → (if needed) QA
 ### UI/UX Change
 
 ```
-Orchestrator → UX Designer → Tester (required Playwright screenshot-based in-app checks for UI/visual changes) → (if issues) UX Designer → (if pass) Orchestrator
+Orchestrator → UX Designer → Tester (required VS Code integrated browser (Simple Browser) screenshot-based in-app checks for UI/visual changes) → (if issues) UX Designer → (if pass) Orchestrator
 ```
 
 ## When Agents Hand Back to You

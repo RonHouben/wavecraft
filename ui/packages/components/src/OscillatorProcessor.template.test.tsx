@@ -2,6 +2,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ParameterInfo } from '@wavecraft/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Source under test lives in sdk-template/ui/src/processors/OscillatorProcessor.tsx.
+
 const mockUseHasProcessorInSignalChain = vi.hoisted(() => vi.fn());
 const mockUseParametersForProcessor = vi.hoisted(() => vi.fn());
 const mockSetParameter = vi.hoisted(() => vi.fn(async () => undefined));

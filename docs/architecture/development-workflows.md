@@ -7,7 +7,7 @@ This document covers browser development mode, the build system, visual testing,
 - [High-Level Design](./high-level-design.md) — Architecture overview, component design, data flows
 - [Coding Standards — Testing](./coding-standards-testing.md) — Testing, linting, logging conventions
 - [Agent Development Flow](./agent-development-flow.md) — Agent testing workflow
-- [Visual Testing Guide](../guides/visual-testing.md) — Playwright-based screenshot comparison
+- [Visual Testing Guide](../guides/visual-testing.md) — VS Code integrated browser (Simple Browser) screenshot workflow
 - [CI/CD Pipeline Guide](../guides/ci-pipeline.md) — Pipeline details and troubleshooting
 - [macOS Signing Guide](../guides/macos-signing.md) — Code signing and notarization setup
 
@@ -376,14 +376,15 @@ cargo xtask all
 
 ### Visual Testing Workflow
 
-Visual testing is done separately from automated checks using the Playwright MCP skill:
+Visual testing is done separately from automated checks using the VS Code integrated browser (Simple Browser):
 
 ```bash
 # 1. Start dev servers
 cargo xtask dev
 
-# 2. Use Playwright MCP skill for browser-based testing
-#    (handled by Tester agent via "playwright-mcp-ui-testing" skill)
+# 2. Open http://localhost:5173 in VS Code Simple Browser
+#    Capture screenshots of changed/verified states
+#    Record screenshot evidence paths/references in test-plan.md
 
 # 3. Stop servers when done
 pkill -f "cargo xtask dev"
@@ -511,30 +512,30 @@ Wavecraft uses GitHub Actions for continuous integration and release automation.
 
 ## Visual Testing
 
-Wavecraft supports browser-based visual testing using Playwright MCP for agent-driven UI validation.
+Wavecraft supports browser-based visual testing using the VS Code integrated browser (Simple Browser) for in-app UI validation.
 
 ### Architecture
 
 ```
-  Agent / Developer                 Playwright MCP              Browser
+    Agent / Developer               VS Code Simple Browser          Browser
   ┌─────────────┐                  ┌─────────────┐           ┌─────────────┐
-  │             │ "take screenshot"│             │   CDP     │             │
-  │   Copilot   │─────────────────►│  Playwright │──────────►│  Chromium   │
-  │             │                  │  MCP Server │           │  Wavecraft UI  │
-  │             │◄─────────────────│             │◄──────────│             │
-  └─────────────┘  screenshot.png  └─────────────┘           └──────┬──────┘
+    │             │ "open + verify"  │             │  embedded │             │
+    │   Tester    │─────────────────►│  Simple      │  webview  │  Wavecraft UI │
+    │             │                  │  Browser     │           │             │
+    │             │◄─────────────────│             │◄──────────│             │
+    └─────────────┘  screenshot refs  └─────────────┘           └──────┬──────┘
         │                                                          │ ws://
         ▼                                                          ▼
-  ┌─────────────┐                                           ┌─────────────┐
-  │  External   │                                           │    Rust     │
-  │  Baselines  │                                           │   Engine    │
-  │ ~/.wavecraft/  │                                           │ (xtask dev) │
-  └─────────────┘                                           └─────────────┘
+    ┌─────────────┐                                           ┌─────────────┐
+    │ Screenshot  │                                           │    Rust     │
+    │ Evidence    │                                           │   Engine    │
+    │ (test-plan) │                                           │ (xtask dev) │
+    └─────────────┘                                           └─────────────┘
 ```
 
 ### Test ID Convention
 
-All UI components have `data-testid` attributes for reliable Playwright selection:
+All UI components have `data-testid` attributes for reliable visual verification and evidence capture:
 
 | Component  | Test ID Pattern                       | Example             |
 | ---------- | ------------------------------------- | ------------------- |
@@ -554,11 +555,11 @@ Visual baselines are stored externally (not in git) at `~/.wavecraft/visual-base
 
 ### Key Design Decisions
 
-| Decision            | Choice                     | Rationale                       |
-| ------------------- | -------------------------- | ------------------------------- |
-| Automation tool     | Playwright MCP             | Agent-native, no custom scripts |
-| Baseline location   | External (`~/.wavecraft/`) | Repository stays lean           |
-| Test orchestration  | Agent-driven               | On-demand, not CI               |
-| Component targeting | `data-testid` attributes   | Stable selectors                |
+| Decision            | Choice                    | Rationale                       |
+| ------------------- | ------------------------- | ------------------------------- |
+| Browser workflow    | VS Code Simple Browser    | Integrated, reproducible checks |
+| Evidence location   | Referenced in `test-plan` | Auditability for sign-off       |
+| Test orchestration  | Tester-driven             | On-demand, not CI               |
+| Component targeting | `data-testid` attributes  | Stable selectors                |
 
 See [Visual Testing Guide](../guides/visual-testing.md) for complete setup and usage instructions.
