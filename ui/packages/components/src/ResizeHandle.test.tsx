@@ -29,7 +29,7 @@ describe('ResizeHandle', () => {
     expect(handle).toHaveClass('right-2');
     expect(handle).toHaveClass('bg-plugin-surface');
     expect(handle).toHaveClass('focus-visible:ring-2');
-    expect(handle).toHaveClass('focus-visible:ring-accent');
+    expect(handle).toHaveClass('focus-visible:ring-accent-light');
   });
 
   it('requests resize while dragging', () => {

@@ -79,6 +79,12 @@ describe('Meter', () => {
 
     const clipButton = screen.getByTestId('meter-clip-button');
     expect(clipButton).toHaveClass('focus-visible:ring-2');
-    expect(clipButton).toHaveClass('focus-visible:ring-accent');
+    expect(clipButton).toHaveClass('focus-visible:ring-accent-light');
+  });
+
+  it('renders plugin state badge when provided', () => {
+    render(<Meter connected frame={frame} pluginState="mapped" />);
+
+    expect(screen.getByText('MAP')).toBeInTheDocument();
   });
 });

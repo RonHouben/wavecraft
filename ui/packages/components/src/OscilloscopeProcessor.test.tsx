@@ -55,9 +55,9 @@ describe('OscilloscopeProcessor', () => {
     render(<OscilloscopeProcessor connected frame={frame} />);
 
     expect(screen.getByTestId('osc-channel-view')).toHaveClass('focus-visible:ring-2');
-    expect(screen.getByTestId('osc-channel-view')).toHaveClass('focus-visible:ring-accent');
+    expect(screen.getByTestId('osc-channel-view')).toHaveClass('focus-visible:ring-accent-light');
     expect(screen.getByTestId('osc-trigger-mode')).toHaveClass('focus-visible:ring-2');
-    expect(screen.getByTestId('osc-trigger-mode')).toHaveClass('focus-visible:ring-accent');
+    expect(screen.getByTestId('osc-trigger-mode')).toHaveClass('focus-visible:ring-accent-light');
   });
 
   it('shows no-signal label when frame reports no signal', () => {

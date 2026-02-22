@@ -7,6 +7,14 @@
 // Core plugin UI components
 export { Meter } from './Meter';
 export type { MeterProps } from './Meter';
+export { Button } from './Button';
+export type { ButtonProps } from './Button';
+export { Toggle } from './Toggle';
+export type { ToggleProps } from './Toggle';
+export { Knob } from './Knob';
+export type { KnobProps } from './Knob';
+export { Fader } from './Fader';
+export type { FaderProps } from './Fader';
 export { ParameterSlider } from './ParameterSlider';
 export type { ParameterSliderProps } from './ParameterSlider';
 export { ParameterGroup } from './ParameterGroup';
@@ -35,6 +43,8 @@ export type {
   ParameterInfo,
   ParameterType,
   ParameterValue,
+  ControlVisualState,
+  PluginVisualState,
   MeterFrame,
   AudioRuntimePhase,
   AudioDiagnostic,

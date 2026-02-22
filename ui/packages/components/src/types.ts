@@ -1,6 +1,9 @@
 export type ParameterType = 'float' | 'bool' | 'enum';
 export type ParameterValue = number | boolean;
 
+export type ControlVisualState = 'default' | 'loading' | 'error';
+export type PluginVisualState = 'bypassed' | 'armed' | 'mapped';
+
 export interface ParameterInfo {
   id: string;
   name: string;

@@ -5,8 +5,13 @@
  */
 
 import React, { useEffect, useState, useRef } from 'react';
-import type { MeterFrame } from './types';
-import { focusRingClass, surfaceCardClass } from './utils/classNames';
+import type { ControlVisualState, MeterFrame, PluginVisualState } from './types';
+import { focusRingClass, mergeClassNames, surfaceCardClass } from './utils/classNames';
+import {
+  getControlStateClass,
+  getStateBadgeClass,
+  getStateBadgeLabel,
+} from './utils/controlStates';
 
 const METER_FLOOR_DB = -60;
 const METER_RANGE_DB = 60; // 0 to -60 dB
@@ -23,6 +28,8 @@ function linearToDb(linear: number, floorDb = METER_FLOOR_DB): number {
 export interface MeterProps {
   readonly connected: boolean;
   readonly frame: MeterFrame | null;
+  readonly state?: ControlVisualState;
+  readonly pluginState?: PluginVisualState;
 }
 
 interface MeterChannelProps {
@@ -126,7 +133,12 @@ function MeterChannel({
   );
 }
 
-export function Meter({ connected, frame }: Readonly<MeterProps>): React.JSX.Element {
+export function Meter({
+  connected,
+  frame,
+  pluginState,
+  state = 'default',
+}: Readonly<MeterProps>): React.JSX.Element {
   const [channelClippedState, setChannelClippedState] = useState<Record<'L' | 'R', boolean>>({
     L: false,
     R: false,
@@ -155,30 +167,77 @@ export function Meter({ connected, frame }: Readonly<MeterProps>): React.JSX.Ele
 
   const clippedL = channelClippedState.L;
   const clippedR = channelClippedState.R;
+  const badgeLabel = getStateBadgeLabel(pluginState);
+  const isLoading = state === 'loading' || !connected;
+  const isError = state === 'error';
+  const isBypassed = pluginState === 'bypassed';
 
   const handleResetClip = (): void => {
     resetHandlersRef.current.L();
     resetHandlersRef.current.R();
   };
 
-  // Show connecting state when not connected
-  if (!connected) {
+  // Show connecting/loading state
+  if (isLoading) {
     return (
-      <div data-testid="meter" className={`flex flex-col gap-2 font-sans ${surfaceCardClass}`}>
+      <div
+        data-testid="meter"
+        data-state={state}
+        data-plugin-state={pluginState}
+        className={mergeClassNames(
+          'flex flex-col gap-2 font-sans',
+          surfaceCardClass,
+          getControlStateClass({ state, pluginState }),
+          isError ? 'border-meter-clip' : ''
+        )}
+      >
         <div className="flex items-center justify-between gap-2">
           <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Levels</div>
+          {badgeLabel ? (
+            <span
+              className={mergeClassNames(
+                'rounded-sm border px-1 py-0.5 font-mono text-[10px] leading-none',
+                getStateBadgeClass(pluginState)
+              )}
+              aria-hidden="true"
+            >
+              {badgeLabel}
+            </span>
+          ) : null}
         </div>
         <div className="flex items-center justify-center py-8 text-sm text-gray-400">
-          ⏳ Connecting...
+          ⏳ {isError ? 'Meter unavailable' : 'Connecting...'}
         </div>
       </div>
     );
   }
 
   return (
-    <div data-testid="meter" className={`flex flex-col gap-2 font-sans ${surfaceCardClass}`}>
+    <div
+      data-testid="meter"
+      data-state={state}
+      data-plugin-state={pluginState}
+      className={mergeClassNames(
+        'flex flex-col gap-2 font-sans',
+        surfaceCardClass,
+        getControlStateClass({ pluginState, state }),
+        isError ? 'border-meter-clip' : '',
+        isBypassed ? 'opacity-70' : ''
+      )}
+    >
       <div className="flex items-center justify-between gap-2">
         <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Levels</div>
+        {badgeLabel ? (
+          <span
+            className={mergeClassNames(
+              'rounded-sm border px-1 py-0.5 font-mono text-[10px] leading-none',
+              getStateBadgeClass(pluginState)
+            )}
+            aria-hidden="true"
+          >
+            {badgeLabel}
+          </span>
+        ) : null}
         {(clippedL || clippedR) && (
           <button
             data-testid="meter-clip-button"
