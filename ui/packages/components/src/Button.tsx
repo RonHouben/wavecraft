@@ -57,7 +57,9 @@ export function Button({
         buttonSizeClassMap[size],
         focusRingClass,
         getControlStateClass({ disabled: isDisabled, pluginState, state }),
-        active ? 'border-accent bg-accent/15 font-semibold text-accent' : '',
+        active
+          ? 'border-accent bg-gradient-to-b from-accent/20 to-accent/10 font-semibold text-accent shadow-md ring-1 ring-inset ring-accent/30'
+          : '',
         isError ? 'border-meter-clip bg-meter-clip/10 text-meter-clip' : '',
         className
       )}
@@ -81,12 +83,6 @@ export function Button({
       )}
 
       <span>{children}</span>
-
-      {active ? (
-        <span aria-hidden="true" className="font-mono text-type-xs leading-none">
-          ✓
-        </span>
-      ) : null}
 
       {badgeLabel ? (
         <span

@@ -43,13 +43,17 @@ describe('Button', () => {
     expect(button).toHaveAttribute('aria-invalid', 'true');
   });
 
-  it('renders explicit active state semantics and indicator', () => {
+  it('renders explicit active state semantics with accent styling', () => {
     render(<Button active>Mode A</Button>);
 
     const button = screen.getByRole('button', { name: 'Mode A' });
     expect(button).toHaveAttribute('aria-pressed', 'true');
     expect(button).toHaveAttribute('data-active', 'true');
-    expect(screen.getByText('✓')).toBeInTheDocument();
+    expect(button).toHaveClass('border-accent');
+    expect(button).toHaveClass('from-accent/20');
+    expect(button).toHaveClass('to-accent/10');
+    expect(button).toHaveClass('ring-accent/30');
+    expect(screen.queryByText('✓')).not.toBeInTheDocument();
   });
 
   it('keeps legacy pressed behavior for backwards compatibility', () => {
@@ -78,6 +82,7 @@ describe('Button', () => {
     const button = screen.getByRole('button', { name: 'Explicit Off' });
     expect(button).toHaveAttribute('aria-pressed', 'false');
     expect(button).toHaveAttribute('data-active', 'false');
+    expect(button).not.toHaveClass('border-accent');
     expect(screen.queryByText('✓')).not.toBeInTheDocument();
   });
 });
