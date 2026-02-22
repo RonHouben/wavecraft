@@ -20,6 +20,23 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 
 ---
 
+## Release Hygiene (Next Minor Cycle)
+
+- **Remove `ui-ux-refactor` compatibility shims after the migration window closes**
+	- **Scope**
+		- Retire deprecated wrapper re-exports in `@wavecraft/components`
+		- Remove compatibility wrappers in `sdk-template/ui`
+		- Clean up deprecated aliases/hooks in `@wavecraft/core` once the migration window is complete
+	- **Acceptance criteria**
+		- Migration window closure is confirmed and communicated in the release notes
+		- First-party templates and docs reference only the current (non-deprecated) UI APIs
+		- Deprecated shim entry points are no longer shipped in the targeted minor release
+		- A short upgrade note is published for plugin teams still on deprecated imports/hooks
+	- **Risk note**
+		- If shims are removed too early, downstream plugin UIs may break. Mitigate by keeping a clear migration window and explicit deprecation messaging before removal.
+
+---
+
 ## Performance
 
 | Item                                                    | Notes                               |
@@ -100,6 +117,7 @@ When planning a new milestone, the Product Owner reviews this backlog and promot
 
 | Date       | Update                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-02-21 | **Backlog addition (optional release hygiene):** Added next-minor-cycle item to remove temporary UI compatibility shims introduced during `ui-ux-refactor`, including scope for `@wavecraft/components`, `sdk-template/ui`, and `@wavecraft/core`, with acceptance criteria and migration-window risk note.                                                                                                               |
 | 2026-02-19 | **Item promoted to Milestone 19:** Removed `Refactor wavecraft_plugin! macro for maintainability` — promoted to M19 (Codebase Refactor Sweep) as part of Tier 1 deep refactor of `plugin.rs`.                                                                                                                                                                                                                            |
 | 2026-02-19 | **Backlog cleanup (item closed):** Removed `SDK dev mode: crate version mismatch` — CLI now patches transitive dev deps (`wavecraft-dsp`, `wavecraft-dev-server`) to path dependencies via `apply_local_dev_overrides` in `cli/src/template/mod.rs`. Fixed broken link for WASM audio input item (now points to archived spec).                                                                                          |
 | 2026-02-18 | **Backlog cleanup (item closed):** Removed `Oscillator blocks DAW passthrough in generated projects` after Milestone 18.11 completion and archival to `docs/feature-specs/_archive/oscillator-passthrough-mix/`.                                                                                                                                                                                                         |
