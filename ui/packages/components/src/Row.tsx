@@ -5,7 +5,7 @@ export interface RowProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children
   readonly children: ReactNode;
 }
 
-const BASE_ROW_CLASS_NAME = 'flex flex-wrap items-center gap-2';
+const BASE_ROW_CLASS_NAME = 'flex flex-wrap w-full items-center gap-2';
 
 export function Row({ children, className, ...props }: Readonly<RowProps>): React.JSX.Element {
   return (
