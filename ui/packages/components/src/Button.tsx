@@ -58,7 +58,7 @@ export function Button({
         focusRingClass,
         getControlStateClass({ disabled: isDisabled, pluginState, state }),
         active
-          ? 'border-accent bg-gradient-to-b from-accent/20 to-accent/10 font-semibold text-accent shadow-md ring-1 ring-inset ring-accent/30'
+          ? 'border-accent-light bg-gradient-to-b from-accent/30 to-accent/15 font-semibold text-accent shadow-md ring-1 ring-inset ring-accent/45'
           : '',
         isError ? 'border-meter-clip bg-meter-clip/10 text-meter-clip' : '',
         className

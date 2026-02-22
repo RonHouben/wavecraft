@@ -49,10 +49,10 @@ describe('Button', () => {
     const button = screen.getByRole('button', { name: 'Mode A' });
     expect(button).toHaveAttribute('aria-pressed', 'true');
     expect(button).toHaveAttribute('data-active', 'true');
-    expect(button).toHaveClass('border-accent');
-    expect(button).toHaveClass('from-accent/20');
-    expect(button).toHaveClass('to-accent/10');
-    expect(button).toHaveClass('ring-accent/30');
+    expect(button).toHaveClass('border-accent-light');
+    expect(button).toHaveClass('from-accent/30');
+    expect(button).toHaveClass('to-accent/15');
+    expect(button).toHaveClass('ring-accent/45');
     expect(screen.queryByText('✓')).not.toBeInTheDocument();
   });
 
