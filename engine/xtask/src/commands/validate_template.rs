@@ -524,6 +524,10 @@ fn output_contains_asset_regression_signature(output: &str) -> bool {
         || output.contains("assets/ui-dist") && output.contains("No such file or directory")
 }
 
+fn output_contains_ready_marker(output: &str) -> bool {
+    output.contains("All servers running")
+}
+
 fn cleanup_start_smoke_ports(ws_port: u16, ui_port: u16, verbose: bool) {
     for port in [ws_port, ui_port] {
         let lsof_output = Command::new("lsof")
@@ -560,6 +564,9 @@ fn validate_git_source_start_smoke(
     verbose: bool,
 ) -> Result<()> {
     ensure_generated_plugin_root(project_dir)?;
+
+    // Ensure deterministic startup for fixed smoke-test ports across repeated runs.
+    cleanup_start_smoke_ports(ws_port, ui_port, verbose);
 
     if verbose {
         println!(
@@ -605,11 +612,41 @@ fn validate_git_source_start_smoke(
                 );
             }
 
-            if !combined.contains("All servers running") {
+            if !output_contains_ready_marker(combined.as_str()) {
                 bail!(
                     "`wavecraft start` exited without reaching ready state marker\nstdout:\n{}\nstderr:\n{}",
                     stdout,
                     stderr
+                );
+            }
+
+            return Ok(());
+        }
+
+        let combined = format!(
+            "{}\n{}",
+            output_capture.stdout_lossy(),
+            output_capture.stderr_lossy()
+        );
+
+        if output_contains_ready_marker(combined.as_str()) {
+            if verbose {
+                println!("Startup smoke reached ready marker; terminating bounded run");
+            }
+
+            terminate_start_smoke_child(&mut child, verbose)?;
+            output_capture.drain_after_exit()?;
+
+            let stdout = output_capture.stdout_lossy();
+            let stderr = output_capture.stderr_lossy();
+            let combined = format!("{}\n{}", stdout, stderr);
+
+            cleanup_start_smoke_ports(ws_port, ui_port, verbose);
+
+            if output_contains_asset_regression_signature(combined.as_str()) {
+                bail!(
+                    "Detected fallback asset regression signature in startup smoke output:\n{}",
+                    combined
                 );
             }
 
@@ -632,7 +669,7 @@ fn validate_git_source_start_smoke(
                 );
             }
 
-            if !combined.contains("All servers running") {
+            if !output_contains_ready_marker(combined.as_str()) {
                 bail!(
                     "Startup smoke timed out before ready marker ({START_SMOKE_TIMEOUT_SECS}s)\nstdout:\n{}\nstderr:\n{}",
                     stdout,
@@ -1086,6 +1123,18 @@ mod tests {
     fn test_output_contains_asset_regression_signature_ignores_unrelated_output() {
         let output = "All servers running";
         assert!(!output_contains_asset_regression_signature(output));
+    }
+
+    #[test]
+    fn test_output_contains_ready_marker_detects_expected_text() {
+        let output = "...\nAll servers running\n...";
+        assert!(output_contains_ready_marker(output));
+    }
+
+    #[test]
+    fn test_output_contains_ready_marker_ignores_unrelated_output() {
+        let output = "Server starting";
+        assert!(!output_contains_ready_marker(output));
     }
 
     #[test]

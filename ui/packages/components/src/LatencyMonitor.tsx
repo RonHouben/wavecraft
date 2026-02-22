@@ -3,11 +3,20 @@
  */
 
 import React from 'react';
-import { useLatencyMonitor } from '@wavecraft/core';
 
-export function LatencyMonitor(): React.JSX.Element {
-  const { latency, avg, max, count } = useLatencyMonitor(1000);
+export interface LatencyMonitorProps {
+  readonly latency: number | null;
+  readonly avg: number;
+  readonly max: number;
+  readonly count: number;
+}
 
+export function LatencyMonitor({
+  latency,
+  avg,
+  max,
+  count,
+}: Readonly<LatencyMonitorProps>): React.JSX.Element {
   const getStatusColor = (): string => {
     if (avg < 5) return 'text-green-400';
     if (avg < 10) return 'text-yellow-400';

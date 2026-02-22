@@ -3,56 +3,46 @@
  */
 
 import React from 'react';
-import { useParameter, logger } from '@wavecraft/core';
-import type { ParameterId } from '@wavecraft/core';
+import { focusRingClass, interactionStateClass } from './utils/classNames';
 
-interface ParameterToggleProps {
-  readonly id: ParameterId;
+export interface ParameterToggleProps {
+  readonly id: string;
+  readonly name: string;
+  readonly value: boolean;
+  readonly disabled?: boolean;
+  readonly onChange: (value: boolean) => void | Promise<void>;
 }
 
-export function ParameterToggle({ id }: ParameterToggleProps): React.JSX.Element {
-  const { param, setValue, isLoading, error } = useParameter(id);
-
-  if (isLoading) {
-    return (
-      <div className="mb-4 flex items-center justify-between rounded-lg border border-plugin-border bg-plugin-surface p-4 italic text-gray-500">
-        Loading {id}...
-      </div>
-    );
-  }
-
-  if (error || !param) {
-    return (
-      <div className="mb-4 flex items-center justify-between rounded-lg border border-red-400 bg-plugin-surface p-4 text-red-400">
-        Error: {error?.message || 'Parameter not found'}
-      </div>
-    );
-  }
-
-  const isOn = Boolean(param.value);
+export function ParameterToggle({
+  id,
+  name,
+  value,
+  disabled = false,
+  onChange,
+}: Readonly<ParameterToggleProps>): React.JSX.Element {
+  const isOn = Boolean(value);
 
   const handleToggle = (): void => {
     const newValue = !isOn;
-    setValue(newValue).catch((err) => {
-      logger.error('Failed to set parameter', { error: err, parameterId: id });
-    });
+    void onChange(newValue);
   };
 
   return (
     <div className="mb-4 flex items-center justify-between rounded-lg border border-plugin-border bg-plugin-surface p-4">
       <label htmlFor={`toggle-${id}`} className="font-semibold text-gray-200">
-        {param.name}
+        {name}
       </label>
       <button
         id={`toggle-${id}`}
-        className={`relative h-[26px] w-[50px] cursor-pointer rounded-full border-none outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-plugin-surface ${
+        className={`relative h-[26px] w-[50px] cursor-pointer rounded-full border-none motion-safe:transition-colors motion-safe:duration-200 ${focusRingClass} ${interactionStateClass} ${
           isOn ? 'bg-accent hover:bg-accent-light' : 'bg-gray-600 hover:bg-gray-500'
         }`}
         onClick={handleToggle}
         aria-pressed={isOn}
+        disabled={disabled}
       >
         <span
-          className={`absolute top-[3px] h-5 w-5 rounded-full bg-white transition-[left] duration-200 ${
+          className={`absolute top-[3px] h-5 w-5 rounded-full bg-white motion-safe:transition-[left] motion-safe:duration-200 ${
             isOn ? 'left-[27px]' : 'left-[3px]'
           }`}
         ></span>

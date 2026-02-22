@@ -1,18 +1,20 @@
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useAllParametersFor } from './useAllParameterFor';
+import { useAllParametersFor, useParametersForProcessor } from './useAllParameterFor';
 
 const useAllParametersMock = vi.hoisted(() => vi.fn());
 const reloadMock = vi.hoisted(() => vi.fn(async () => {}));
+const setParameterMock = vi.hoisted(() => vi.fn(async () => {}));
 
 vi.mock('./useAllParameters', () => ({
   useAllParameters: useAllParametersMock,
 }));
 
-describe('useAllParametersFor', () => {
+describe('useParametersForProcessor', () => {
   beforeEach(() => {
     useAllParametersMock.mockReset();
     reloadMock.mockClear();
+    setParameterMock.mockClear();
 
     useAllParametersMock.mockReturnValue({
       params: [
@@ -46,12 +48,13 @@ describe('useAllParametersFor', () => {
       ],
       isLoading: false,
       error: null,
+      setParameter: setParameterMock,
       reload: reloadMock,
     });
   });
 
   it('returns all parameters belonging to the requested processor (including bypass)', () => {
-    const { result } = renderHook(() => useAllParametersFor('input_trim'));
+    const { result } = renderHook(() => useParametersForProcessor('input_trim'));
 
     expect(result.current.params.map((param) => param.id)).toEqual([
       'input_trim_bypass',
@@ -60,17 +63,22 @@ describe('useAllParametersFor', () => {
   });
 
   it('passes through loading/error/reload state from useAllParameters', () => {
-    const { result } = renderHook(() => useAllParametersFor('input_trim'));
+    const { result } = renderHook(() => useParametersForProcessor('input_trim'));
 
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBeNull();
+    expect(result.current.setParameter).toBe(setParameterMock);
     expect(result.current.reload).toBe(reloadMock);
   });
 
-  it('supports the pluralized alias export', () => {
+  it('useAllParametersFor alias resolves to the same hook result shape', () => {
     const { result } = renderHook(() => useAllParametersFor('input_trim'));
+    const { result: canonicalResult } = renderHook(() => useParametersForProcessor('input_trim'));
 
     expect(result.current.params).toHaveLength(2);
     expect(result.current.processorId).toBe('input_trim');
+    expect(result.current.params).toEqual(canonicalResult.current.params);
+    expect(result.current.setParameter).toBe(canonicalResult.current.setParameter);
+    expect(result.current.reload).toBe(canonicalResult.current.reload);
   });
 });

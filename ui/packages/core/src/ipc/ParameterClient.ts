@@ -20,6 +20,7 @@ import {
   METHOD_GET_ALL_PARAMETERS,
   NOTIFICATION_PARAMETER_CHANGED,
 } from '../types/parameters';
+import { IpcMethods } from './constants';
 
 type ParameterChangeCallback = (id: ParameterId, value: ParameterValue) => void;
 
@@ -72,7 +73,7 @@ export class ParameterClient {
    */
   public async ping(): Promise<number> {
     const start = performance.now();
-    await this.bridge.invoke('ping');
+    await this.bridge.invoke(IpcMethods.PING);
     const end = performance.now();
     return end - start;
   }

@@ -2,10 +2,11 @@
  * useOscilloscopeFrame - Hook for requestAnimationFrame-driven waveform polling
  */
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { IpcBridge } from '../ipc/IpcBridge';
 import { METHOD_GET_OSCILLOSCOPE_FRAME } from '../types/ipc';
 import type { GetOscilloscopeFrameResult, OscilloscopeFrame } from '../types/oscilloscope';
+import { _usePollingSubscription } from './_usePollingSubscription';
 
 /**
  * Hook to poll oscilloscope frames on the browser animation frame cadence.
@@ -15,7 +16,7 @@ import type { GetOscilloscopeFrameResult, OscilloscopeFrame } from '../types/osc
 export function useOscilloscopeFrame(): OscilloscopeFrame | null {
   const [frame, setFrame] = useState<OscilloscopeFrame | null>(null);
 
-  useEffect(() => {
+  _usePollingSubscription(() => {
     let isMounted = true;
     let inFlight = false;
     let rafId: number | null = null;

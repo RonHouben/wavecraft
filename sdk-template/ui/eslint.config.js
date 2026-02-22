@@ -10,7 +10,70 @@ import globals from 'globals';
 export default [
   // Base JavaScript rules
   js.configs.recommended,
-  
+
+  // Guardrail: disallow raw IPC method/event literals in app source
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/**/*.test.{ts,tsx}', 'src/**/__mocks__/**', 'src/**/*mock*.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "Literal[value='getParameter']",
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
+        },
+        {
+          selector: "Literal[value='setParameter']",
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
+        },
+        {
+          selector: "Literal[value='getAllParameters']",
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
+        },
+        {
+          selector: "Literal[value='getMeterFrame']",
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
+        },
+        {
+          selector: "Literal[value='getAudioStatus']",
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
+        },
+        {
+          selector: "Literal[value='getOscilloscopeFrame']",
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
+        },
+        {
+          selector: "Literal[value='requestResize']",
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
+        },
+        {
+          selector: "Literal[value='ping']",
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
+        },
+        {
+          selector: "Literal[value='audioStatusChanged']",
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
+        },
+        {
+          selector: "Literal[value='paramUpdate']",
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
+        },
+        {
+          selector: "Literal[value='meterFrame']",
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
+        },
+        {
+          selector: "Literal[value='parameterChanged']",
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
+        },
+        {
+          selector: "Literal[value='parametersChanged']",
+          message: 'Use canonical IPC constants instead of raw IPC literals.',
+        },
+      ],
+    },
+  },
+
   // TypeScript files
   {
     files: ['**/*.{ts,tsx}'],
@@ -30,7 +93,7 @@ export default [
     },
     plugins: {
       '@typescript-eslint': typescript,
-      'react': react,
+      react: react,
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
     },
@@ -41,17 +104,17 @@ export default [
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/explicit-function-return-type': 'warn',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-      
+
       // React rules
       ...react.configs.recommended.rules,
       'react/react-in-jsx-scope': 'off', // Not needed with React 17+
       'react/prop-types': 'off', // Using TypeScript
-      
+
       // React Hooks rules (exhaustive deps)
       ...reactHooks.configs.recommended.rules,
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'error',
-      
+
       // React Refresh (Vite HMR)
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
@@ -59,12 +122,12 @@ export default [
       react: { version: 'detect' },
     },
   },
-  
+
   // Ignore patterns
   {
     ignores: ['dist/**', 'node_modules/**', '*.config.js'],
   },
-  
+
   // Prettier config must be last to disable conflicting ESLint rules
   eslintConfigPrettier,
 ];

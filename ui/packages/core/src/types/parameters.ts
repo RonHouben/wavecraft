@@ -4,6 +4,8 @@
  * Types related to plugin parameters.
  */
 
+import { IpcEvents, IpcMethods } from '../ipc/constants';
+
 export type ParameterType = 'float' | 'bool' | 'enum';
 export type ParameterValue = number | boolean;
 
@@ -103,7 +105,7 @@ export interface ParameterChangedNotification {
 }
 
 // Method Names (matching Rust constants)
-export const METHOD_GET_PARAMETER = 'getParameter';
-export const METHOD_SET_PARAMETER = 'setParameter';
-export const METHOD_GET_ALL_PARAMETERS = 'getAllParameters';
-export const NOTIFICATION_PARAMETER_CHANGED = 'parameterChanged';
+export const METHOD_GET_PARAMETER = IpcMethods.GET_PARAMETER;
+export const METHOD_SET_PARAMETER = IpcMethods.SET_PARAMETER;
+export const METHOD_GET_ALL_PARAMETERS = IpcMethods.GET_ALL_PARAMETERS;
+export const NOTIFICATION_PARAMETER_CHANGED = IpcEvents.PARAMETER_CHANGED;

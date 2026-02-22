@@ -1,0 +1,147 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - heading "My Plugin" [level=1] [ref=e5]
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - generic [ref=e10]: Connected
+          - generic [ref=e11]: (websocket)
+        - generic [ref=e12]:
+          - generic [ref=e14]: "Audio: running (full duplex)"
+          - generic [ref=e15]: (ready)
+      - generic [ref=e16]: vdev
+  - generic [ref=e17]:
+    - generic [ref=e18]:
+      - generic [ref=e19]:
+        - heading "Oscillator" [level=3] [ref=e20]
+        - generic [ref=e21]:
+          - generic [ref=e22]:
+            - generic [ref=e23]: Enabled
+            - button "Enabled" [ref=e24] [cursor=pointer]
+          - generic [ref=e26]:
+            - generic [ref=e28]: Waveform
+            - combobox "Waveform" [ref=e29]:
+              - option "Sine" [selected]
+              - option "Square"
+              - option "Saw"
+              - option "Triangle"
+          - generic [ref=e30]:
+            - generic [ref=e31]:
+              - generic [ref=e32]: Frequency
+              - generic [ref=e33]: 440.0 Hz
+            - slider "Frequency" [ref=e34]: "440.001"
+          - generic [ref=e35]:
+            - generic [ref=e36]:
+              - generic [ref=e37]: Level
+              - generic [ref=e38]: 50.0%
+            - slider "Level" [ref=e39]: "0.5"
+          - generic [ref=e40]:
+            - generic [ref=e41]: Oscillator Bypass
+            - button "Oscillator Bypass" [ref=e42] [cursor=pointer]
+      - generic [ref=e44]:
+        - heading "Input Trim" [level=3] [ref=e45]
+        - generic [ref=e46]:
+          - generic [ref=e47]:
+            - generic [ref=e48]:
+              - generic [ref=e49]: Level
+              - generic [ref=e50]: 1.0 x
+            - slider "Level" [ref=e51]: "1"
+          - generic [ref=e52]:
+            - generic [ref=e53]: Input Trim Bypass
+            - button "Input Trim Bypass" [ref=e54] [cursor=pointer]
+      - generic [ref=e56]:
+        - heading "Tone Filter" [level=3] [ref=e57]
+        - generic [ref=e58]:
+          - generic [ref=e59]:
+            - generic [ref=e61]: Mode
+            - combobox "Mode" [ref=e62]:
+              - option "Low-pass" [selected]
+              - option "High-pass"
+              - option "Band-pass"
+          - generic [ref=e63]:
+            - generic [ref=e64]:
+              - generic [ref=e65]: Cutoff
+              - generic [ref=e66]: 1000.0 Hz
+            - slider "Cutoff" [ref=e67]: "1000"
+          - generic [ref=e68]:
+            - generic [ref=e69]:
+              - generic [ref=e70]: Resonance
+              - generic [ref=e71]: 0.7 Q
+            - slider "Resonance" [ref=e72]: "0.707000001490116"
+          - generic [ref=e73]:
+            - generic [ref=e74]: Tone Filter Bypass
+            - button "Tone Filter Bypass" [ref=e75] [cursor=pointer]
+      - generic [ref=e77]:
+        - heading "Soft Clip" [level=3] [ref=e78]
+        - generic [ref=e79]:
+          - generic [ref=e80]:
+            - generic [ref=e81]:
+              - generic [ref=e82]: Drive
+              - generic [ref=e83]: 0.0 dB
+            - slider "Drive" [ref=e84]: "0"
+          - generic [ref=e85]:
+            - generic [ref=e86]:
+              - generic [ref=e87]: Output Trim
+              - generic [ref=e88]: 0.0 dB
+            - slider "Output Trim" [ref=e89]: "0"
+          - generic [ref=e90]:
+            - generic [ref=e91]: Soft Clip Bypass
+            - button "Soft Clip Bypass" [ref=e92] [cursor=pointer]
+      - generic [ref=e94]:
+        - heading "Example Processor" [level=3] [ref=e95]
+        - generic [ref=e97]:
+          - generic [ref=e98]: Example Processor Bypass
+          - button "Example Processor Bypass" [ref=e99] [cursor=pointer]
+      - generic [ref=e101]:
+        - heading "Output Gain" [level=3] [ref=e102]
+        - generic [ref=e103]:
+          - generic [ref=e104]:
+            - generic [ref=e105]:
+              - generic [ref=e106]: Level
+              - generic [ref=e107]: 1.0 x
+            - slider "Level" [ref=e108]: "1"
+          - generic [ref=e109]:
+            - generic [ref=e110]: Output Gain Bypass
+            - button "Output Gain Bypass" [ref=e111] [cursor=pointer]
+      - generic [ref=e114]:
+        - generic [ref=e115]: Oscilloscope
+        - generic [ref=e116]:
+          - text: Channel view
+          - combobox "Channel view" [ref=e117]:
+            - option "Overlay (L/R)" [selected]
+            - option "Left"
+            - option "Right"
+        - generic [ref=e118]:
+          - text: Trigger mode
+          - combobox "Trigger mode" [ref=e119]:
+            - option "Rising zero-crossing" [selected]
+    - generic [ref=e122]:
+      - heading "Output Metering" [level=2] [ref=e123]
+      - generic [ref=e124]:
+        - generic [ref=e126]: Levels
+        - generic [ref=e127]:
+          - generic [ref=e128]: L
+          - generic [ref=e131]: "-41.3 dB"
+        - generic [ref=e132]:
+          - generic [ref=e133]: R
+          - generic [ref=e136]: "-41.3 dB"
+    - generic [ref=e137]:
+      - heading "Info" [level=2] [ref=e138]
+      - generic [ref=e139]:
+        - heading "IPC Latency" [level=3] [ref=e140]
+        - generic [ref=e141]:
+          - generic [ref=e142]:
+            - generic [ref=e143]: "Current:"
+            - generic [ref=e144]: 1.80 ms
+          - generic [ref=e145]:
+            - generic [ref=e146]: "Average:"
+            - generic [ref=e147]: 1.35 ms
+          - generic [ref=e148]:
+            - generic [ref=e149]: "Max:"
+            - generic [ref=e150]: 1.80 ms
+          - generic [ref=e151]:
+            - generic [ref=e152]: "Samples:"
+            - generic [ref=e153]: "4"
+        - generic [ref=e154]: ✓ Excellent
+  - button "Resize window" [active] [ref=e155]:
+    - img [ref=e156]

@@ -87,6 +87,9 @@ export {
   NOTIFICATION_PARAMETER_CHANGED,
 } from './types/parameters';
 
+export { IpcMethods, IpcEvents } from './ipc/constants';
+export type { IpcMethod, IpcEvent } from './ipc/constants';
+
 // =============================================================================
 // Core Classes (advanced use)
 // =============================================================================
@@ -96,14 +99,22 @@ export { ParameterClient } from './ipc/ParameterClient';
 // =============================================================================
 // React Hooks (primary API)
 // =============================================================================
+export { WavecraftProvider } from './context/WavecraftProvider';
+export type { WavecraftProviderProps } from './context/WavecraftProvider';
+
 export { useParameter } from './hooks/useParameter';
 export type { UseParameterResult } from './hooks/useParameter';
 
 export { useAllParameters } from './hooks/useAllParameters';
 export type { UseAllParametersResult } from './hooks/useAllParameters';
 
-export { useAllParametersFor } from './hooks/useAllParameterFor';
-export type { UseAllParameterForResult } from './hooks/useAllParameterFor';
+export { useParametersForProcessor } from './hooks/useAllParameterFor';
+export type { UseParametersForProcessorResult } from './hooks/useAllParameterFor';
+
+/** @deprecated Use useParametersForProcessor instead. */
+export { useAllParametersFor } from './hooks/useAllParameterFor'; // compat: remove after next minor
+/** @deprecated Use UseParametersForProcessorResult instead. */
+export type { UseAllParameterForResult } from './hooks/useAllParameterFor'; // compat: remove after next minor
 
 export { useConnectionStatus } from './hooks/useConnectionStatus';
 export type { ConnectionStatus, TransportType } from './hooks/useConnectionStatus';

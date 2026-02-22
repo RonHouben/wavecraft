@@ -2,10 +2,11 @@
  * useLatencyMonitor - Hook for monitoring IPC latency
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { IpcBridge } from '../ipc/IpcBridge';
 import { ParameterClient } from '../ipc/ParameterClient';
 import { logger } from '../logger';
+import { _usePollingSubscription } from './_usePollingSubscription';
 
 export interface UseLatencyMonitorResult {
   latency: number | null;
@@ -19,7 +20,7 @@ export function useLatencyMonitor(intervalMs = 1000): UseLatencyMonitorResult {
   const [measurements, setMeasurements] = useState<number[]>([]);
   const bridge = IpcBridge.getInstance();
 
-  useEffect(() => {
+  _usePollingSubscription(() => {
     let isMounted = true;
     const client = ParameterClient.getInstance();
 

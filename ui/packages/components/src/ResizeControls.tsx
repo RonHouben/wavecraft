@@ -3,7 +3,7 @@
  */
 
 import React, { useState } from 'react';
-import { useRequestResize } from '@wavecraft/core';
+import { focusRingClass, interactionStateClass } from './utils/classNames';
 
 const PRESET_SIZES = [
   { name: 'Small', width: 600, height: 400 },
@@ -12,8 +12,13 @@ const PRESET_SIZES = [
   { name: 'Extra Large', width: 1280, height: 960 },
 ];
 
-export function ResizeControls(): React.JSX.Element {
-  const requestResize = useRequestResize();
+export interface ResizeControlsProps {
+  readonly onRequestResize: (width: number, height: number) => Promise<boolean>;
+}
+
+export function ResizeControls({
+  onRequestResize,
+}: Readonly<ResizeControlsProps>): React.JSX.Element {
   const [status, setStatus] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -22,7 +27,7 @@ export function ResizeControls(): React.JSX.Element {
     setStatus(`Requesting ${width}x${height}...`);
 
     try {
-      const accepted = await requestResize(width, height);
+      const accepted = await onRequestResize(width, height);
       if (accepted) {
         setStatus(`✓ Resized to ${width}x${height}`);
       } else {
@@ -44,9 +49,9 @@ export function ResizeControls(): React.JSX.Element {
         {PRESET_SIZES.map((preset) => (
           <button
             key={preset.name}
-            onClick={() => handleResize(preset.width, preset.height)}
+            onClick={() => void handleResize(preset.width, preset.height)}
             disabled={isLoading}
-            className="flex cursor-pointer flex-col items-center justify-center rounded-md border border-gray-300 bg-white p-3 font-medium text-gray-800 transition-all duration-200 hover:-translate-y-px hover:border-blue-500 hover:bg-gray-100 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+            className={`flex cursor-pointer flex-col items-center justify-center rounded-md border border-gray-300 bg-white p-3 font-medium text-gray-800 hover:-translate-y-px hover:border-blue-500 hover:bg-gray-100 hover:shadow-md motion-safe:transition-all motion-safe:duration-200 ${focusRingClass} ${interactionStateClass}`}
           >
             {preset.name}
             <span className="mt-1 text-[11px] text-gray-500">

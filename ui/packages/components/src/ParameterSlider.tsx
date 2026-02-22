@@ -3,11 +3,17 @@
  */
 
 import React from 'react';
-import { useParameter, logger } from '@wavecraft/core';
-import type { ParameterId } from '@wavecraft/core';
+import { focusRingClass, interactionStateClass, surfaceCardClass } from './utils/classNames';
 
-interface ParameterSliderProps {
-  readonly id: ParameterId;
+export interface ParameterSliderProps {
+  readonly id: string;
+  readonly name: string;
+  readonly value: number;
+  readonly min: number;
+  readonly max: number;
+  readonly unit?: string;
+  readonly disabled?: boolean;
+  readonly onChange: (value: number) => void | Promise<void>;
 }
 
 function formatParameterValue(value: number, unit?: string): string {
@@ -22,48 +28,32 @@ function formatParameterValue(value: number, unit?: string): string {
   return `${value.toFixed(1)} ${unit}`;
 }
 
-export function ParameterSlider({ id }: ParameterSliderProps): React.JSX.Element {
-  const { param, setValue, isLoading, error } = useParameter(id);
-
-  if (isLoading) {
-    return (
-      <div className="mb-4 rounded-lg border border-plugin-border bg-plugin-surface p-4 italic text-gray-500">
-        Loading {id}...
-      </div>
-    );
-  }
-
-  if (error || !param) {
-    const message = error?.message || 'Parameter not found';
-
-    return (
-      <div className="mb-4 rounded-lg border border-red-400 bg-plugin-surface p-4 text-red-400">
-        Error: {message}
-      </div>
-    );
-  }
-
+export function ParameterSlider({
+  id,
+  name,
+  value,
+  min,
+  max,
+  unit,
+  disabled = false,
+  onChange,
+}: Readonly<ParameterSliderProps>): React.JSX.Element {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const nextValue = Number.parseFloat(e.currentTarget.value);
-    setValue(nextValue).catch((err) => {
-      logger.error('Failed to set parameter', { error: err, parameterId: id });
-    });
+    void onChange(nextValue);
   };
-  const numericValue = typeof param.value === 'boolean' ? (param.value ? 1 : 0) : param.value;
-  const displayValue = formatParameterValue(numericValue, param.unit);
+
+  const displayValue = formatParameterValue(value, unit);
 
   return (
-    <div
-      data-testid={`param-${id}`}
-      className="mb-4 rounded-lg border border-plugin-border bg-plugin-surface p-4"
-    >
+    <div data-testid={`param-${id}`} className={`mb-4 ${surfaceCardClass}`}>
       <div className="mb-2 flex items-center justify-between">
         <label
           data-testid={`param-${id}-label`}
           htmlFor={`slider-${id}`}
           className="font-semibold text-gray-200"
         >
-          {param.name}
+          {name}
         </label>
         <span data-testid={`param-${id}-value`} className="font-mono text-sm text-accent">
           {displayValue}
@@ -73,12 +63,13 @@ export function ParameterSlider({ id }: ParameterSliderProps): React.JSX.Element
         data-testid={`param-${id}-slider`}
         id={`slider-${id}`}
         type="range"
-        min={param.min}
-        max={param.max}
+        min={min}
+        max={max}
         step="0.001"
-        value={numericValue}
+        value={value}
         onChange={handleChange}
-        className="slider-thumb h-1.5 w-full appearance-none rounded-sm bg-plugin-border outline-none"
+        disabled={disabled}
+        className={`slider-thumb h-1.5 w-full appearance-none rounded-sm bg-plugin-border ${focusRingClass} ${interactionStateClass}`}
       />
     </div>
   );
