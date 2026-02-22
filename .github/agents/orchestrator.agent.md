@@ -8,35 +8,6 @@ tools:
   ['read', 'search', 'agent', 'web', 'todo', 'memory', 'excalidraw/*', 'vscode']
 agents: ['*']
 user-invokable: true
-handoffs:
-  - label: Requirements Phase
-    agent: po
-    prompt: Define user stories and requirements for this feature.
-    send: true
-  - label: Design Phase
-    agent: architect
-    prompt: Create low-level design for this feature.
-    send: true
-  - label: Planning Phase
-    agent: planner
-    prompt: Create detailed implementation plan for this feature.
-    send: true
-  - label: Implementation Phase
-    agent: coder
-    prompt: Implement this feature according to the plan.
-    send: true
-  - label: UI/UX Phase
-    agent: ux-designer
-    prompt: Implement UI/UX changes, following required UX skill order (ui-ux-change-workflow → design-token-compliance → ui-accessibility-review), then hand off to tester.
-    send: true
-  - label: Testing Phase
-    agent: tester
-    prompt: Test this implementation. For any UI/visual changes, run required VS Code integrated browser (Simple Browser) screenshot-based in-app checks and record evidence.
-    send: true
-  - label: QA Phase
-    agent: qa
-    prompt: Perform quality review of this implementation.
-    send: true
 ---
 
 # Orchestrator Agent

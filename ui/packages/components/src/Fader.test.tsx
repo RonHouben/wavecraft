@@ -94,11 +94,23 @@ describe('Fader', () => {
     const controlContainer = input.parentElement;
 
     expect(controlContainer).not.toBeNull();
-    expect(controlContainer).toHaveClass('h-10');
+    expect(controlContainer).toHaveClass('w-full');
+    expect(controlContainer).toHaveClass('h-9');
     expect(input).toHaveClass('w-full');
     expect(input).toHaveClass('h-2');
-    expect(input).toHaveClass('bg-plugin-border');
+    expect(input).toHaveClass('bg-transparent');
+    expect(input).toHaveClass('accent-accent');
     expect(input).not.toHaveClass('-rotate-90');
+
+    const rail = controlContainer?.querySelector('[data-slot="horizontal-rail"]');
+    const fill = controlContainer?.querySelector('[data-slot="horizontal-fill"]');
+
+    expect(rail).not.toBeNull();
+    expect(rail).toHaveClass('h-2');
+    expect(rail).toHaveClass('bg-plugin-border');
+    expect(fill).not.toBeNull();
+    expect(fill).toHaveClass('h-1');
+    expect(fill).toHaveClass('bg-accent');
   });
 
   it('supports vertical orientation', () => {
@@ -120,7 +132,7 @@ describe('Fader', () => {
     expect(controlContainer).not.toBeNull();
     expect(controlContainer).toHaveClass('h-[160px]');
     expect(controlContainer).toHaveClass('w-10');
-    expect(input).toHaveClass('h-[160px]');
+    expect(input).toHaveClass('h-full');
     expect(input).toHaveClass('w-2');
     expect(input).toHaveClass('[direction:rtl]');
     expect(input).toHaveClass('[writing-mode:vertical-lr]');
@@ -128,6 +140,7 @@ describe('Fader', () => {
     expect(input).toHaveClass('[-webkit-appearance:slider-vertical]');
     expect(input).toHaveClass('rounded-full');
     expect(input).toHaveClass('bg-plugin-border');
+    expect(input).toHaveClass('accent-accent');
     expect(input).not.toHaveClass('w-full');
     expect(input).not.toHaveClass('-rotate-90');
   });
@@ -146,9 +159,16 @@ describe('Fader', () => {
       'border',
       'border-plugin-border',
       'bg-plugin-dark',
-      'p-2'
+      'p-2',
+      'w-full'
     );
-    expect(horizontalInput).toHaveClass('rounded-full', 'h-2', 'w-full', 'bg-plugin-border');
+    expect(horizontalInput).toHaveClass(
+      'rounded-full',
+      'h-2',
+      'w-full',
+      'bg-transparent',
+      'accent-accent'
+    );
 
     rerender(
       <Fader
@@ -173,8 +193,117 @@ describe('Fader', () => {
       'bg-plugin-dark',
       'p-2'
     );
-    expect(verticalInput).toHaveClass('rounded-full', 'h-[160px]', 'w-2', 'bg-plugin-border');
+    expect(verticalInput).toHaveClass(
+      'rounded-full',
+      'h-full',
+      'w-2',
+      'bg-plugin-border',
+      'accent-accent'
+    );
     expect(verticalInput).toHaveClass('[writing-mode:vertical-lr]');
+  });
+
+  it('renders horizontal blue fill width from the normalized value', () => {
+    render(<Fader id="fill-fader" label="Fill" value={0.25} min={0} max={1} onChange={vi.fn()} />);
+
+    const input = screen.getByLabelText('Fill');
+    const controlContainer = input.parentElement;
+    const fill = controlContainer?.querySelector('[data-slot="horizontal-fill"]');
+
+    expect(fill).not.toBeNull();
+    expect(fill).toHaveAttribute('style', 'width: calc(25.000% + 4.500px);');
+  });
+
+  it('uses full-width horizontal geometry across size variants while preserving height footprints', () => {
+    const { rerender } = render(
+      <Fader
+        id="size-fader"
+        label="Size"
+        value={0.5}
+        min={0}
+        max={1}
+        size="sm"
+        onChange={vi.fn()}
+      />
+    );
+
+    const input = screen.getByLabelText('Size');
+    const smContainer = input.parentElement;
+
+    expect(smContainer).not.toBeNull();
+    expect(smContainer).toHaveClass('w-full');
+    expect(smContainer).toHaveClass('h-8');
+
+    rerender(
+      <Fader
+        id="size-fader"
+        label="Size"
+        value={0.5}
+        min={0}
+        max={1}
+        size="lg"
+        onChange={vi.fn()}
+      />
+    );
+
+    const lgContainer = screen.getByLabelText('Size').parentElement;
+
+    expect(lgContainer).not.toBeNull();
+    expect(lgContainer).toHaveClass('w-full');
+    expect(lgContainer).toHaveClass('h-10');
+  });
+
+  it('keeps horizontal rail/fill behind the slider thumb for proper layering', () => {
+    render(<Fader id="layer-fader" label="Layer" value={0.6} min={0} max={1} onChange={vi.fn()} />);
+
+    const input = screen.getByLabelText('Layer');
+    const controlContainer = input.parentElement;
+    const railWrapper = controlContainer?.querySelector(
+      '[data-slot="horizontal-rail"]'
+    )?.parentElement;
+
+    expect(input).toHaveClass('relative');
+    expect(input).toHaveClass('z-10');
+    expect(railWrapper).not.toBeNull();
+    expect(railWrapper).toHaveClass('z-0');
+  });
+
+  it('uses the same interaction styling language for horizontal and vertical thumbs', () => {
+    const { rerender } = render(
+      <Fader id="parity-fader" label="Parity" value={0.5} min={0} max={1} onChange={vi.fn()} />
+    );
+
+    const sharedInteractionClasses = [
+      'slider-thumb',
+      'appearance-none',
+      'rounded-full',
+      'accent-accent',
+      'ring-1',
+      'ring-inset',
+      'ring-plugin-dark/80',
+    ];
+
+    const horizontalInput = screen.getByLabelText('Parity');
+    for (const className of sharedInteractionClasses) {
+      expect(horizontalInput).toHaveClass(className);
+    }
+
+    rerender(
+      <Fader
+        id="parity-fader"
+        label="Parity"
+        value={0.5}
+        min={0}
+        max={1}
+        orientation="vertical"
+        onChange={vi.fn()}
+      />
+    );
+
+    const verticalInput = screen.getByLabelText('Parity');
+    for (const className of sharedInteractionClasses) {
+      expect(verticalInput).toHaveClass(className);
+    }
   });
 
   it('maps vertical pointer dragging by geometry so upward movement increases output value', () => {

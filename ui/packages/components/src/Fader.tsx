@@ -24,15 +24,15 @@ export interface FaderProps {
 }
 
 const horizontalLengthClassMap: Record<NonNullable<FaderProps['size']>, string> = {
-  sm: 'w-[120px]',
-  md: 'w-[180px]',
-  lg: 'w-[240px]',
+  sm: 'w-full',
+  md: 'w-full',
+  lg: 'w-full',
 };
 
 const horizontalFootprintClassMap: Record<NonNullable<FaderProps['size']>, string> = {
-  sm: 'h-9',
-  md: 'h-10',
-  lg: 'h-12',
+  sm: 'h-8',
+  md: 'h-9',
+  lg: 'h-10',
 };
 
 const verticalLengthClassMap: Record<NonNullable<FaderProps['size']>, string> = {
@@ -48,6 +48,7 @@ const verticalFootprintClassMap: Record<NonNullable<FaderProps['size']>, string>
 };
 
 const SHIFT_DRAG_PRECISION_DIVISOR = 12;
+const HORIZONTAL_THUMB_DIAMETER_PX = 18;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -149,7 +150,13 @@ export function Fader({
   const isVertical = orientation === 'vertical';
   const keyboardSteps = getKeyboardSteps(min, max, step);
   const clampedValue = clamp(value, min, max);
-  const verticalInputClass = `${verticalLengthClassMap[size]} w-2 [direction:rtl] [writing-mode:vertical-lr] [appearance:slider-vertical] [-webkit-appearance:slider-vertical]`;
+  const range = Math.max(0, max - min);
+  const normalizedValue = range > 0 ? clamp((clampedValue - min) / range, 0, 1) : 0;
+  const horizontalThumbRadius = HORIZONTAL_THUMB_DIAMETER_PX / 2;
+  const horizontalFillOffsetPx = horizontalThumbRadius * (1 - normalizedValue * 2);
+  const horizontalFillWidth = `calc(${(normalizedValue * 100).toFixed(3)}% + ${horizontalFillOffsetPx.toFixed(3)}px)`;
+  const verticalInputClass =
+    'h-full w-2 [direction:rtl] [writing-mode:vertical-lr] [appearance:slider-vertical] [-webkit-appearance:slider-vertical]';
 
   const resetShiftDragAnchors = useCallback((): void => {
     shiftDragAnchorRawValueRef.current = null;
@@ -231,7 +238,7 @@ export function Fader({
   }, [resetShiftDragAnchors]);
 
   return (
-    <div className="group inline-flex flex-col items-center gap-2">
+    <div className="group inline-flex w-full flex-col items-center gap-2 align-middle">
       <label
         htmlFor={id}
         className="text-type-xs uppercase tracking-wide text-plugin-text-secondary"
@@ -250,6 +257,19 @@ export function Fader({
           isError ? 'border-meter-clip' : ''
         )}
       >
+        {!isVertical ? (
+          <div
+            className="pointer-events-none absolute inset-x-2 top-1/2 z-0 -translate-y-1/2"
+            aria-hidden="true"
+          >
+            <div className="h-2 w-full rounded-full bg-plugin-border" data-slot="horizontal-rail" />
+            <div
+              className="absolute left-0 top-1/2 h-1 w-full -translate-y-1/2 rounded-full bg-accent"
+              style={{ width: horizontalFillWidth }}
+              data-slot="horizontal-fill"
+            />
+          </div>
+        ) : null}
         <input
           id={id}
           type="range"
@@ -425,10 +445,10 @@ export function Fader({
           data-state={state}
           data-plugin-state={pluginState}
           className={mergeClassNames(
-            'slider-thumb appearance-none rounded-full bg-plugin-border ring-1 ring-inset ring-plugin-dark/80',
+            'slider-thumb relative z-10 appearance-none rounded-full accent-accent ring-1 ring-inset ring-plugin-dark/80 [&::-moz-range-thumb:active]:bg-accent [&::-moz-range-thumb:hover]:bg-accent [&::-webkit-slider-thumb:active]:bg-accent [&::-webkit-slider-thumb:hover]:bg-accent',
             isPrecisionVisualActive ? 'cursor-zoom-in' : '',
             focusRingClass,
-            isVertical ? verticalInputClass : 'h-2 w-full'
+            isVertical ? `${verticalInputClass} bg-plugin-border` : 'h-2 w-full bg-transparent'
           )}
         />
       </div>

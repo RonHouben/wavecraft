@@ -170,7 +170,7 @@ function renderPrimitiveParameter(param: SmartProcessorParameter): JSX.Element |
           </span>
         </div>
 
-        <div className="rounded-lg border border-plugin-border/80 bg-plugin-dark/65 px-3 py-4 shadow-inner">
+        <div className="rounded-lg border border-plugin-border/80 bg-plugin-dark/65 px-3 py-2 shadow-inner">
           {isFaderParameter(param) ? (
             <Fader
               id={controlId}
