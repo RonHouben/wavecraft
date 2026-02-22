@@ -29,6 +29,12 @@ const horizontalLengthClassMap: Record<NonNullable<FaderProps['size']>, string> 
   lg: 'w-[240px]',
 };
 
+const horizontalFootprintClassMap: Record<NonNullable<FaderProps['size']>, string> = {
+  sm: 'h-9',
+  md: 'h-10',
+  lg: 'h-12',
+};
+
 const verticalLengthClassMap: Record<NonNullable<FaderProps['size']>, string> = {
   sm: 'h-[120px]',
   md: 'h-[160px]',
@@ -238,7 +244,7 @@ export function Fader({
           'relative inline-flex items-center justify-center rounded-md border border-plugin-border bg-plugin-dark p-2',
           isVertical
             ? `${verticalLengthClassMap[size]} ${verticalFootprintClassMap[size]}`
-            : horizontalLengthClassMap[size],
+            : `${horizontalLengthClassMap[size]} ${horizontalFootprintClassMap[size]}`,
           getControlStateClass({ disabled: isDisabled, pluginState, state }),
           isPrecisionVisualActive ? 'ring-1 ring-accent/60' : '',
           isError ? 'border-meter-clip' : ''
@@ -419,10 +425,10 @@ export function Fader({
           data-state={state}
           data-plugin-state={pluginState}
           className={mergeClassNames(
-            'slider-thumb h-2 appearance-none rounded-sm',
+            'slider-thumb appearance-none rounded-full bg-plugin-border',
             isPrecisionVisualActive ? 'cursor-zoom-in' : '',
             focusRingClass,
-            isVertical ? `${verticalInputClass} bg-plugin-border` : 'w-full bg-plugin-border'
+            isVertical ? verticalInputClass : 'h-2 w-full'
           )}
         />
       </div>

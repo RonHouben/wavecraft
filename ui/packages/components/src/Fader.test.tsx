@@ -91,7 +91,12 @@ describe('Fader', () => {
     render(<Fader id="pan-fader" label="Pan" value={0} min={-1} max={1} onChange={vi.fn()} />);
 
     const input = screen.getByLabelText('Pan');
+    const controlContainer = input.parentElement;
+
+    expect(controlContainer).not.toBeNull();
+    expect(controlContainer).toHaveClass('h-10');
     expect(input).toHaveClass('w-full');
+    expect(input).toHaveClass('h-2');
     expect(input).toHaveClass('bg-plugin-border');
     expect(input).not.toHaveClass('-rotate-90');
   });
@@ -121,9 +126,55 @@ describe('Fader', () => {
     expect(input).toHaveClass('[writing-mode:vertical-lr]');
     expect(input).toHaveClass('[appearance:slider-vertical]');
     expect(input).toHaveClass('[-webkit-appearance:slider-vertical]');
+    expect(input).toHaveClass('rounded-full');
     expect(input).toHaveClass('bg-plugin-border');
     expect(input).not.toHaveClass('w-full');
     expect(input).not.toHaveClass('-rotate-90');
+  });
+
+  it('uses shared frame and rail treatment for both orientations while keeping orientation-specific geometry', () => {
+    const { rerender } = render(
+      <Fader id="family-fader" label="Family" value={0.5} min={0} max={1} onChange={vi.fn()} />
+    );
+
+    const horizontalInput = screen.getByLabelText('Family');
+    const horizontalContainer = horizontalInput.parentElement;
+
+    expect(horizontalContainer).not.toBeNull();
+    expect(horizontalContainer).toHaveClass(
+      'rounded-md',
+      'border',
+      'border-plugin-border',
+      'bg-plugin-dark',
+      'p-2'
+    );
+    expect(horizontalInput).toHaveClass('rounded-full', 'h-2', 'w-full', 'bg-plugin-border');
+
+    rerender(
+      <Fader
+        id="family-fader"
+        label="Family"
+        value={0.5}
+        min={0}
+        max={1}
+        orientation="vertical"
+        onChange={vi.fn()}
+      />
+    );
+
+    const verticalInput = screen.getByLabelText('Family');
+    const verticalContainer = verticalInput.parentElement;
+
+    expect(verticalContainer).not.toBeNull();
+    expect(verticalContainer).toHaveClass(
+      'rounded-md',
+      'border',
+      'border-plugin-border',
+      'bg-plugin-dark',
+      'p-2'
+    );
+    expect(verticalInput).toHaveClass('rounded-full', 'h-[160px]', 'w-2', 'bg-plugin-border');
+    expect(verticalInput).toHaveClass('[writing-mode:vertical-lr]');
   });
 
   it('maps vertical pointer dragging by geometry so upward movement increases output value', () => {
