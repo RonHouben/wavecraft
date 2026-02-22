@@ -42,4 +42,42 @@ describe('Button', () => {
     const button = screen.getByRole('button', { name: 'Save' });
     expect(button).toHaveAttribute('aria-invalid', 'true');
   });
+
+  it('renders explicit active state semantics and indicator', () => {
+    render(<Button active>Mode A</Button>);
+
+    const button = screen.getByRole('button', { name: 'Mode A' });
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+    expect(button).toHaveAttribute('data-active', 'true');
+    expect(screen.getByText('✓')).toBeInTheDocument();
+  });
+
+  it('keeps legacy pressed behavior for backwards compatibility', () => {
+    render(<Button pressed>Legacy Toggle</Button>);
+
+    const button = screen.getByRole('button', { name: 'Legacy Toggle' });
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+    expect(button).toHaveAttribute('data-active', 'true');
+  });
+
+  it('keeps legacy isActive behavior for backwards compatibility', () => {
+    render(<Button isActive>Legacy Active</Button>);
+
+    const button = screen.getByRole('button', { name: 'Legacy Active' });
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+    expect(button).toHaveAttribute('data-active', 'true');
+  });
+
+  it('gives explicit active prop precedence over isActive and pressed', () => {
+    render(
+      <Button active={false} isActive pressed>
+        Explicit Off
+      </Button>
+    );
+
+    const button = screen.getByRole('button', { name: 'Explicit Off' });
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+    expect(button).toHaveAttribute('data-active', 'false');
+    expect(screen.queryByText('✓')).not.toBeInTheDocument();
+  });
 });

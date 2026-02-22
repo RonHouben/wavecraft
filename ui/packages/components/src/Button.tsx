@@ -15,6 +15,8 @@ export interface ButtonProps extends NativeButtonProps {
   readonly state?: ControlVisualState;
   readonly pluginState?: PluginVisualState;
   readonly iconLeft?: ReactNode;
+  readonly active?: boolean;
+  readonly isActive?: boolean;
   readonly pressed?: boolean;
 }
 
@@ -25,10 +27,12 @@ const buttonSizeClassMap: Record<NonNullable<ButtonProps['size']>, string> = {
 };
 
 export function Button({
+  active: activeProp,
   children,
   className,
   disabled = false,
   iconLeft,
+  isActive,
   onClick,
   pluginState,
   pressed,
@@ -41,16 +45,19 @@ export function Button({
   const isLoading = state === 'loading';
   const isError = state === 'error';
   const isDisabled = disabled || isLoading || state === 'disabled';
+  const hasActiveState =
+    activeProp !== undefined || isActive !== undefined || pressed !== undefined;
+  const active = activeProp ?? isActive ?? pressed ?? false;
 
   return (
     <button
       type={type}
       className={mergeClassNames(
-        'text-plugin-text-primary shadow-control inline-flex items-center justify-center gap-1 rounded-md border border-plugin-border bg-plugin-surface',
+        'inline-flex items-center justify-center gap-1 rounded-md border border-plugin-border bg-plugin-surface text-plugin-text-primary shadow-control',
         buttonSizeClassMap[size],
         focusRingClass,
         getControlStateClass({ disabled: isDisabled, pluginState, state }),
-        pressed === true ? 'border-accent bg-accent/15 text-accent' : '',
+        active ? 'border-accent bg-accent/15 font-semibold text-accent' : '',
         isError ? 'border-meter-clip bg-meter-clip/10 text-meter-clip' : '',
         className
       )}
@@ -58,21 +65,28 @@ export function Button({
       disabled={isDisabled}
       aria-busy={isLoading || undefined}
       aria-invalid={isError || undefined}
-      aria-pressed={pressed}
+      aria-pressed={hasActiveState ? active : undefined}
       data-state={state}
       data-plugin-state={pluginState}
+      data-active={hasActiveState ? String(active) : undefined}
       {...rest}
     >
       {isLoading ? (
         <span
           aria-hidden="true"
-          className="border-plugin-text-secondary h-3.5 w-3.5 animate-spin rounded-full border border-t-accent"
+          className="h-3.5 w-3.5 animate-spin rounded-full border border-plugin-text-secondary border-t-accent"
         />
       ) : (
         iconLeft
       )}
 
       <span>{children}</span>
+
+      {active ? (
+        <span aria-hidden="true" className="font-mono text-type-xs leading-none">
+          ✓
+        </span>
+      ) : null}
 
       {badgeLabel ? (
         <span

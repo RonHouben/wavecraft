@@ -111,7 +111,7 @@ function renderPrimitiveParameter(param: SmartProcessorParameter): JSX.Element |
               <Button
                 key={`${param.id}-${variant}-${index}`}
                 size="sm"
-                pressed={index === selectedIndex}
+                active={index === selectedIndex}
                 disabled={param.disabled}
                 className="bg-plugin-dark/70"
                 onClick={(): void => {
