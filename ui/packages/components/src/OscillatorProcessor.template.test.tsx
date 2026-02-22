@@ -98,6 +98,44 @@ describe('sdk-template OscillatorProcessor', () => {
     expect(mockSetParameter).toHaveBeenCalledWith('oscillator_level', -3);
   });
 
+  it('shows a global precision hint for focused controls and switches hint text while Shift precision is active', async () => {
+    const params: ParameterInfo[] = [
+      makeParameter({ id: 'oscillator_bypass', name: 'Bypass', type: 'bool', value: true }),
+      makeParameter({ id: 'oscillator_enabled', name: 'Enabled', type: 'bool', value: true }),
+      makeParameter({ id: 'oscillator_frequency', name: 'Frequency', type: 'float', value: 440 }),
+    ];
+
+    mockUseHasProcessorInSignalChain.mockReturnValue(true);
+    mockUseParametersForProcessor.mockReturnValue({
+      params,
+      isLoading: false,
+      error: null,
+      setParameter: mockSetParameter,
+    });
+
+    render(<OscillatorProcessor />);
+
+    const hint = screen.getByTestId('processor-precision-hint');
+    const frequencyInput = screen.getByLabelText('Frequency');
+
+    expect(hint).toHaveTextContent('');
+
+    fireEvent.focus(frequencyInput);
+    expect(hint).toHaveTextContent('Hold Shift for fine adjust');
+
+    fireEvent.keyDown(frequencyInput, { key: 'Shift' });
+    expect(hint).toHaveTextContent('⇧ Fine adjust');
+
+    fireEvent.keyUp(frequencyInput, { key: 'Shift' });
+    expect(hint).toHaveTextContent('Hold Shift for fine adjust');
+
+    fireEvent.blur(frequencyInput);
+
+    await waitFor(() => {
+      expect(hint).toHaveTextContent('');
+    });
+  });
+
   it('announces loading and error states with live-region semantics', () => {
     mockUseHasProcessorInSignalChain.mockReturnValue(true);
     mockUseParametersForProcessor.mockReturnValue({

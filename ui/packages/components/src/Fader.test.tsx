@@ -17,12 +17,17 @@ function fireDragChangeWithoutShiftMetadata(input: HTMLElement, value: string): 
 }
 
 describe('Fader', () => {
-  it('renders a subtle Shift precision helper hint as decorative text', () => {
+  it('toggles precision visual-state metadata while Shift precision is active', () => {
     render(<Fader id="hint-fader" label="Hint" value={0.5} min={0} max={1} onChange={vi.fn()} />);
 
-    const hint = screen.getByText('Hold Shift for fine adjust');
-    expect(hint).toBeInTheDocument();
-    expect(hint).toHaveAttribute('aria-hidden', 'true');
+    const input = screen.getByLabelText('Hint');
+    expect(input).toHaveAttribute('data-precision-active', 'false');
+
+    fireEvent.pointerDown(input, { shiftKey: true });
+    expect(input).toHaveAttribute('data-precision-active', 'true');
+
+    fireEvent.pointerUp(input);
+    expect(input).toHaveAttribute('data-precision-active', 'false');
   });
 
   it('renders label and formatted value', () => {

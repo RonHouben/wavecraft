@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ControlVisualState, PluginVisualState } from './types';
 import { focusRingClass, mergeClassNames } from './utils/classNames';
 import {
@@ -36,7 +36,6 @@ const knobWidthClassMap: Record<NonNullable<KnobProps['size']>, string> = {
 
 const KNOB_SWEEP_START_DEG = -135;
 const KNOB_SWEEP_RANGE_DEG = 270;
-const SHIFT_PRECISION_HINT = 'Hold Shift for fine adjust';
 const SHIFT_DRAG_PRECISION_DIVISOR = 12;
 
 function clamp(value: number, min: number, max: number): number {
@@ -117,6 +116,7 @@ export function Knob({
   const shiftDragAnchorRawValueRef = useRef<number | null>(null);
   const shiftDragAnchorOutputValueRef = useRef<number | null>(null);
   const latestOutputValueRef = useRef(value);
+  const [isPrecisionVisualActive, setIsPrecisionVisualActive] = useState(false);
 
   const isLoading = state === 'loading';
   const isError = state === 'error';
@@ -148,6 +148,9 @@ export function Knob({
     function handleWindowKeyDown(event: KeyboardEvent): void {
       if (event.key === 'Shift') {
         isShiftPressedDuringDragRef.current = true;
+        if (isPointerDragActiveRef.current) {
+          setIsPrecisionVisualActive(true);
+        }
       }
     }
 
@@ -155,6 +158,9 @@ export function Knob({
       if (event.key === 'Shift') {
         isShiftPressedDuringDragRef.current = false;
         resetShiftDragAnchors();
+        if (isPointerDragActiveRef.current) {
+          setIsPrecisionVisualActive(false);
+        }
       }
     }
 
@@ -193,21 +199,26 @@ export function Knob({
           aria-busy={isLoading || undefined}
           aria-invalid={isError || undefined}
           aria-valuetext={formattedValue}
+          data-precision-control="true"
+          data-precision-active={isPrecisionVisualActive ? 'true' : 'false'}
           data-state={state}
           data-plugin-state={pluginState}
           onPointerDown={(event): void => {
             isPointerDragActiveRef.current = true;
             isShiftPressedDuringDragRef.current = event.shiftKey;
+            setIsPrecisionVisualActive(event.shiftKey);
             resetShiftDragAnchors();
           }}
           onPointerUp={(): void => {
             isPointerDragActiveRef.current = false;
             isShiftPressedDuringDragRef.current = false;
+            setIsPrecisionVisualActive(false);
             resetShiftDragAnchors();
           }}
           onPointerCancel={(): void => {
             isPointerDragActiveRef.current = false;
             isShiftPressedDuringDragRef.current = false;
+            setIsPrecisionVisualActive(false);
             resetShiftDragAnchors();
           }}
           onKeyDown={(event): void => {
@@ -215,10 +226,16 @@ export function Knob({
               return;
             }
 
+            if (event.key === 'Shift') {
+              setIsPrecisionVisualActive(true);
+              return;
+            }
+
             const isPrecisionMode = isShiftPrecisionActive(event);
 
             if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
               event.preventDefault();
+              setIsPrecisionVisualActive(isPrecisionMode);
               applyKeyboardDelta(
                 isPrecisionMode ? keyboardSteps.precisionArrowStep : keyboardSteps.arrowStep
               );
@@ -227,6 +244,7 @@ export function Knob({
 
             if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
               event.preventDefault();
+              setIsPrecisionVisualActive(isPrecisionMode);
               applyKeyboardDelta(
                 isPrecisionMode ? -keyboardSteps.precisionArrowStep : -keyboardSteps.arrowStep
               );
@@ -235,26 +253,38 @@ export function Knob({
 
             if (event.key === 'PageUp') {
               event.preventDefault();
+              setIsPrecisionVisualActive(false);
               applyKeyboardDelta(keyboardSteps.pageStep);
               return;
             }
 
             if (event.key === 'PageDown') {
               event.preventDefault();
+              setIsPrecisionVisualActive(false);
               applyKeyboardDelta(-keyboardSteps.pageStep);
               return;
             }
 
             if (event.key === 'Home') {
               event.preventDefault();
+              setIsPrecisionVisualActive(false);
               onChange(min);
               return;
             }
 
             if (event.key === 'End') {
               event.preventDefault();
+              setIsPrecisionVisualActive(false);
               onChange(max);
             }
+          }}
+          onKeyUp={(event): void => {
+            if (event.key === 'Shift') {
+              setIsPrecisionVisualActive(false);
+            }
+          }}
+          onBlur={(): void => {
+            setIsPrecisionVisualActive(false);
           }}
           onChange={(event): void => {
             const rawValue = Number.parseFloat(event.currentTarget.value);
@@ -270,6 +300,8 @@ export function Knob({
             const isShiftPrecisionMode = isPointerDragActiveRef.current
               ? isShiftPressedDuringDragRef.current
               : isShiftActiveOnEvent;
+
+            setIsPrecisionVisualActive(isShiftPrecisionMode);
 
             if (!isShiftPrecisionMode) {
               resetShiftDragAnchors();
@@ -298,6 +330,7 @@ export function Knob({
           }}
           className={mergeClassNames(
             'peer absolute inset-0 z-20 h-full w-full cursor-pointer appearance-none rounded-full opacity-0',
+            isPrecisionVisualActive ? 'cursor-zoom-in' : '',
             focusRingClass
           )}
         />
@@ -307,6 +340,7 @@ export function Knob({
             'absolute inset-0 z-10 rounded-full border border-plugin-border bg-plugin-surface shadow-control',
             'peer-focus-visible:ring-2 peer-focus-visible:ring-accent-light peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-plugin-dark',
             getControlStateClass({ disabled: isDisabled, pluginState, state }),
+            isPrecisionVisualActive ? 'ring-1 ring-accent/60' : '',
             isError ? 'border-meter-clip' : ''
           )}
         >
@@ -345,12 +379,6 @@ export function Knob({
             {badgeLabel}
           </span>
         ) : null}
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute left-0 top-full mt-1 w-full px-1 text-center text-type-xs leading-tight text-plugin-text-secondary opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 motion-reduce:transition-none"
-        >
-          {SHIFT_PRECISION_HINT}
-        </span>
       </div>
     </div>
   );

@@ -87,7 +87,7 @@ export function Button({
       {badgeLabel ? (
         <span
           className={mergeClassNames(
-            'rounded-sm border px-1 py-0.5 font-mono text-[10px] leading-none',
+            'rounded-sm border px-1 py-0.5 font-mono text-type-2xs leading-none',
             getStateBadgeClass(pluginState)
           )}
           aria-hidden="true"

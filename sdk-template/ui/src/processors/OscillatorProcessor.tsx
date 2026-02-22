@@ -5,7 +5,7 @@ import {
   useParametersForProcessor,
 } from '@wavecraft/core';
 import { Button, Fader, Knob, Toggle } from '@wavecraft/components';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { JSX } from 'react';
 
 // Test discoverability: this template implementation is validated in
@@ -17,6 +17,21 @@ export interface OscillatorProcessorProps {
 
 interface OscillatorParameter extends ParameterInfo {
   readonly onChange: (value: number | boolean) => Promise<void>;
+}
+
+const SHIFT_HINT_INACTIVE_TEXT = 'Hold Shift for fine adjust';
+const SHIFT_HINT_ACTIVE_TEXT = '⇧ Fine adjust';
+
+function getPrecisionControl(target: EventTarget | null): HTMLElement | null {
+  if (!(target instanceof HTMLElement)) {
+    return null;
+  }
+
+  return target.closest('[data-precision-control="true"]');
+}
+
+function isPrecisionControlActive(control: HTMLElement | null): boolean {
+  return control?.dataset.precisionActive === 'true';
 }
 
 function hasSuffix(paramId: string, suffix: string): boolean {
@@ -134,6 +149,9 @@ function renderAuxiliaryParameter(param: OscillatorParameter): JSX.Element | nul
 export function OscillatorProcessor({
   hideWhenNotInSignalChain,
 }: Readonly<OscillatorProcessorProps>): JSX.Element | null {
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const [isPrecisionHintVisible, setIsPrecisionHintVisible] = useState(false);
+  const [isPrecisionHintActive, setIsPrecisionHintActive] = useState(false);
   const processorId = 'oscillator';
   const hasProcessorInSignalChain = useHasProcessorInSignalChain(processorId);
   const { params, isLoading, error, setParameter } = useParametersForProcessor(processorId);
@@ -179,6 +197,74 @@ export function OscillatorProcessor({
     (param) => !knownParameterIds.has(param.id)
   );
 
+  useEffect(() => {
+    const sectionElement = sectionRef.current;
+
+    if (!sectionElement) {
+      return;
+    }
+
+    const hostElement = sectionElement;
+
+    function syncPrecisionHintState(): void {
+      const activeControl = getPrecisionControl(document.activeElement);
+
+      if (activeControl && hostElement.contains(activeControl)) {
+        setIsPrecisionHintVisible(true);
+        setIsPrecisionHintActive(isPrecisionControlActive(activeControl));
+        return;
+      }
+
+      setIsPrecisionHintVisible(false);
+      setIsPrecisionHintActive(false);
+    }
+
+    function handleContextEvent(event: Event): void {
+      const precisionControl = getPrecisionControl(event.target);
+
+      if (!precisionControl || !hostElement.contains(precisionControl)) {
+        return;
+      }
+
+      setIsPrecisionHintVisible(true);
+
+      if (event instanceof KeyboardEvent && event.key === 'Shift') {
+        setIsPrecisionHintActive(event.type === 'keydown');
+        return;
+      }
+
+      setIsPrecisionHintActive(isPrecisionControlActive(precisionControl));
+    }
+
+    function handleFocusOut(): void {
+      requestAnimationFrame((): void => {
+        syncPrecisionHintState();
+      });
+    }
+
+    hostElement.addEventListener('focusin', handleContextEvent);
+    hostElement.addEventListener('focusout', handleFocusOut);
+    hostElement.addEventListener('keydown', handleContextEvent);
+    hostElement.addEventListener('keyup', handleContextEvent);
+    hostElement.addEventListener('pointerdown', handleContextEvent);
+    hostElement.addEventListener('pointerup', handleContextEvent);
+    hostElement.addEventListener('pointercancel', handleContextEvent);
+    hostElement.addEventListener('change', handleContextEvent);
+    hostElement.addEventListener('input', handleContextEvent);
+
+    return (): void => {
+      hostElement.removeEventListener('focusin', handleContextEvent);
+      hostElement.removeEventListener('focusout', handleFocusOut);
+      hostElement.removeEventListener('keydown', handleContextEvent);
+      hostElement.removeEventListener('keyup', handleContextEvent);
+      hostElement.removeEventListener('pointerdown', handleContextEvent);
+      hostElement.removeEventListener('pointerup', handleContextEvent);
+      hostElement.removeEventListener('pointercancel', handleContextEvent);
+      hostElement.removeEventListener('change', handleContextEvent);
+      hostElement.removeEventListener('input', handleContextEvent);
+    };
+  }, []);
+
   if (hideWhenNotInSignalChain && !hasProcessorInSignalChain) {
     return null;
   }
@@ -217,7 +303,10 @@ export function OscillatorProcessor({
   const selectedWaveform = waveformParameter ? getNumericValue(waveformParameter.value) : 0;
 
   return (
-    <section className="rounded-xl border border-plugin-border bg-plugin-surface-1 p-3 shadow-panel">
+    <section
+      ref={sectionRef}
+      className="rounded-xl border border-plugin-border bg-plugin-surface-1 p-3 shadow-panel"
+    >
       <header className="mb-3 flex items-start justify-between gap-3 border-b border-plugin-border/70 pb-3">
         <div className="min-w-0">
           <p className="text-type-2xs uppercase tracking-wider text-plugin-text-muted">Processor</p>
@@ -249,6 +338,17 @@ export function OscillatorProcessor({
           ) : null}
         </div>
       </header>
+
+      <p
+        data-testid="processor-precision-hint"
+        className="mb-3 h-4 text-type-xs text-plugin-text-secondary"
+      >
+        {isPrecisionHintVisible
+          ? isPrecisionHintActive
+            ? SHIFT_HINT_ACTIVE_TEXT
+            : SHIFT_HINT_INACTIVE_TEXT
+          : '\u00A0'}
+      </p>
 
       <div className="space-y-3">
         {waveformParameter?.type === 'enum' ? (

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ControlVisualState, PluginVisualState } from './types';
 import { focusRingClass, mergeClassNames } from './utils/classNames';
 import {
@@ -35,7 +35,6 @@ const verticalLengthClassMap: Record<NonNullable<FaderProps['size']>, string> = 
   lg: 'h-[220px]',
 };
 
-const SHIFT_PRECISION_HINT = 'Hold Shift for fine adjust';
 const SHIFT_DRAG_PRECISION_DIVISOR = 12;
 
 function clamp(value: number, min: number, max: number): number {
@@ -114,6 +113,7 @@ export function Fader({
   const shiftDragAnchorRawValueRef = useRef<number | null>(null);
   const shiftDragAnchorOutputValueRef = useRef<number | null>(null);
   const latestOutputValueRef = useRef(value);
+  const [isPrecisionVisualActive, setIsPrecisionVisualActive] = useState(false);
 
   const isLoading = state === 'loading';
   const isError = state === 'error';
@@ -136,6 +136,9 @@ export function Fader({
     function handleWindowKeyDown(event: KeyboardEvent): void {
       if (event.key === 'Shift') {
         isShiftPressedDuringDragRef.current = true;
+        if (isPointerDragActiveRef.current) {
+          setIsPrecisionVisualActive(true);
+        }
       }
     }
 
@@ -143,6 +146,9 @@ export function Fader({
       if (event.key === 'Shift') {
         isShiftPressedDuringDragRef.current = false;
         resetShiftDragAnchors();
+        if (isPointerDragActiveRef.current) {
+          setIsPrecisionVisualActive(false);
+        }
       }
     }
 
@@ -169,6 +175,7 @@ export function Fader({
           'inline-flex items-center justify-center rounded-md border border-plugin-border bg-plugin-dark p-2',
           isVertical ? verticalLengthClassMap[size] : horizontalLengthClassMap[size],
           getControlStateClass({ disabled: isDisabled, pluginState, state }),
+          isPrecisionVisualActive ? 'ring-1 ring-accent/60' : '',
           isError ? 'border-meter-clip' : ''
         )}
       >
@@ -180,19 +187,24 @@ export function Fader({
           step={step}
           value={clampedValue}
           disabled={isDisabled}
+          data-precision-control="true"
+          data-precision-active={isPrecisionVisualActive ? 'true' : 'false'}
           onPointerDown={(event): void => {
             isPointerDragActiveRef.current = true;
             isShiftPressedDuringDragRef.current = event.shiftKey;
+            setIsPrecisionVisualActive(event.shiftKey);
             resetShiftDragAnchors();
           }}
           onPointerUp={(): void => {
             isPointerDragActiveRef.current = false;
             isShiftPressedDuringDragRef.current = false;
+            setIsPrecisionVisualActive(false);
             resetShiftDragAnchors();
           }}
           onPointerCancel={(): void => {
             isPointerDragActiveRef.current = false;
             isShiftPressedDuringDragRef.current = false;
+            setIsPrecisionVisualActive(false);
             resetShiftDragAnchors();
           }}
           onKeyDown={(event): void => {
@@ -200,10 +212,16 @@ export function Fader({
               return;
             }
 
+            if (event.key === 'Shift') {
+              setIsPrecisionVisualActive(true);
+              return;
+            }
+
             const isPrecisionMode = isShiftPrecisionActive(event);
 
             if (event.key === 'ArrowUp' || event.key === 'ArrowRight') {
               event.preventDefault();
+              setIsPrecisionVisualActive(isPrecisionMode);
               const delta = isPrecisionMode
                 ? keyboardSteps.precisionArrowStep
                 : keyboardSteps.arrowStep;
@@ -216,6 +234,7 @@ export function Fader({
 
             if (event.key === 'ArrowDown' || event.key === 'ArrowLeft') {
               event.preventDefault();
+              setIsPrecisionVisualActive(isPrecisionMode);
               const delta = isPrecisionMode
                 ? -keyboardSteps.precisionArrowStep
                 : -keyboardSteps.arrowStep;
@@ -224,6 +243,14 @@ export function Fader({
                 onChange(nextValue);
               }
             }
+          }}
+          onKeyUp={(event): void => {
+            if (event.key === 'Shift') {
+              setIsPrecisionVisualActive(false);
+            }
+          }}
+          onBlur={(): void => {
+            setIsPrecisionVisualActive(false);
           }}
           onChange={(event): void => {
             const rawValue = Number.parseFloat(event.currentTarget.value);
@@ -240,6 +267,8 @@ export function Fader({
             const isShiftPrecisionMode = isPointerDragActiveRef.current
               ? isShiftPressedDuringDragRef.current
               : isShiftActiveOnEvent;
+
+            setIsPrecisionVisualActive(isShiftPrecisionMode);
 
             if (!isShiftPrecisionMode) {
               resetShiftDragAnchors();
@@ -272,6 +301,7 @@ export function Fader({
           data-plugin-state={pluginState}
           className={mergeClassNames(
             'slider-thumb h-2 appearance-none rounded-sm bg-plugin-border',
+            isPrecisionVisualActive ? 'cursor-zoom-in' : '',
             focusRingClass,
             isVertical ? 'w-full -rotate-90' : 'w-full'
           )}
@@ -285,7 +315,7 @@ export function Fader({
         {badgeLabel ? (
           <span
             className={mergeClassNames(
-              'rounded-sm border px-1 py-0.5 font-mono text-[10px] leading-none',
+              'rounded-sm border px-1 py-0.5 font-mono text-type-2xs leading-none',
               getStateBadgeClass(pluginState)
             )}
             aria-hidden="true"
@@ -293,12 +323,6 @@ export function Fader({
             {badgeLabel}
           </span>
         ) : null}
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap text-type-xs text-plugin-text-secondary opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 motion-reduce:transition-none"
-        >
-          {SHIFT_PRECISION_HINT}
-        </span>
       </div>
     </div>
   );

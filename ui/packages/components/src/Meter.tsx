@@ -102,7 +102,7 @@ function MeterChannel({
       data-testid={`meter-${side}`}
       className="flex items-center gap-2 rounded bg-plugin-dark p-2"
     >
-      <div className="w-4 text-center text-[11px] font-semibold text-gray-300">{side}</div>
+      <div className="w-4 text-center text-type-xs font-semibold text-gray-300">{side}</div>
       <div className="relative h-6 flex-1">
         <div
           className={`relative h-full w-full overflow-hidden rounded bg-plugin-surface motion-safe:transition-shadow motion-safe:duration-100 ${
@@ -123,7 +123,7 @@ function MeterChannel({
       </div>
       <div
         data-testid={`meter-${side}-db`}
-        className={`w-[60px] text-right font-mono text-[11px] text-gray-300 motion-safe:transition-colors motion-safe:duration-100 ${
+        className={`w-[60px] text-right font-mono text-type-xs text-gray-300 motion-safe:transition-colors motion-safe:duration-100 ${
           clipped ? 'font-semibold text-meter-clip' : ''
         }`}
       >
@@ -192,11 +192,13 @@ export function Meter({
         )}
       >
         <div className="flex items-center justify-between gap-2">
-          <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Levels</div>
+          <div className="text-type-xs font-semibold uppercase tracking-wide text-gray-500">
+            Levels
+          </div>
           {badgeLabel ? (
             <span
               className={mergeClassNames(
-                'rounded-sm border px-1 py-0.5 font-mono text-[10px] leading-none',
+                'rounded-sm border px-1 py-0.5 font-mono text-type-2xs leading-none',
                 getStateBadgeClass(pluginState)
               )}
               aria-hidden="true"
@@ -205,7 +207,7 @@ export function Meter({
             </span>
           ) : null}
         </div>
-        <div className="flex items-center justify-center py-8 text-sm text-gray-400">
+        <div className="flex items-center justify-center py-8 text-type-sm text-gray-400">
           ⏳ {isError ? 'Meter unavailable' : 'Connecting...'}
         </div>
       </div>
@@ -226,11 +228,13 @@ export function Meter({
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Levels</div>
+        <div className="text-type-xs font-semibold uppercase tracking-wide text-gray-500">
+          Levels
+        </div>
         {badgeLabel ? (
           <span
             className={mergeClassNames(
-              'rounded-sm border px-1 py-0.5 font-mono text-[10px] leading-none',
+              'rounded-sm border px-1 py-0.5 font-mono text-type-2xs leading-none',
               getStateBadgeClass(pluginState)
             )}
             aria-hidden="true"
@@ -241,7 +245,7 @@ export function Meter({
         {(clippedL || clippedR) && (
           <button
             data-testid="meter-clip-button"
-            className={`animate-clip-pulse cursor-pointer select-none rounded border-none bg-meter-clip px-2 py-0.5 text-[10px] font-bold text-white hover:bg-meter-clip-dark active:scale-95 ${focusRingClass}`}
+            className={`animate-clip-pulse cursor-pointer select-none rounded border-none bg-meter-clip px-2 py-0.5 text-type-2xs font-bold leading-none text-white hover:bg-meter-clip-dark active:scale-95 ${focusRingClass}`}
             onClick={handleResetClip}
             title="Click to reset"
             type="button"
