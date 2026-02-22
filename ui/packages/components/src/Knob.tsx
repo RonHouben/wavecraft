@@ -345,7 +345,7 @@ export function Knob({
 
         <div
           className={mergeClassNames(
-            'absolute inset-0 z-10 rounded-full border border-plugin-border bg-plugin-surface shadow-control',
+            'absolute inset-0 z-10 rounded-full border border-plugin-border bg-plugin-surface bg-gradient-to-b from-plugin-surface to-plugin-dark shadow-control ring-1 ring-inset ring-plugin-border/60',
             'peer-focus-visible:ring-2 peer-focus-visible:ring-accent-light peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-plugin-dark',
             getControlStateClass({ disabled: isDisabled, pluginState, state }),
             isPrecisionVisualActive ? 'ring-1 ring-accent/60' : '',
@@ -359,7 +359,7 @@ export function Knob({
           >
             <span
               aria-hidden="true"
-              className="absolute left-1/2 top-0.5 h-2 w-2 -translate-x-1/2 rounded-full border border-plugin-dark bg-accent shadow-control"
+              className="absolute left-1/2 top-0.5 h-2 w-2 -translate-x-1/2 rounded-full border border-accent-light/70 bg-accent shadow-control"
             />
           </span>
         </div>

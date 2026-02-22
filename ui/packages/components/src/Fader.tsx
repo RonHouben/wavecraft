@@ -241,7 +241,7 @@ export function Fader({
 
       <div
         className={mergeClassNames(
-          'relative inline-flex items-center justify-center rounded-md border border-plugin-border bg-plugin-dark p-2',
+          'relative inline-flex items-center justify-center rounded-md border border-plugin-border bg-plugin-dark bg-gradient-to-b from-plugin-surface/60 to-plugin-dark p-2 shadow-control ring-1 ring-inset ring-plugin-border/60',
           isVertical
             ? `${verticalLengthClassMap[size]} ${verticalFootprintClassMap[size]}`
             : `${horizontalLengthClassMap[size]} ${horizontalFootprintClassMap[size]}`,
@@ -425,7 +425,7 @@ export function Fader({
           data-state={state}
           data-plugin-state={pluginState}
           className={mergeClassNames(
-            'slider-thumb appearance-none rounded-full bg-plugin-border',
+            'slider-thumb appearance-none rounded-full bg-plugin-border ring-1 ring-inset ring-plugin-dark/80',
             isPrecisionVisualActive ? 'cursor-zoom-in' : '',
             focusRingClass,
             isVertical ? verticalInputClass : 'h-2 w-full'
