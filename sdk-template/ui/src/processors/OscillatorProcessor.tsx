@@ -357,24 +357,28 @@ export function OscillatorProcessor({
 
         <div className="flex items-center gap-2">
           {enabledParameter ? (
-            <Toggle
+            <Button
               id={`param-${enabledParameter.id}`}
-              label="Enabled"
-              checked={Boolean(enabledParameter.value)}
-              onChange={(checked): void => {
-                void enabledParameter.onChange(checked);
+              size="sm"
+              active={Boolean(enabledParameter.value)}
+              onClick={(): void => {
+                void enabledParameter.onChange(!enabledParameter.value);
               }}
-            />
+            >
+              Enabled
+            </Button>
           ) : null}
           {bypassParameter ? (
-            <Toggle
+            <Button
               id={`param-${bypassParameter.id}`}
-              label="Bypass"
-              checked={Boolean(bypassParameter.value)}
-              onChange={(checked): void => {
-                void bypassParameter.onChange(checked);
+              size="sm"
+              active={Boolean(bypassParameter.value)}
+              onClick={(): void => {
+                void bypassParameter.onChange(!bypassParameter.value);
               }}
-            />
+            >
+              Bypass
+            </Button>
           ) : null}
         </div>
       </header>

@@ -91,16 +91,16 @@ describe('sdk-template OscillatorProcessor', () => {
     render(<OscillatorProcessor />);
 
     expect(screen.getByRole('heading', { name: 'Oscillator' })).toBeInTheDocument();
-    expect(screen.getByRole('switch', { name: 'Bypass' })).toBeInTheDocument();
-    expect(screen.getByRole('switch', { name: 'Enabled' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Bypass' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Enabled' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('slider', { name: 'Level' })).toHaveAttribute(
       'aria-orientation',
       'vertical'
     );
     expect(screen.getByRole('slider', { name: 'Level' })).toHaveClass('[writing-mode:vertical-lr]');
 
-    fireEvent.click(screen.getByRole('switch', { name: 'Bypass' }));
-    fireEvent.click(screen.getByRole('switch', { name: 'Enabled' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bypass' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enabled' }));
     fireEvent.click(screen.getByRole('button', { name: 'Square' }));
 
     fireEvent.change(screen.getByLabelText('Frequency'), {
@@ -275,7 +275,7 @@ describe('sdk-template OscillatorProcessor', () => {
 
     render(<OscillatorProcessor />);
 
-    fireEvent.click(screen.getByRole('switch', { name: 'Bypass' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bypass' }));
 
     await waitFor(() => {
       expect(mockLoggerError).toHaveBeenCalledWith('Failed to set processor parameter', {
