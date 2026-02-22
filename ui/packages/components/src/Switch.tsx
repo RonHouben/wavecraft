@@ -7,7 +7,7 @@ import {
   getStateBadgeLabel,
 } from './utils/controlStates';
 
-export interface ToggleProps {
+export interface SwitchProps {
   readonly checked: boolean;
   readonly disabled?: boolean;
   readonly id?: string;
@@ -18,13 +18,13 @@ export interface ToggleProps {
   readonly state?: ControlVisualState;
 }
 
-interface ToggleSizeStyle {
+interface SwitchSizeStyle {
   readonly track: string;
   readonly thumb: string;
   readonly thumbTranslateOn: string;
 }
 
-const toggleSizeClassMap: Record<NonNullable<ToggleProps['size']>, ToggleSizeStyle> = {
+const switchSizeClassMap: Record<NonNullable<SwitchProps['size']>, SwitchSizeStyle> = {
   sm: {
     track: 'h-4 w-7',
     thumb: 'h-3 w-3 top-0.5',
@@ -42,7 +42,7 @@ const toggleSizeClassMap: Record<NonNullable<ToggleProps['size']>, ToggleSizeSty
   },
 };
 
-export function Toggle({
+export function Switch({
   checked,
   disabled = false,
   id,
@@ -51,11 +51,11 @@ export function Toggle({
   pluginState,
   size = 'md',
   state = 'default',
-}: Readonly<ToggleProps>): React.JSX.Element {
+}: Readonly<SwitchProps>): React.JSX.Element {
   const generatedLabelId = useId();
   const labelId = label ? `${id ?? generatedLabelId}-label` : undefined;
   const badgeLabel = getStateBadgeLabel(pluginState);
-  const sizeStyle = toggleSizeClassMap[size];
+  const sizeStyle = switchSizeClassMap[size];
   const isLoading = state === 'loading';
   const isError = state === 'error';
   const isDisabled = disabled || isLoading || state === 'disabled';

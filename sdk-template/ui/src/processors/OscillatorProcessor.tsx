@@ -1,6 +1,6 @@
-import { Button, Fader, Knob } from '@wavecraft/components';
+import { Button, Col, Fader, Knob, Row } from '@wavecraft/components';
 import { useHasProcessorInSignalChain, useParameter } from '@wavecraft/core';
-import { useRef, type JSX } from 'react';
+import { type JSX } from 'react';
 
 export interface OscillatorProcessorProps {
   readonly hideWhenNotInSignalChain?: boolean;
@@ -16,9 +16,7 @@ function getNumericValue(value: number | boolean): number {
 export function OscillatorProcessor({
   hideWhenNotInSignalChain,
 }: Readonly<OscillatorProcessorProps>): JSX.Element | null {
-  const sectionRef = useRef<HTMLElement | null>(null);
-  const processorId = 'oscillator';
-  const hasProcessorInSignalChain = useHasProcessorInSignalChain(processorId);
+  const hasProcessorInSignalChain = useHasProcessorInSignalChain('oscillator');
 
   const { param: bypassParameter, setValue: setBypassValue } =
     useParameter<boolean>('oscillator_bypass');
@@ -41,38 +39,43 @@ export function OscillatorProcessor({
 
   return (
     <section
-      ref={sectionRef}
       data-bypassed={String(isBypassActive)}
       className={`w-fit rounded-xl border border-plugin-border bg-plugin-surface-1 p-3 shadow-panel transition-[opacity,filter] duration-150 ${
         isBypassActive ? 'opacity-70 brightness-90 saturate-50' : 'opacity-100 saturate-100'
       }`}
     >
-      <header className="mb-3 flex items-start justify-between gap-3 border-b border-plugin-border/70 pb-3">
-        <h3 className="truncate text-type-md font-semibold text-plugin-text-primary">Oscillator</h3>
-
-        <div className="flex items-center gap-2">
+      <header className="mb-3 flex flex-col items-start justify-between gap-3 border-b border-plugin-border/70 pb-3">
+        <Row className="">
+          <Col className="gap-0.5">
+            <h3 className="truncate text-type-md font-semibold text-plugin-text-primary">
+              Oscillator
+            </h3>
+            <h5 className="text-type-2xs uppercase tracking-wide text-plugin-text-secondary">
+              Subtitle
+            </h5>
+          </Col>
           <Button
             id={`param-${bypassParameter?.id}`}
             size="sm"
             active={Boolean(bypassParameter?.value)}
-            className={bypassParameter?.value === true ? BYPASS_ACTIVE_CLASS : undefined}
+            className={bypassParameter?.value ? BYPASS_ACTIVE_CLASS : undefined}
             onClick={() => setBypassValue(!bypassParameter?.value)}
           >
             Bypass
           </Button>
-        </div>
+        </Row>
       </header>
 
-      <Button
-        id={`param-${enabledParameter?.id}`}
-        size="sm"
-        active={enabledParameter?.value ?? false}
-        onClick={() => setEnabledValue(!enabledParameter?.value)}
-      >
-        Enabled
-      </Button>
-
       <div className="grid gap-3 space-y-3 sm:grid-cols-4 sm:items-end sm:justify-start">
+        <Button
+          id={`param-${enabledParameter?.id}`}
+          size="sm"
+          active={Boolean(enabledParameter?.value)}
+          onClick={() => setEnabledValue(!enabledParameter?.value)}
+        >
+          Enabled
+        </Button>
+
         {waveformParameter?.type === 'enum' ? (
           <div className="w-fit rounded-md border border-plugin-border bg-plugin-dark/60 p-2 sm:col-span-4">
             <div className="mb-2">
@@ -80,11 +83,7 @@ export function OscillatorProcessor({
                 {waveformParameter.name}
               </span>
             </div>
-            <div
-              role="group"
-              aria-label={waveformParameter.name}
-              className="flex flex-wrap gap-1.5"
-            >
+            <Row role="group" aria-label={waveformParameter.name} className="gap-1.5">
               {waveformVariants.map((variant, index) => (
                 <Button
                   key={`${waveformParameter.id}-${variant}-${index}`}
@@ -95,7 +94,7 @@ export function OscillatorProcessor({
                   {variant}
                 </Button>
               ))}
-            </div>
+            </Row>
           </div>
         ) : null}
 

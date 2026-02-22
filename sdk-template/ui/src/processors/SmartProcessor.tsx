@@ -5,9 +5,10 @@ import {
   useParametersForProcessor,
   useHasProcessorInSignalChain,
 } from '@wavecraft/core';
-import { Button, Fader, Knob, Toggle } from '@wavecraft/components';
+import { Button, Fader, Knob, Switch } from '@wavecraft/components';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { JSX } from 'react';
+import { ParameterValue } from '@wavecraft/core';
 
 export interface SmartProcessorProps {
   readonly id: ProcessorId;
@@ -15,7 +16,7 @@ export interface SmartProcessorProps {
   readonly title?: string;
 }
 
-interface SmartProcessorParameter extends ParameterInfo {
+interface SmartProcessorParameter<T extends ParameterValue> extends ParameterInfo<T> {
   readonly onChange: (value: number | boolean) => Promise<void>;
   readonly disabled?: boolean;
 }
@@ -35,11 +36,13 @@ function isPrecisionControlActive(control: HTMLElement | null): boolean {
   return control?.dataset.precisionActive === 'true';
 }
 
-function isBypassParameter(param: Pick<ParameterInfo, 'id'>): boolean {
+function isBypassParameter<T extends ParameterValue>(param: Pick<ParameterInfo<T>, 'id'>): boolean {
   return param.id.endsWith('_bypass');
 }
 
-function isFaderParameter(param: Pick<ParameterInfo, 'id' | 'name' | 'unit'>): boolean {
+function isFaderParameter<T extends ParameterValue>(
+  param: Pick<ParameterInfo<T>, 'id' | 'name' | 'unit'>
+): boolean {
   const faderHintRegex = /(level|gain|trim|volume|db)/i;
   return faderHintRegex.test(`${param.id} ${param.name} ${param.unit ?? ''}`);
 }
@@ -73,7 +76,9 @@ function formatParameterValue(
   return `${value.toFixed(2)} ${unit}`;
 }
 
-function renderPrimitiveParameter(param: SmartProcessorParameter): JSX.Element | null {
+function renderPrimitiveParameter<T extends ParameterValue>(
+  param: SmartProcessorParameter<T>
+): JSX.Element | null {
   const controlId = `param-${param.id}`;
 
   if (param.type === 'bool') {
@@ -92,7 +97,7 @@ function renderPrimitiveParameter(param: SmartProcessorParameter): JSX.Element |
             {formatParameterValue(Boolean(param.value))}
           </span>
         </div>
-        <Toggle
+        <Switch
           id={controlId}
           label={param.name}
           checked={Boolean(param.value)}
@@ -215,7 +220,7 @@ export function SmartProcessor({
   const hasProcessorInSignalChain = useHasProcessorInSignalChain(id);
   const { params, isLoading, error, setParameter } = useParametersForProcessor(id);
 
-  const processorParameters: SmartProcessorParameter[] = useMemo(() => {
+  const processorParameters = useMemo(() => {
     const mappedParameters = params.map((param) => ({
       ...param,
       onChange: async (value: number | boolean): Promise<void> => {

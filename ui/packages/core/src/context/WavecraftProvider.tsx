@@ -28,14 +28,14 @@ export interface WavecraftProviderProps {
 }
 
 export function WavecraftProvider({ children }: Readonly<WavecraftProviderProps>) {
-  const [params, setParams] = useState<ParameterInfo[]>([]);
+  const [params, setParams] = useState<ParameterInfo<ParameterValue>[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   const { connected } = useConnectionStatus();
 
   const mountedRef = useRef(true);
-  const paramsRef = useRef<ParameterInfo[]>([]);
+  const paramsRef = useRef<ParameterInfo<ParameterValue>[]>([]);
   const fetchingRef = useRef(false);
   const prevConnectedRef = useRef<boolean | null>(null);
 

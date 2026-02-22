@@ -1,13 +1,13 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { Toggle } from './Toggle';
+import { Switch } from './Switch';
 
-describe('Toggle', () => {
+describe('Switch', () => {
   it('uses switch semantics and toggles value on click', () => {
     const onChange = vi.fn();
 
-    render(<Toggle checked={false} label="Bypass" onChange={onChange} />);
+    render(<Switch checked={false} label="Bypass" onChange={onChange} />);
 
     const toggle = screen.getByRole('switch', { name: 'Bypass' });
     fireEvent.click(toggle);
@@ -16,7 +16,7 @@ describe('Toggle', () => {
   });
 
   it('forces off state when bypassed', () => {
-    render(<Toggle checked label="Bypass" pluginState="bypassed" onChange={vi.fn()} />);
+    render(<Switch checked label="Bypass" pluginState="bypassed" onChange={vi.fn()} />);
 
     const toggle = screen.getByRole('switch', { name: 'Bypass' });
     expect(toggle).toHaveAttribute('aria-checked', 'false');
@@ -24,21 +24,21 @@ describe('Toggle', () => {
   });
 
   it('uses associated label text for non-string label nodes', () => {
-    render(<Toggle checked={false} label={<span>Processor Enabled</span>} onChange={vi.fn()} />);
+    render(<Switch checked={false} label={<span>Processor Enabled</span>} onChange={vi.fn()} />);
 
     expect(screen.getByRole('switch', { name: 'Processor Enabled' })).toBeInTheDocument();
   });
 
   it('disables interaction for loading and disabled visual states', () => {
     const { rerender } = render(
-      <Toggle checked={false} label="Bypass" state="loading" onChange={vi.fn()} />
+      <Switch checked={false} label="Bypass" state="loading" onChange={vi.fn()} />
     );
 
     const loadingToggle = screen.getByRole('switch', { name: 'Bypass' });
     expect(loadingToggle).toBeDisabled();
     expect(loadingToggle).toHaveAttribute('aria-busy', 'true');
 
-    rerender(<Toggle checked={false} label="Bypass" state="disabled" onChange={vi.fn()} />);
+    rerender(<Switch checked={false} label="Bypass" state="disabled" onChange={vi.fn()} />);
 
     expect(screen.getByRole('switch', { name: 'Bypass' })).toBeDisabled();
   });
@@ -47,7 +47,7 @@ describe('Toggle', () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
 
-    render(<Toggle checked={false} label="Bypass" onChange={onChange} />);
+    render(<Switch checked={false} label="Bypass" onChange={onChange} />);
 
     const toggle = screen.getByRole('switch', { name: 'Bypass' });
     toggle.focus();
@@ -61,7 +61,7 @@ describe('Toggle', () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
 
-    render(<Toggle checked={false} label="Bypass" onChange={onChange} />);
+    render(<Switch checked={false} label="Bypass" onChange={onChange} />);
 
     const toggle = screen.getByRole('switch', { name: 'Bypass' });
     toggle.focus();
