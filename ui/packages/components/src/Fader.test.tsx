@@ -42,4 +42,36 @@ describe('Fader', () => {
 
     expect(onChange).toHaveBeenCalledWith(0.8);
   });
+
+  it('applies error semantics when state is error', () => {
+    render(
+      <Fader
+        id="level-fader"
+        label="Level"
+        value={0.4}
+        min={0}
+        max={1}
+        state="error"
+        onChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getByLabelText('Level')).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('disables fader for disabled visual state', () => {
+    render(
+      <Fader
+        id="gain-fader"
+        label="Gain"
+        value={0.4}
+        min={0}
+        max={1}
+        state="disabled"
+        onChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getByLabelText('Gain')).toBeDisabled();
+  });
 });

@@ -27,4 +27,19 @@ describe('Button', () => {
 
     expect(screen.getByText('MAP')).toBeInTheDocument();
   });
+
+  it('disables interaction for disabled visual state', () => {
+    render(<Button state="disabled">Bypass</Button>);
+
+    const button = screen.getByRole('button', { name: 'Bypass' });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('data-state', 'disabled');
+  });
+
+  it('applies error semantics when state is error', () => {
+    render(<Button state="error">Save</Button>);
+
+    const button = screen.getByRole('button', { name: 'Save' });
+    expect(button).toHaveAttribute('aria-invalid', 'true');
+  });
 });

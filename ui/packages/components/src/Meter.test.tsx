@@ -87,4 +87,12 @@ describe('Meter', () => {
 
     expect(screen.getByText('MAP')).toBeInTheDocument();
   });
+
+  it('applies disabled state cue when state is disabled', () => {
+    render(<Meter connected frame={frame} state="disabled" />);
+
+    const meter = screen.getByTestId('meter');
+    expect(meter).toHaveAttribute('data-state', 'disabled');
+    expect(meter).toHaveClass('cursor-not-allowed');
+  });
 });

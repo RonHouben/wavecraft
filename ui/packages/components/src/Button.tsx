@@ -40,7 +40,7 @@ export function Button({
   const badgeLabel = getStateBadgeLabel(pluginState);
   const isLoading = state === 'loading';
   const isError = state === 'error';
-  const isDisabled = disabled || isLoading;
+  const isDisabled = disabled || isLoading || state === 'disabled';
 
   return (
     <button

@@ -24,4 +24,38 @@ describe('Knob', () => {
 
     expect(onChange).toHaveBeenCalledWith(880);
   });
+
+  it('disables knob and sets busy semantics in loading state', () => {
+    render(
+      <Knob
+        id="gain-knob"
+        label="Gain"
+        value={0.5}
+        min={0}
+        max={1}
+        state="loading"
+        onChange={vi.fn()}
+      />
+    );
+
+    const input = screen.getByLabelText('Gain');
+    expect(input).toBeDisabled();
+    expect(input).toHaveAttribute('aria-busy', 'true');
+  });
+
+  it('disables knob for disabled visual state', () => {
+    render(
+      <Knob
+        id="mix-knob"
+        label="Mix"
+        value={0.5}
+        min={0}
+        max={1}
+        state="disabled"
+        onChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getByLabelText('Mix')).toBeDisabled();
+  });
 });

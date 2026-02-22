@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import type { ControlVisualState, PluginVisualState } from './types';
 import { focusRingClass, mergeClassNames } from './utils/classNames';
 import {
@@ -52,11 +52,13 @@ export function Toggle({
   size = 'md',
   state = 'default',
 }: Readonly<ToggleProps>): React.JSX.Element {
+  const generatedLabelId = useId();
+  const labelId = label ? `${id ?? generatedLabelId}-label` : undefined;
   const badgeLabel = getStateBadgeLabel(pluginState);
   const sizeStyle = toggleSizeClassMap[size];
   const isLoading = state === 'loading';
   const isError = state === 'error';
-  const isDisabled = disabled || isLoading;
+  const isDisabled = disabled || isLoading || state === 'disabled';
   const resolvedChecked = pluginState === 'bypassed' ? false : checked;
 
   return (
@@ -68,7 +70,7 @@ export function Toggle({
         aria-checked={resolvedChecked}
         aria-busy={isLoading || undefined}
         aria-invalid={isError || undefined}
-        aria-label={typeof label === 'string' ? label : undefined}
+        aria-labelledby={labelId}
         disabled={isDisabled}
         data-state={state}
         data-plugin-state={pluginState}
@@ -93,7 +95,11 @@ export function Toggle({
         />
       </button>
 
-      {label ? <span className="text-type-sm text-plugin-text-secondary">{label}</span> : null}
+      {label ? (
+        <span id={labelId} className="text-type-sm text-plugin-text-secondary">
+          {label}
+        </span>
+      ) : null}
 
       {badgeLabel ? (
         <span

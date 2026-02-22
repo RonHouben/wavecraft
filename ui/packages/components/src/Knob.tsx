@@ -57,7 +57,7 @@ export function Knob({
 }: Readonly<KnobProps>): React.JSX.Element {
   const isLoading = state === 'loading';
   const isError = state === 'error';
-  const isDisabled = disabled || isLoading;
+  const isDisabled = disabled || isLoading || state === 'disabled';
   const clampedValue = clamp(value, min, max);
   const normalized = (clampedValue - min) / (max - min || 1);
   const angle = -135 + normalized * 270;

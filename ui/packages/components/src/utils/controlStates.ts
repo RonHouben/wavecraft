@@ -12,7 +12,9 @@ export function getControlStateClass({
   pluginState,
   disabled = false,
 }: Readonly<ControlStateOptions>): string {
-  if (disabled) {
+  const isDisabled = disabled || state === 'disabled';
+
+  if (isDisabled) {
     return 'cursor-not-allowed opacity-50';
   }
 
@@ -24,7 +26,13 @@ export function getControlStateClass({
       ? 'pointer-events-none cursor-wait'
       : state === 'error'
         ? 'border border-meter-clip text-meter-clip'
-        : '';
+        : state === 'hover'
+          ? 'brightness-110'
+          : state === 'focus'
+            ? 'ring-2 ring-accent-light ring-offset-2 ring-offset-plugin-dark'
+            : state === 'active'
+              ? 'scale-[0.98] brightness-95'
+              : '';
 
   const pluginStateClass =
     pluginState === 'bypassed'
