@@ -100,7 +100,13 @@ describe('sdk-template OscillatorProcessor', () => {
       'saturate-50',
       'brightness-90'
     );
-    expect(screen.getByRole('button', { name: 'Bypass' })).toHaveAttribute('aria-pressed', 'true');
+    const bypassButton = screen.getByRole('button', { name: 'Bypass' });
+    expect(bypassButton).toHaveAttribute('aria-pressed', 'true');
+    expect(bypassButton).toHaveClass('from-accent/60');
+    expect(bypassButton).toHaveClass('to-accent/35');
+    expect(bypassButton).toHaveClass('text-accent-light');
+    expect(bypassButton).toHaveClass('ring-2');
+    expect(bypassButton).toHaveClass('ring-accent/70');
     expect(screen.getByRole('button', { name: 'Enabled' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('slider', { name: 'Level' })).toHaveAttribute(
       'aria-orientation',

@@ -426,7 +426,7 @@ describe('Knob', () => {
     const input = screen.getByRole('slider', { name: 'Frequency Layout Small' });
     const root = input.closest('.group');
     expect(root).not.toBeNull();
-    expect(root).toHaveClass('min-w-[72px]');
+    expect(root).toHaveClass('min-w-[88px]');
     expect(root).not.toHaveClass('w-[72px]');
 
     const valueLabel = screen.getByText('20.00 Hz');

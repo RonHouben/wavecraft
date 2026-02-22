@@ -5,19 +5,19 @@ import type { ParameterId, ParameterInfo, ParameterValue } from '../types/parame
 import type { ProcessorId } from '../types/processors';
 import { useAllParameters } from './useAllParameters';
 
-export interface UseParametersForProcessorResult {
+export interface UseParametersForProcessorResult<T extends ParameterValue> {
   processorId: ProcessorId;
-  params: ParameterInfo[];
+  params: ParameterInfo<T>[];
   isLoading: boolean;
   error: Error | null;
-  setParameter: (id: ParameterId, value: ParameterValue) => Promise<void>;
+  setParameter: (id: ParameterId, value: T) => Promise<void>;
   reload: () => Promise<void>;
 }
 
-function selectProcessorParams(
-  allParams: readonly ParameterInfo[],
+function selectProcessorParams<T extends ParameterValue>(
+  allParams: readonly ParameterInfo<T>[],
   processorId: ProcessorId
-): ParameterInfo[] {
+): ParameterInfo<T>[] {
   const bypassId = `${processorId}${PROCESSOR_BYPASS_SUFFIX}`;
 
   return allParams.filter(
@@ -25,13 +25,13 @@ function selectProcessorParams(
   );
 }
 
-export function useParametersForProcessor(
+export function useParametersForProcessor<T extends ParameterValue>(
   processorId: ProcessorId
-): UseParametersForProcessorResult {
+): UseParametersForProcessorResult<T> {
   const { params, isLoading, error, setParameter, reload } = useAllParameters();
 
   const processorParams = useMemo(
-    () => selectProcessorParams(params, processorId),
+    () => selectProcessorParams<T>(params, processorId),
     [params, processorId]
   );
 

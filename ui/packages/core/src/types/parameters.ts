@@ -61,12 +61,12 @@ export type ParameterId = ParameterIdMapAugmentedMarker extends keyof ParameterI
   ? Exclude<Extract<keyof ParameterIdMap, string>, ParameterIdMapAugmentedMarker>
   : string;
 
-export interface ParameterInfo {
+export interface ParameterInfo<T extends ParameterValue> {
   id: ParameterId;
   name: string;
   type: ParameterType;
-  value: ParameterValue;
-  default: ParameterValue;
+  value: T;
+  default: T;
   min: number;
   max: number;
   unit?: string;
@@ -94,8 +94,8 @@ export interface SetParameterParams {
 export type SetParameterResult = Record<string, never>;
 
 // getAllParameters
-export interface GetAllParametersResult {
-  parameters: ParameterInfo[];
+export interface GetAllParametersResult<T extends ParameterValue> {
+  parameters: ParameterInfo<T>[];
 }
 
 // Notification: parameterChanged

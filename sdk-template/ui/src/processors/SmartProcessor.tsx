@@ -342,7 +342,7 @@ export function SmartProcessor({
   return (
     <section
       ref={sectionRef}
-      className="relative overflow-hidden rounded-xl border border-plugin-border bg-plugin-surface-1 p-5 shadow-panel"
+      className="relative w-fit overflow-hidden rounded-xl border border-plugin-border bg-plugin-surface-1 p-5 shadow-panel"
     >
       <div
         aria-hidden="true"

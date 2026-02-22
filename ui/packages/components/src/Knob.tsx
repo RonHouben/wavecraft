@@ -29,7 +29,7 @@ const knobSizeClassMap: Record<NonNullable<KnobProps['size']>, string> = {
 };
 
 const knobWidthClassMap: Record<NonNullable<KnobProps['size']>, string> = {
-  sm: 'min-w-[72px]',
+  sm: 'min-w-[88px]',
   md: 'min-w-[88px]',
   lg: 'min-w-[88px]',
 };
@@ -184,7 +184,7 @@ export function Knob({
   return (
     <div
       className={mergeClassNames(
-        'group inline-grid justify-items-center gap-2',
+        'group mx-auto inline-grid justify-items-center gap-2 text-center',
         knobWidthClassMap[size]
       )}
     >
@@ -372,7 +372,7 @@ export function Knob({
         ) : null}
       </div>
 
-      <div className="relative inline-flex w-full items-center justify-center gap-1">
+      <div className="relative flex w-full items-center justify-center gap-1">
         <span
           className="shrink-0 whitespace-nowrap text-center font-mono text-type-sm tabular-nums text-plugin-text-primary"
           style={{ width: `${reservedValueWidthCh}ch` }}
