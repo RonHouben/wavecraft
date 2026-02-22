@@ -63,7 +63,7 @@ function getKeyboardSteps(
 
 function isShiftPrecisionActive(event: {
   readonly shiftKey: boolean;
-  readonly getModifierState?: (keyArg: string) => boolean;
+  readonly getModifierState?: (keyArg: 'Shift') => boolean;
 }): boolean {
   if (event.shiftKey) {
     return true;
