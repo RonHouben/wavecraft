@@ -29,12 +29,46 @@ function getNumericValue(value: number | boolean): number {
   return typeof value === 'number' ? value : value ? 1 : 0;
 }
 
+function formatParameterValue(
+  value: number | boolean,
+  unit?: string,
+  variants?: readonly string[]
+): string {
+  if (typeof value === 'boolean') {
+    return value ? 'On' : 'Off';
+  }
+
+  if (Array.isArray(variants) && variants.length > 0) {
+    const variant = variants[getNumericValue(value)] ?? variants[0];
+    return variant;
+  }
+
+  if (!unit) {
+    return value.toFixed(3);
+  }
+
+  if (unit === '%') {
+    return `${(value * 100).toFixed(1)}%`;
+  }
+
+  return `${value.toFixed(2)} ${unit}`;
+}
+
 function renderPrimitiveParameter(param: SmartProcessorParameter): JSX.Element | null {
   const controlId = `param-${param.id}`;
 
   if (param.type === 'bool') {
     return (
-      <div key={param.id} className="rounded-md border border-plugin-border bg-plugin-surface p-3">
+      <div
+        key={param.id}
+        className="rounded-lg border border-plugin-border bg-plugin-surface-2/60 p-4 shadow-control"
+      >
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <p className="text-type-sm font-semibold text-plugin-text-primary">{param.name}</p>
+          <span className="rounded-md border border-accent/30 bg-accent/10 px-2 py-1 font-mono text-type-xs uppercase tracking-wide text-accent">
+            {formatParameterValue(Boolean(param.value))}
+          </span>
+        </div>
         <Toggle
           id={controlId}
           label={param.name}
@@ -53,8 +87,16 @@ function renderPrimitiveParameter(param: SmartProcessorParameter): JSX.Element |
     const selectedIndex = getNumericValue(param.value);
 
     return (
-      <div key={param.id} className="rounded-md border border-plugin-border bg-plugin-surface p-3">
-        <p className="mb-2 text-sm font-semibold text-plugin-text-primary">{param.name}</p>
+      <div
+        key={param.id}
+        className="rounded-lg border border-plugin-border bg-plugin-surface-2/60 p-4 shadow-control"
+      >
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-type-sm font-semibold text-plugin-text-primary">{param.name}</p>
+          <span className="rounded-md border border-accent/30 bg-accent/10 px-2 py-1 font-mono text-type-xs uppercase tracking-wide text-accent">
+            {formatParameterValue(param.value, undefined, variants)}
+          </span>
+        </div>
         {variants.length > 0 ? (
           <div role="group" aria-label={param.name} className="flex flex-wrap gap-2">
             {variants.map((variant, index) => (
@@ -63,6 +105,7 @@ function renderPrimitiveParameter(param: SmartProcessorParameter): JSX.Element |
                 size="sm"
                 pressed={index === selectedIndex}
                 disabled={param.disabled}
+                className="bg-plugin-dark/70"
                 onClick={(): void => {
                   void param.onChange(index);
                 }}
@@ -72,7 +115,7 @@ function renderPrimitiveParameter(param: SmartProcessorParameter): JSX.Element |
             ))}
           </div>
         ) : (
-          <p className="text-plugin-text-muted text-xs">No variants available</p>
+          <p className="text-xs text-plugin-text-muted">No variants available</p>
         )}
       </div>
     );
@@ -85,32 +128,44 @@ function renderPrimitiveParameter(param: SmartProcessorParameter): JSX.Element |
     };
 
     return (
-      <div key={param.id} className="rounded-md border border-plugin-border bg-plugin-surface p-3">
-        {isFaderParameter(param) ? (
-          <Fader
-            id={controlId}
-            label={param.name}
-            value={controlValue}
-            min={param.min}
-            max={param.max}
-            unit={param.unit}
-            disabled={param.disabled}
-            size="lg"
-            orientation="horizontal"
-            onChange={onChange}
-          />
-        ) : (
-          <Knob
-            id={controlId}
-            label={param.name}
-            value={controlValue}
-            min={param.min}
-            max={param.max}
-            unit={param.unit}
-            disabled={param.disabled}
-            onChange={onChange}
-          />
-        )}
+      <div
+        key={param.id}
+        className="rounded-lg border border-plugin-border bg-plugin-surface-2/60 p-4 shadow-control"
+      >
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-type-sm font-semibold text-plugin-text-primary">{param.name}</p>
+          <span className="rounded-md border border-plugin-border-strong/70 bg-plugin-dark/60 px-2 py-1 font-mono text-type-xs tabular-nums text-plugin-text-secondary">
+            {formatParameterValue(controlValue, param.unit)}
+          </span>
+        </div>
+
+        <div className="rounded-md border border-plugin-border bg-plugin-dark/60 px-3 py-4">
+          {isFaderParameter(param) ? (
+            <Fader
+              id={controlId}
+              label={param.name}
+              value={controlValue}
+              min={param.min}
+              max={param.max}
+              unit={param.unit}
+              disabled={param.disabled}
+              size="lg"
+              orientation="horizontal"
+              onChange={onChange}
+            />
+          ) : (
+            <Knob
+              id={controlId}
+              label={param.name}
+              value={controlValue}
+              min={param.min}
+              max={param.max}
+              unit={param.unit}
+              disabled={param.disabled}
+              onChange={onChange}
+            />
+          )}
+        </div>
       </div>
     );
   }
@@ -155,7 +210,7 @@ export function SmartProcessor({
         role="status"
         aria-live="polite"
         aria-atomic="true"
-        className="text-plugin-text-muted rounded-lg border border-plugin-border bg-plugin-surface p-4 text-sm italic"
+        className="rounded-xl border border-plugin-border bg-plugin-surface-1 p-5 text-type-sm italic text-plugin-text-muted shadow-panel"
       >
         Loading {id}...
       </div>
@@ -168,7 +223,7 @@ export function SmartProcessor({
         role="alert"
         aria-live="assertive"
         aria-atomic="true"
-        className="rounded-lg border border-state-danger/60 bg-plugin-surface p-4 text-sm text-state-danger"
+        className="rounded-xl border border-state-danger/60 bg-plugin-surface-1 p-5 text-type-sm text-state-danger shadow-panel"
       >
         Error loading {id}: {error.message}
       </div>
@@ -180,12 +235,28 @@ export function SmartProcessor({
   }
 
   return (
-    <div className="space-y-2 rounded-lg border border-plugin-border bg-plugin-surface p-4">
-      <h3 className="text-plugin-text-secondary text-sm font-semibold uppercase tracking-wider">
-        {title ?? id}
-      </h3>
+    <section className="relative overflow-hidden rounded-xl border border-plugin-border bg-plugin-surface-1 p-5 shadow-panel">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-accent/10 to-transparent"
+      />
 
-      <div className="space-y-3">{processorParameters.map((param) => renderPrimitiveParameter(param))}</div>
-    </div>
+      <div className="relative mb-4 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="mb-1 text-type-2xs uppercase tracking-wider text-plugin-text-muted">
+            Processor
+          </p>
+          <h3 className="truncate text-type-lg text-plugin-text-primary">{title ?? id}</h3>
+        </div>
+
+        <span className="rounded-md border border-plugin-border-strong/70 bg-plugin-dark/70 px-2 py-1 font-mono text-type-xs tabular-nums text-plugin-text-secondary">
+          {processorParameters.length} params
+        </span>
+      </div>
+
+      <div className="relative space-y-4">
+        {processorParameters.map((param) => renderPrimitiveParameter(param))}
+      </div>
+    </section>
   );
 }
