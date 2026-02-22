@@ -151,7 +151,7 @@ For **UI/UX changes** — React component work, design system adjustments, acces
 
 1. **Orchestrator** routes the UI/UX task to UX Designer
 2. **UX Designer** researches existing patterns → proposes UX approach → implements (following required skill order)
-3. **UX Designer** hands off to **Tester** for visual and functional validation
+3. **UX Designer** hands off to **Tester** for visual and functional validation; for UI/visual changes, Playwright screenshot-based in-app checks are required
 4. **Tester** returns results; if issues are found, UX Designer iterates
 5. **UX Designer** hands back to **Orchestrator** on completion
 
@@ -382,7 +382,7 @@ This command runs 6 phases:
 
 ### Visual Testing with Playwright MCP
 
-Visual testing is done separately using the **playwright-mcp-ui-testing** skill:
+For any UI/visual change, visual testing is required using the **playwright-mcp-ui-testing** skill:
 
 ```bash
 # 1. Start the dev servers
@@ -398,7 +398,7 @@ cargo xtask dev
 pkill -f "cargo xtask dev"
 ```
 
-**When to use visual testing:**
+**Required for:**
 
 - UI component changes
 - Styling updates

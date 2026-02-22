@@ -16,7 +16,7 @@ tools:
     'web',
     'todo',
     'memory',
-    vscode
+    'vscode'
   ]
 agents: [orchestrator, coder, qa, docwriter, search]
 user-invokable: true
@@ -333,7 +333,7 @@ cd engine && cargo run -p desktop
 
 ### Phase 3b: Visual UI Testing (Playwright MCP)
 
-For tests requiring UI interaction or visual verification, use Playwright MCP tools.
+For any UI/visual change, perform Playwright screenshot-based in-app checks as a required step.
 
 **Skill**: Read `.github/skills/playwright-mcp-ui-testing/SKILL.md` for detailed instructions.
 
@@ -345,6 +345,12 @@ For tests requiring UI interaction or visual verification, use Playwright MCP to
 4. Use `mcp_playwright_browser_take_screenshot` for visual capture
 5. Close with `mcp_playwright_browser_close` when done
 6. **⚠️ CRITICAL: Stop dev servers**: See "Graceful Server Shutdown" below
+
+**Required scope for UI/visual changes:**
+
+- Capture screenshots of changed UI areas in-app
+- Validate visual behavior against expected state/baseline
+- Document screenshot evidence and result in `test-plan.md`
 
 **Graceful Server Shutdown:**
 
@@ -382,6 +388,7 @@ ps aux | grep "cargo xtask dev"  # Should return no results
 
 - **Always stop dev servers after visual testing** using `pkill -f "cargo xtask dev"`
 - **Run `cargo xtask ci-check` first** as the primary validation method (~52s)
+- **For any UI/visual change, run Playwright screenshot-based in-app checks before sign-off**
 - Use individual commands only to debug failures
 - Execute commands yourself to verify behavior
 - Document EVERY test result in test-plan.md

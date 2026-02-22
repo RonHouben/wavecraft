@@ -4,7 +4,10 @@
 
 This guide explains how to use Playwright MCP for visual testing of the Wavecraft UI during development. Visual testing enables screenshot capture, baseline comparison, and validation of UI components at various states.
 
+For any UI/visual change, screenshot-based in-app checks with Playwright are required before testing sign-off.
+
 **Requirements:**
+
 - `cargo xtask dev` running (WebSocket server + Vite)
 - Playwright MCP server configured
 - Chromium browser installed via `npm run playwright:install`
@@ -13,13 +16,18 @@ This guide explains how to use Playwright MCP for visual testing of the Wavecraf
 
 ## Quick Start
 
+Use this workflow as a required testing step for UI/visual changes.
+
 1. **Start the development servers:**
+
    ```bash
    cargo xtask dev
    ```
+
    This starts both the WebSocket server (port 9000) and Vite dev server (port 5173).
 
 2. **Install Playwright (first time only):**
+
    ```bash
    cd ui
    npm run playwright:install
@@ -42,41 +50,41 @@ All testable components have `data-testid` attributes for reliable selection.
 
 ### Component Test IDs
 
-| Component | Test ID | Description |
-|-----------|---------|-------------|
-| **App Root** | `app-root` | Main application container |
-| **Meter (container)** | `meter` | Meter component wrapper |
-| **Meter L Channel** | `meter-L` | Left channel row |
-| **Meter R Channel** | `meter-R` | Right channel row |
-| **Meter L Peak** | `meter-L-peak` | Left peak bar |
-| **Meter L RMS** | `meter-L-rms` | Left RMS bar |
-| **Meter R Peak** | `meter-R-peak` | Right peak bar |
-| **Meter R RMS** | `meter-R-rms` | Right RMS bar |
-| **Meter L dB Display** | `meter-L-db` | Left dB readout |
-| **Meter R dB Display** | `meter-R-db` | Right dB readout |
-| **Meter Clip Button** | `meter-clip-button` | Clipping indicator button |
-| **Parameter Container** | `param-{id}` | Parameter wrapper (e.g., `param-gain`) |
-| **Parameter Label** | `param-{id}-label` | Parameter name label |
-| **Parameter Slider** | `param-{id}-slider` | Range input element |
-| **Parameter Value** | `param-{id}-value` | Displayed value |
-| **Version Badge** | `version-badge` | Version display |
-| **Resize Handle** | `resize-handle` | Window resize button |
-| **Connection Status** | `connection-status` | WebSocket status indicator |
+| Component               | Test ID             | Description                            |
+| ----------------------- | ------------------- | -------------------------------------- |
+| **App Root**            | `app-root`          | Main application container             |
+| **Meter (container)**   | `meter`             | Meter component wrapper                |
+| **Meter L Channel**     | `meter-L`           | Left channel row                       |
+| **Meter R Channel**     | `meter-R`           | Right channel row                      |
+| **Meter L Peak**        | `meter-L-peak`      | Left peak bar                          |
+| **Meter L RMS**         | `meter-L-rms`       | Left RMS bar                           |
+| **Meter R Peak**        | `meter-R-peak`      | Right peak bar                         |
+| **Meter R RMS**         | `meter-R-rms`       | Right RMS bar                          |
+| **Meter L dB Display**  | `meter-L-db`        | Left dB readout                        |
+| **Meter R dB Display**  | `meter-R-db`        | Right dB readout                       |
+| **Meter Clip Button**   | `meter-clip-button` | Clipping indicator button              |
+| **Parameter Container** | `param-{id}`        | Parameter wrapper (e.g., `param-gain`) |
+| **Parameter Label**     | `param-{id}-label`  | Parameter name label                   |
+| **Parameter Slider**    | `param-{id}-slider` | Range input element                    |
+| **Parameter Value**     | `param-{id}-value`  | Displayed value                        |
+| **Version Badge**       | `version-badge`     | Version display                        |
+| **Resize Handle**       | `resize-handle`     | Window resize button                   |
+| **Connection Status**   | `connection-status` | WebSocket status indicator             |
 
 ### Playwright Selectors
 
 ```typescript
 // Full page
-page.locator('[data-testid="app-root"]')
+page.locator('[data-testid="app-root"]');
 
 // Individual component
-page.locator('[data-testid="meter"]')
-page.locator('[data-testid="meter-L"]')
-page.locator('[data-testid="param-gain"]')
+page.locator('[data-testid="meter"]');
+page.locator('[data-testid="meter-L"]');
+page.locator('[data-testid="param-gain"]');
 
 // Nested elements
-page.locator('[data-testid="meter-L-peak"]')
-page.locator('[data-testid="param-gain-slider"]')
+page.locator('[data-testid="meter-L-peak"]');
+page.locator('[data-testid="param-gain-slider"]');
 ```
 
 ---
@@ -125,15 +133,19 @@ Baselines are stored externally in your user directory, not in the git repositor
 ### Naming Convention
 
 **Full-page screenshots:**
+
 ```
 {scenario}_{viewport}.png
 ```
+
 - Example: `default_800x600.png`, `metering-active_800x600.png`
 
 **Component screenshots:**
+
 ```
 {state}.png
 ```
+
 - Example: `silent.png`, `hover.png`, `clipping.png`
 - Stored in `components/{component-name}/` subdirectory
 
@@ -143,43 +155,43 @@ Baselines are stored externally in your user directory, not in the git repositor
 
 ### Full-Page Scenarios
 
-| ID | Scenario | Description | Setup |
-|----|----------|-------------|-------|
-| FP-01 | Default state | Fresh load, default parameters | Navigate to app, wait for connection |
-| FP-02 | Metering active | Meters showing signal | Play audio or inject test signal |
-| FP-03 | Clipping state | Clipping indicator visible | Trigger clipping (signal > 0dB) |
-| FP-04 | Resized small | 600×400 viewport | Resize window to 600×400 |
-| FP-05 | Resized large | 1024×768 viewport | Resize window to 1024×768 |
-| FP-06 | Disconnected | WebSocket disconnected | Stop WebSocket server |
+| ID    | Scenario        | Description                    | Setup                                |
+| ----- | --------------- | ------------------------------ | ------------------------------------ |
+| FP-01 | Default state   | Fresh load, default parameters | Navigate to app, wait for connection |
+| FP-02 | Metering active | Meters showing signal          | Play audio or inject test signal     |
+| FP-03 | Clipping state  | Clipping indicator visible     | Trigger clipping (signal > 0dB)      |
+| FP-04 | Resized small   | 600×400 viewport               | Resize window to 600×400             |
+| FP-05 | Resized large   | 1024×768 viewport              | Resize window to 1024×768            |
+| FP-06 | Disconnected    | WebSocket disconnected         | Stop WebSocket server                |
 
 ### Component Scenarios
 
 #### Meter Component
 
-| State | Description | Setup |
-|-------|-------------|-------|
-| Silent | No signal | Bars at minimum |
-| Low | -40dB signal | ~10% bar height |
-| Medium | -12dB signal | ~60% bar height |
-| High | -3dB signal | ~90% bar height |
-| Clipping | 0dB+ signal | Full bar + clip indicator |
+| State    | Description  | Setup                     |
+| -------- | ------------ | ------------------------- |
+| Silent   | No signal    | Bars at minimum           |
+| Low      | -40dB signal | ~10% bar height           |
+| Medium   | -12dB signal | ~60% bar height           |
+| High     | -3dB signal  | ~90% bar height           |
+| Clipping | 0dB+ signal  | Full bar + clip indicator |
 
 #### Parameter Slider
 
-| State | Description | Setup |
-|-------|-------------|-------|
-| Minimum | Value at 0% | Set parameter to 0.0 |
-| Middle | Value at 50% | Set parameter to 0.5 |
-| Maximum | Value at 100% | Set parameter to 1.0 |
-| Hover | Mouse over thumb | Hover on slider thumb |
-| Dragging | Dragging thumb | Mouse down on thumb |
+| State    | Description      | Setup                 |
+| -------- | ---------------- | --------------------- |
+| Minimum  | Value at 0%      | Set parameter to 0.0  |
+| Middle   | Value at 50%     | Set parameter to 0.5  |
+| Maximum  | Value at 100%    | Set parameter to 1.0  |
+| Hover    | Mouse over thumb | Hover on slider thumb |
+| Dragging | Dragging thumb   | Mouse down on thumb   |
 
 #### Connection Status
 
-| State | Description | Setup |
-|-------|-------------|-------|
-| Connected | Banner hidden | Normal operation |
-| Disconnected | Red banner | Stop WebSocket server |
+| State        | Description          | Setup                    |
+| ------------ | -------------------- | ------------------------ |
+| Connected    | Banner hidden        | Normal operation         |
+| Disconnected | Red banner           | Stop WebSocket server    |
 | Reconnecting | Reconnecting message | Stop then restart server |
 
 ---
@@ -296,6 +308,7 @@ Action: Review diff and either:
 ```
 
 **Diff Image Legend:**
+
 - **Magenta pixels** — Significant differences
 - **Yellow pixels** — Anti-aliasing differences (usually acceptable)
 
@@ -343,6 +356,7 @@ await page.evaluate(() => {
 **Problem:** Agent cannot navigate to `http://localhost:5173`
 
 **Solution:**
+
 - Verify `cargo xtask dev` is running
 - Check Vite dev server logs
 - Try manually opening `http://localhost:5173` in browser
@@ -352,6 +366,7 @@ await page.evaluate(() => {
 **Problem:** UI shows "Connecting..." indefinitely
 
 **Solution:**
+
 - Verify WebSocket server is running on port 9000
 - Check for port conflicts: `lsof -i :9000`
 - Restart `cargo xtask dev`
@@ -361,6 +376,7 @@ await page.evaluate(() => {
 **Problem:** Agent reports "NO_BASELINE"
 
 **Solution:**
+
 - First time testing? Save current state as baseline
 - Check `~/.wavecraft/visual-baselines/` exists
 - Verify `manifest.json` is valid JSON
@@ -370,6 +386,7 @@ await page.evaluate(() => {
 **Problem:** Minor pixel differences trigger failures
 
 **Solution:**
+
 - Increase threshold in comparison (default 0.1%)
 - Ignore anti-aliasing differences (`includeAA: false`)
 - Ensure consistent viewport size
@@ -380,15 +397,15 @@ await page.evaluate(() => {
 
 The agent uses these Playwright MCP tools:
 
-| Tool | Purpose |
-|------|---------|
-| `browser_navigate` | Navigate to URL |
+| Tool                 | Purpose                                 |
+| -------------------- | --------------------------------------- |
+| `browser_navigate`   | Navigate to URL                         |
 | `browser_screenshot` | Capture full-page or element screenshot |
-| `browser_click` | Click element |
-| `browser_type` | Type text into input |
-| `browser_hover` | Hover over element |
-| `browser_wait_for` | Wait for selector/condition |
-| `browser_evaluate` | Execute JavaScript in page context |
+| `browser_click`      | Click element                           |
+| `browser_type`       | Type text into input                    |
+| `browser_hover`      | Hover over element                      |
+| `browser_wait_for`   | Wait for selector/condition             |
+| `browser_evaluate`   | Execute JavaScript in page context      |
 
 ---
 
@@ -397,4 +414,3 @@ The agent uses these Playwright MCP tools:
 - [Implementation Plan](../feature-specs/_archive/browser-visual-testing/implementation-plan.md)
 - [Low-Level Design](../feature-specs/_archive/browser-visual-testing/low-level-design-browser-visual-testing.md)
 - [User Stories](../feature-specs/_archive/browser-visual-testing/user-stories.md)
-

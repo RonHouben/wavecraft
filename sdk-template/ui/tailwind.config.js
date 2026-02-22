@@ -1,6 +1,13 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ['./index.html', './src/**/*.{ts,tsx}', './node_modules/@wavecraft/components/**/*.js'],
+  content: [
+    './index.html',
+    './src/**/*.{ts,tsx}',
+    './node_modules/@wavecraft/components/**/*.js',
+    './node_modules/@wavecraft/components/dist/**/*.js',
+    './node_modules/@wavecraft/components/src/**/*.{ts,tsx}',
+    '../../ui/packages/components/src/**/*.{ts,tsx}',
+  ],
   theme: {
     extend: {
       colors: {

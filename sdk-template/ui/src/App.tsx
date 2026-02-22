@@ -29,7 +29,7 @@ export function App(): JSX.Element {
 
   return (
     <WavecraftProvider>
-      <div className="flex h-screen flex-col gap-4 bg-plugin-dark p-6">
+      <div className="relative flex h-screen flex-col gap-4 bg-plugin-dark p-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-100">My Plugin</h1>
@@ -47,7 +47,7 @@ export function App(): JSX.Element {
         </div>
 
         {/* Main Content */}
-        <div className="flex flex-1 flex-col gap-6">
+        <div className="flex flex-1 flex-col gap-6 pb-14 pr-14">
           <div className="grid grid-cols-1 gap-4">
             <SmartProcessor id="oscillator" title="Oscillator" hideWhenNotInSignalChain />
             <SmartProcessor id="input_trim" title="Input Trim" hideWhenNotInSignalChain />
