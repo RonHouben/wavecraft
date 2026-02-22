@@ -61,11 +61,15 @@ function renderPrimitiveParameter(param: SmartProcessorParameter): JSX.Element |
     return (
       <div
         key={param.id}
-        className="rounded-lg border border-plugin-border bg-plugin-surface-2/60 p-4 shadow-control"
+        className="relative overflow-hidden rounded-xl border border-plugin-border bg-plugin-surface-2/60 p-4 shadow-control backdrop-blur-sm"
       >
-        <div className="mb-3 flex items-center justify-between gap-3">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-plugin-border-strong/70 to-transparent"
+        />
+        <div className="mb-3 flex items-center justify-between gap-3 border-b border-plugin-border/70 pb-3">
           <p className="text-type-sm font-semibold text-plugin-text-primary">{param.name}</p>
-          <span className="rounded-md border border-accent/30 bg-accent/10 px-2 py-1 font-mono text-type-xs uppercase tracking-wide text-accent">
+          <span className="rounded-full border border-accent/35 bg-gradient-to-b from-accent/20 to-accent/10 px-2.5 py-1 font-mono text-type-xs uppercase tracking-wide text-accent-light">
             {formatParameterValue(Boolean(param.value))}
           </span>
         </div>
@@ -89,11 +93,15 @@ function renderPrimitiveParameter(param: SmartProcessorParameter): JSX.Element |
     return (
       <div
         key={param.id}
-        className="rounded-lg border border-plugin-border bg-plugin-surface-2/60 p-4 shadow-control"
+        className="relative overflow-hidden rounded-xl border border-plugin-border bg-plugin-surface-2/60 p-4 shadow-control backdrop-blur-sm"
       >
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-plugin-border-strong/70 to-transparent"
+        />
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-plugin-border/70 pb-3">
           <p className="text-type-sm font-semibold text-plugin-text-primary">{param.name}</p>
-          <span className="rounded-md border border-accent/30 bg-accent/10 px-2 py-1 font-mono text-type-xs uppercase tracking-wide text-accent">
+          <span className="rounded-full border border-accent/35 bg-gradient-to-b from-accent/20 to-accent/10 px-2.5 py-1 font-mono text-type-xs uppercase tracking-wide text-accent-light">
             {formatParameterValue(param.value, undefined, variants)}
           </span>
         </div>
@@ -130,16 +138,20 @@ function renderPrimitiveParameter(param: SmartProcessorParameter): JSX.Element |
     return (
       <div
         key={param.id}
-        className="rounded-lg border border-plugin-border bg-plugin-surface-2/60 p-4 shadow-control"
+        className="relative overflow-hidden rounded-xl border border-plugin-border bg-plugin-surface-2/60 p-4 shadow-control backdrop-blur-sm"
       >
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-plugin-border-strong/70 to-transparent"
+        />
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-plugin-border/70 pb-3">
           <p className="text-type-sm font-semibold text-plugin-text-primary">{param.name}</p>
-          <span className="rounded-md border border-plugin-border-strong/70 bg-plugin-dark/60 px-2 py-1 font-mono text-type-xs tabular-nums text-plugin-text-secondary">
+          <span className="rounded-full border border-plugin-border-strong/80 bg-plugin-dark/70 px-2.5 py-1 font-mono text-type-xs tabular-nums text-plugin-text-primary">
             {formatParameterValue(controlValue, param.unit)}
           </span>
         </div>
 
-        <div className="rounded-md border border-plugin-border bg-plugin-dark/60 px-3 py-4">
+        <div className="rounded-lg border border-plugin-border/80 bg-plugin-dark/65 px-3 py-4 shadow-inner">
           {isFaderParameter(param) ? (
             <Fader
               id={controlId}
@@ -238,23 +250,29 @@ export function SmartProcessor({
     <section className="relative overflow-hidden rounded-xl border border-plugin-border bg-plugin-surface-1 p-5 shadow-panel">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-accent/10 to-transparent"
+        className="from-accent/12 pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b to-transparent"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-plugin-border-strong/70 to-transparent"
       />
 
-      <div className="relative mb-4 flex items-start justify-between gap-3">
+      <div className="relative mb-4 flex items-start justify-between gap-3 border-b border-plugin-border/70 pb-4">
         <div className="min-w-0">
           <p className="mb-1 text-type-2xs uppercase tracking-wider text-plugin-text-muted">
             Processor
           </p>
-          <h3 className="truncate text-type-lg text-plugin-text-primary">{title ?? id}</h3>
+          <h3 className="truncate text-type-lg font-semibold text-plugin-text-primary">
+            {title ?? id}
+          </h3>
         </div>
 
-        <span className="rounded-md border border-plugin-border-strong/70 bg-plugin-dark/70 px-2 py-1 font-mono text-type-xs tabular-nums text-plugin-text-secondary">
+        <span className="rounded-full border border-plugin-border-strong/80 bg-plugin-dark/75 px-2.5 py-1 font-mono text-type-xs tabular-nums text-plugin-text-primary">
           {processorParameters.length} params
         </span>
       </div>
 
-      <div className="relative space-y-4">
+      <div className="relative space-y-3">
         {processorParameters.map((param) => renderPrimitiveParameter(param))}
       </div>
     </section>
