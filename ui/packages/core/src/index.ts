@@ -111,11 +111,6 @@ export type { UseAllParametersResult } from './hooks/useAllParameters';
 export { useParametersForProcessor } from './hooks/useAllParameterFor';
 export type { UseParametersForProcessorResult } from './hooks/useAllParameterFor';
 
-/** @deprecated Use useParametersForProcessor instead. */
-export { useAllParametersFor } from './hooks/useAllParameterFor'; // compat: remove after next minor
-/** @deprecated Use UseParametersForProcessorResult instead. */
-export type { UseAllParameterForResult } from './hooks/useAllParameterFor'; // compat: remove after next minor
-
 export { useConnectionStatus } from './hooks/useConnectionStatus';
 export type { ConnectionStatus, TransportType } from './hooks/useConnectionStatus';
 

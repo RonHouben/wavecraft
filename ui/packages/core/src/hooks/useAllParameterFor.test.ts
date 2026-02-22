@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useAllParametersFor, useParametersForProcessor } from './useAllParameterFor';
+import { useParametersForProcessor } from './useAllParameterFor';
 
 const useAllParametersMock = vi.hoisted(() => vi.fn());
 const reloadMock = vi.hoisted(() => vi.fn(async () => {}));
@@ -71,14 +71,9 @@ describe('useParametersForProcessor', () => {
     expect(result.current.reload).toBe(reloadMock);
   });
 
-  it('useAllParametersFor alias resolves to the same hook result shape', () => {
-    const { result } = renderHook(() => useAllParametersFor('input_trim'));
-    const { result: canonicalResult } = renderHook(() => useParametersForProcessor('input_trim'));
+  it('exposes processor identity for the selected parameter group', () => {
+    const { result } = renderHook(() => useParametersForProcessor('input_trim'));
 
-    expect(result.current.params).toHaveLength(2);
     expect(result.current.processorId).toBe('input_trim');
-    expect(result.current.params).toEqual(canonicalResult.current.params);
-    expect(result.current.setParameter).toBe(canonicalResult.current.setParameter);
-    expect(result.current.reload).toBe(canonicalResult.current.reload);
   });
 });

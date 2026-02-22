@@ -12,13 +12,6 @@ export type { ParameterSliderProps } from './ParameterSlider';
 export { ParameterGroup } from './ParameterGroup';
 export { Processor } from './Processor';
 export type { ProcessorProps, ProcessorParameter } from './Processor';
-export {
-  InputTrimProcessor,
-  OutputGainProcessor,
-  SoftClipProcessor,
-  ToneFilterProcessor,
-  OscillatorProcessor,
-} from './compat';
 export { ParameterToggle } from './ParameterToggle';
 export type { ParameterToggleProps } from './ParameterToggle';
 export { ParameterSelect } from './ParameterSelect';

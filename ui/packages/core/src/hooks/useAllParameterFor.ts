@@ -14,9 +14,6 @@ export interface UseParametersForProcessorResult {
   reload: () => Promise<void>;
 }
 
-/** @deprecated Use UseParametersForProcessorResult instead. */
-export type UseAllParameterForResult = UseParametersForProcessorResult;
-
 function selectProcessorParams(
   allParams: readonly ParameterInfo[],
   processorId: ProcessorId
@@ -46,9 +43,4 @@ export function useParametersForProcessor(
     setParameter,
     reload,
   };
-}
-
-/** @deprecated Use useParametersForProcessor instead. */
-export function useAllParametersFor(processorId: ProcessorId): UseAllParameterForResult {
-  return useParametersForProcessor(processorId);
 }

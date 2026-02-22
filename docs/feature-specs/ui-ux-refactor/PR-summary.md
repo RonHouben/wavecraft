@@ -18,6 +18,21 @@ Key outcomes:
 - Resize ownership clarified in smart layer (Phase 5 follow-up)
 - All 148 automated and manual checks pass; QA blocker retest confirmed ✅
 
+### Post-migration compatibility cleanup (2026-02-22)
+
+Migration-window compatibility shims have now been removed for the next minor cycle:
+
+- Removed deprecated processor wrapper re-exports from `@wavecraft/components`
+- Deleted `sdk-template/ui` legacy processor compatibility files entirely (`compat.tsx` + per-processor shim files; no tombstones retained)
+- Removed deprecated `@wavecraft/core` alias hook/type exports:
+  - `useAllParametersFor`
+  - `UseAllParameterForResult`
+
+Upgrade path for downstream plugin UIs:
+
+- Use `<Processor id="..." />` in `@wavecraft/components` (or template `SmartProcessor` wrappers)
+- Use `useParametersForProcessor` and `UseParametersForProcessorResult` from `@wavecraft/core`
+
 ---
 
 ## Changes
