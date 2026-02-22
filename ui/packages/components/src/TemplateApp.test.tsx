@@ -31,6 +31,9 @@ vi.mock('@wavecraft/components', async () => {
 vi.mock('../../../../sdk-template/ui/src/processors/OscilloscopeProcessor', () => ({
   OscilloscopeProcessor: () => <div data-testid="oscilloscope" />,
 }));
+vi.mock('../../../../sdk-template/ui/src/processors/OscillatorProcessor', () => ({
+  OscillatorProcessor: () => <div data-testid="processor-oscillator" />,
+}));
 vi.mock('../../../../sdk-template/ui/src/processors/SmartProcessor', () => ({
   SmartProcessor: ({ id }: { id: string }) => <div data-testid={`processor-${id}`} />,
 }));

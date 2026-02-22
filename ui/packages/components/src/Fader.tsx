@@ -34,6 +34,41 @@ const verticalLengthClassMap: Record<NonNullable<FaderProps['size']>, string> = 
   lg: 'h-[220px]',
 };
 
+const SHIFT_PRECISION_HINT = 'Hold Shift for fine adjust';
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function isShiftPrecisionActive(event: {
+  readonly shiftKey: boolean;
+  readonly getModifierState?: (keyArg: 'Shift') => boolean;
+}): boolean {
+  if (event.shiftKey) {
+    return true;
+  }
+
+  return event.getModifierState?.('Shift') ?? false;
+}
+
+function getKeyboardSteps(
+  min: number,
+  max: number,
+  step: number
+): {
+  readonly arrowStep: number;
+  readonly precisionArrowStep: number;
+} {
+  const range = Math.max(0, max - min);
+  const safeStep = Number.isFinite(step) && step > 0 ? step : 0.001;
+  const arrowStep = Math.max(safeStep, range / 150);
+
+  return {
+    arrowStep,
+    precisionArrowStep: arrowStep / 12,
+  };
+}
+
 function formatValue(value: number, unit?: string): string {
   if (!unit) {
     return value.toFixed(3);
@@ -66,12 +101,14 @@ export function Fader({
   const isDisabled = disabled || isLoading || state === 'disabled';
   const badgeLabel = getStateBadgeLabel(pluginState);
   const isVertical = orientation === 'vertical';
+  const keyboardSteps = getKeyboardSteps(min, max, step);
+  const clampedValue = clamp(value, min, max);
 
   return (
-    <div className="inline-flex flex-col items-center gap-2">
+    <div className="group inline-flex flex-col items-center gap-2">
       <label
         htmlFor={id}
-        className="text-type-xs text-plugin-text-secondary uppercase tracking-wide"
+        className="text-type-xs uppercase tracking-wide text-plugin-text-secondary"
       >
         {label}
       </label>
@@ -90,8 +127,38 @@ export function Fader({
           min={min}
           max={max}
           step={step}
-          value={value}
+          value={clampedValue}
           disabled={isDisabled}
+          onKeyDown={(event): void => {
+            if (isDisabled) {
+              return;
+            }
+
+            const isPrecisionMode = isShiftPrecisionActive(event);
+
+            if (event.key === 'ArrowUp' || event.key === 'ArrowRight') {
+              event.preventDefault();
+              const delta = isPrecisionMode
+                ? keyboardSteps.precisionArrowStep
+                : keyboardSteps.arrowStep;
+              const nextValue = clamp(clampedValue + delta, min, max);
+              if (nextValue !== clampedValue) {
+                onChange(nextValue);
+              }
+              return;
+            }
+
+            if (event.key === 'ArrowDown' || event.key === 'ArrowLeft') {
+              event.preventDefault();
+              const delta = isPrecisionMode
+                ? -keyboardSteps.precisionArrowStep
+                : -keyboardSteps.arrowStep;
+              const nextValue = clamp(clampedValue + delta, min, max);
+              if (nextValue !== clampedValue) {
+                onChange(nextValue);
+              }
+            }
+          }}
           onChange={(event): void => {
             onChange(Number.parseFloat(event.currentTarget.value));
           }}
@@ -107,9 +174,9 @@ export function Fader({
         />
       </div>
 
-      <div className="inline-flex items-center gap-1">
-        <span className="text-type-sm text-plugin-text-primary font-mono tabular-nums">
-          {formatValue(value, unit)}
+      <div className="relative inline-flex items-center gap-1">
+        <span className="font-mono text-type-sm tabular-nums text-plugin-text-primary">
+          {formatValue(clampedValue, unit)}
         </span>
         {badgeLabel ? (
           <span
@@ -122,6 +189,12 @@ export function Fader({
             {badgeLabel}
           </span>
         ) : null}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap text-type-xs text-plugin-text-secondary opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 motion-reduce:transition-none"
+        >
+          {SHIFT_PRECISION_HINT}
+        </span>
       </div>
     </div>
   );

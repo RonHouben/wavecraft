@@ -35,6 +35,7 @@ const knobWidthClassMap: Record<NonNullable<KnobProps['size']>, string> = {
 
 const KNOB_SWEEP_START_DEG = -135;
 const KNOB_SWEEP_RANGE_DEG = 270;
+const SHIFT_PRECISION_HINT = 'Hold Shift for fine adjust';
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -117,7 +118,10 @@ export function Knob({
 
   return (
     <div
-      className={mergeClassNames('inline-grid justify-items-center gap-2', knobWidthClassMap[size])}
+      className={mergeClassNames(
+        'group inline-grid justify-items-center gap-2',
+        knobWidthClassMap[size]
+      )}
     >
       <label
         htmlFor={id}
@@ -223,7 +227,7 @@ export function Knob({
         ) : null}
       </div>
 
-      <div className="inline-flex w-full items-center justify-center gap-1">
+      <div className="relative inline-flex w-full items-center justify-center gap-1">
         <span className="min-w-[72px] text-center font-mono text-type-sm tabular-nums text-plugin-text-primary">
           {formattedValue}
         </span>
@@ -238,6 +242,12 @@ export function Knob({
             {badgeLabel}
           </span>
         ) : null}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap text-type-xs text-plugin-text-secondary opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 motion-reduce:transition-none"
+        >
+          {SHIFT_PRECISION_HINT}
+        </span>
       </div>
     </div>
   );

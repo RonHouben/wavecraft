@@ -3,6 +3,14 @@ import { describe, expect, it, vi } from 'vitest';
 import { Knob } from './Knob';
 
 describe('Knob', () => {
+  it('renders a subtle Shift precision helper hint as decorative text', () => {
+    render(<Knob id="hint-knob" label="Hint" value={0.5} min={0} max={1} onChange={vi.fn()} />);
+
+    const hint = screen.getByText('Hold Shift for fine adjust');
+    expect(hint).toBeInTheDocument();
+    expect(hint).toHaveAttribute('aria-hidden', 'true');
+  });
+
   it('renders with accessible label and formatted value', () => {
     render(
       <Knob id="gain-knob" label="Gain" value={0.5} min={0} max={1} unit="%" onChange={vi.fn()} />
