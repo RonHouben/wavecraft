@@ -339,13 +339,17 @@ export function OscillatorProcessor({
     return null;
   }
 
+  const isBypassActive = Boolean(bypassParameter?.value);
   const waveformVariants = waveformParameter?.variants ?? [];
   const selectedWaveform = waveformParameter ? getNumericValue(waveformParameter.value) : 0;
 
   return (
     <section
       ref={sectionRef}
-      className="rounded-xl border border-plugin-border bg-plugin-surface-1 p-3 shadow-panel"
+      data-bypassed={String(isBypassActive)}
+      className={`rounded-xl border border-plugin-border bg-plugin-surface-1 p-3 shadow-panel transition-[opacity,filter] duration-150 ${
+        isBypassActive ? 'opacity-70 brightness-90 saturate-50' : 'opacity-100 saturate-100'
+      }`}
     >
       <header className="mb-3 flex items-start justify-between gap-3 border-b border-plugin-border/70 pb-3">
         <div className="min-w-0">

@@ -91,6 +91,15 @@ describe('sdk-template OscillatorProcessor', () => {
     render(<OscillatorProcessor />);
 
     expect(screen.getByRole('heading', { name: 'Oscillator' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Oscillator' }).closest('section')).toHaveAttribute(
+      'data-bypassed',
+      'true'
+    );
+    expect(screen.getByRole('heading', { name: 'Oscillator' }).closest('section')).toHaveClass(
+      'opacity-70',
+      'saturate-50',
+      'brightness-90'
+    );
     expect(screen.getByRole('button', { name: 'Bypass' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'Enabled' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('slider', { name: 'Level' })).toHaveAttribute(
