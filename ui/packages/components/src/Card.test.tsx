@@ -3,6 +3,24 @@ import { describe, expect, it } from 'vitest';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './Card';
 
 describe('Card', () => {
+  it('supports compound component API with static subcomponents', () => {
+    render(
+      <Card>
+        <Card.Header>
+          <Card.Title>SomeTitle</Card.Title>
+          <Card.Description>SomeDescription</Card.Description>
+        </Card.Header>
+        <Card.Content>SomeContent</Card.Content>
+        <Card.Footer>SomeFooter</Card.Footer>
+      </Card>
+    );
+
+    expect(screen.getByRole('heading', { level: 3, name: 'SomeTitle' })).toBeInTheDocument();
+    expect(screen.getByText('SomeDescription')).toBeInTheDocument();
+    expect(screen.getByText('SomeContent')).toBeInTheDocument();
+    expect(screen.getByText('SomeFooter')).toBeInTheDocument();
+  });
+
   it('renders with default surface styling', () => {
     render(<Card data-testid="card">Body</Card>);
 

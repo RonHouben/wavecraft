@@ -9,15 +9,8 @@ export { Meter } from './Meter';
 export type { MeterProps } from './Meter';
 export { Button } from './Button';
 export type { ButtonProps } from './Button';
-export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './Card';
-export type {
-  CardProps,
-  CardHeaderProps,
-  CardTitleProps,
-  CardDescriptionProps,
-  CardContentProps,
-  CardFooterProps,
-} from './Card';
+export { Card } from './Card';
+export type { CardProps } from './Card';
 export { Switch } from './Switch';
 export type { SwitchProps } from './Switch';
 export { Knob } from './Knob';
@@ -31,8 +24,6 @@ export type { ColProps } from './Col';
 export { ParameterSlider } from './ParameterSlider';
 export type { ParameterSliderProps } from './ParameterSlider';
 export { ParameterGroup } from './ParameterGroup';
-export { Processor } from './Processor';
-export type { ProcessorProps, ProcessorParameter } from './Processor';
 export { ParameterToggle } from './ParameterToggle';
 export type { ParameterToggleProps } from './ParameterToggle';
 export { ParameterSelect } from './ParameterSelect';
@@ -72,8 +63,10 @@ export type {
 } from './types';
 
 // Audio Processors
-export { OscilloscopeProcessor } from './processors/OscilloscopeProcessor';
-export type { OscilloscopeProcessorProps } from './processors/OscilloscopeProcessor';
+export { Processor } from './processors/Processor';
+export type { ProcessorProps } from './processors/Processor';
+export { OscilloscopeProcessor } from './processors/oscilloscope/OscilloscopeProcessor';
+export type { OscilloscopeProcessorProps } from './processors/oscilloscope/OscilloscopeProcessor';
 
 export { TestToneProcessor } from './processors/TestToneProcessor';
 export type { TestToneProcessorProps } from './processors/TestToneProcessor';

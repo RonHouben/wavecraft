@@ -7,40 +7,29 @@ export interface CardProps extends NativeDivProps {
   readonly children: ReactNode;
 }
 
-export interface CardHeaderProps extends NativeDivProps {
+interface CardHeaderProps extends NativeDivProps {
   readonly children: ReactNode;
 }
 
 type NativeHeadingProps = Omit<HTMLAttributes<HTMLHeadingElement>, 'children'>;
 
-export interface CardTitleProps extends NativeHeadingProps {
+interface CardTitleProps extends NativeHeadingProps {
   readonly children: ReactNode;
 }
 
-export interface CardDescriptionProps extends NativeDivProps {
+interface CardDescriptionProps extends NativeDivProps {
   readonly children: ReactNode;
 }
 
-export interface CardContentProps extends NativeDivProps {
+interface CardContentProps extends NativeDivProps {
   readonly children: ReactNode;
 }
 
-export interface CardFooterProps extends NativeDivProps {
+interface CardFooterProps extends NativeDivProps {
   readonly children: ReactNode;
 }
 
-export function Card({ children, className, ...props }: Readonly<CardProps>): React.JSX.Element {
-  return (
-    <div
-      className={mergeClassNames(surfaceCardClass, 'text-plugin-text-primary', className)}
-      {...props}
-    >
-      {children}
-    </div>
-  );
-}
-
-export function CardHeader({
+function CardHeader({
   children,
   className,
   ...props
@@ -52,11 +41,7 @@ export function CardHeader({
   );
 }
 
-export function CardTitle({
-  children,
-  className,
-  ...props
-}: Readonly<CardTitleProps>): React.JSX.Element {
+function CardTitle({ children, className, ...props }: Readonly<CardTitleProps>): React.JSX.Element {
   return (
     <h3
       className={mergeClassNames('text-type-md font-semibold text-plugin-text-primary', className)}
@@ -67,7 +52,7 @@ export function CardTitle({
   );
 }
 
-export function CardDescription({
+function CardDescription({
   children,
   className,
   ...props
@@ -82,7 +67,7 @@ export function CardDescription({
   );
 }
 
-export function CardContent({
+function CardContent({
   children,
   className,
   ...props
@@ -94,7 +79,7 @@ export function CardContent({
   );
 }
 
-export function CardFooter({
+function CardFooter({
   children,
   className,
   ...props
@@ -105,3 +90,30 @@ export function CardFooter({
     </div>
   );
 }
+
+function CardRoot({ children, className, ...props }: Readonly<CardProps>): React.JSX.Element {
+  return (
+    <div
+      className={mergeClassNames(surfaceCardClass, 'text-plugin-text-primary', className)}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
+
+type CardCompoundComponent = ((props: Readonly<CardProps>) => React.JSX.Element) & {
+  readonly Header: typeof CardHeader;
+  readonly Title: typeof CardTitle;
+  readonly Description: typeof CardDescription;
+  readonly Content: typeof CardContent;
+  readonly Footer: typeof CardFooter;
+};
+
+export const Card: CardCompoundComponent = Object.assign(CardRoot, {
+  Header: CardHeader,
+  Title: CardTitle,
+  Description: CardDescription,
+  Content: CardContent,
+  Footer: CardFooter,
+});

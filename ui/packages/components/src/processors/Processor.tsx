@@ -3,10 +3,10 @@
  */
 
 import React from 'react';
-import { Card } from './Card';
-import type { ParameterInfo } from './types';
-import { parameterListClass, sectionHeadingClass } from './utils/classNames';
-import { renderParameter } from './utils/renderParameter';
+import { Card } from '../Card';
+import type { ParameterInfo } from '../types';
+import { parameterListClass, sectionHeadingClass } from '../utils/classNames';
+import { renderParameter } from '../utils/renderParameter';
 
 export interface ProcessorParameter extends ParameterInfo {
   readonly onChange: (value: number | boolean) => void | Promise<void>;

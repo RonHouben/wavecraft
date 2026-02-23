@@ -8,8 +8,6 @@ import {
   useWindowResizeSync,
 } from '@wavecraft/core';
 import { type JSX } from 'react';
-import { ExampleProcessor } from './processors/ExampleProcessor';
-import { SmartProcessor } from './processors/SmartProcessor';
 import {
   Meter,
   VersionBadge,
@@ -54,12 +52,13 @@ export function App(): JSX.Element {
             className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4"
           >
             <TestToneProcessor hideWhenNotInSignalChain />
-            <SmartProcessor id="input_trim" title="Input Trim" hideWhenNotInSignalChain />
-            <SmartProcessor id="tone_filter" title="Tone Filter" hideWhenNotInSignalChain />
-            <SmartProcessor id="soft_clip" title="Soft Clip" hideWhenNotInSignalChain />
-            <ExampleProcessor hideWhenNotInSignalChain />
-            <SmartProcessor id="output_gain" title="Output Gain" hideWhenNotInSignalChain />
             <OscilloscopeProcessor hideWhenNotInSignalChain />
+            {/* <SmartProcessor id="input_trim" title="Input Trim" hideWhenNotInSignalChain /> */}
+            {/* <SmartProcessor id="tone_filter" title="Tone Filter" hideWhenNotInSignalChain /> */}
+            {/* <SmartProcessor id="soft_clip" title="Soft Clip" hideWhenNotInSignalChain /> */}
+            {/* <ExampleProcessor hideWhenNotInSignalChain /> */}
+            {/* <SmartProcessor id="output_gain" title="Output Gain" hideWhenNotInSignalChain /> */}
+            {/* <OscilloscopeProcessor hideWhenNotInSignalChain /> */}
           </div>
 
           {/* Metering Section */}
