@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Card } from '../../Card';
 import type {
   OscilloscopeChannelView,
   OscilloscopeFrame,
   OscilloscopeTriggerMode,
 } from '../../types';
-import { focusRingClass } from '../../utils/classNames';
+import { Select } from '../../Select';
+import { Row } from '../../Row';
+import { Col } from '../../Col';
 
 const WIDTH = 640;
 const HEIGHT = 220;
@@ -158,43 +159,35 @@ export function OscilloscopeView({
   }, [channelView, connected]);
 
   return (
-    <>
-      <label className="flex items-center gap-2 text-xs text-gray-300" htmlFor="osc-view-select">
-        Channel view
-        <select
-          id="osc-view-select"
-          data-testid="osc-channel-view"
-          className={`rounded border border-plugin-border bg-plugin-dark px-2 py-1 text-xs text-gray-200 focus:border-accent ${focusRingClass}`}
-          value={channelView}
-          onChange={(event) => {
-            setChannelView(event.target.value as OscilloscopeChannelView);
-          }}
-        >
-          <option value="overlay">Overlay (L/R)</option>
-          <option value="left">Left</option>
-          <option value="right">Right</option>
-        </select>
-      </label>
+    <Col className="gap-5">
+      <Row className="justify-between">
+        <Col>
+          <Select
+            label="Channel view"
+            data-testid="osc-channel-view"
+            value={channelView}
+            size="sm"
+            options={[
+              { label: 'Overlay (L/R)', value: 'overlay' },
+              { label: 'Left', value: 'left' },
+              { label: 'Right', value: 'right' },
+            ]}
+            onChange={setChannelView}
+          />
+        </Col>
+        <Col>
+          <Select
+            label="Trigger mode"
+            data-testid="osc-trigger-mode"
+            value={triggerMode}
+            size="sm"
+            options={[{ label: 'Rising zero-crossing', value: 'risingZeroCrossing' }]}
+            onChange={setTriggerMode}
+          />
+        </Col>
+      </Row>
 
-      <label
-        className="flex items-center gap-2 text-xs text-gray-300"
-        htmlFor="osc-trigger-mode-select"
-      >
-        Trigger mode
-        <select
-          id="osc-trigger-mode-select"
-          data-testid="osc-trigger-mode"
-          className={`rounded border border-plugin-border bg-plugin-dark px-2 py-1 text-xs text-gray-200 focus:border-accent ${focusRingClass}`}
-          value={triggerMode}
-          onChange={(event) => {
-            setTriggerMode(event.target.value as OscilloscopeTriggerMode);
-          }}
-        >
-          <option value="risingZeroCrossing">Rising zero-crossing</option>
-        </select>
-      </label>
-
-      <div className="relative rounded border border-plugin-border bg-plugin-dark p-2">
+      <Row className="relative rounded border border-plugin-border bg-plugin-dark p-2">
         <canvas
           ref={canvasRef}
           data-testid="oscilloscope-canvas"
@@ -210,7 +203,7 @@ export function OscilloscopeView({
             No signal
           </div>
         ) : null}
-      </div>
-    </>
+      </Row>
+    </Col>
   );
 }

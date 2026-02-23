@@ -1,7 +1,7 @@
 //! TypeScript code generation utilities.
 //!
-//! Generates `ui/src/generated/parameters.ts` with module augmentation for
-//! `@wavecraft/core` so parameter IDs are available as IDE autocomplete.
+//! Generates `ui/src/generated/parameters.ts` with global augmentation for
+//! `WavecraftParameterIdMap` so parameter IDs are available as IDE autocomplete.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -126,7 +126,7 @@ fn append_interface_entry(content: &mut String, key: &str, value_type: &str) -> 
 ///
 /// Output path: `{ui_dir}/src/generated/parameters.ts`
 ///
-/// The file augments `@wavecraft/core`'s `ParameterIdMap` interface so
+/// The file augments global `WavecraftParameterIdMap` so
 /// `ParameterId` resolves to a typed union of parameter IDs in the user's
 /// project TypeScript compilation.
 pub fn write_parameter_types(ui_dir: &Path, params: &[ParameterInfo]) -> Result<()> {
@@ -135,8 +135,8 @@ pub fn write_parameter_types(ui_dir: &Path, params: &[ParameterInfo]) -> Result<
     let mut content = String::new();
     append_generated_header(&mut content, "Type-safe parameter IDs for your plugin.");
 
-    content.push_str("declare module '@wavecraft/core' {\n");
-    content.push_str("  interface ParameterIdMap {\n");
+    content.push_str("declare global {\n");
+    content.push_str("  interface WavecraftParameterIdMap {\n");
     content.push_str("    ");
     content.push_str(PARAMETER_ID_MAP_AUGMENTED_MARKER);
     content.push_str(": true;\n");

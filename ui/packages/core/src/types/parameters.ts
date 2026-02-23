@@ -13,11 +13,16 @@ export type ParameterVariant = string | undefined;
 /**
  * Augmentable parameter ID registry.
  *
- * The generated `ui/src/generated/parameters.ts` file augments this interface
- * with the plugin's concrete parameter IDs.
+ * The generated `ui/src/generated/parameters.ts` file augments the global
+ * `WavecraftParameterIdMap` interface with the plugin's concrete parameter IDs.
  */
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  interface WavecraftParameterIdMap {}
+}
+
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ParameterIdMap {}
+export interface ParameterIdMap extends WavecraftParameterIdMap {}
 
 type ParameterIdMapEntryValue = true | number | boolean;
 
@@ -42,7 +47,7 @@ export type ParameterValueForId<TId extends ParameterId> =
       : number;
 
 /**
- * Internal marker key added by generated module augmentation.
+ * Internal marker key added by generated type augmentation.
  *
  * Used to distinguish:
  * - unaugmented projects (fallback `string` for backward compatibility)

@@ -30,6 +30,8 @@ export { ParameterSelect } from './ParameterSelect';
 export type { ParameterSelectProps } from './ParameterSelect';
 export { RadioGroup } from './RadioGroup';
 export type { RadioGroupOption, RadioGroupOwnProps as RadioGroupProps } from './RadioGroup';
+export { Select } from './Select';
+export type { SelectOption, SelectProps } from './Select';
 export { VersionBadge } from './VersionBadge';
 export { Icon } from './Icon';
 export type { IconProps } from './Icon';

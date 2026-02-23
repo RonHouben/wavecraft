@@ -17,6 +17,10 @@
     "declaration": true,
     "declarationDir": "./dist"
   },
-  "include": ["src", "../../../sdk-template/ui/src/generated/processors.ts"],
+  "include": [
+    "src",
+    "../../../sdk-template/ui/src/generated/parameters.ts",
+    "../../../sdk-template/ui/src/generated/processors.ts"
+  ],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }

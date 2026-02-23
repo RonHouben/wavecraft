@@ -347,7 +347,7 @@ fn test_bundle_refreshes_generated_contract_types_from_sidecars() {
     fs::create_dir_all(root.join("ui/src/generated")).expect("generated dir");
     fs::write(
         root.join("ui/src/generated/parameters.ts"),
-        "declare module '@wavecraft/core' { interface ParameterIdMap { stale_param: number; } }\n",
+        "declare global { interface WavecraftParameterIdMap { stale_param: number; } }\n",
     )
     .expect("stale parameters");
     fs::write(
