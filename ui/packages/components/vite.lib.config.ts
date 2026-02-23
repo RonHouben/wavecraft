@@ -14,9 +14,12 @@ export default defineConfig({
   ],
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
+      entry: {
+        index: resolve(__dirname, 'src/index.ts'),
+        icons: resolve(__dirname, 'src/icons/index.ts'),
+      },
       formats: ['es'],
-      fileName: () => 'index.js',
+      fileName: (_, entryName) => `${entryName}.js`,
     },
     rollupOptions: {
       external: ['react', 'react-dom', 'react/jsx-runtime', '@wavecraft/core'],

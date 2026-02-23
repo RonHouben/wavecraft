@@ -1,4 +1,4 @@
-import { Button, Col, Knob, Row, Switch } from '@wavecraft/components';
+import { Col, IconButton, IconProps, Knob, Row, Switch } from '@wavecraft/components';
 import { useHasProcessorInSignalChain, useParameter } from '@wavecraft/core';
 import { type JSX } from 'react';
 
@@ -74,14 +74,13 @@ export function OscillatorProcessor({
           </div>
           <Row role="group" aria-label={waveformParameter?.name} className="gap-1.5">
             {waveformVariants.map((variant, index) => (
-              <Button
+              <IconButton
                 key={`${waveformParameter?.id}-${variant}-${index}`}
                 size="sm"
                 active={index === selectedWaveform}
                 onClick={() => setWaveformValue(index)}
-              >
-                {variant}
-              </Button>
+                icon={mapWaveformParameterToIconVariant(String(variant))}
+              />
             ))}
           </Row>
         </div>
@@ -112,4 +111,19 @@ export function OscillatorProcessor({
       </div>
     </section>
   );
+}
+
+function mapWaveformParameterToIconVariant(waveformParameterValue: string): IconProps['icon'] {
+  switch (waveformParameterValue) {
+    case 'Sine':
+      return 'waveform-sine';
+    case 'Square':
+      return 'waveform-square';
+    case 'Saw':
+      return 'waveform-saw';
+    case 'Triangle':
+      return 'waveform-triangle';
+    default:
+      throw new Error(`Unsupported waveform variant: ${waveformParameterValue}`);
+  }
 }

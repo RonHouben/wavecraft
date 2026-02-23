@@ -6,6 +6,7 @@ import {
   getStateBadgeClass,
   getStateBadgeLabel,
 } from './utils/controlStates';
+import { Icon, IconProps } from './Icon';
 
 type NativeButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'>;
 
@@ -14,7 +15,7 @@ export interface ButtonProps extends NativeButtonProps {
   readonly size?: 'sm' | 'md' | 'lg';
   readonly state?: ControlVisualState;
   readonly pluginState?: PluginVisualState;
-  readonly iconLeft?: ReactNode;
+  readonly iconLeft?: IconProps['icon'];
   readonly active?: boolean;
   readonly isActive?: boolean;
   readonly pressed?: boolean;
@@ -73,14 +74,14 @@ export function Button({
       data-active={hasActiveState ? String(active) : undefined}
       {...rest}
     >
-      {isLoading ? (
+      {isLoading && (
         <span
           aria-hidden="true"
           className="h-3.5 w-3.5 animate-spin rounded-full border border-plugin-text-secondary border-t-accent"
         />
-      ) : (
-        iconLeft
       )}
+
+      {iconLeft && <Icon icon={iconLeft} />}
 
       <span>{children}</span>
 

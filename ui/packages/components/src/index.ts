@@ -29,6 +29,10 @@ export type { ParameterToggleProps } from './ParameterToggle';
 export { ParameterSelect } from './ParameterSelect';
 export type { ParameterSelectProps } from './ParameterSelect';
 export { VersionBadge } from './VersionBadge';
+export { Icon } from './Icon';
+export type { IconProps } from './Icon';
+export { IconButton } from './IconButton';
+export type { IconButtonProps } from './IconButton';
 
 // Connection and status components
 export { ConnectionStatus } from './ConnectionStatus';
