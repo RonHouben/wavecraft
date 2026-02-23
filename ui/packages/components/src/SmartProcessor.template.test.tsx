@@ -70,7 +70,7 @@ describe('sdk-template SmartProcessor primitive migration', () => {
       setParameter: mockSetParameter,
     });
 
-    render(<SmartProcessor id="test_tone" title="Test Tone" />);
+    render(<SmartProcessor processorId="test_tone" title="Test Tone" />);
 
     const controlsContainer = document.querySelector('section .relative.space-y-3');
     expect(controlsContainer?.firstElementChild).toHaveTextContent('Bypass');
@@ -118,7 +118,7 @@ describe('sdk-template SmartProcessor primitive migration', () => {
       setParameter: mockSetParameter,
     });
 
-    render(<SmartProcessor id="test_tone" title="Test Tone" />);
+    render(<SmartProcessor processorId="test_tone" title="Test Tone" />);
 
     const hint = screen.getByTestId('processor-precision-hint');
     const frequencyInput = screen.getByLabelText('Frequency');
@@ -150,7 +150,7 @@ describe('sdk-template SmartProcessor primitive migration', () => {
       setParameter: mockSetParameter,
     });
 
-    const { rerender } = render(<SmartProcessor id="test_tone" title="Test Tone" />);
+    const { rerender } = render(<SmartProcessor processorId="test_tone" title="Test Tone" />);
 
     const loadingState = screen.getByRole('status');
     expect(loadingState).toHaveTextContent('Loading test_tone...');
@@ -163,7 +163,7 @@ describe('sdk-template SmartProcessor primitive migration', () => {
       setParameter: mockSetParameter,
     });
 
-    rerender(<SmartProcessor id="test_tone" title="Test Tone" />);
+    rerender(<SmartProcessor processorId="test_tone" title="Test Tone" />);
 
     const errorState = screen.getByRole('alert');
     expect(errorState).toHaveTextContent('Error loading test_tone: boom');
@@ -184,7 +184,7 @@ describe('sdk-template SmartProcessor primitive migration', () => {
       setParameter: mockSetParameter,
     });
 
-    render(<SmartProcessor id="test_tone" title="Test Tone" />);
+    render(<SmartProcessor processorId="test_tone" title="Test Tone" />);
 
     fireEvent.click(screen.getByRole('switch', { name: 'Bypass' }));
 
@@ -207,7 +207,7 @@ describe('sdk-template SmartProcessor primitive migration', () => {
     });
 
     const { container } = render(
-      <SmartProcessor id="test_tone" title="Test Tone" hideWhenNotInSignalChain />
+      <SmartProcessor processorId="test_tone" title="Test Tone" hideWhenNotInSignalChain />
     );
 
     expect(container.firstChild).toBeNull();

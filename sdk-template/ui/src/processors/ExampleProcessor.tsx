@@ -10,7 +10,7 @@ export function ExampleProcessor({
 }: Readonly<ExampleProcessorProps>): JSX.Element | null {
   return (
     <SmartProcessor
-      id="example_processor"
+      processorId="example_processor"
       title="Example Processor"
       hideWhenNotInSignalChain={hideWhenNotInSignalChain}
     />

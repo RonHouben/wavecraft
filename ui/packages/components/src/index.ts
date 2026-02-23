@@ -65,8 +65,6 @@ export type {
 } from './types';
 
 // Audio Processors
-export { Processor } from './processors/Processor';
-export type { ProcessorProps } from './processors/Processor';
 export { OscilloscopeProcessor } from './processors/oscilloscope/OscilloscopeProcessor';
 export type { OscilloscopeProcessorProps } from './processors/oscilloscope/OscilloscopeProcessor';
 
