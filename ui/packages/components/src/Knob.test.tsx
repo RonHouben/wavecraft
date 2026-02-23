@@ -176,6 +176,52 @@ describe('Knob', () => {
     expect(onChange).toHaveBeenNthCalledWith(3, 0.7);
   });
 
+  it('turns precision cue on when Shift is pressed during an active drag', () => {
+    render(
+      <Knob
+        id="drag-shift-press-knob"
+        label="Drag Shift Press"
+        value={0.5}
+        min={0}
+        max={1}
+        onChange={vi.fn()}
+      />
+    );
+
+    const input = screen.getByLabelText('Drag Shift Press');
+
+    fireEvent.pointerDown(input, { shiftKey: false });
+    expect(input).toHaveAttribute('data-precision-active', 'false');
+
+    fireEvent.keyDown(window, { key: 'Shift' });
+    expect(input).toHaveAttribute('data-precision-active', 'true');
+
+    fireEvent.pointerUp(input);
+  });
+
+  it('turns precision cue off immediately when Shift is released during an active drag', () => {
+    render(
+      <Knob
+        id="drag-shift-release-knob"
+        label="Drag Shift Release"
+        value={0.5}
+        min={0}
+        max={1}
+        onChange={vi.fn()}
+      />
+    );
+
+    const input = screen.getByLabelText('Drag Shift Release');
+
+    fireEvent.pointerDown(input, { shiftKey: true });
+    expect(input).toHaveAttribute('data-precision-active', 'true');
+
+    fireEvent.keyUp(window, { key: 'Shift' });
+    expect(input).toHaveAttribute('data-precision-active', 'false');
+
+    fireEvent.pointerUp(input);
+  });
+
   it('disables knob and sets busy semantics in loading state', () => {
     render(
       <Knob

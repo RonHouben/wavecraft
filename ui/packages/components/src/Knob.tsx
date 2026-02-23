@@ -174,10 +174,14 @@ export function Knob({
 
     window.addEventListener('keydown', handleWindowKeyDown);
     window.addEventListener('keyup', handleWindowKeyUp);
+    document.addEventListener('keydown', handleWindowKeyDown);
+    document.addEventListener('keyup', handleWindowKeyUp);
 
     return () => {
       window.removeEventListener('keydown', handleWindowKeyDown);
       window.removeEventListener('keyup', handleWindowKeyUp);
+      document.removeEventListener('keydown', handleWindowKeyDown);
+      document.removeEventListener('keyup', handleWindowKeyUp);
     };
   }, [resetShiftDragAnchors]);
 
