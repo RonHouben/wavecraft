@@ -1,5 +1,6 @@
 import { ErrorMessage, Knob, RadioGroup, Switch } from '@wavecraft/components';
 import { ProcessorCard } from '@wavecraft/components/processors/ProcessorCard';
+import { mergeClassNames } from '@wavecraft/components/utils/classNames';
 import { ParameterId } from '@wavecraft/core';
 import {
   type ParameterInfo,
@@ -19,6 +20,7 @@ export interface SmartProcessorProps<T extends ElementType> {
   readonly radioGroupOptions?: {
     renderOptionsAs?: T;
   } & Omit<ComponentPropsWithoutRef<T>, 'children'>;
+  readonly className?: string;
 }
 
 function isBypassParameter<T extends ParameterValue>(param: Pick<ParameterInfo<T>, 'id'>): boolean {
@@ -77,6 +79,7 @@ export function SmartProcessor<T extends ElementType>(
       bypassParameterId={props.bypassParameterId}
       title={props.title}
       hideWhenNotInSignalChain={props.hideWhenNotInSignalChain}
+      className={mergeClassNames('h-full w-full', props.className)}
     >
       {processorParameters.map((param) => {
         switch (param.type) {

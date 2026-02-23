@@ -2,13 +2,16 @@ import { Col, Knob, Row } from '@wavecraft/components';
 import { useParameter } from '@wavecraft/core';
 import { type JSX } from 'react';
 import { ProcessorCard } from './ProcessorCard';
+import { mergeClassNames } from '../utils/classNames';
 
 export interface TestToneProcessorProps {
   readonly hideWhenNotInSignalChain?: boolean;
+  readonly className?: string;
 }
 
 export function TestToneProcessor({
   hideWhenNotInSignalChain,
+  className,
 }: Readonly<TestToneProcessorProps>): JSX.Element | null {
   const { param: enabledParameter, setValue: setEnabledValue } =
     useParameter<boolean>('test_tone_enabled');
@@ -28,6 +31,7 @@ export function TestToneProcessor({
       onSwitchChange={(checked) => {
         setEnabledValue(checked);
       }}
+      className={mergeClassNames('h-wull w-full', className)}
     >
       <Row className="flex-nowrap items-start gap-1.5">
         <Col className="h-auto items-center justify-start self-start">
