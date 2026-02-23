@@ -28,6 +28,8 @@ export { ParameterToggle } from './ParameterToggle';
 export type { ParameterToggleProps } from './ParameterToggle';
 export { ParameterSelect } from './ParameterSelect';
 export type { ParameterSelectProps } from './ParameterSelect';
+export { RadioGroup } from './RadioGroup';
+export type { RadioGroupOption, RadioGroupProps } from './RadioGroup';
 export { VersionBadge } from './VersionBadge';
 export { Icon } from './Icon';
 export type { IconProps } from './Icon';

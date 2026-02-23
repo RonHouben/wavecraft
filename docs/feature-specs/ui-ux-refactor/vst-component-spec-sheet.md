@@ -152,13 +152,13 @@ Plugin-specific badges (`bypassed`, `armed`, `mapped`) layer on top of baseline 
 
 ### 6.2 Linear Fader
 
-| Spec area             | Definition                                                                                                                                                                                      |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Size variants         | Vertical: 120/160/220px track; Horizontal: 120/180/240px track                                                                                                                                  |
-| Label/value placement | Label above track, value at end-cap or below, unit suffix aligned                                                                                                                               |
-| Spacing               | thumb clearance `space-2`; label gap `space-2`; grouped channels gap `space-4`                                                                                                                  |
-| States                | hover thumb highlight; focus ring on track; active thumb glow; disabled muted track; loading skeleton thumb; error danger border; bypassed striped overlay; armed amber edge; mapped info badge |
-| Accessibility notes   | Ensure hit area >= 24px for thumb; keyboard increments/decrements; page up/down coarse step                                                                                                     |
+| Spec area             | Definition                                                                                                                                                                                           |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Size variants         | Vertical: 120/160/220px track; Horizontal: 120/180/240px track                                                                                                                                       |
+| Label/value placement | Label above track, value at end-cap or below, unit suffix aligned                                                                                                                                    |
+| Spacing               | thumb clearance `space-2`; label gap `space-2`; grouped channels gap `space-4`                                                                                                                       |
+| States                | hover thumb highlight; focus ring on track; active thumb glow; disabled muted track; loading skeleton thumb; error danger border; bypassed striped overlay; armed amber edge; mapped info badge      |
+| Accessibility notes   | Implement as `<input type="range">`; keyboard increments/decrements and page up/down coarse step are provided natively — no custom key handlers required. Ensure hit area >= 24px for thumb via CSS. |
 
 ### 6.3 Button (momentary/latch)
 
@@ -325,6 +325,36 @@ Plugin-specific badges (`bypassed`, `armed`, `mapped`) layer on top of baseline 
 - Do not rely on color alone for state (add icon, text, pattern, or shape cue).
 - Respect reduced motion (`prefers-reduced-motion`) for animations and meter embellishments.
 - Provide alternative numeric/text entry for graph-like controls where feasible.
+
+### 8.1 Native-first keyboard policy
+
+Native HTML elements provide keyboard behavior out of the box — do not reimplement it.
+
+**What is already handled natively (no custom `onKeyDown` needed):**
+
+- **Tab focus** — all focusable native elements (buttons, links, inputs, ranges) participate in the tab order automatically.
+- **Enter / Space activation** — `<button>` responds to both keys without any event handler.
+- **Radio group navigation** — `<input type="radio">` elements sharing a `name` attribute already cycle focus with arrow keys.
+- **Range increment / decrement** — `<input type="range">` responds to arrow keys and Page Up / Page Down natively.
+
+**Prohibited:** Adding `onKeyDown` handlers that duplicate behavior already provided by native semantics (e.g., responding to Space on a real `<button>`, or rewriting arrow-key movement for a native radio group).
+
+**Custom keyboard handling is only permitted for:**
+
+- Composite widgets with no native equivalent: tab panels, listboxes, menus, tree views.
+- Canvas or SVG controls: knobs, XY pads, graph editors, envelope editors.
+- Dialog focus trapping and Escape-to-close.
+
+### 8.2 Keyboard interaction documentation requirement
+
+Any component that implements custom keyboard handling **must** document the following in its spec entry (section 6.x) or inline JSDoc:
+
+- **Supported keys** — full list of handled key codes and their actions.
+- **Focus movement rules** — how focus moves within the widget (e.g., arrow wrapping, roving `tabindex`).
+- **Escape / close behavior** — whether Escape dismisses, collapses, or resets the widget (if applicable).
+- **Test coverage expectations** — at minimum one keyboard-only test path per interactive widget.
+
+Components that rely entirely on native element behavior do **not** require this documentation beyond a note confirming the native element used (e.g., "Implemented as `<input type=range>`; keyboard behavior is native").
 
 ---
 

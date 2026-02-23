@@ -7,7 +7,8 @@
 import { IpcEvents, IpcMethods } from '../ipc/constants';
 
 export type ParameterType = 'float' | 'bool' | 'enum';
-export type ParameterValue = number | boolean;
+export type ParameterValue = number | boolean | string;
+export type ParameterVariant = string | undefined;
 
 /**
  * Augmentable parameter ID registry.
@@ -61,7 +62,7 @@ export type ParameterId = ParameterIdMapAugmentedMarker extends keyof ParameterI
   ? Exclude<Extract<keyof ParameterIdMap, string>, ParameterIdMapAugmentedMarker>
   : string;
 
-export interface ParameterInfo<T extends ParameterValue> {
+export interface ParameterInfo<T extends ParameterValue, V extends ParameterVariant> {
   id: ParameterId;
   name: string;
   type: ParameterType;
@@ -72,7 +73,7 @@ export interface ParameterInfo<T extends ParameterValue> {
   unit?: string;
   group?: string;
   /** Variant labels for enum parameters (e.g., ["Sine", "Square", "Saw", "Triangle"]). */
-  variants?: string[];
+  variants?: V[];
 }
 
 // getParameter
@@ -94,8 +95,8 @@ export interface SetParameterParams {
 export type SetParameterResult = Record<string, never>;
 
 // getAllParameters
-export interface GetAllParametersResult<T extends ParameterValue> {
-  parameters: ParameterInfo<T>[];
+export interface GetAllParametersResult<T extends ParameterValue, V extends ParameterVariant> {
+  parameters: ParameterInfo<T, V>[];
 }
 
 // Notification: parameterChanged

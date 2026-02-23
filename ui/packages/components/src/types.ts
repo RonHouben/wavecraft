@@ -1,5 +1,5 @@
-export type ParameterType = 'float' | 'bool' | 'enum';
-export type ParameterValue = number | boolean;
+import type { ElementType, ComponentPropsWithoutRef } from 'react';
+import type { ParameterVariant, ParameterValue, ParameterType } from '@wavecraft/core';
 
 export type ControlVisualState =
   | 'default'
@@ -11,17 +11,17 @@ export type ControlVisualState =
   | 'error';
 export type PluginVisualState = 'bypassed' | 'armed' | 'mapped';
 
-export interface ParameterInfo {
+export interface ParameterInfo<T extends ParameterValue, V extends ParameterVariant> {
   id: string;
   name: string;
   type: ParameterType;
-  value: ParameterValue;
-  default: ParameterValue;
+  value: T;
+  default: T;
   min: number;
   max: number;
   unit?: string;
   group?: string;
-  variants?: string[];
+  variants?: V[];
 }
 
 export interface MeterFrame {
@@ -57,3 +57,7 @@ export interface OscilloscopeFrame {
 
 export type OscilloscopeChannelView = 'overlay' | 'left' | 'right';
 export type OscilloscopeTriggerMode = 'risingZeroCrossing';
+
+export type PolymorphicProps<C extends ElementType, OwnProps> = OwnProps & {
+  as?: C;
+} & Omit<ComponentPropsWithoutRef<C>, keyof OwnProps | 'as'>;

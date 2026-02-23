@@ -33,6 +33,7 @@ export type {
   ParameterId,
   ParameterIdMap,
   ParameterType,
+  ParameterVariant,
   GetParameterParams,
   GetParameterResult,
   SetParameterParams,

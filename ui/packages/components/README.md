@@ -62,11 +62,39 @@ module.exports = {
 | `ParameterSlider`  | Slider control for a parameter          |
 | `ParameterGroup`   | Group of related parameters             |
 | `ParameterToggle`  | Boolean parameter toggle                |
+| `RadioGroup`       | Exclusive single-select option group    |
 | `VersionBadge`     | Displays plugin version                 |
 | `ConnectionStatus` | Shows IPC connection state              |
 | `LatencyMonitor`   | Displays IPC latency stats              |
 | `ResizeHandle`     | Draggable resize corner                 |
 | `ResizeControls`   | Preset size buttons                     |
+
+## RadioGroup Usage
+
+```tsx
+import { useState } from 'react';
+import { RadioGroup } from '@wavecraft/components';
+
+type Mode = 'clean' | 'drive' | 'fuzz';
+
+function ModeSelector() {
+  const [mode, setMode] = useState<Mode>('clean');
+
+  return (
+    <RadioGroup
+      name="mode"
+      label="Mode"
+      value={mode}
+      onChange={setMode}
+      options={[
+        { value: 'clean', label: 'Clean' },
+        { value: 'drive', label: 'Drive' },
+        { value: 'fuzz', label: 'Fuzz' },
+      ]}
+    />
+  );
+}
+```
 
 ## Requirements
 

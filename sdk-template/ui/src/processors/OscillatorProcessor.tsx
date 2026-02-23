@@ -1,4 +1,5 @@
-import { Col, IconButton, IconProps, Knob, Row, Switch } from '@wavecraft/components';
+import { Col, IconButton, IconProps, Knob, RadioGroup, Row, Switch } from '@wavecraft/components';
+import { ParameterInfo } from '@wavecraft/components/types';
 import { useHasProcessorInSignalChain, useParameter } from '@wavecraft/core';
 import { type JSX } from 'react';
 
@@ -6,8 +7,11 @@ export interface OscillatorProcessorProps {
   readonly hideWhenNotInSignalChain?: boolean;
 }
 
-function getNumericValue(value: number | boolean): number {
-  return typeof value === 'number' ? value : value ? 1 : 0;
+enum WaveformVariant {
+  'Sine' = 'Sine',
+  'Square' = 'Square',
+  'Saw' = 'Saw',
+  'Triangle' = 'Triangle',
 }
 
 export function OscillatorProcessor({
@@ -19,8 +23,10 @@ export function OscillatorProcessor({
     useParameter<boolean>('oscillator_bypass');
   const { param: enabledParameter, setValue: setEnabledValue } =
     useParameter<boolean>('oscillator_enabled');
-  const { param: waveformParameter, setValue: setWaveformValue } =
-    useParameter<number>('oscillator_waveform');
+  const { param: waveformParameter, setValue: setWaveformValue } = useParameter<
+    number,
+    WaveformVariant
+  >('oscillator_waveform');
   const { param: frequencyParameter, setValue: setFrequencyValue } =
     useParameter<number>('oscillator_frequency');
   const { param: levelParameter, setValue: setLevelValue } =
@@ -30,15 +36,11 @@ export function OscillatorProcessor({
     return null;
   }
 
-  const isBypassActive = Boolean(bypassParameter?.value);
-  const waveformVariants = waveformParameter?.variants ?? [];
-  const selectedWaveform = waveformParameter ? getNumericValue(waveformParameter.value) : 0;
-
   return (
     <section
-      data-bypassed={String(isBypassActive)}
+      data-bypassed={bypassParameter?.value}
       className={`w-fit rounded-xl border border-plugin-border bg-plugin-surface-1 p-3 shadow-panel transition-[opacity,filter] duration-150 ${
-        isBypassActive ? 'opacity-70 brightness-90 saturate-50' : 'opacity-100 saturate-100'
+        bypassParameter?.value ? 'opacity-70 brightness-90 saturate-50' : 'opacity-100 saturate-100'
       }`}
     >
       <header className="mb-3 flex flex-col items-start justify-between gap-3 border-b border-plugin-border/70 pb-3">
@@ -73,15 +75,32 @@ export function OscillatorProcessor({
             </span>
           </div>
           <Row role="group" aria-label={waveformParameter?.name} className="gap-1.5">
-            {waveformVariants.map((variant, index) => (
-              <IconButton
-                key={`${waveformParameter?.id}-${variant}-${index}`}
-                size="sm"
-                active={index === selectedWaveform}
-                onClick={() => setWaveformValue(index)}
-                icon={mapWaveformParameterToIconVariant(String(variant))}
-              />
-            ))}
+            <>
+              {waveformParameter && (
+                <RadioGroup
+                  name="waveform"
+                  value={mapWaveformValueToVariant(waveformParameter.value, waveformParameter)}
+                  options={
+                    waveformParameter.variants?.map((variant) => ({
+                      as: IconButton,
+                      label: variant,
+                      value: variant,
+                      icon: mapWaveformParameterToIconVariant(variant),
+                      // size: 'sm',
+                    })) ?? []
+                  }
+                  onChange={(selectedWaveform) => {
+                    if (isWaveformVariant(selectedWaveform)) {
+                      const newWaveformValue = mapWaveformVariantToValue(selectedWaveform);
+
+                      console.log({ selectedWaveform, newWaveformValue });
+
+                      setWaveformValue(newWaveformValue);
+                    }
+                  }}
+                />
+              )}
+            </>
           </Row>
         </div>
 
@@ -113,17 +132,36 @@ export function OscillatorProcessor({
   );
 }
 
-function mapWaveformParameterToIconVariant(waveformParameterValue: string): IconProps['icon'] {
+function mapWaveformValueToVariant(
+  waveformValue: number,
+  waveformParameters: ParameterInfo<number, WaveformVariant>
+): WaveformVariant | undefined {
+  return waveformParameters.variants ? waveformParameters.variants[waveformValue] : undefined;
+}
+
+function mapWaveformVariantToValue(waveformVariant: WaveformVariant): number {
+  return Object.values(WaveformVariant).indexOf(waveformVariant);
+}
+
+function mapWaveformParameterToIconVariant(
+  waveformParameterValue: WaveformVariant
+): IconProps['icon'] {
   switch (waveformParameterValue) {
-    case 'Sine':
+    case WaveformVariant.Sine:
       return 'waveform-sine';
-    case 'Square':
+    case WaveformVariant.Square:
       return 'waveform-square';
-    case 'Saw':
+    case WaveformVariant.Saw:
       return 'waveform-saw';
-    case 'Triangle':
+    case WaveformVariant.Triangle:
       return 'waveform-triangle';
     default:
       throw new Error(`Unsupported waveform variant: ${waveformParameterValue}`);
   }
+}
+
+function isWaveformVariant(value: unknown): value is WaveformVariant {
+  return (
+    typeof value === 'string' && Object.values(WaveformVariant).includes(value as WaveformVariant)
+  );
 }
