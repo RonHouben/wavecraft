@@ -34,6 +34,12 @@ const knobWidthClassMap: Record<NonNullable<KnobProps['size']>, string> = {
   lg: 'min-w-[88px]',
 };
 
+const knobValueTextSizeClassMap: Record<NonNullable<KnobProps['size']>, string> = {
+  sm: 'text-type-xs',
+  md: 'text-type-sm',
+  lg: 'text-type-sm',
+};
+
 const KNOB_SWEEP_START_DEG = -135;
 const KNOB_SWEEP_RANGE_DEG = 270;
 const SHIFT_DRAG_PRECISION_DIVISOR = 12;
@@ -378,7 +384,10 @@ export function Knob({
 
       <div className="relative flex w-full items-center justify-center gap-1">
         <span
-          className="shrink-0 whitespace-nowrap text-center font-mono text-type-sm tabular-nums text-plugin-text-primary"
+          className={mergeClassNames(
+            'shrink-0 whitespace-nowrap text-center font-mono tabular-nums text-plugin-text-primary',
+            knobValueTextSizeClassMap[size]
+          )}
           style={{ width: `${reservedValueWidthCh}ch` }}
         >
           {formattedValue}

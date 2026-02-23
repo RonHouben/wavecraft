@@ -43,7 +43,7 @@ export function OscillatorProcessor({
         bypassParameter?.value ? 'opacity-70 brightness-90 saturate-50' : 'opacity-100 saturate-100'
       }`}
     >
-      <header className="mb-3 flex flex-col items-start justify-between gap-3 border-b border-plugin-border/70 pb-3">
+      <header className="mb-3 flex flex-col items-start justify-between gap-3 border-plugin-border/70 pb-3">
         <Row className="justify-between">
           <Col className="justify-between gap-2">
             <h3 className="truncate text-type-md font-semibold text-plugin-text-primary">
@@ -67,65 +67,64 @@ export function OscillatorProcessor({
         </Row>
       </header>
 
-      <div className="grid gap-3 space-y-3">
-        <div className="w-fit rounded-md border border-plugin-border bg-plugin-dark/60 p-2 sm:col-span-4">
-          <div className="mb-2">
+      <main>
+        <Row className="flex-nowrap items-start gap-1.5">
+          <Col
+            className="h-auto items-start justify-start gap-1 self-start"
+            role="group"
+            aria-label={waveformParameter?.name}
+          >
             <span className="text-type-xs uppercase tracking-wide text-plugin-text-secondary">
               {waveformParameter?.name}
             </span>
-          </div>
-          <Row role="group" aria-label={waveformParameter?.name} className="gap-1.5">
-            <>
-              {waveformParameter && (
-                <RadioGroup
-                  name="waveform"
-                  value={mapWaveformValueToVariant(waveformParameter.value, waveformParameter)}
-                  options={
-                    waveformParameter.variants?.map((variant) => ({
-                      as: IconButton,
-                      label: variant,
-                      value: variant,
-                      icon: mapWaveformParameterToIconVariant(variant),
-                      size: 'sm' as const,
-                    })) ?? []
+            {waveformParameter && (
+              <RadioGroup
+                orientation="vertical"
+                name="waveform"
+                value={mapWaveformValueToVariant(waveformParameter.value, waveformParameter)}
+                options={
+                  waveformParameter.variants?.map((variant) => ({
+                    as: IconButton,
+                    label: variant,
+                    value: variant,
+                    icon: mapWaveformParameterToIconVariant(variant),
+                    size: 'sm' as const,
+                  })) ?? []
+                }
+                onChange={(selectedWaveform) => {
+                  if (isWaveformVariant(selectedWaveform)) {
+                    const newWaveformValue = mapWaveformVariantToValue(selectedWaveform);
+
+                    setWaveformValue(newWaveformValue);
                   }
-                  onChange={(selectedWaveform) => {
-                    if (isWaveformVariant(selectedWaveform)) {
-                      const newWaveformValue = mapWaveformVariantToValue(selectedWaveform);
-
-                      setWaveformValue(newWaveformValue);
-                    }
-                  }}
-                />
-              )}
-            </>
-          </Row>
-        </div>
-
-        <Row>
-          <Knob
-            id={`param-${frequencyParameter?.id}`}
-            label={frequencyParameter?.name ?? ''}
-            value={frequencyParameter?.value ?? 0}
-            min={frequencyParameter?.min ?? 0}
-            max={frequencyParameter?.max ?? 0}
-            unit={frequencyParameter?.unit ?? ''}
-            size="sm"
-            onChange={setFrequencyValue}
-          />
-
-          <Knob
-            id={`param-${levelParameter?.id}`}
-            label={levelParameter?.name ?? ''}
-            value={levelParameter?.value ?? 0}
-            min={levelParameter?.min ?? 0}
-            max={levelParameter?.max ?? 0}
-            unit={levelParameter?.unit ?? ''}
-            size="sm"
-            onChange={setLevelValue}
-          />
+                }}
+              />
+            )}
+          </Col>
+          <Col className="h-auto items-center justify-start self-start">
+            <Knob
+              id={`param-${frequencyParameter?.id}`}
+              label={frequencyParameter?.name ?? ''}
+              value={frequencyParameter?.value ?? 0}
+              min={frequencyParameter?.min ?? 0}
+              max={frequencyParameter?.max ?? 0}
+              unit={frequencyParameter?.unit ?? ''}
+              size="sm"
+              onChange={setFrequencyValue}
+            />
+            <Knob
+              id={`param-${levelParameter?.id}`}
+              label={levelParameter?.name ?? ''}
+              value={levelParameter?.value ?? 0}
+              min={levelParameter?.min ?? 0}
+              max={levelParameter?.max ?? 0}
+              unit={levelParameter?.unit ?? ''}
+              size="sm"
+              onChange={setLevelValue}
+            />
+          </Col>
         </Row>
-      </div>
+      </main>
     </section>
   );
 }

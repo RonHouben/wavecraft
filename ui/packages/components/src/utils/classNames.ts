@@ -1,3 +1,30 @@
+import { clsx, type ClassValue } from 'clsx';
+import { extendTailwindMerge } from 'tailwind-merge';
+
+const wavecraftTwMerge = extendTailwindMerge({
+  extend: {
+    classGroups: {
+      'font-size': [
+        {
+          text: ['type-2xs', 'type-xs', 'type-sm', 'type-md', 'type-lg'],
+        },
+      ],
+      'text-color': [
+        {
+          text: [
+            'plugin-text-primary',
+            'plugin-text-secondary',
+            'plugin-text-muted',
+            'accent',
+            'accent-light',
+            'state-danger',
+          ],
+        },
+      ],
+    },
+  },
+});
+
 export const focusRingClass =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-light focus-visible:ring-offset-2 focus-visible:ring-offset-plugin-dark';
 
@@ -10,6 +37,6 @@ export const sectionHeadingClass = 'text-sm font-semibold uppercase tracking-wid
 
 export const parameterListClass = 'space-y-3';
 
-export function mergeClassNames(...classes: Array<string | undefined | null | false>): string {
-  return classes.filter(Boolean).join(' ');
+export function mergeClassNames(...classes: ClassValue[]): string {
+  return wavecraftTwMerge(clsx(classes));
 }
