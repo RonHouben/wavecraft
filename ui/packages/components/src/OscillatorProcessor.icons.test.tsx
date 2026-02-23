@@ -92,21 +92,24 @@ describe('sdk-template OscillatorProcessor waveform icons', () => {
     render(<OscillatorProcessor />);
 
     expect(
-      screen.getByRole('button', { name: 'Sine' }).querySelector('[data-waveform-icon="sine"]')
+      document.querySelector('[role="radio"][value="Sine"] [data-waveform-icon="sine"]')
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Square' }).querySelector('[data-waveform-icon="square"]')
+      document.querySelector('[role="radio"][value="Square"] [data-waveform-icon="square"]')
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Saw' }).querySelector('[data-waveform-icon="saw"]')
+      document.querySelector('[role="radio"][value="Saw"] [data-waveform-icon="saw"]')
     ).toBeInTheDocument();
     expect(
-      screen
-        .getByRole('button', { name: 'Triangle' })
-        .querySelector('[data-waveform-icon="triangle"]')
+      document.querySelector('[role="radio"][value="Triangle"] [data-waveform-icon="triangle"]')
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Square' }));
+    const squareWaveformOption = document.querySelector<HTMLButtonElement>(
+      '[role="radio"][value="Square"]'
+    );
+    expect(squareWaveformOption).toBeInTheDocument();
+
+    fireEvent.click(squareWaveformOption as HTMLButtonElement);
 
     expect(mockSetParameter).toHaveBeenCalledWith('oscillator_waveform', 1);
   });

@@ -1,12 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import {
+  IconComponentMap,
   SawWaveIcon,
   SineWaveIcon,
   SquareWaveIcon,
   TriangleWaveIcon,
-  getWaveformIcon,
-} from './icons';
+} from './icons/WaveformIcons';
 
 describe('Waveform icons', () => {
   it('renders dedicated icons with waveform markers', () => {
@@ -25,13 +25,18 @@ describe('Waveform icons', () => {
     expect(document.querySelector('[data-waveform-icon="triangle"]')).toBeInTheDocument();
   });
 
-  it('maps known waveform labels to matching icon components', () => {
+  it('maps waveform icon keys to matching icon components', () => {
+    const SineIcon = IconComponentMap['waveform-sine'];
+    const SquareIcon = IconComponentMap['waveform-square'];
+    const SawIcon = IconComponentMap['waveform-saw'];
+    const TriangleIcon = IconComponentMap['waveform-triangle'];
+
     render(
       <div>
-        {getWaveformIcon('Sine')}
-        {getWaveformIcon('Square')}
-        {getWaveformIcon('Saw')}
-        {getWaveformIcon('Triangle')}
+        <SineIcon />
+        <SquareIcon />
+        <SawIcon />
+        <TriangleIcon />
       </div>
     );
 
@@ -41,10 +46,18 @@ describe('Waveform icons', () => {
     expect(document.querySelector('[data-waveform-icon="triangle"]')).toBeInTheDocument();
   });
 
-  it('returns null for unsupported waveform labels', () => {
-    render(<div>{getWaveformIcon('Pulse')}</div>);
+  it('keeps saw and sawtooth aliases mapped to the same icon component', () => {
+    expect(IconComponentMap['waveform-sawtooth']).toBe(IconComponentMap['waveform-saw']);
+
+    const SawtoothAliasIcon = IconComponentMap['waveform-sawtooth'];
+
+    render(
+      <div>
+        <SawtoothAliasIcon data-waveform-icon="sawtooth-alias" />
+      </div>
+    );
 
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
-    expect(document.querySelector('[data-waveform-icon]')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-waveform-icon="sawtooth-alias"]')).toBeInTheDocument();
   });
 });

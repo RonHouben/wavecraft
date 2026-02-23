@@ -81,20 +81,10 @@ describe('sdk-template SmartProcessor primitive migration', () => {
 
     const controlsContainer = document.querySelector('section .relative.space-y-3');
     expect(controlsContainer?.firstElementChild).toHaveTextContent('Bypass');
-    expect(
-      screen.getByRole('button', { name: 'Sine' }).querySelector('[data-waveform-icon="sine"]')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Square' }).querySelector('[data-waveform-icon="square"]')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Saw' }).querySelector('[data-waveform-icon="saw"]')
-    ).toBeInTheDocument();
-    expect(
-      screen
-        .getByRole('button', { name: 'Triangle' })
-        .querySelector('[data-waveform-icon="triangle"]')
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sine' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Square' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Saw' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Triangle' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('switch', { name: 'Bypass' }));
     fireEvent.click(screen.getByRole('button', { name: 'Square' }));

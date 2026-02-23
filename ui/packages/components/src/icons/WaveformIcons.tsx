@@ -25,13 +25,15 @@ export function SineWaveIcon({
       fill="none"
       stroke="currentColor"
       strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       aria-hidden="true"
       focusable="false"
       data-waveform-icon="sine"
       className={mergeClassNames(baseWaveformIconClassName, className)}
       {...rest}
     >
-      <path d="M1 8c1.75 0 1.75-6 3.5-6s1.75 12 3.5 12 1.75-12 3.5-12 1.75 6 3.5 6" />
+      <path d="M1 8C2.5 4 4.5 4 6 8S9.5 12 11 8 13.5 4 15 8" />
     </svg>
   );
 }
@@ -46,13 +48,15 @@ export function SquareWaveIcon({
       fill="none"
       stroke="currentColor"
       strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       aria-hidden="true"
       focusable="false"
       data-waveform-icon="square"
       className={mergeClassNames(baseWaveformIconClassName, className)}
       {...rest}
     >
-      <path d="M1 12V4h7v8h7" />
+      <path d="M1 11.5V4.5h5.5v7h5.5v-7H15" />
     </svg>
   );
 }
@@ -67,13 +71,15 @@ export function SawWaveIcon({
       fill="none"
       stroke="currentColor"
       strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       aria-hidden="true"
       focusable="false"
       data-waveform-icon="saw"
       className={mergeClassNames(baseWaveformIconClassName, className)}
       {...rest}
     >
-      <path d="M1 12 11 4v8h4" />
+      <path d="M1 11.5 6.5 4.5v7L12 4.5v7" />
     </svg>
   );
 }
@@ -88,13 +94,15 @@ export function TriangleWaveIcon({
       fill="none"
       stroke="currentColor"
       strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       aria-hidden="true"
       focusable="false"
       data-waveform-icon="triangle"
       className={mergeClassNames(baseWaveformIconClassName, className)}
       {...rest}
     >
-      <path d="M1 12 5.5 4 10 12l4.5-8" />
+      <path d="M1 10.5 4.5 4.5 8 10.5 11.5 4.5 15 10.5" />
     </svg>
   );
 }
