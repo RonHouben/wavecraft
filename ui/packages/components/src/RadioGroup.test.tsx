@@ -170,22 +170,24 @@ describe('RadioGroup', () => {
         name="mode"
         label="Mode"
         value="clean"
-        options={[
-          {
-            value: 'clean',
-            label: 'Clean',
-            as: Button,
-            renderOptionsAs: Button,
-            size: 'sm',
-          },
-          {
-            value: 'drive',
-            label: 'Drive',
-            as: Button,
-            renderOptionsAs: Button,
-            size: 'sm',
-          },
-        ] as unknown as readonly RadioGroupOption<Mode>[]}
+        options={
+          [
+            {
+              value: 'clean',
+              label: 'Clean',
+              as: Button,
+              renderOptionsAs: Button,
+              size: 'sm',
+            },
+            {
+              value: 'drive',
+              label: 'Drive',
+              as: Button,
+              renderOptionsAs: Button,
+              size: 'sm',
+            },
+          ] as unknown as readonly RadioGroupOption<Mode>[]
+        }
         onChange={vi.fn()}
       />
     );
