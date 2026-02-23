@@ -8,21 +8,26 @@ import {
   logger,
   useParametersForProcessor,
 } from '@wavecraft/core';
-import type { JSX } from 'react';
+import type { ComponentPropsWithoutRef, ElementType, JSX } from 'react';
 import { useMemo } from 'react';
 
-export interface SmartProcessorProps {
+export interface SmartProcessorProps<T extends ElementType> {
   readonly processorId: ProcessorId;
   readonly bypassParameterId: ParameterId;
   readonly hideWhenNotInSignalChain?: boolean;
   readonly title: string;
+  readonly radioGroupOptions?: {
+    renderOptionsAs?: T;
+  } & Omit<ComponentPropsWithoutRef<T>, 'children'>;
 }
 
 function isBypassParameter<T extends ParameterValue>(param: Pick<ParameterInfo<T>, 'id'>): boolean {
   return param.id.endsWith('_bypass');
 }
 
-export function SmartProcessor(props: Readonly<SmartProcessorProps>): JSX.Element | null {
+export function SmartProcessor<T extends ElementType>(
+  props: Readonly<SmartProcessorProps<T>>
+): JSX.Element | null {
   const { params, isLoading, error, setParameter } = useParametersForProcessor(props.processorId);
 
   const processorParameters = useMemo(() => {
@@ -76,34 +81,55 @@ export function SmartProcessor(props: Readonly<SmartProcessorProps>): JSX.Elemen
         switch (param.type) {
           case 'bool':
             return (
-              <Switch checked={Boolean(param.value)} onChange={(value) => param.onChange(value)} />
+              <Switch
+                key={param.id}
+                checked={Boolean(param.value)}
+                onChange={(value) => param.onChange(value)}
+              />
             );
 
-          case 'enum':
-            {
-              const enumValue = typeof param.value === 'number' ? param.value : Number(param.value);
-              const enumOptions = (param.variants ?? []).map((variant, index) => ({
-                label: variant ?? `Option ${index + 1}`,
-                value: index,
-              }));
+          case 'enum': {
+            const enumValue = typeof param.value === 'number' ? param.value : Number(param.value);
+            const enumOptions = (param.variants ?? []).map((variant, index) => ({
+              as: props.radioGroupOptions?.renderOptionsAs,
+              ...props.radioGroupOptions,
+              label: variant ?? `Option ${index + 1}`,
+              value: index,
+              children: variant,
+            }));
 
-              if (enumOptions.length === 0) {
-                return <ErrorMessage message={`Error: Enum parameter has no variants: ${param.name}`} />;
-              }
-
+            if (enumOptions.length === 0) {
               return (
-                <RadioGroup
-                  name={param.id}
-                  value={enumValue}
-                  onChange={(newValue) => param.onChange(newValue)}
-                  options={enumOptions}
-                ></RadioGroup>
+                <ErrorMessage
+                  key={param.id}
+                  message={`Error: Enum parameter has no variants: ${param.name}`}
+                />
               );
             }
+
+            return (
+              <RadioGroup
+                key={param.id}
+                name={param.id}
+                value={enumValue}
+                onChange={(newValue) => param.onChange(newValue)}
+                options={enumOptions}
+                orientation="vertical"
+                label={param.name}
+              />
+            );
+          }
           case 'float':
-            return <Knob {...param} label={param.name} value={Number(param.value)} />;
+            return (
+              <Knob key={param.id} {...param} label={param.name} value={Number(param.value)} />
+            );
           default:
-            return <ErrorMessage message={`Error: Unsupported parameter type: ${param.type}`} />;
+            return (
+              <ErrorMessage
+                key={param.id}
+                message={`Error: Unsupported parameter type: ${param.type}`}
+              />
+            );
         }
       })}
     </ProcessorCard>

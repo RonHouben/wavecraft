@@ -31,7 +31,7 @@ export function ProcessorCard(props: Readonly<ProcessorCardProps>): React.JSX.El
   return (
     <Card
       data-bypassed={bypassParam?.value}
-      className={`w-fit rounded-xl border border-plugin-border bg-plugin-surface-1 p-3 shadow-panel transition-[opacity,filter] duration-150 ${
+      className={`h-full w-fit rounded-xl border border-plugin-border bg-plugin-surface-1 p-3 shadow-panel transition-[opacity,filter] duration-150 ${
         bypassParam?.value ? 'opacity-70 brightness-90 saturate-50' : 'opacity-100 saturate-100'
       }`}
     >
@@ -54,7 +54,7 @@ export function ProcessorCard(props: Readonly<ProcessorCardProps>): React.JSX.El
           }}
         />
       </Card.Header>
-      <Card.Content>{props.children}</Card.Content>
+      <Card.Content className="flex flex-col gap-4">{props.children}</Card.Content>
     </Card>
   );
 }

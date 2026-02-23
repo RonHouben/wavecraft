@@ -1,14 +1,15 @@
-import React, { useId, type ReactNode } from 'react';
+import React, { useId } from 'react';
 import { focusRingClass, mergeClassNames } from './utils/classNames';
 import { getControlStateClass } from './utils/controlStates';
 import { PolymorphicProps } from './types';
 import { omit } from 'lodash';
+import { Row } from './Row';
 
 type RadioGroupValue = string | number;
 
 export interface RadioGroupOption<T extends RadioGroupValue> {
   readonly value: T;
-  readonly label: ReactNode;
+  readonly label: string;
   readonly disabled?: boolean;
 }
 
@@ -17,7 +18,7 @@ export type RadioGroupOwnProps<T extends RadioGroupValue> = {
   options: readonly PolymorphicProps<React.ElementType, RadioGroupOption<T>>[];
   value: T;
   onChange: (value: T) => void;
-  label?: React.ReactNode;
+  label?: string;
   disabled?: boolean;
   className?: string;
   orientation?: 'horizontal' | 'vertical';
@@ -41,7 +42,14 @@ export function RadioGroup<T extends RadioGroupValue>(
   };
 
   return (
-    <div className={mergeClassNames('inline-flex flex-col gap-2', props.className)}>
+    <div
+      className={mergeClassNames(
+        props.orientation === 'vertical'
+          ? 'flex w-full flex-col gap-2'
+          : 'inline-flex flex-col gap-2',
+        props.className
+      )}
+    >
       {props.label ? (
         <span id={labelId} className="text-type-sm text-plugin-text-secondary">
           {props.label}
@@ -54,8 +62,8 @@ export function RadioGroup<T extends RadioGroupValue>(
         aria-disabled={props.disabled || undefined}
         aria-orientation={props.orientation}
         className={mergeClassNames(
-          'inline-flex gap-2',
-          props.orientation === 'vertical' ? 'flex-col items-start' : 'items-center'
+          'inline-flex gap-3',
+          props.orientation === 'vertical' ? 'flex-col items-center' : 'items-center'
         )}
       >
         {props.options.map((option, index) => {
@@ -75,32 +83,37 @@ export function RadioGroup<T extends RadioGroupValue>(
           const commonProps = {
             ...omit(option, 'as'),
             'aria-checked': isChecked,
-            'aria-label': typeof option.label === 'string' ? option.label : undefined,
+            'aria-label': option.label,
             'aria-disabled': isDisabled || undefined,
-            id: `${generatedId}-${index}`,
-            tabIndex: -1,
             className,
             disabled: isDisabled,
-            onClick: () => selectOption(index),
-            onKeyDown: (event: React.KeyboardEvent): void => {
-              event.preventDefault();
-              event.stopPropagation();
-            },
-            onKeyUp: (event: React.KeyboardEvent): void => {
-              event.preventDefault();
-              event.stopPropagation();
-            },
+            key: optionKey,
           };
 
           if (option.as) {
             return React.createElement(option.as, {
-              key: optionKey,
               ...commonProps,
               role: 'radio',
+              onClick: () => selectOption(index),
+              size: 'sm',
             });
           }
 
-          return <input key={optionKey} {...commonProps} type="radio" />;
+          const inputId = `input-${index}-${generatedId}`;
+
+          return (
+            <Row key={commonProps.key} className="text-xs">
+              <label htmlFor={inputId}>{option.label}</label>
+              <input
+                id={inputId}
+                name={option.label}
+                checked={isChecked}
+                {...commonProps}
+                type="radio"
+                onChange={() => selectOption(index)}
+              />
+            </Row>
+          );
         })}
       </div>
     </div>

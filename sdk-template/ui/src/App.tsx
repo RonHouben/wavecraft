@@ -16,6 +16,9 @@ import {
   ResizeHandle,
   TestToneProcessor,
   OscilloscopeProcessor,
+  Row,
+  Button,
+  Col,
 } from '@wavecraft/components';
 import { SmartProcessor } from './processors/SmartProcessor';
 
@@ -29,64 +32,70 @@ export function App(): JSX.Element {
 
   return (
     <WavecraftProvider>
-      <div className="relative flex h-screen flex-col gap-4 bg-plugin-dark p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-100">My Plugin</h1>
-          <div className="flex items-center gap-2">
-            <ConnectionStatus
-              connected={connected}
-              transport={transport}
-              phase={phase}
-              isReady={isReady}
-              isDegraded={isDegraded}
-              diagnostic={diagnostic}
-            />
-            <VersionBadge />
-          </div>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-100">My Plugin</h1>
+        <div className="flex items-center gap-2">
+          <ConnectionStatus
+            connected={connected}
+            transport={transport}
+            phase={phase}
+            isReady={isReady}
+            isDegraded={isDegraded}
+            diagnostic={diagnostic}
+          />
+          <VersionBadge />
         </div>
+      </div>
 
-        {/* Main Content */}
-        <div className="flex flex-1 flex-col gap-6 pb-14 pr-14">
-          <div
-            data-testid="processor-grid"
-            className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4"
-          >
-            <TestToneProcessor hideWhenNotInSignalChain />
-            <SmartProcessor
-              processorId="input_trim"
-              bypassParameterId="input_trim_bypass"
-              title="Input Trim"
-              hideWhenNotInSignalChain
-            />
+      {/* Main Content */}
+      <Col>
+        <Row>
+          <TestToneProcessor hideWhenNotInSignalChain />
+          <SmartProcessor
+            processorId="input_trim"
+            bypassParameterId="input_trim_bypass"
+            title="Input Trim"
+            hideWhenNotInSignalChain
+          />
+          <SmartProcessor
+            processorId="soft_clip"
+            bypassParameterId="soft_clip_bypass"
+            title="Soft Clip"
+            hideWhenNotInSignalChain
+          />
+          <SmartProcessor
+            processorId="tone_filter"
+            bypassParameterId="tone_filter_bypass"
+            title="Tone Filter"
+            hideWhenNotInSignalChain
+            radioGroupOptions={{
+              renderOptionsAs: Button,
+              size: 'lg',
+            }}
+          />
+        </Row>
+        <Row>
+          <Col>
             <OscilloscopeProcessor hideWhenNotInSignalChain />
-            {/* <SmartProcessor id="tone_filter" title="Tone Filter" hideWhenNotInSignalChain /> */}
-            {/* <SmartProcessor id="soft_clip" title="Soft Clip" hideWhenNotInSignalChain /> */}
             {/* <ExampleProcessor hideWhenNotInSignalChain /> */}
             {/* <SmartProcessor id="output_gain" title="Output Gain" hideWhenNotInSignalChain /> */}
             {/* <OscilloscopeProcessor hideWhenNotInSignalChain /> */}
-          </div>
+          </Col>
+        </Row>
+      </Col>
 
-          {/* Metering Section */}
-          <div className="rounded-lg border border-plugin-border bg-plugin-surface p-4">
-            <h2 className="mb-3 text-base font-semibold text-gray-200">Output Metering</h2>
-            <Meter connected={connected} frame={frame} />
-          </div>
+      {/* Metering Section */}
+      <Meter connected={connected} frame={frame} />
 
-          {/* Info Section */}
-          <div className="rounded-lg border border-plugin-border bg-plugin-surface p-4">
-            <h2 className="mb-3 text-base font-semibold text-gray-200">Info</h2>
-            <LatencyMonitor
-              latency={latency.latency}
-              avg={latency.avg}
-              max={latency.max}
-              count={latency.count}
-            />
-          </div>
-        </div>
+      <LatencyMonitor
+        latency={latency.latency}
+        avg={latency.avg}
+        max={latency.max}
+        count={latency.count}
+      />
 
-        <ResizeHandle onRequestResize={requestResize} />
-      </div>
+      <ResizeHandle onRequestResize={requestResize} />
     </WavecraftProvider>
   );
 }
