@@ -29,6 +29,7 @@ export function SmartProcessor<T extends ElementType>(
   props: Readonly<SmartProcessorProps<T>>
 ): JSX.Element | null {
   const { params, isLoading, error, setParameter } = useParametersForProcessor(props.processorId);
+  const { renderOptionsAs, ...radioGroupOptionProps } = props.radioGroupOptions ?? {};
 
   const processorParameters = useMemo(() => {
     const mappedParameters = params.map((param) => ({
@@ -91,8 +92,8 @@ export function SmartProcessor<T extends ElementType>(
           case 'enum': {
             const enumValue = typeof param.value === 'number' ? param.value : Number(param.value);
             const enumOptions = (param.variants ?? []).map((variant, index) => ({
-              as: props.radioGroupOptions?.renderOptionsAs,
-              ...props.radioGroupOptions,
+              as: renderOptionsAs,
+              ...radioGroupOptionProps,
               label: variant ?? `Option ${index + 1}`,
               value: index,
               children: variant,

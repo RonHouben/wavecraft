@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import { Button } from './Button';
 import { RadioGroup, type RadioGroupOption } from './RadioGroup';
 
 type Mode = 'clean' | 'drive' | 'fuzz';
@@ -161,5 +162,36 @@ describe('RadioGroup', () => {
     expect(screen.getByRole('radio', { name: 'Clean' })).toHaveAttribute('tabindex', '-1');
     expect(screen.getByRole('radio', { name: 'Drive' })).toHaveAttribute('tabindex', '-1');
     expect(screen.getByRole('radio', { name: 'Fuzz' })).toHaveAttribute('tabindex', '-1');
+  });
+
+  it('does not forward renderOptionsAs to DOM when rendering options as Button', () => {
+    render(
+      <RadioGroup
+        name="mode"
+        label="Mode"
+        value="clean"
+        options={[
+          {
+            value: 'clean',
+            label: 'Clean',
+            as: Button,
+            renderOptionsAs: Button,
+            size: 'sm',
+          },
+          {
+            value: 'drive',
+            label: 'Drive',
+            as: Button,
+            renderOptionsAs: Button,
+            size: 'sm',
+          },
+        ] as unknown as readonly RadioGroupOption<Mode>[]}
+        onChange={vi.fn()}
+      />
+    );
+
+    const clean = screen.getByRole('radio', { name: 'Clean' });
+    expect(clean).not.toHaveAttribute('renderOptionsAs');
+    expect(clean).not.toHaveAttribute('renderoptionsas');
   });
 });

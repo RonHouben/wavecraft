@@ -15,6 +15,7 @@ export interface ProcessorCardProps {
   readonly title: string;
   readonly onSwitchChange?: (checked: boolean) => void;
   readonly children: React.ReactNode;
+  readonly className?: string;
 }
 
 export function ProcessorCard(props: Readonly<ProcessorCardProps>): React.JSX.Element | null {
@@ -33,7 +34,7 @@ export function ProcessorCard(props: Readonly<ProcessorCardProps>): React.JSX.El
       data-bypassed={bypassParam?.value}
       className={`h-full w-fit rounded-xl border border-plugin-border bg-plugin-surface-1 p-3 shadow-panel transition-[opacity,filter] duration-150 ${
         bypassParam?.value ? 'opacity-70 brightness-90 saturate-50' : 'opacity-100 saturate-100'
-      }`}
+      } ${props.className ?? ''}`}
     >
       <Card.Header>
         <div>

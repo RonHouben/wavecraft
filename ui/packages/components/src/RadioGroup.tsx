@@ -81,18 +81,18 @@ export function RadioGroup<T extends RadioGroupValue>(
           );
 
           const commonProps = {
-            ...omit(option, 'as'),
+            ...omit(option, 'as', 'renderOptionsAs'),
             'aria-checked': isChecked,
             'aria-label': option.label,
             'aria-disabled': isDisabled || undefined,
             className,
             disabled: isDisabled,
-            key: optionKey,
           };
 
           if (option.as) {
             return React.createElement(option.as, {
               ...commonProps,
+              key: optionKey,
               role: 'radio',
               onClick: () => selectOption(index),
               size: 'sm',
@@ -102,7 +102,7 @@ export function RadioGroup<T extends RadioGroupValue>(
           const inputId = `input-${index}-${generatedId}`;
 
           return (
-            <Row key={commonProps.key} className="text-xs">
+            <Row key={optionKey} className="text-xs">
               <label htmlFor={inputId}>{option.label}</label>
               <input
                 id={inputId}

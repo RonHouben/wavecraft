@@ -155,8 +155,7 @@ export function Fader({
   const horizontalThumbRadius = HORIZONTAL_THUMB_DIAMETER_PX / 2;
   const horizontalFillOffsetPx = horizontalThumbRadius * (1 - normalizedValue * 2);
   const horizontalFillWidth = `calc(${(normalizedValue * 100).toFixed(3)}% + ${horizontalFillOffsetPx.toFixed(3)}px)`;
-  const verticalInputClass =
-    'h-full w-2 [direction:rtl] [writing-mode:vertical-lr] [appearance:slider-vertical] [-webkit-appearance:slider-vertical]';
+  const verticalInputClass = 'h-full w-2 [direction:rtl] [writing-mode:vertical-lr]';
 
   const resetShiftDragAnchors = useCallback((): void => {
     shiftDragAnchorRawValueRef.current = null;

@@ -136,8 +136,6 @@ describe('Fader', () => {
     expect(input).toHaveClass('w-2');
     expect(input).toHaveClass('[direction:rtl]');
     expect(input).toHaveClass('[writing-mode:vertical-lr]');
-    expect(input).toHaveClass('[appearance:slider-vertical]');
-    expect(input).toHaveClass('[-webkit-appearance:slider-vertical]');
     expect(input).toHaveClass('rounded-full');
     expect(input).toHaveClass('bg-plugin-border');
     expect(input).toHaveClass('accent-accent');

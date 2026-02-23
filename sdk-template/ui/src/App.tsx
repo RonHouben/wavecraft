@@ -49,8 +49,8 @@ export function App(): JSX.Element {
       </div>
 
       {/* Main Content */}
-      <Col>
-        <Row>
+      <Col className="grid grid-cols-12 gap-4 px-4">
+        <Row className="col-span-12 justify-center gap-4">
           <TestToneProcessor hideWhenNotInSignalChain />
           <SmartProcessor
             processorId="input_trim"
@@ -75,25 +75,25 @@ export function App(): JSX.Element {
             }}
           />
         </Row>
-        <Row>
-          <Col>
-            <OscilloscopeProcessor hideWhenNotInSignalChain />
-            {/* <ExampleProcessor hideWhenNotInSignalChain /> */}
-            {/* <SmartProcessor id="output_gain" title="Output Gain" hideWhenNotInSignalChain /> */}
-            {/* <OscilloscopeProcessor hideWhenNotInSignalChain /> */}
-          </Col>
+        <Row className="col-span-12 grid grid-cols-12">
+          <OscilloscopeProcessor hideWhenNotInSignalChain />
+          {/* <ExampleProcessor hideWhenNotInSignalChain /> */}
+          {/* <SmartProcessor id="output_gain" title="Output Gain" hideWhenNotInSignalChain /> */}
+          {/* <OscilloscopeProcessor hideWhenNotInSignalChain /> */}
+        </Row>
+        <Row className="col-span-12 grid grid-cols-12 justify-center gap-4">
+          {/* Metering Section */}
+          <Meter className="col-span-6" connected={connected} frame={frame} />
+
+          <LatencyMonitor
+            className="col-span-6"
+            latency={latency.latency}
+            avg={latency.avg}
+            max={latency.max}
+            count={latency.count}
+          />
         </Row>
       </Col>
-
-      {/* Metering Section */}
-      <Meter connected={connected} frame={frame} />
-
-      <LatencyMonitor
-        latency={latency.latency}
-        avg={latency.avg}
-        max={latency.max}
-        count={latency.count}
-      />
 
       <ResizeHandle onRequestResize={requestResize} />
     </WavecraftProvider>

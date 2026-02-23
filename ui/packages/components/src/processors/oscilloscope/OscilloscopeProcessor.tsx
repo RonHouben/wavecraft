@@ -4,6 +4,7 @@ import { ProcessorCard } from '../ProcessorCard';
 
 export interface OscilloscopeProcessorProps {
   readonly hideWhenNotInSignalChain?: boolean;
+  readonly className?: string;
 }
 
 export function OscilloscopeProcessor(
@@ -17,6 +18,7 @@ export function OscilloscopeProcessor(
       bypassParameterId="oscilloscope_tap_bypass"
       title="Oscilloscope"
       hideWhenNotInSignalChain={props.hideWhenNotInSignalChain}
+      className={props.className}
     >
       <OscilloscopeView connected={connected} frame={frame} />
     </ProcessorCard>

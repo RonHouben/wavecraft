@@ -26,6 +26,7 @@ function linearToDb(linear: number, floorDb = METER_FLOOR_DB): number {
 }
 
 export interface MeterProps {
+  readonly className?: string;
   readonly connected: boolean;
   readonly frame: MeterFrame | null;
   readonly state?: ControlVisualState;
@@ -134,6 +135,7 @@ function MeterChannel({
 }
 
 export function Meter({
+  className,
   connected,
   frame,
   pluginState,
@@ -224,7 +226,8 @@ export function Meter({
         surfaceCardClass,
         getControlStateClass({ pluginState, state }),
         isError ? 'border-meter-clip' : '',
-        isBypassed ? 'opacity-70' : ''
+        isBypassed ? 'opacity-70' : '',
+        className
       )}
     >
       <div className="flex items-center justify-between gap-2">
