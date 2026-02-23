@@ -1,4 +1,4 @@
-import { Switch } from '@wavecraft/components';
+import { ErrorMessage, Knob, RadioGroup, Switch } from '@wavecraft/components';
 import { ProcessorCard } from '@wavecraft/components/processors/ProcessorCard';
 import { ParameterId } from '@wavecraft/core';
 import {
@@ -41,10 +41,8 @@ export function SmartProcessor(props: Readonly<SmartProcessorProps>): JSX.Elemen
       },
     }));
 
-    const bypassParameters = mappedParameters.filter((param) => isBypassParameter(param));
-    const regularParameters = mappedParameters.filter((param) => !isBypassParameter(param));
-
-    return [...bypassParameters, ...regularParameters];
+    // Bypass is arranged separately
+    return mappedParameters.filter((param) => !isBypassParameter(param));
   }, [props.processorId, params, setParameter]);
 
   if (isLoading) {
@@ -61,16 +59,7 @@ export function SmartProcessor(props: Readonly<SmartProcessorProps>): JSX.Elemen
   }
 
   if (error) {
-    return (
-      <div
-        role="alert"
-        aria-live="assertive"
-        aria-atomic="true"
-        className="rounded-xl border border-state-danger/60 bg-plugin-surface-1 p-5 text-type-sm text-state-danger shadow-panel"
-      >
-        Error loading {props.processorId}: {error.message}
-      </div>
-    );
+    return <ErrorMessage message={`Error loading ${props.processorId}: ${error.message}`} />;
   }
 
   if (processorParameters.length === 0) {
@@ -89,8 +78,23 @@ export function SmartProcessor(props: Readonly<SmartProcessorProps>): JSX.Elemen
             return (
               <Switch checked={Boolean(param.value)} onChange={(value) => param.onChange(value)} />
             );
+
+          case 'enum':
+            return (
+              <RadioGroup
+                name=""
+                value={param.value}
+                onChange={(newValue) => param.onChange(newValue)}
+                options={param.variants?.map((variant) => ({
+                  label: variant,
+                  value: variant,
+                }))}
+              ></RadioGroup>
+            );
+          case 'float':
+            return <Knob {...param} label={param.name} value={Number(param.value)} />;
           default:
-            return <div>Error: Unsupported parameter type: {param.type}</div>;
+            return <ErrorMessage message={`Error: Unsupported parameter type: ${param.type}`} />;
         }
       })}
     </ProcessorCard>

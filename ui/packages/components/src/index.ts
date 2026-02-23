@@ -11,6 +11,8 @@ export { Button } from './Button';
 export type { ButtonProps } from './Button';
 export { Card } from './Card';
 export type { CardProps } from './Card';
+export { ErrorMessage } from './ErrorMessage';
+export type { ErrorMessageProps } from './ErrorMessage';
 export { Switch } from './Switch';
 export type { SwitchProps } from './Switch';
 export { Knob } from './Knob';
