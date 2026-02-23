@@ -4,8 +4,8 @@ import { useHasProcessorInSignalChain } from '@wavecraft/core';
 type UseHasProcessorArg = Parameters<typeof useHasProcessorInSignalChain>[0];
 type IsWidenedString = string extends UseHasProcessorArg ? true : false;
 
-const validProcessorId: ProcessorId = 'oscillator';
-const validHookArg: UseHasProcessorArg = 'oscillator';
+const validProcessorId: ProcessorId = 'test_tone';
+const validHookArg: UseHasProcessorArg = 'test_tone';
 const shouldBeLiteralUnion: IsWidenedString = false;
 
 void validProcessorId;

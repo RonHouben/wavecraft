@@ -31,8 +31,8 @@ vi.mock('@wavecraft/components', async () => {
 vi.mock('../../../../sdk-template/ui/src/processors/OscilloscopeProcessor', () => ({
   OscilloscopeProcessor: () => <div data-testid="oscilloscope" />,
 }));
-vi.mock('../../../../sdk-template/ui/src/processors/OscillatorProcessor', () => ({
-  OscillatorProcessor: () => <div data-testid="processor-oscillator" />,
+vi.mock('../../../../sdk-template/ui/src/processors/TestToneProcessor', () => ({
+  TestToneProcessor: () => <div data-testid="processor-test-tone" />,
 }));
 vi.mock('../../../../sdk-template/ui/src/processors/SmartProcessor', () => ({
   SmartProcessor: ({ id }: { id: string }) => <div data-testid={`processor-${id}`} />,
@@ -45,7 +45,7 @@ vi.mock('../../../../sdk-template/ui/src/processors/ExampleProcessor', () => ({
 import { App } from '../../../../sdk-template/ui/src/App';
 
 describe('sdk-template App layout', () => {
-  it('renders oscillator panel and resize handle', () => {
+  it('renders test tone panel and resize handle', () => {
     mockUseConnectionStatus.mockReturnValue({ connected: true, transport: 'websocket' });
     mockUseAudioStatus.mockReturnValue({
       phase: 'runningFullDuplex',
@@ -59,7 +59,7 @@ describe('sdk-template App layout', () => {
 
     render(<App />);
 
-    expect(screen.getByTestId('processor-oscillator')).toBeInTheDocument();
+    expect(screen.getByTestId('processor-test-tone')).toBeInTheDocument();
     expect(screen.getByTestId('processor-input_trim')).toBeInTheDocument();
     expect(screen.getByTestId('processor-tone_filter')).toBeInTheDocument();
     expect(screen.getByTestId('processor-soft_clip')).toBeInTheDocument();

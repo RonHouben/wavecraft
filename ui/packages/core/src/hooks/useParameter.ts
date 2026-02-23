@@ -60,7 +60,7 @@ export function useParameter<T extends ParameterValue, V extends ParameterVarian
       return null;
     }
 
-    return normalizeParameter<T, V>(found);
+    return normalizeParameter<T, V>(found as ParameterInfo<T, V>);
   }, [id, params]);
 
   const notFoundError = useMemo(

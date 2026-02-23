@@ -361,21 +361,16 @@ mod tests {
         let ui_dir = temp.path();
 
         let params = vec![ParameterInfo {
-            id: "oscillator_waveform".to_string(),
-            name: "Waveform".to_string(),
+            id: "test_tone_frequency".to_string(),
+            name: "Frequency".to_string(),
             param_type: ParameterType::Enum,
             value: 0.0,
             default: 0.0,
             min: 0.0,
-            max: 3.0,
+            max: 2.0,
             unit: None,
-            group: Some("Oscillator".to_string()),
-            variants: Some(vec![
-                "Sine".to_string(),
-                "Square".to_string(),
-                "Saw".to_string(),
-                "Triangle".to_string(),
-            ]),
+            group: Some("Test Tone".to_string()),
+            variants: Some(vec!["Low".to_string(), "Mid".to_string(), "High".to_string()]),
         }];
 
         write_parameter_types(ui_dir, &params).expect("write should succeed");
@@ -383,7 +378,7 @@ mod tests {
         let output_path = ui_dir.join("src/generated/parameters.ts");
         let output = fs::read_to_string(output_path).expect("generated file should exist");
 
-        assert!(output.contains("oscillator_waveform: number;"));
+        assert!(output.contains("test_tone_frequency: number;"));
     }
 
     #[test]
@@ -411,7 +406,7 @@ mod tests {
 
         let processors = vec![
             processor("output_gain"),
-            processor("oscillator"),
+            processor("test_tone"),
             processor("output_gain"),
         ];
         write_processor_types(ui_dir, &processors).expect("write should succeed");
@@ -419,14 +414,14 @@ mod tests {
         let output_path = ui_dir.join("src/generated/processors.ts");
         let output = fs::read_to_string(output_path).expect("generated file should exist");
 
-        let oscillator_pos = output
-            .find("oscillator: true;")
-            .expect("oscillator present");
+        let test_tone_pos = output
+            .find("test_tone: true;")
+            .expect("test_tone present");
         let output_gain_pos = output
             .find("output_gain: true;")
             .expect("output_gain present");
 
-        assert!(oscillator_pos < output_gain_pos, "IDs should be sorted");
+        assert!(output_gain_pos < test_tone_pos, "IDs should be sorted");
         assert_eq!(
             output.matches("output_gain: true;").count(),
             1,

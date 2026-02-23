@@ -23,7 +23,7 @@ import { SmartProcessor } from '../../../../sdk-template/ui/src/processors/Smart
 
 function makeParameter(overrides: Partial<ParameterInfo>): ParameterInfo {
   return {
-    id: 'oscillator_frequency',
+    id: 'test_tone_frequency',
     name: 'Frequency',
     type: 'float',
     value: 440,
@@ -44,22 +44,15 @@ describe('sdk-template SmartProcessor primitive migration', () => {
   it('renders primitive controls and forwards parameter changes', () => {
     const params: ParameterInfo[] = [
       makeParameter({
-        id: 'oscillator_waveform',
-        name: 'Waveform',
-        type: 'enum',
-        value: 0,
-        variants: ['Sine', 'Square', 'Saw', 'Triangle'],
-      }),
-      makeParameter({
-        id: 'oscillator_frequency',
+        id: 'test_tone_frequency',
         name: 'Frequency',
         type: 'float',
         unit: 'Hz',
         value: 440,
       }),
-      makeParameter({ id: 'oscillator_bypass', name: 'Bypass', type: 'bool', value: true }),
+      makeParameter({ id: 'test_tone_bypass', name: 'Bypass', type: 'bool', value: true }),
       makeParameter({
-        id: 'oscillator_level',
+        id: 'test_tone_level',
         name: 'Output Level',
         type: 'float',
         unit: 'dB',
@@ -77,17 +70,13 @@ describe('sdk-template SmartProcessor primitive migration', () => {
       setParameter: mockSetParameter,
     });
 
-    render(<SmartProcessor id="oscillator" title="Oscillator" />);
+    render(<SmartProcessor id="test_tone" title="Test Tone" />);
 
     const controlsContainer = document.querySelector('section .relative.space-y-3');
     expect(controlsContainer?.firstElementChild).toHaveTextContent('Bypass');
-    expect(screen.getByRole('button', { name: 'Sine' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Square' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Saw' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Triangle' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sine' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('switch', { name: 'Bypass' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Square' }));
 
     fireEvent.change(screen.getByLabelText('Frequency'), {
       target: { value: '880' },
@@ -96,23 +85,22 @@ describe('sdk-template SmartProcessor primitive migration', () => {
       target: { value: '-3' },
     });
 
-    expect(mockSetParameter).toHaveBeenCalledWith('oscillator_bypass', false);
-    expect(mockSetParameter).toHaveBeenCalledWith('oscillator_waveform', 1);
-    expect(mockSetParameter).toHaveBeenCalledWith('oscillator_frequency', 880);
-    expect(mockSetParameter).toHaveBeenCalledWith('oscillator_level', -3);
+    expect(mockSetParameter).toHaveBeenCalledWith('test_tone_bypass', false);
+    expect(mockSetParameter).toHaveBeenCalledWith('test_tone_frequency', 880);
+    expect(mockSetParameter).toHaveBeenCalledWith('test_tone_level', -3);
   });
 
   it('shows a global precision hint for focused controls and switches to active hint while Shift precision is active', async () => {
     const params: ParameterInfo[] = [
       makeParameter({
-        id: 'oscillator_frequency',
+        id: 'test_tone_frequency',
         name: 'Frequency',
         type: 'float',
         unit: 'Hz',
         value: 440,
       }),
       makeParameter({
-        id: 'oscillator_level',
+        id: 'test_tone_level',
         name: 'Output Level',
         type: 'float',
         unit: 'dB',
@@ -130,7 +118,7 @@ describe('sdk-template SmartProcessor primitive migration', () => {
       setParameter: mockSetParameter,
     });
 
-    render(<SmartProcessor id="oscillator" title="Oscillator" />);
+    render(<SmartProcessor id="test_tone" title="Test Tone" />);
 
     const hint = screen.getByTestId('processor-precision-hint');
     const frequencyInput = screen.getByLabelText('Frequency');
@@ -162,10 +150,10 @@ describe('sdk-template SmartProcessor primitive migration', () => {
       setParameter: mockSetParameter,
     });
 
-    const { rerender } = render(<SmartProcessor id="oscillator" title="Oscillator" />);
+    const { rerender } = render(<SmartProcessor id="test_tone" title="Test Tone" />);
 
     const loadingState = screen.getByRole('status');
-    expect(loadingState).toHaveTextContent('Loading oscillator...');
+    expect(loadingState).toHaveTextContent('Loading test_tone...');
     expect(loadingState).toHaveAttribute('aria-live', 'polite');
 
     mockUseParametersForProcessor.mockReturnValue({
@@ -175,10 +163,10 @@ describe('sdk-template SmartProcessor primitive migration', () => {
       setParameter: mockSetParameter,
     });
 
-    rerender(<SmartProcessor id="oscillator" title="Oscillator" />);
+    rerender(<SmartProcessor id="test_tone" title="Test Tone" />);
 
     const errorState = screen.getByRole('alert');
-    expect(errorState).toHaveTextContent('Error loading oscillator: boom');
+    expect(errorState).toHaveTextContent('Error loading test_tone: boom');
     expect(errorState).toHaveAttribute('aria-live', 'assertive');
   });
 
@@ -189,22 +177,22 @@ describe('sdk-template SmartProcessor primitive migration', () => {
     mockUseHasProcessorInSignalChain.mockReturnValue(true);
     mockUseParametersForProcessor.mockReturnValue({
       params: [
-        makeParameter({ id: 'oscillator_bypass', name: 'Bypass', type: 'bool', value: true }),
+        makeParameter({ id: 'test_tone_bypass', name: 'Bypass', type: 'bool', value: true }),
       ],
       isLoading: false,
       error: null,
       setParameter: mockSetParameter,
     });
 
-    render(<SmartProcessor id="oscillator" title="Oscillator" />);
+    render(<SmartProcessor id="test_tone" title="Test Tone" />);
 
     fireEvent.click(screen.getByRole('switch', { name: 'Bypass' }));
 
     await waitFor(() => {
       expect(mockLoggerError).toHaveBeenCalledWith('Failed to set processor parameter', {
         error: failure,
-        parameterId: 'oscillator_bypass',
-        processorId: 'oscillator',
+        parameterId: 'test_tone_bypass',
+        processorId: 'test_tone',
       });
     });
   });
@@ -219,7 +207,7 @@ describe('sdk-template SmartProcessor primitive migration', () => {
     });
 
     const { container } = render(
-      <SmartProcessor id="oscillator" title="Oscillator" hideWhenNotInSignalChain />
+      <SmartProcessor id="test_tone" title="Test Tone" hideWhenNotInSignalChain />
     );
 
     expect(container.firstChild).toBeNull();

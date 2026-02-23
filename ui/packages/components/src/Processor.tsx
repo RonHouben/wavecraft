@@ -3,8 +3,9 @@
  */
 
 import React from 'react';
+import { Card } from './Card';
 import type { ParameterInfo } from './types';
-import { parameterListClass, sectionHeadingClass, surfaceCardClass } from './utils/classNames';
+import { parameterListClass, sectionHeadingClass } from './utils/classNames';
 import { renderParameter } from './utils/renderParameter';
 
 export interface ProcessorParameter extends ParameterInfo {
@@ -28,12 +29,12 @@ export function Processor({ id, title, parameters }: Readonly<ProcessorProps>): 
   const orderedParameters = [...bypassParameters, ...regularParameters];
 
   return (
-    <div className={`space-y-2 ${surfaceCardClass}`}>
+    <Card className="space-y-2">
       <h3 className={sectionHeadingClass}>{title ?? id}</h3>
 
       <div className={parameterListClass}>
         {orderedParameters.map((param) => renderParameter(param, param.id))}
       </div>
-    </div>
+    </Card>
   );
 }

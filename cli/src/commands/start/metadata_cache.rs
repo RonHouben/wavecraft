@@ -279,15 +279,15 @@ mod tests {
             .expect("dylib placeholder should be written");
 
         let params = vec![ParameterInfo {
-            id: "oscillator_frequency".to_string(),
+            id: "test_tone_frequency".to_string(),
             name: "Frequency".to_string(),
             param_type: ParameterType::Float,
             value: 440.0,
             default: 440.0,
             min: 20.0,
-            max: 5_000.0,
+            max: 20_000.0,
             unit: Some("Hz".to_string()),
-            group: Some("Oscillator".to_string()),
+            group: Some("Test Tone".to_string()),
             variants: None,
         }];
 
@@ -298,11 +298,11 @@ mod tests {
 
         let frequency = cached
             .iter()
-            .find(|param| param.id == "oscillator_frequency")
+            .find(|param| param.id == "test_tone_frequency")
             .expect("frequency parameter should exist");
 
         assert!((frequency.min - 20.0).abs() < f32::EPSILON);
-        assert!((frequency.max - 5_000.0).abs() < f32::EPSILON);
+        assert!((frequency.max - 20_000.0).abs() < f32::EPSILON);
         assert!((frequency.value - 440.0).abs() < f32::EPSILON);
     }
 }

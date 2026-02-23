@@ -1,9 +1,9 @@
 import * as icons from './icons/WaveformIcons';
 
-type Icon = keyof typeof icons.IconComponentMap;
+type IconName = keyof typeof icons.IconComponentMap;
 
 export interface IconProps {
-  icon: Icon;
+  icon: IconName;
 }
 
 export function Icon({ icon }: Readonly<IconProps>) {

@@ -168,7 +168,7 @@ mod tests {
             &engine_dir
         ));
         assert!(FileWatcher::is_relevant_file(
-            &engine_dir.join("src/dsp/oscillator.rs"),
+            &engine_dir.join("src/dsp/test_tone.rs"),
             &engine_dir
         ));
 

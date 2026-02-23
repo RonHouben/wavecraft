@@ -1,6 +1,7 @@
 import type { SVGProps } from 'react';
 import { mergeClassNames } from '../utils/classNames';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const IconComponentMap = {
   'waveform-sine': SineWaveIcon,
   'waveform-square': SquareWaveIcon,

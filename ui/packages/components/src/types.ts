@@ -1,5 +1,8 @@
 import type { ElementType, ComponentPropsWithoutRef } from 'react';
-import type { ParameterVariant, ParameterValue, ParameterType } from '@wavecraft/core';
+
+export type ParameterType = 'float' | 'bool' | 'enum';
+export type ParameterValue = number | boolean | string;
+export type ParameterVariant = string | undefined;
 
 export type ControlVisualState =
   | 'default'
@@ -11,7 +14,10 @@ export type ControlVisualState =
   | 'error';
 export type PluginVisualState = 'bypassed' | 'armed' | 'mapped';
 
-export interface ParameterInfo<T extends ParameterValue, V extends ParameterVariant> {
+export interface ParameterInfo<
+  T extends ParameterValue = ParameterValue,
+  V extends ParameterVariant = ParameterVariant,
+> {
   id: string;
   name: string;
   type: ParameterType;

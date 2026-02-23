@@ -86,7 +86,7 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
         pub struct __WavecraftParams {
             // Store parameters as a vector for dynamic discovery
             params: ::std::vec::Vec<__WavecraftRuntimeParam>,
-            // Runtime IDs aligned with FFI-generated contract IDs (e.g. oscillator_enabled)
+            // Runtime IDs aligned with FFI-generated contract IDs (e.g. test_tone_enabled)
             ids: ::std::vec::Vec<::std::string::String>,
             // Optional parameter group names (empty string when none)
             groups: ::std::vec::Vec<::std::string::String>,

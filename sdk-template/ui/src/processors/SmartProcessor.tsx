@@ -17,7 +17,7 @@ export interface SmartProcessorProps {
 }
 
 interface SmartProcessorParameter<T extends ParameterValue> extends ParameterInfo<T> {
-  readonly onChange: (value: number | boolean) => Promise<void>;
+  readonly onChange: (value: ParameterValue) => Promise<void>;
   readonly disabled?: boolean;
 }
 
@@ -47,22 +47,39 @@ function isFaderParameter<T extends ParameterValue>(
   return faderHintRegex.test(`${param.id} ${param.name} ${param.unit ?? ''}`);
 }
 
-function getNumericValue(value: number | boolean): number {
-  return typeof value === 'number' ? value : value ? 1 : 0;
+function getNumericValue(value: ParameterValue): number {
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  if (typeof value === 'boolean') {
+    return value ? 1 : 0;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function formatParameterValue(
-  value: number | boolean,
+  value: ParameterValue,
   unit?: string,
-  variants?: readonly string[]
+  variants?: readonly (string | undefined)[]
 ): string {
   if (typeof value === 'boolean') {
     return value ? 'On' : 'Off';
   }
 
-  if (Array.isArray(variants) && variants.length > 0) {
-    const variant = variants[getNumericValue(value)] ?? variants[0];
-    return variant;
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  const enumVariants = (variants ?? []).filter(
+    (variant): variant is string => typeof variant === 'string'
+  );
+
+  if (enumVariants.length > 0) {
+    const variant = enumVariants[getNumericValue(value)] ?? enumVariants[0];
+    return variant ?? String(getNumericValue(value));
   }
 
   if (!unit) {
@@ -111,7 +128,9 @@ function renderPrimitiveParameter<T extends ParameterValue>(
   }
 
   if (param.type === 'enum') {
-    const variants = param.variants ?? [];
+    const variants = (param.variants ?? []).filter(
+      (variant): variant is string => typeof variant === 'string'
+    );
     const selectedIndex = getNumericValue(param.value);
 
     return (
@@ -223,7 +242,7 @@ export function SmartProcessor({
   const processorParameters = useMemo(() => {
     const mappedParameters = params.map((param) => ({
       ...param,
-      onChange: async (value: number | boolean): Promise<void> => {
+      onChange: async (value: ParameterValue): Promise<void> => {
         try {
           await setParameter(param.id, value);
         } catch (err) {

@@ -9,6 +9,15 @@ export { Meter } from './Meter';
 export type { MeterProps } from './Meter';
 export { Button } from './Button';
 export type { ButtonProps } from './Button';
+export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './Card';
+export type {
+  CardProps,
+  CardHeaderProps,
+  CardTitleProps,
+  CardDescriptionProps,
+  CardContentProps,
+  CardFooterProps,
+} from './Card';
 export { Switch } from './Switch';
 export type { SwitchProps } from './Switch';
 export { Knob } from './Knob';
@@ -29,7 +38,7 @@ export type { ParameterToggleProps } from './ParameterToggle';
 export { ParameterSelect } from './ParameterSelect';
 export type { ParameterSelectProps } from './ParameterSelect';
 export { RadioGroup } from './RadioGroup';
-export type { RadioGroupOption, RadioGroupProps } from './RadioGroup';
+export type { RadioGroupOption, RadioGroupOwnProps as RadioGroupProps } from './RadioGroup';
 export { VersionBadge } from './VersionBadge';
 export { Icon } from './Icon';
 export type { IconProps } from './Icon';
@@ -41,7 +50,6 @@ export { ConnectionStatus } from './ConnectionStatus';
 export type { ConnectionStatusProps } from './ConnectionStatus';
 export { LatencyMonitor } from './LatencyMonitor';
 export type { LatencyMonitorProps } from './LatencyMonitor';
-export { OscilloscopeProcessor } from './OscilloscopeProcessor';
 
 // Resize components
 export { ResizeHandle } from './ResizeHandle';
@@ -62,3 +70,10 @@ export type {
   OscilloscopeChannelView,
   OscilloscopeTriggerMode,
 } from './types';
+
+// Audio Processors
+export { OscilloscopeProcessor } from './processors/OscilloscopeProcessor';
+export type { OscilloscopeProcessorProps } from './processors/OscilloscopeProcessor';
+
+export { TestToneProcessor } from './processors/TestToneProcessor';
+export type { TestToneProcessorProps } from './processors/TestToneProcessor';

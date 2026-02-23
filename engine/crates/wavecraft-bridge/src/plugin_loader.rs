@@ -467,12 +467,12 @@ mod tests {
 
     #[test]
     fn test_parse_processors_json() {
-        let json = r#"[{"id":"oscillator"},{"id":"output_gain"}]"#;
+        let json = r#"[{"id":"test_tone"},{"id":"output_gain"}]"#;
         let processors: Vec<ProcessorInfo> =
             serde_json::from_str(json).expect("json should deserialize");
 
         assert_eq!(processors.len(), 2);
-        assert_eq!(processors[0].id, "oscillator");
+        assert_eq!(processors[0].id, "test_tone");
         assert_eq!(processors[1].id, "output_gain");
     }
 

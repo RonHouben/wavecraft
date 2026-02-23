@@ -11,7 +11,21 @@ export function normalizeValue(
   value: ParameterValue
 ): ParameterValue {
   if (paramType === 'bool') {
-    return typeof value === 'boolean' ? value : value >= 0.5;
+    if (typeof value === 'boolean') {
+      return value;
+    }
+
+    if (typeof value === 'number') {
+      return value >= 0.5;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true' || normalized === 'false') {
+      return normalized === 'true';
+    }
+
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0.5;
   }
 
   return typeof value === 'boolean' ? (value ? 1 : 0) : value;

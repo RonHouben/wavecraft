@@ -1,7 +1,12 @@
 import { useMemo } from 'react';
 
 import { PROCESSOR_BYPASS_SUFFIX } from '../processors/bypass';
-import type { ParameterId, ParameterInfo, ParameterValue } from '../types/parameters';
+import type {
+  ParameterId,
+  ParameterInfo,
+  ParameterValue,
+  ParameterVariant,
+} from '../types/parameters';
 import type { ProcessorId } from '../types/processors';
 import { useAllParameters } from './useAllParameters';
 
@@ -14,10 +19,10 @@ export interface UseParametersForProcessorResult<T extends ParameterValue> {
   reload: () => Promise<void>;
 }
 
-function selectProcessorParams<T extends ParameterValue>(
-  allParams: readonly ParameterInfo<T>[],
-  processorId: ProcessorId
-): ParameterInfo<T>[] {
+function selectProcessorParams<
+  T extends ParameterValue = ParameterValue,
+  V extends ParameterVariant = ParameterVariant,
+>(allParams: readonly ParameterInfo<T, V>[], processorId: ProcessorId): ParameterInfo<T, V>[] {
   const bypassId = `${processorId}${PROCESSOR_BYPASS_SUFFIX}`;
 
   return allParams.filter(
@@ -25,13 +30,13 @@ function selectProcessorParams<T extends ParameterValue>(
   );
 }
 
-export function useParametersForProcessor<T extends ParameterValue>(
+export function useParametersForProcessor(
   processorId: ProcessorId
-): UseParametersForProcessorResult<T> {
+): UseParametersForProcessorResult<ParameterValue> {
   const { params, isLoading, error, setParameter, reload } = useAllParameters();
 
   const processorParams = useMemo(
-    () => selectProcessorParams<T>(params, processorId),
+    () => selectProcessorParams(params, processorId),
     [params, processorId]
   );
 

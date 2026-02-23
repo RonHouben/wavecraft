@@ -9,6 +9,7 @@ import { useState, useCallback } from 'react';
 import type {
   ParameterInfo,
   ParameterValue,
+  ParameterVariant,
   MeterFrame,
   OscilloscopeFrame,
   UseParameterResult,
@@ -95,7 +96,7 @@ export function resetMocks(): void {
 /**
  * Mock implementation of useParameter hook
  */
-export function useParameter(id: string): UseParameterResult {
+export function useParameter(id: string): UseParameterResult<ParameterValue, ParameterVariant> {
   // Initialize state directly from mockParameters without useEffect
   const mockParam = mockParameters.get(id);
   const [param, setParam] = useState<ParameterInfo | null>(mockParam ?? null);

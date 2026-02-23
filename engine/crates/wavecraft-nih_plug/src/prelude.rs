@@ -18,8 +18,8 @@ pub use wavecraft_core::prelude::*;
 // Re-export wavecraft-dsp traits/types and wavecraft-processors implementations
 pub use wavecraft_dsp::{Processor, ProcessorParams, Transport};
 pub use wavecraft_processors::{
-    GainDsp, Oscillator, OscillatorParams, PassthroughDsp, SaturatorDsp, UnifiedFilterDsp,
-    UnifiedFilterMode,
+    GainDsp, PassthroughDsp, SaturatorDsp, TestToneProcessor, TestToneProcessorParams,
+    UnifiedFilterDsp, UnifiedFilterMode,
 };
 
 // Re-export wavecraft-protocol types

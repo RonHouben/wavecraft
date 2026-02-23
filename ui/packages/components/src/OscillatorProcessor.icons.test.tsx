@@ -15,13 +15,13 @@ vi.mock('@wavecraft/core', async () => {
   };
 });
 
-import { OscillatorProcessor } from '../../../../sdk-template/ui/src/processors/OscillatorProcessor';
+import { TestToneProcessor } from '../../../../sdk-template/ui/src/processors/TestToneProcessor';
 
 type NumericOrBooleanParameter = ParameterInfo<number | boolean>;
 
 function makeParameter(overrides: Partial<NumericOrBooleanParameter>): NumericOrBooleanParameter {
   return {
-    id: 'oscillator_frequency',
+    id: 'test_tone_frequency',
     name: 'Frequency',
     type: 'float',
     value: 440,
@@ -33,47 +33,42 @@ function makeParameter(overrides: Partial<NumericOrBooleanParameter>): NumericOr
   };
 }
 
-describe('sdk-template OscillatorProcessor waveform icons', () => {
+describe('sdk-template TestToneProcessor semantics', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSetParameter.mockReset();
     mockSetParameter.mockResolvedValue(undefined);
   });
 
-  it('renders waveform buttons with icons and forwards selection', () => {
+  it('renders test tone controls without waveform selection', () => {
     const parameterMap = new Map<string, NumericOrBooleanParameter>([
       [
-        'oscillator_bypass',
-        makeParameter({ id: 'oscillator_bypass', name: 'Bypass', type: 'bool', value: false }),
+        'test_tone_bypass',
+        makeParameter({ id: 'test_tone_bypass', name: 'Bypass', type: 'bool', value: false }),
       ],
       [
-        'oscillator_enabled',
-        makeParameter({ id: 'oscillator_enabled', name: 'Enabled', type: 'bool', value: true }),
+        'test_tone_enabled',
+        makeParameter({ id: 'test_tone_enabled', name: 'Enabled', type: 'bool', value: true }),
       ],
       [
-        'oscillator_waveform',
+        'test_tone_frequency',
         makeParameter({
-          id: 'oscillator_waveform',
-          name: 'Waveform',
-          type: 'enum',
-          value: 0,
-          variants: ['Sine', 'Square', 'Saw', 'Triangle'],
+          id: 'test_tone_frequency',
+          name: 'Frequency',
+          type: 'float',
+          value: 440,
         }),
       ],
       [
-        'oscillator_frequency',
-        makeParameter({ id: 'oscillator_frequency', name: 'Frequency', type: 'float', value: 440 }),
-      ],
-      [
-        'oscillator_level',
+        'test_tone_level',
         makeParameter({
-          id: 'oscillator_level',
+          id: 'test_tone_level',
           name: 'Level',
           type: 'float',
-          value: -6,
-          min: -24,
-          max: 0,
-          unit: 'dB',
+          value: 0.5,
+          min: 0,
+          max: 1,
+          unit: '%',
         }),
       ],
     ]);
@@ -89,28 +84,15 @@ describe('sdk-template OscillatorProcessor waveform icons', () => {
       };
     });
 
-    render(<OscillatorProcessor />);
+    render(<TestToneProcessor />);
 
-    expect(
-      document.querySelector('[role="radio"][value="Sine"] [data-waveform-icon="sine"]')
-    ).toBeInTheDocument();
-    expect(
-      document.querySelector('[role="radio"][value="Square"] [data-waveform-icon="square"]')
-    ).toBeInTheDocument();
-    expect(
-      document.querySelector('[role="radio"][value="Saw"] [data-waveform-icon="saw"]')
-    ).toBeInTheDocument();
-    expect(
-      document.querySelector('[role="radio"][value="Triangle"] [data-waveform-icon="triangle"]')
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Test Tone' })).toBeInTheDocument();
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
 
-    const squareWaveformOption = document.querySelector<HTMLButtonElement>(
-      '[role="radio"][value="Square"]'
-    );
-    expect(squareWaveformOption).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Frequency'), {
+      target: { value: '880' },
+    });
 
-    fireEvent.click(squareWaveformOption as HTMLButtonElement);
-
-    expect(mockSetParameter).toHaveBeenCalledWith('oscillator_waveform', 1);
+    expect(mockSetParameter).toHaveBeenCalledWith('test_tone_frequency', 880);
   });
 });

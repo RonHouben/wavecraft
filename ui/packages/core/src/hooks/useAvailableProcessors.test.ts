@@ -13,11 +13,11 @@ afterEach(() => {
 
 describe('useAvailableProcessors', () => {
   it('returns sorted registered processor IDs', () => {
-    registerAvailableProcessors(['output_gain', 'oscillator', 'input_gain']);
+    registerAvailableProcessors(['output_gain', 'test_tone', 'input_gain']);
 
     const { result } = renderHook(() => useAvailableProcessors());
 
-    expect(result.current).toEqual(['input_gain', 'oscillator', 'output_gain']);
+    expect(result.current).toEqual(['input_gain', 'output_gain', 'test_tone']);
   });
 
   it('returns empty list when nothing is registered', () => {

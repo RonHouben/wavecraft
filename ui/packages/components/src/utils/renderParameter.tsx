@@ -5,7 +5,17 @@ import { ParameterSelect } from '../ParameterSelect';
 import { ParameterSlider } from '../ParameterSlider';
 import { ParameterToggle } from '../ParameterToggle';
 
+function toEnumOptions(variants?: readonly (string | undefined)[]): string[] {
+  if (!variants || variants.length === 0) {
+    return [];
+  }
+
+  return variants.filter((variant): variant is string => typeof variant === 'string');
+}
+
 export function renderParameter(param: ProcessorParameter, key: string): React.ReactNode {
+  const enumOptions = toEnumOptions(param.variants);
+
   switch (param.type) {
     case 'bool':
       return (
@@ -25,7 +35,7 @@ export function renderParameter(param: ProcessorParameter, key: string): React.R
           id={param.id}
           name={param.name}
           value={typeof param.value === 'number' ? param.value : 0}
-          options={param.variants ?? []}
+          options={enumOptions}
           disabled={param.disabled}
           onChange={param.onChange}
         />

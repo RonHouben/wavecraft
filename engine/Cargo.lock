@@ -3368,7 +3368,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-bridge"
-version = "0.12.7"
+version = "0.12.8"
 dependencies = [
  "libloading",
  "serde",
@@ -3380,7 +3380,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-core"
-version = "0.12.7"
+version = "0.12.8"
 dependencies = [
  "paste",
  "wavecraft-bridge",
@@ -3393,7 +3393,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-dsp"
-version = "0.12.7"
+version = "0.12.8"
 dependencies = [
  "wavecraft-macros",
  "wavecraft-protocol",
@@ -3401,7 +3401,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-macros"
-version = "0.12.7"
+version = "0.12.8"
 dependencies = [
  "convert_case 0.6.0",
  "proc-macro2",
@@ -3412,7 +3412,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-metering"
-version = "0.12.7"
+version = "0.12.8"
 dependencies = [
  "rtrb",
  "wavecraft-protocol",
@@ -3420,7 +3420,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-nih_plug"
-version = "0.12.7"
+version = "0.12.8"
 dependencies = [
  "block2 0.5.1",
  "include_dir",
@@ -3448,7 +3448,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-processors"
-version = "0.12.7"
+version = "0.12.8"
 dependencies = [
  "rtrb",
  "wavecraft-dsp",
@@ -3457,7 +3457,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-protocol"
-version = "0.12.7"
+version = "0.12.8"
 dependencies = [
  "paste",
  "serde",

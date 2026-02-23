@@ -1,8 +1,8 @@
 use wavecraft::prelude::wavecraft_plugin;
 use wavecraft::prelude::wavecraft_processor;
 use wavecraft::prelude::SignalChain;
-use wavecraft::Oscillator;
 use wavecraft::OscilloscopeTap;
+use wavecraft::TestToneProcessor;
 
 // Custom processors live in the `processors/` folder.
 // See `processors/example_processor.rs` for a minimal custom processor.
@@ -16,6 +16,7 @@ use processors::ExampleProcessor;
 // Wrapper names are converted to snake_case and prefixed into parameter IDs
 // (e.g. `OutputGain` contributes the `output_gain_*` prefix).
 wavecraft_processor!(InputTrim => Gain);
+wavecraft_processor!(TestTone => TestToneProcessor);
 wavecraft_processor!(ToneFilter => Filter);
 wavecraft_processor!(SoftClip => Saturator);
 wavecraft_processor!(OutputGain => Gain);
@@ -27,7 +28,7 @@ wavecraft_processor!(OutputGain => Gain);
 wavecraft_plugin! {
     name: "My First Plugin",
     signal: SignalChain![
-        Oscillator,
+        TestTone,
         InputTrim,
         ExampleProcessor,
         ToneFilter,

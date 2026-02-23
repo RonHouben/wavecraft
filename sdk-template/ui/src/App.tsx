@@ -10,15 +10,15 @@ import {
 import { type JSX } from 'react';
 import { ExampleProcessor } from './processors/ExampleProcessor';
 import { SmartProcessor } from './processors/SmartProcessor';
-import { OscillatorProcessor } from './processors/OscillatorProcessor';
 import {
   Meter,
   VersionBadge,
   ConnectionStatus,
   LatencyMonitor,
   ResizeHandle,
+  TestToneProcessor,
+  OscilloscopeProcessor,
 } from '@wavecraft/components';
-import { OscilloscopeProcessor } from './processors/OscilloscopeProcessor';
 
 export function App(): JSX.Element {
   useWindowResizeSync();
@@ -53,7 +53,7 @@ export function App(): JSX.Element {
             data-testid="processor-grid"
             className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4"
           >
-            <OscillatorProcessor hideWhenNotInSignalChain />
+            <TestToneProcessor hideWhenNotInSignalChain />
             <SmartProcessor id="input_trim" title="Input Trim" hideWhenNotInSignalChain />
             <SmartProcessor id="tone_filter" title="Tone Filter" hideWhenNotInSignalChain />
             <SmartProcessor id="soft_clip" title="Soft Clip" hideWhenNotInSignalChain />

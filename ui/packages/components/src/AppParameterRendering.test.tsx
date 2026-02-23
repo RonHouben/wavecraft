@@ -7,7 +7,7 @@ describe('ParameterGroup rendering', () => {
   it('renders mixed parameter controls via presentational props', () => {
     const params: ProcessorParameter[] = [
       {
-        id: 'oscillator_enabled',
+        id: 'test_tone_enabled',
         name: 'Enabled',
         type: 'bool',
         value: true,
@@ -17,34 +17,34 @@ describe('ParameterGroup rendering', () => {
         onChange: vi.fn(),
       },
       {
-        id: 'oscillator_waveform',
-        name: 'Waveform',
-        type: 'enum',
-        value: 0,
-        default: 0,
-        min: 0,
-        max: 3,
-        variants: ['Sine', 'Square', 'Saw', 'Triangle'],
-        onChange: vi.fn(),
-      },
-      {
-        id: 'oscillator_frequency',
+        id: 'test_tone_frequency',
         name: 'Frequency',
         type: 'float',
         value: 440,
         default: 440,
         min: 20,
-        max: 5000,
+        max: 20000,
         unit: 'Hz',
+        onChange: vi.fn(),
+      },
+      {
+        id: 'test_tone_level',
+        name: 'Level',
+        type: 'float',
+        value: 0.5,
+        default: 0.5,
+        min: 0,
+        max: 1,
+        unit: '%',
         onChange: vi.fn(),
       },
     ];
 
-    render(<ParameterGroup group={{ name: 'Oscillator', parameters: params }} />);
+    render(<ParameterGroup group={{ name: 'Test Tone', parameters: params }} />);
 
-    expect(screen.getByRole('heading', { level: 3, name: 'Oscillator' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Test Tone' })).toBeInTheDocument();
     expect(screen.getByLabelText('Enabled')).toBeInTheDocument();
-    expect(screen.getByLabelText('Waveform')).toBeInTheDocument();
     expect(screen.getByLabelText('Frequency')).toBeInTheDocument();
+    expect(screen.getByLabelText('Level')).toBeInTheDocument();
   });
 });

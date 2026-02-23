@@ -61,6 +61,7 @@ export function RadioGroup<T extends inputType, C extends React.ElementType>(
         {props.options.map((option, index) => {
           const isChecked = option.value === props.value;
           const isDisabled = props.disabled || option.disabled;
+          const optionKey = `${props.name}-${option.value}`;
 
           const className = mergeClassNames(
             'inline-flex min-w-[72px] items-center justify-center rounded-md border border-plugin-border px-3 py-2 text-type-sm shadow-control',
@@ -74,22 +75,32 @@ export function RadioGroup<T extends inputType, C extends React.ElementType>(
           const commonProps = {
             ...omit(option, 'as'),
             'aria-checked': isChecked,
+            'aria-label': typeof option.label === 'string' ? option.label : undefined,
             'aria-disabled': isDisabled || undefined,
-            key: `${props.name}-${option.value}`,
             id: `${generatedId}-${index}`,
+            tabIndex: -1,
             className,
-            disable: props.disabled,
+            disabled: isDisabled,
             onClick: () => selectOption(index),
+            onKeyDown: (event: React.KeyboardEvent): void => {
+              event.preventDefault();
+              event.stopPropagation();
+            },
+            onKeyUp: (event: React.KeyboardEvent): void => {
+              event.preventDefault();
+              event.stopPropagation();
+            },
           };
 
           if (option.as) {
             return React.createElement(option.as, {
+              key: optionKey,
               ...commonProps,
               role: 'radio',
             });
           }
 
-          return <input {...commonProps} type="radio" />;
+          return <input key={optionKey} {...commonProps} type="radio" />;
         })}
       </div>
     </div>
