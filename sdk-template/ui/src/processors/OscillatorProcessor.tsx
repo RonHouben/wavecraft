@@ -86,14 +86,12 @@ export function OscillatorProcessor({
                       label: variant,
                       value: variant,
                       icon: mapWaveformParameterToIconVariant(variant),
-                      // size: 'sm',
+                      size: 'sm' as const,
                     })) ?? []
                   }
                   onChange={(selectedWaveform) => {
                     if (isWaveformVariant(selectedWaveform)) {
                       const newWaveformValue = mapWaveformVariantToValue(selectedWaveform);
-
-                      console.log({ selectedWaveform, newWaveformValue });
 
                       setWaveformValue(newWaveformValue);
                     }
