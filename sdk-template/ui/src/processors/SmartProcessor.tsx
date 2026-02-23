@@ -80,17 +80,26 @@ export function SmartProcessor(props: Readonly<SmartProcessorProps>): JSX.Elemen
             );
 
           case 'enum':
-            return (
-              <RadioGroup
-                name=""
-                value={param.value}
-                onChange={(newValue) => param.onChange(newValue)}
-                options={param.variants?.map((variant) => ({
-                  label: variant,
-                  value: variant,
-                }))}
-              ></RadioGroup>
-            );
+            {
+              const enumValue = typeof param.value === 'number' ? param.value : Number(param.value);
+              const enumOptions = (param.variants ?? []).map((variant, index) => ({
+                label: variant ?? `Option ${index + 1}`,
+                value: index,
+              }));
+
+              if (enumOptions.length === 0) {
+                return <ErrorMessage message={`Error: Enum parameter has no variants: ${param.name}`} />;
+              }
+
+              return (
+                <RadioGroup
+                  name={param.id}
+                  value={enumValue}
+                  onChange={(newValue) => param.onChange(newValue)}
+                  options={enumOptions}
+                ></RadioGroup>
+              );
+            }
           case 'float':
             return <Knob {...param} label={param.name} value={Number(param.value)} />;
           default:

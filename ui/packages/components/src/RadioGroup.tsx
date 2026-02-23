@@ -4,17 +4,17 @@ import { getControlStateClass } from './utils/controlStates';
 import { PolymorphicProps } from './types';
 import { omit } from 'lodash';
 
-type inputType = string | number | undefined;
+type RadioGroupValue = string | number;
 
-export interface RadioGroupOption<T extends inputType> {
+export interface RadioGroupOption<T extends RadioGroupValue> {
   readonly value: T;
   readonly label: ReactNode;
   readonly disabled?: boolean;
 }
 
-export type RadioGroupOwnProps<T extends inputType, C extends React.ElementType> = {
+export type RadioGroupOwnProps<T extends RadioGroupValue> = {
   name: string;
-  options: readonly PolymorphicProps<C, RadioGroupOption<T>>[];
+  options: readonly PolymorphicProps<React.ElementType, RadioGroupOption<T>>[];
   value: T;
   onChange: (value: T) => void;
   label?: React.ReactNode;
@@ -23,8 +23,8 @@ export type RadioGroupOwnProps<T extends inputType, C extends React.ElementType>
   orientation?: 'horizontal' | 'vertical';
 };
 
-export function RadioGroup<T extends inputType, C extends React.ElementType>(
-  props: Readonly<RadioGroupOwnProps<T, C>>
+export function RadioGroup<T extends RadioGroupValue>(
+  props: Readonly<RadioGroupOwnProps<T>>
 ): React.JSX.Element {
   const generatedId = useId();
   const labelId = props.label ? `${generatedId}-label` : undefined;
@@ -61,7 +61,7 @@ export function RadioGroup<T extends inputType, C extends React.ElementType>(
         {props.options.map((option, index) => {
           const isChecked = option.value === props.value;
           const isDisabled = props.disabled || option.disabled;
-          const optionKey = `${props.name}-${option.value}`;
+          const optionKey = `${props.name}-${String(option.value)}`;
 
           const className = mergeClassNames(
             'inline-flex min-w-[72px] items-center justify-center rounded-md border border-plugin-border px-3 py-2 text-type-sm shadow-control',
