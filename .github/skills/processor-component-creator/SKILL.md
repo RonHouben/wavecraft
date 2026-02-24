@@ -20,6 +20,7 @@ Use this skill to add a new processor UI component in `@wavecraft/components` wi
 - Do not edit `docs/roadmap.md` (PO-owned).
 - Always use `ask_questions` to clarify requirements with the user **before** starting implementation and **during** implementation whenever uncertainty appears.
 - Processor parameters must be based on processors defined in the `engine/crates/wavecraft-processors` crate.
+- Using (and creating/updating when missing) processor-parameter ID types in `@wavecraft/core` is required for processor component work.
 - Default scope is only:
   1. Component file
   2. Unit test file
@@ -72,19 +73,26 @@ Use this skill to add a new processor UI component in `@wavecraft/components` wi
 - Prefer filtered/narrowed `ProcessorId` types (or helper types) before suffixing, so invalid combinations are rejected at compile time.
 - If a processor uses different canonical suffixes, codify that explicitly in typed mappings.
 
-### 4) Update index exports
+### 4) Require `@wavecraft/core` processor-parameter ID types
+
+- Check `ui/packages/core/src/types/processor-parameter-ids.ts` for required processor-parameter ID type(s) before implementing/adjusting component ID derivation.
+- If required type(s) are missing, create/update them there (for example, suffix-derived types like `LevelProcessorId`, `BypassProcessorId`).
+- Re-export updated/new types from `ui/packages/core/src/index.ts`.
+- Use these core types in component props and ID derivation logic (instead of ad-hoc local string typing).
+
+### 5) Update index exports
 
 - Export the new component from the relevant local `index.ts`.
 - Bubble export to package-level index only where required by existing structure.
 - Keep export changes minimal and ordered consistently with nearby entries.
 
-### 5) Add tests and typechecks
+### 6) Add tests and typechecks
 
 - Add/extend unit tests for rendering, interactions, callback behavior, and ID wiring.
 - Add/extend typecheck assertions to ensure derived IDs and props remain type-safe.
 - Cover failure-prone cases (invalid suffix/type narrowing regressions).
 
-### 6) Validate (targeted)
+### 7) Validate (targeted)
 
 - [ ] Run targeted TypeScript diagnostics on touched files.
 - [ ] Run processor component tests (targeted Vitest scope).
@@ -95,6 +103,8 @@ Use this skill to add a new processor UI component in `@wavecraft/components` wi
 
 - [ ] Component implemented with `ProcessorCard`
 - [ ] IDs derived from `processorId` by default strategy
+- [ ] Required processor-parameter ID type(s) exist in `ui/packages/core/src/types/processor-parameter-ids.ts` and are used by the component
+- [ ] Core processor-parameter ID type(s) exported from `ui/packages/core/src/index.ts`
 - [ ] Unit tests added/updated and passing
 - [ ] Typecheck file added/updated and passing
 - [ ] Index exports updated and verified
@@ -107,4 +117,6 @@ Use this skill to add a new processor UI component in `@wavecraft/components` wi
 - Invalid suffixes for a given `ProcessorId` (string interpolation compiles too loosely)
 - Outdated generated IDs/metadata causing false failures
 - Export added in one index but not package-level re-export path
+- Forgetting to add/update required processor-parameter ID type(s) in `ui/packages/core/src/types/processor-parameter-ids.ts`
+- Forgetting to re-export updated/new core processor-parameter ID type(s) from `ui/packages/core/src/index.ts`
 - Tests pass while typecheck file misses unsafe ID derivation paths
