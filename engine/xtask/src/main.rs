@@ -299,6 +299,13 @@ enum Commands {
         #[arg(long)]
         allow_major: bool,
     },
+
+    /// Create and open a local SDK test plugin project
+    #[command(
+        about = "Generate TestPlugin in target/tmp/test-plugin and open it in VS Code",
+        name = "try-sdk"
+    )]
+    TrySdk,
 }
 
 fn main() -> Result<()> {
@@ -502,6 +509,7 @@ fn main() -> Result<()> {
                 }
             }
         }
+        Some(Commands::TrySdk) => commands::try_sdk::run(cli.verbose),
         None => {
             // Default behavior: run nih_plug_xtask for backward compatibility
             // This handles `cargo xtask bundle wavecraft --release` style invocations

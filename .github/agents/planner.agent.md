@@ -26,7 +26,7 @@ YOU MUST NEVER CHANGE CODE!
 - Suggest optimal implementation order
 - Consider edge cases and error scenarios
 
-> **🔍 Research Rule:** When you need to find, locate, or survey code/docs and don't already know the exact file path, **delegate to the Search agent** via #tool:agent/runSubagent Do NOT use your own `read`/`search` tools for exploratory research. See [Codebase Research](#codebase-research) for details.
+> **🔍 Research Rule:** When you need to find, locate, or survey code/docs and don't already know the exact file path, **delegate to the Search agent** via #tool:agent/runSubagent Do NOT use your own `read`/`search` tools for exploratory research. See the **Codebase Research** section below for details.
 
 ---
 
