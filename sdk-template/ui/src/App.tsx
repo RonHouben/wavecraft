@@ -18,6 +18,7 @@ import {
   OscilloscopeProcessor,
   Row,
   Col,
+  GainProcessor,
 } from '@wavecraft/components';
 
 export function App(): JSX.Element {
@@ -50,6 +51,20 @@ export function App(): JSX.Element {
       <Col className="grid grid-cols-12 gap-4 px-4">
         <Row className="col-span-12 grid grid-cols-12 justify-center gap-4">
           <TestToneProcessor className="col-span-3" hideWhenNotInSignalChain />
+          <GainProcessor
+            className="col-span-3"
+            processorId="input_trim"
+            title="Input Trim"
+            subtitle="My Input Trim"
+            hideWhenNotInSignalChain
+          />
+          <GainProcessor
+            className="col-span-3"
+            processorId="output_gain"
+            title="Output Gain"
+            subtitle="My Output Gain"
+            hideWhenNotInSignalChain
+          />
         </Row>
         <Row className="col-span-12 grid grid-cols-12">
           <OscilloscopeProcessor className="col-span-12" hideWhenNotInSignalChain />

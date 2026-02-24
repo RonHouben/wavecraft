@@ -4,7 +4,7 @@ description: Quality Assurance agent focused on code quality and static code ana
 model:
   - GPT-5.3-Codex (copilot)
   - Claude Opus 4.6 (copilot)
-  - Gemini 2.5 Pro (copilot)
+  - Gemini 3.1 Pro (Preview)
 tools: ['agent', 'search', 'read', 'web', 'todo', 'memory', 'vscode']
 agents: [orchestrator, coder, architect, docwriter, search]
 user-invokable: true

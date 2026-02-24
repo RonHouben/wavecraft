@@ -25,7 +25,7 @@
   "include": [
     "src",
     "../../../sdk-template/ui/src/generated/parameters.ts",
-    "../../../sdk-template/ui/src/generated/processors.ts"
+    "../../../sdk-template/ui/src/generated/processors.d.ts"
   ],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }

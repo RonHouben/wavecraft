@@ -2,9 +2,9 @@
 name: po
 description: Product Owner for Wavecraft — audio plugin framework. Expert in user needs, feature prioritization, roadmap management, and product vision for audio software.
 model:
+  - GPT-5.3-Codex (copilot)
   - Claude Opus 4.6 (copilot)
   - Claude Sonnet 4.6 (copilot)
-  - GPT-5.2 (copilot)
 tools: ['edit', 'read', 'search', 'web', 'agent', 'todo', 'memory', 'vscode']
 agents: [orchestrator, architect, docwriter, search]
 user-invokable: true

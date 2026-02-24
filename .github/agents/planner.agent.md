@@ -2,9 +2,9 @@
 name: planner
 description: Expert planning specialist for complex features and refactoring. Use PROACTIVELY when users request feature implementation, architectural changes, or complex refactoring. Automatically activated for planning tasks.
 model:
-  - Claude Opus 4.6 (copilot)
-  - Claude Sonnet 4.6 (copilot)
   - GPT-5.3-Codex (copilot)
+  - Claude Sonnet 4.6 (copilot)
+  - Claude Opus 4.6 (copilot)
 tools: ['read', 'search', 'web', 'agent', 'todo', 'memory', 'vscode']
 agents: [orchestrator, docwriter, search, coder]
 user-invokable: true

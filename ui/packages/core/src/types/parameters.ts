@@ -49,23 +49,21 @@ export type ParameterValueForId<TId extends ParameterId> =
 /**
  * Internal marker key added by generated type augmentation.
  *
- * Used to distinguish:
- * - unaugmented projects (fallback `string` for backward compatibility)
- * - augmented projects with zero parameters (resolves to `never`)
+ * Used to distinguish generated entries from concrete parameter IDs.
  */
 export type ParameterIdMapAugmentedMarker = '__wavecraft_internal_augmented__';
 
 /**
  * Type-safe parameter identifier.
  *
- * When generated augmentation is present, this resolves to a literal string
- * union of plugin parameter IDs. If augmentation is present but no parameters
- * exist, this resolves to `never`. Without augmentation, it falls back to
- * `string` for backward compatibility.
+ * Resolves to a literal string union of plugin parameter IDs derived from the
+ * generated augmentation map. When no IDs are generated, this resolves to
+ * `never`.
  */
-export type ParameterId = ParameterIdMapAugmentedMarker extends keyof ParameterIdMap
-  ? Exclude<Extract<keyof ParameterIdMap, string>, ParameterIdMapAugmentedMarker>
-  : string;
+export type ParameterId = Exclude<
+  Extract<keyof ParameterIdMap, string>,
+  ParameterIdMapAugmentedMarker
+>;
 
 export interface ParameterInfo<
   T extends ParameterValue = ParameterValue,

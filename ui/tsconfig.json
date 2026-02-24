@@ -44,6 +44,6 @@
     "vite.config.ts",
     "vitest.config.ts",
     "../sdk-template/ui/src/generated/parameters.ts",
-    "../sdk-template/ui/src/generated/processors.ts"
+    "../sdk-template/ui/src/generated/processors.d.ts"
   ]
 }

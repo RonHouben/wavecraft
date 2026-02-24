@@ -2,8 +2,8 @@
 name: orchestrator
 model:
   - GPT-5.3-Codex (copilot)
-  - Claude Opus 4.6 (copilot)
   - Claude Sonnet 4.6 (copilot)
+  - Claude Opus 4.6 (copilot)
 tools:
   ['read', 'search', 'agent', 'web', 'todo', 'memory', 'excalidraw/*', 'vscode']
 agents: ['*']

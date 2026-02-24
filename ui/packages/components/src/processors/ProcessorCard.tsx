@@ -1,5 +1,5 @@
 import {
-  type ParameterId,
+  type BypassProcessorId,
   type ProcessorId,
   useHasProcessorInSignalChain,
   useParameter,
@@ -9,22 +9,19 @@ import { mergeClassNames } from '../utils/classNames';
 
 export interface ProcessorCardProps {
   readonly hideWhenNotInSignalChain?: boolean;
-  readonly signalChainProcessorId?: ProcessorId;
-  readonly bypassParameterId: ParameterId;
-  readonly switchId?: string;
+  readonly processorId: BypassProcessorId;
   readonly subtitle?: string;
   readonly title: string;
-  readonly onSwitchChange?: (checked: boolean) => void;
   readonly children: React.ReactNode;
   readonly className?: string;
 }
 
 export function ProcessorCard(props: Readonly<ProcessorCardProps>): React.JSX.Element | null {
-  const hasProcessorInSignalChain = useHasProcessorInSignalChain(
-    props.signalChainProcessorId ?? 'oscilloscope_tap'
-  );
+  const hasProcessorInSignalChain = useHasProcessorInSignalChain(props.processorId);
 
-  const { param: bypassParam, setValue: setBypassValue } = useParameter(props.bypassParameterId);
+  const { param: bypassParam, setValue: setBypassValue } = useParameter(
+    `${props.processorId}_bypass`
+  );
 
   if (props.hideWhenNotInSignalChain && !hasProcessorInSignalChain) {
     return null;
@@ -49,12 +46,11 @@ export function ProcessorCard(props: Readonly<ProcessorCardProps>): React.JSX.El
           ) : null}
         </div>
         <Switch
-          id={props.switchId}
+          id={`param-${bypassParam?.id}-switch`}
           checked={Boolean(!bypassParam?.value)}
           size="sm"
           onChange={(checked) => {
             setBypassValue(!checked);
-            props.onSwitchChange?.(checked);
           }}
         />
       </Card.Header>

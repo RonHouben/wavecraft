@@ -48,6 +48,8 @@ export type {
   ProcessorIdMap,
 } from './types/processors';
 
+export type { BypassProcessorId, LevelProcessorId } from './types/processor-parameter-ids';
+
 export type {
   // Metering types
   MeterFrame,

@@ -1,43 +1,43 @@
-import { Col, Knob, Row } from '@wavecraft/components';
+import type { LevelProcessorId } from '@wavecraft/core';
 import { useParameter } from '@wavecraft/core';
 import { type JSX } from 'react';
-import { ProcessorCard } from './ProcessorCard';
+import { Col } from '../Col';
+import { Knob } from '../Knob';
+import { Row } from '../Row';
 import { mergeClassNames } from '../utils/classNames';
+import { ProcessorCard } from './ProcessorCard';
 
-export interface TestToneProcessorProps {
+type GainLikeProcessorId = LevelProcessorId;
+
+export interface GainProcessorProps {
+  readonly processorId: GainLikeProcessorId;
+  readonly title: string;
+  readonly subtitle: string;
   readonly hideWhenNotInSignalChain?: boolean;
   readonly className?: string;
 }
 
-export function TestToneProcessor({
+export function GainProcessor({
+  processorId,
+  title,
+  subtitle,
   hideWhenNotInSignalChain,
   className,
-}: Readonly<TestToneProcessorProps>): JSX.Element | null {
-  const { param: frequencyParameter, setValue: setFrequencyValue } =
-    useParameter<number>('test_tone_frequency');
-  const { param: levelParameter, setValue: setLevelValue } =
-    useParameter<number>('test_tone_level');
+}: Readonly<GainProcessorProps>): JSX.Element | null {
+  const { param: levelParameter, setValue: setLevelValue } = useParameter<number>(
+    `${processorId}_level`
+  );
 
   return (
     <ProcessorCard
-      processorId="test_tone"
+      processorId={processorId}
       hideWhenNotInSignalChain={hideWhenNotInSignalChain}
-      subtitle="Test Signal"
-      title="Test Tone"
+      title={title}
+      subtitle={subtitle}
       className={mergeClassNames('h-full w-full', className)}
     >
       <Row className="flex-nowrap items-start gap-1.5">
         <Col className="h-auto items-center justify-start self-start">
-          <Knob
-            id={`param-${frequencyParameter?.id}`}
-            label={frequencyParameter?.name ?? ''}
-            value={frequencyParameter?.value ?? 0}
-            min={frequencyParameter?.min ?? 0}
-            max={frequencyParameter?.max ?? 0}
-            unit={frequencyParameter?.unit ?? ''}
-            size="sm"
-            onChange={setFrequencyValue}
-          />
           <Knob
             id={`param-${levelParameter?.id}`}
             label={levelParameter?.name ?? ''}

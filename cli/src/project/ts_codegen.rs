@@ -180,19 +180,17 @@ pub fn write_parameter_types(ui_dir: &Path, params: &[ParameterInfo]) -> Result<
 pub fn write_processor_types(ui_dir: &Path, processors: &[ProcessorInfo]) -> Result<()> {
     let generated_dir = ensure_generated_types_dir(ui_dir)?;
 
-    let mut content = String::new();
+    let mut typing_content = String::new();
     append_generated_header(
-        &mut content,
+        &mut typing_content,
         "Type-safe processor IDs for your plugin signal chain.",
     );
 
-    content.push_str("import { registerAvailableProcessors } from '@wavecraft/core';\n\n");
-
-    content.push_str("declare global {\n");
-    content.push_str("  interface WavecraftProcessorIdMap {\n");
-    content.push_str("    ");
-    content.push_str(PROCESSOR_ID_MAP_AUGMENTED_MARKER);
-    content.push_str(": true;\n");
+    typing_content.push_str("declare global {\n");
+    typing_content.push_str("  interface WavecraftProcessorIdMap {\n");
+    typing_content.push_str("    ");
+    typing_content.push_str(PROCESSOR_ID_MAP_AUGMENTED_MARKER);
+    typing_content.push_str(": true;\n");
 
     let mut typed_ids: BTreeMap<&str, bool> = BTreeMap::new();
     for processor in processors {
@@ -207,24 +205,36 @@ pub fn write_processor_types(ui_dir: &Path, processors: &[ProcessorInfo]) -> Res
             );
         }
 
-        append_interface_entry(&mut content, id, "true")?;
+        append_interface_entry(&mut typing_content, id, "true")?;
     }
 
-    content.push_str("  }\n");
-    content.push_str("}\n\n");
+    typing_content.push_str("  }\n");
+    typing_content.push_str("}\n\n");
+    typing_content.push_str("export {};\n");
 
-    content.push_str("const PROCESSOR_IDS = [\n");
+    let mut runtime_content = String::new();
+    append_generated_header(
+        &mut runtime_content,
+        "Runtime processor registration for your plugin signal chain.",
+    );
+
+    runtime_content.push_str("import { registerAvailableProcessors } from '@wavecraft/core';\n\n");
+
+    runtime_content.push_str("const PROCESSOR_IDS = [\n");
     for id in typed_ids.keys() {
-        content.push_str("  ");
-        content.push_str(&ts_string_literal(id)?);
-        content.push_str(",\n");
+        runtime_content.push_str("  ");
+        runtime_content.push_str(&ts_string_literal(id)?);
+        runtime_content.push_str(",\n");
     }
-    content.push_str("] as const;\n\n");
-    content.push_str("registerAvailableProcessors(PROCESSOR_IDS);\n\n");
-    content.push_str("export {};\n");
+    runtime_content.push_str("] as const;\n\n");
+    runtime_content.push_str("registerAvailableProcessors(PROCESSOR_IDS);\n\n");
+    runtime_content.push_str("export {};\n");
 
-    let out_file = generated_dir.join("processors.ts");
-    write_generated_file_if_changed(&out_file, content, "processor")?;
+    let typing_out_file = generated_dir.join("processors.d.ts");
+    write_generated_file_if_changed(&typing_out_file, typing_content, "processor type")?;
+
+    let runtime_out_file = generated_dir.join("processors.ts");
+    write_generated_file_if_changed(&runtime_out_file, runtime_content, "processor runtime")?;
 
     Ok(())
 }
@@ -272,6 +282,14 @@ mod tests {
         assert!(
             output.contains("__wavecraft_internal_augmented__: true;"),
             "augmentation marker should always be present"
+        );
+        assert!(
+            output.contains("declare global {"),
+            "parameter map should use global augmentation"
+        );
+        assert!(
+            !output.contains("declare module '@wavecraft/core'"),
+            "parameter map should not use module augmentation"
         );
     }
 
@@ -370,7 +388,11 @@ mod tests {
             max: 2.0,
             unit: None,
             group: Some("Test Tone".to_string()),
-            variants: Some(vec!["Low".to_string(), "Mid".to_string(), "High".to_string()]),
+            variants: Some(vec![
+                "Low".to_string(),
+                "Mid".to_string(),
+                "High".to_string(),
+            ]),
         }];
 
         write_parameter_types(ui_dir, &params).expect("write should succeed");
@@ -411,25 +433,42 @@ mod tests {
         ];
         write_processor_types(ui_dir, &processors).expect("write should succeed");
 
-        let output_path = ui_dir.join("src/generated/processors.ts");
-        let output = fs::read_to_string(output_path).expect("generated file should exist");
+        let types_output_path = ui_dir.join("src/generated/processors.d.ts");
+        let types_output =
+            fs::read_to_string(types_output_path).expect("generated type file should exist");
 
-        let test_tone_pos = output
+        let runtime_output_path = ui_dir.join("src/generated/processors.ts");
+        let runtime_output =
+            fs::read_to_string(runtime_output_path).expect("generated runtime file should exist");
+
+        let test_tone_pos = types_output
             .find("test_tone: true;")
             .expect("test_tone present");
-        let output_gain_pos = output
+        let output_gain_pos = types_output
             .find("output_gain: true;")
             .expect("output_gain present");
 
         assert!(output_gain_pos < test_tone_pos, "IDs should be sorted");
         assert_eq!(
-            output.matches("output_gain: true;").count(),
+            types_output.matches("output_gain: true;").count(),
             1,
             "IDs deduplicated"
         );
         assert!(
-            output.contains("registerAvailableProcessors(PROCESSOR_IDS);"),
+            runtime_output.contains("registerAvailableProcessors(PROCESSOR_IDS);"),
             "runtime registration should be emitted"
+        );
+        assert!(
+            types_output.contains("declare global {"),
+            "processor map should use global augmentation"
+        );
+        assert!(
+            !types_output.contains("declare module '@wavecraft/core'"),
+            "processor map should not use module augmentation"
+        );
+        assert!(
+            !runtime_output.contains("declare global {"),
+            "runtime processor file should not contain type augmentation"
         );
     }
 
@@ -440,15 +479,20 @@ mod tests {
 
         write_processor_types(ui_dir, &[]).expect("write should succeed");
 
-        let output_path = ui_dir.join("src/generated/processors.ts");
-        let output = fs::read_to_string(output_path).expect("generated file should exist");
+        let types_output_path = ui_dir.join("src/generated/processors.d.ts");
+        let types_output =
+            fs::read_to_string(types_output_path).expect("generated type file should exist");
+
+        let runtime_output_path = ui_dir.join("src/generated/processors.ts");
+        let runtime_output =
+            fs::read_to_string(runtime_output_path).expect("generated runtime file should exist");
 
         assert!(
-            output.contains("__wavecraft_internal_processors_augmented__: true;"),
+            types_output.contains("__wavecraft_internal_processors_augmented__: true;"),
             "marker should be present for augmented-empty mode"
         );
         assert!(
-            output.contains("const PROCESSOR_IDS = [\n] as const;"),
+            runtime_output.contains("const PROCESSOR_IDS = [\n] as const;"),
             "empty processor array should still be emitted"
         );
     }
@@ -480,7 +524,7 @@ mod tests {
         write_processor_types(ui_dir, &processors).expect("write should succeed");
 
         let output_path = ui_dir.join("src/generated/processors.ts");
-        let output = fs::read_to_string(output_path).expect("generated file should exist");
+        let output = fs::read_to_string(output_path).expect("generated runtime file should exist");
 
         assert!(output.contains("'gain-stage'"));
         assert!(output.contains("'gain\"quoted\\\\slash'"));

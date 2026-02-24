@@ -72,3 +72,6 @@ export type { OscilloscopeProcessorProps } from './processors/oscilloscope/Oscil
 
 export { TestToneProcessor } from './processors/TestToneProcessor';
 export type { TestToneProcessorProps } from './processors/TestToneProcessor';
+
+export { GainProcessor } from './processors/GainProcessor';
+export type { GainProcessorProps } from './processors/GainProcessor';

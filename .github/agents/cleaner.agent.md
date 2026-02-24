@@ -3,8 +3,8 @@ name: cleaner
 description: AI slop cleaner and code quality refactorer. Investigates codebase for dead code, redundant comments, verbose patterns, and documentation noise — then cleans it up without breaking anything.
 model:
   - GPT-5.3-Codex (copilot)
-  - Claude Opus 4.6 (copilot)
-  - Gemini 2.5 Pro (copilot)
+  - Gemini 3.1 Pro (Preview)
+  - Claude Sonnet 4.6 (copilot)
 tools:
   [
     'read',

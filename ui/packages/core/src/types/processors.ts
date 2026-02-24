@@ -21,20 +21,18 @@ export interface ProcessorIdMap extends WavecraftProcessorIdMap {}
 /**
  * Internal marker key added by generated module augmentation.
  *
- * Used to distinguish:
- * - unaugmented projects (fallback `string` for backward compatibility)
- * - augmented projects with zero processors (resolves to `never`)
+ * Used to distinguish generated entries from concrete processor IDs.
  */
 export type ProcessorIdMapAugmentedMarker = '__wavecraft_internal_processors_augmented__';
 
 /**
  * Type-safe processor identifier.
  *
- * When generated augmentation is present, this resolves to a literal string
- * union of discovered processor IDs. If augmentation is present but no
- * processors exist, this resolves to `never`. Without augmentation, it falls
- * back to `string` for backward compatibility.
+ * Resolves to a literal string union of discovered processor IDs derived from
+ * the generated augmentation map. When no IDs are generated, this resolves to
+ * `never`.
  */
-export type ProcessorId = ProcessorIdMapAugmentedMarker extends keyof ProcessorIdMap
-  ? Exclude<Extract<keyof ProcessorIdMap, string>, ProcessorIdMapAugmentedMarker>
-  : string;
+export type ProcessorId = Exclude<
+  Extract<keyof ProcessorIdMap, string>,
+  ProcessorIdMapAugmentedMarker
+>;
