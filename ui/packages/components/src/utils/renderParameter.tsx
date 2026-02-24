@@ -1,6 +1,6 @@
 import React from 'react';
 
-import type { ProcessorParameter } from '../Processor';
+import type { ProcessorParameter } from '../types';
 import { ParameterSelect } from '../ParameterSelect';
 import { ParameterSlider } from '../ParameterSlider';
 import { ParameterToggle } from '../ParameterToggle';

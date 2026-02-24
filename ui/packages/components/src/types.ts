@@ -4,6 +4,39 @@ export type ParameterType = 'float' | 'bool' | 'enum';
 export type ParameterValue = number | boolean | string;
 export type ParameterVariant = string | undefined;
 
+type AsyncChange<T> = (value: T) => void | Promise<void>;
+
+type ProcessorParameterCommon = {
+  id: string;
+  name: string;
+  min: number;
+  max: number;
+  unit?: string;
+  group?: string;
+  disabled?: boolean;
+  variants?: readonly ParameterVariant[];
+};
+
+export type ProcessorParameter =
+  | (ProcessorParameterCommon & {
+      type: 'float';
+      value: number;
+      default: number;
+      onChange: AsyncChange<number>;
+    })
+  | (ProcessorParameterCommon & {
+      type: 'enum';
+      value: number;
+      default: number;
+      onChange: AsyncChange<number>;
+    })
+  | (ProcessorParameterCommon & {
+      type: 'bool';
+      value: boolean;
+      default: boolean;
+      onChange: AsyncChange<boolean>;
+    });
+
 export type ControlVisualState =
   | 'default'
   | 'hover'

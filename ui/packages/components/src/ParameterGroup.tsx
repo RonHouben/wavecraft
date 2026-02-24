@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import type { ProcessorParameter } from './Processor';
+import type { ProcessorParameter } from './types';
 import { parameterListClass, sectionHeadingClass } from './utils/classNames';
 import { renderParameter } from './utils/renderParameter';
 

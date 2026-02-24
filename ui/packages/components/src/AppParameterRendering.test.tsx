@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { ParameterGroup } from './ParameterGroup';
-import type { ProcessorParameter } from './Processor';
+import type { ProcessorParameter } from './types';
 
 describe('ParameterGroup rendering', () => {
   it('renders mixed parameter controls via presentational props', () => {
