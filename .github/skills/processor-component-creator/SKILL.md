@@ -19,6 +19,7 @@ Use this skill to add a new processor UI component in `@wavecraft/components` wi
 - Never edit `docs/feature-specs/_archive/**`.
 - Do not edit `docs/roadmap.md` (PO-owned).
 - Always use `ask_questions` to clarify requirements with the user **before** starting implementation and **during** implementation whenever uncertainty appears.
+- Processor parameters must be based on processors defined in the `engine/crates/wavecraft-processors` crate.
 - Default scope is only:
   1. Component file
   2. Unit test file
@@ -33,13 +34,22 @@ Use this skill to add a new processor UI component in `@wavecraft/components` wi
 ## Clarification Protocol
 
 - Before implementation: ask concise clarifying questions with `ask_questions` to confirm scope, naming, and expected behavior.
+- If the user did not specify which processor(s) to use:
+  1. Create an inventory of available processors from `engine/crates/wavecraft-processors`.
+  2. Present the processor options to the user.
+  3. Ask which processor(s) to implement via `ask_questions` with multiselect enabled.
 - During implementation: if any ambiguity or conflict appears, pause and ask follow-up clarifying questions with `ask_questions` before proceeding.
 
 ## Workflow
 
 ### 1) Discover processor IDs and params
 
-- Identify canonical `processorId` and expected parameter/bypass IDs from generated metadata and existing patterns.
+- Source processor definitions from `engine/crates/wavecraft-processors`.
+- If processor(s) are unspecified by the user, run this selection flow:
+  - Build an inventory/list of available processors from `engine/crates/wavecraft-processors`.
+  - Present those options to the user.
+  - Use `ask_questions` with multiselect enabled to capture selected processor(s).
+- Identify canonical `processorId` and expected parameter/bypass IDs from generated metadata and existing patterns for the selected processor(s).
 - Confirm suffixes used by the processor are valid for its `ProcessorId` type.
 - If IDs look stale or missing, regenerate/build before coding to avoid chasing outdated generated IDs.
 
