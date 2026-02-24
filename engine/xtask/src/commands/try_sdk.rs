@@ -5,7 +5,7 @@ use std::fs;
 use std::process::Command;
 use xtask::output::*;
 use xtask::paths;
-use xtask::run_command_checked;
+use xtask::{npm_command, run_command_checked};
 
 const DEFAULT_PROJECT_NAME: &str = "TestPlugin";
 const DEFAULT_OUTPUT_RELATIVE: &str = "target/tmp/test-plugin";
@@ -19,17 +19,23 @@ pub fn run(verbose: bool) -> Result<()> {
     print_header("Try Wavecraft SDK");
 
     let workspace_root = paths::project_root()?;
+    let ui_dir = workspace_root.join("ui");
     let output_rel = DEFAULT_OUTPUT_RELATIVE;
     let output_abs = workspace_root.join(output_rel);
 
     ensure_tmp_dir(&workspace_root, verbose)?;
 
-    print_status("Step 1/2: Creating test plugin project...");
+    print_status("Step 1/3: Refreshing local UI package artifacts...");
+    run_ui_build_lib_preflight(&ui_dir, verbose)
+        .with_context(|| format!("Failed preflight UI package build in {}", ui_dir.display()))?;
+    print_success_item("UI package artifacts are up-to-date.");
+
+    print_status("Step 2/3: Creating test plugin project...");
     run_create_command(&workspace_root, output_rel)
         .with_context(|| format!("Failed to generate project at {}", output_abs.display()))?;
     print_success_item(&format!("Created project at {}", output_abs.display()));
 
-    print_status("Step 2/2: Opening project in VS Code...");
+    print_status("Step 3/3: Opening project in VS Code...");
     run_code_open_command(&workspace_root, output_rel).with_context(|| {
         format!(
             "Failed to open project in VS Code. Ensure `code` CLI is installed and available in PATH. Path: {}",
@@ -39,6 +45,47 @@ pub fn run(verbose: bool) -> Result<()> {
     print_success_item(&format!("Opened {}", output_abs.display()));
 
     print_success("try-sdk completed successfully.");
+    Ok(())
+}
+
+fn run_ui_build_lib_preflight(ui_dir: &std::path::Path, verbose: bool) -> Result<()> {
+    if !ui_dir.is_dir() {
+        bail!(
+            "UI workspace directory not found at {}. Expected repository layout with `ui/` at workspace root.",
+            ui_dir.display()
+        );
+    }
+
+    if !xtask::command_exists("npm") {
+        bail!(
+            "`npm` command not found. Install Node.js/npm and ensure `npm` is available in PATH before running `cargo xtask try-sdk`."
+        );
+    }
+
+    if verbose {
+        print_info(&format!(
+            "Preflight: running `npm run build:lib` in {}",
+            ui_dir.display()
+        ));
+    }
+
+    let status = npm_command()
+        .args(["run", "build:lib"])
+        .current_dir(ui_dir)
+        .status()
+        .context("Failed to launch npm for `npm run build:lib`")?;
+
+    if !status.success() {
+        bail!(
+            "`npm run build:lib` failed in {} (exit code: {}). Ensure ui dependencies are installed (run npm install in ui/) and fix build errors before retrying.",
+            ui_dir.display(),
+            status
+                .code()
+                .map(|code| code.to_string())
+                .unwrap_or_else(|| "terminated by signal".to_string())
+        );
+    }
+
     Ok(())
 }
 
