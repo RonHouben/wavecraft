@@ -107,7 +107,7 @@ Use this structure for your responses:
 
 [Explanation with file references]
 
-**Implementation:** [file.rs](file.rs#L123-L145)
+**Implementation:** `file.rs#L123-L145`
 [Brief explanation or code snippet if helpful]
 
 ### [Component/Aspect 2]
@@ -116,8 +116,8 @@ Use this structure for your responses:
 
 ## Related Files
 
-- [file1.rs](file1.rs) — Brief description
-- [file2.ts](file2.ts) — Brief description
+- `file1.rs` — Brief description
+- `file2.ts` — Brief description
 
 ## Key Takeaways
 
