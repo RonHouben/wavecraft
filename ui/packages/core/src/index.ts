@@ -48,7 +48,29 @@ export type {
   ProcessorIdMap,
 } from './types/processors';
 
-export type { BypassProcessorId, LevelProcessorId } from './types/processor-parameter-ids';
+export type {
+  BypassProcessorId,
+  LevelProcessorId,
+  ProcessorIdForParameterSuffix,
+  ParameterIdForProcessorSuffix,
+  ToneFilterProcessorId,
+  ToneFilterBypassParameterId,
+  ToneFilterModeParameterId,
+  ToneFilterCutoffHzParameterId,
+  ToneFilterResonanceQParameterId,
+  ToneFilterParameterIds,
+  SoftClipProcessorId,
+  SoftClipBypassParameterId,
+  SoftClipDriveDbParameterId,
+  SoftClipOutputTrimDbParameterId,
+  SoftClipParameterIds,
+  TestToneProcessorId,
+  TestToneBypassParameterId,
+  TestToneEnabledParameterId,
+  TestToneFrequencyParameterId,
+  TestToneLevelParameterId,
+  TestToneParameterIds,
+} from './types/processor-parameter-ids';
 
 export type {
   // Metering types

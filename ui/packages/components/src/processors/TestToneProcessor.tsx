@@ -1,8 +1,20 @@
 import { Col, Knob, Row } from '@wavecraft/components';
+// eslint-disable-next-line no-restricted-imports -- Processor components in this package currently bind typed parameter hooks directly.
+import type { TestToneParameterIds, TestToneProcessorId } from '@wavecraft/core';
+// eslint-disable-next-line no-restricted-imports -- Processor components in this package currently bind typed parameter hooks directly.
 import { useParameter } from '@wavecraft/core';
 import { type JSX } from 'react';
 import { ProcessorCard } from './ProcessorCard';
 import { mergeClassNames } from '../utils/classNames';
+
+const TEST_TONE_PROCESSOR_ID: TestToneProcessorId = 'test_tone';
+
+const testToneParameterIds: TestToneParameterIds = {
+  bypass: `${TEST_TONE_PROCESSOR_ID}_bypass`,
+  enabled: `${TEST_TONE_PROCESSOR_ID}_enabled`,
+  frequency: `${TEST_TONE_PROCESSOR_ID}_frequency`,
+  level: `${TEST_TONE_PROCESSOR_ID}_level`,
+};
 
 export interface TestToneProcessorProps {
   readonly hideWhenNotInSignalChain?: boolean;
@@ -13,14 +25,16 @@ export function TestToneProcessor({
   hideWhenNotInSignalChain,
   className,
 }: Readonly<TestToneProcessorProps>): JSX.Element | null {
-  const { param: frequencyParameter, setValue: setFrequencyValue } =
-    useParameter<number>('test_tone_frequency');
-  const { param: levelParameter, setValue: setLevelValue } =
-    useParameter<number>('test_tone_level');
+  const { param: frequencyParameter, setValue: setFrequencyValue } = useParameter<number>(
+    testToneParameterIds.frequency
+  );
+  const { param: levelParameter, setValue: setLevelValue } = useParameter<number>(
+    testToneParameterIds.level
+  );
 
   return (
     <ProcessorCard
-      processorId="test_tone"
+      processorId={TEST_TONE_PROCESSOR_ID}
       hideWhenNotInSignalChain={hideWhenNotInSignalChain}
       subtitle="Test Signal"
       title="Test Tone"

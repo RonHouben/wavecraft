@@ -87,6 +87,48 @@ export function on(event: string, callback: Function): () => void {
 
 **Rule:** Use functional components with hooks for all React code.
 
+**Rule:** Define component-specific helper functions at the bottom of the file, after the component's state logic and return block.
+
+**Do:**
+
+```typescript
+export function ParameterSlider({ id, name, min, max }: Props) {
+  const { param, setValue } = useParameter(id);
+
+  return (
+    <input
+      type="range"
+      value={param?.value ?? 0}
+      onChange={(e) => setValue(parseFloat(e.target.value))}
+    />
+  );
+}
+
+function clampValue(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+```
+
+**Don't:**
+
+```typescript
+function clampValue(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+export function ParameterSlider({ id, name, min, max }: Props) {
+  const { param, setValue } = useParameter(id);
+
+  return (
+    <input
+      type="range"
+      value={param?.value ?? 0}
+      onChange={(e) => setValue(clampValue(parseFloat(e.target.value), min, max))}
+    />
+  );
+}
+```
+
 ```typescript
 // ✅ Functional component with hooks
 export function ParameterSlider({ id, name, min, max }: Props) {
