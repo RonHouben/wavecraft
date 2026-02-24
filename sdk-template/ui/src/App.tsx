@@ -17,10 +17,8 @@ import {
   TestToneProcessor,
   OscilloscopeProcessor,
   Row,
-  Button,
   Col,
 } from '@wavecraft/components';
-import { SmartProcessor } from './processors/SmartProcessor';
 
 export function App(): JSX.Element {
   useWindowResizeSync();
@@ -52,31 +50,6 @@ export function App(): JSX.Element {
       <Col className="grid grid-cols-12 gap-4 px-4">
         <Row className="col-span-12 grid grid-cols-12 justify-center gap-4">
           <TestToneProcessor className="col-span-3" hideWhenNotInSignalChain />
-          <SmartProcessor
-            className="col-span-3"
-            processorId="input_trim"
-            bypassParameterId="input_trim_bypass"
-            title="Input Trim"
-            hideWhenNotInSignalChain
-          />
-          <SmartProcessor
-            className="col-span-3"
-            processorId="soft_clip"
-            bypassParameterId="soft_clip_bypass"
-            title="Soft Clip"
-            hideWhenNotInSignalChain
-          />
-          <SmartProcessor
-            className="col-span-3"
-            processorId="tone_filter"
-            bypassParameterId="tone_filter_bypass"
-            title="Tone Filter"
-            hideWhenNotInSignalChain
-            radioGroupOptions={{
-              renderOptionsAs: Button,
-              size: 'lg',
-            }}
-          />
         </Row>
         <Row className="col-span-12 grid grid-cols-12">
           <OscilloscopeProcessor className="col-span-12" hideWhenNotInSignalChain />
