@@ -76,7 +76,7 @@ export default [
 
   // Generated declaration files should be parsed as TypeScript, but not type-checked
   // against parserOptions.project because TypeScript excludes same-basename .d.ts when a
-  // sibling .ts exists (e.g. processors.d.ts + processors.ts).
+  // sibling .ts exists (e.g. processors.types.d.ts + processors.ts).
   {
     files: ['src/generated/**/*.d.ts'],
     languageOptions: {

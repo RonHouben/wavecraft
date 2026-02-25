@@ -294,6 +294,11 @@ fn refresh_param_codegen_caches_if_needed(
         project_root
             .join("engine")
             .join("crates")
+            .join("wavecraft-processors")
+            .join("Cargo.toml"),
+        project_root
+            .join("engine")
+            .join("crates")
             .join("wavecraft-protocol")
             .join("src"),
         project_root

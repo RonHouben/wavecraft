@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockProcessorCardRender = vi.hoisted(() => vi.fn());
+const mockUseMeterSignalActivity = vi.hoisted(() => vi.fn());
 
 interface MockProcessorCardProps {
   readonly hideWhenNotInSignalChain?: boolean;
@@ -20,17 +21,26 @@ vi.mock('./ProcessorCard', () => ({
   },
 }));
 
+vi.mock('@wavecraft/core', async () => {
+  const actual = await vi.importActual<typeof import('@wavecraft/core')>('@wavecraft/core');
+
+  return {
+    ...actual,
+    useMeterSignalActivity: mockUseMeterSignalActivity,
+  };
+});
+
 import { PassthroughProcessor } from './PassthroughProcessor';
 
 const PROCESSOR_ID = 'input_trim';
-const BYPASS_PARAMETER_ID = `${PROCESSOR_ID}_bypass`;
 
 describe('PassthroughProcessor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseMeterSignalActivity.mockReturnValue(false);
   });
 
-  it('derives bypass id from processorId and forwards ProcessorCard props', () => {
+  it('forwards ProcessorCard props derived from processorId', () => {
     render(
       <PassthroughProcessor
         processorId={PROCESSOR_ID}
@@ -48,18 +58,11 @@ describe('PassthroughProcessor', () => {
     expect(cardProps.className).toContain('w-full');
     expect(cardProps.className).toContain('test-class');
 
-    expect(screen.getByTestId('passthrough-bypass-parameter-id')).toHaveTextContent(
-      BYPASS_PARAMETER_ID
-    );
   });
 
   it('supports custom title/subtitle and keeps derived bypass id pattern', () => {
     render(
-      <PassthroughProcessor
-        processorId={PROCESSOR_ID}
-        title="Input Trim"
-        subtitle="Utility"
-      />
+      <PassthroughProcessor processorId={PROCESSOR_ID} title="Input Trim" subtitle="Utility" />
     );
 
     const cardProps = mockProcessorCardRender.mock.calls[0]?.[0] as MockProcessorCardProps;
@@ -67,4 +70,28 @@ describe('PassthroughProcessor', () => {
     expect(cardProps.subtitle).toBe('Utility');
   });
 
+  it('opts in to smoothing via core hook configuration', () => {
+    render(<PassthroughProcessor processorId={PROCESSOR_ID} />);
+
+    expect(mockUseMeterSignalActivity).toHaveBeenCalledWith({
+      smoothing: {
+        enabled: true,
+      },
+    });
+  });
+
+  it('glows while signal is active and fades to idle when hook activity toggles', () => {
+    mockUseMeterSignalActivity.mockReturnValue(true);
+
+    const { rerender } = render(<PassthroughProcessor processorId={PROCESSOR_ID} />);
+
+    const eye = screen.getByTestId('passthrough-eye');
+    expect(eye).toHaveAttribute('data-signal-active', 'true');
+
+    mockUseMeterSignalActivity.mockReturnValue(false);
+
+    rerender(<PassthroughProcessor processorId={PROCESSOR_ID} />);
+
+    expect(eye).toHaveAttribute('data-signal-active', 'false');
+  });
 });

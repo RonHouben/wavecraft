@@ -146,6 +146,11 @@ export { useLatencyMonitor } from './hooks/useLatencyMonitor';
 export type { UseLatencyMonitorResult } from './hooks/useLatencyMonitor';
 
 export { useMeterFrame } from './hooks/useMeterFrame';
+export { useMeterSignalActivity, getMeterSignalLevel } from './hooks/useMeterSignalActivity';
+export type {
+  MeterSignalActivitySmoothing,
+  UseMeterSignalActivityOptions,
+} from './hooks/useMeterSignalActivity';
 export { useOscilloscopeFrame } from './hooks/useOscilloscopeFrame';
 export { useAudioStatus } from './hooks/useAudioStatus';
 export type { UseAudioStatusResult } from './hooks/useAudioStatus';

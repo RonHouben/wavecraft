@@ -230,11 +230,21 @@ pub fn write_processor_types(ui_dir: &Path, processors: &[ProcessorInfo]) -> Res
     runtime_content.push_str("registerAvailableProcessors(PROCESSOR_IDS);\n\n");
     runtime_content.push_str("export {};\n");
 
-    let typing_out_file = generated_dir.join("processors.d.ts");
+    let typing_out_file = generated_dir.join("processors.types.d.ts");
     write_generated_file_if_changed(&typing_out_file, typing_content, "processor type")?;
 
     let runtime_out_file = generated_dir.join("processors.ts");
     write_generated_file_if_changed(&runtime_out_file, runtime_content, "processor runtime")?;
+
+    let legacy_typing_out_file = generated_dir.join("processors.d.ts");
+    if legacy_typing_out_file.is_file() {
+        fs::remove_file(&legacy_typing_out_file).with_context(|| {
+            format!(
+                "Failed to remove legacy generated TypeScript processor type file: {}",
+                legacy_typing_out_file.display()
+            )
+        })?;
+    }
 
     Ok(())
 }
@@ -433,7 +443,7 @@ mod tests {
         ];
         write_processor_types(ui_dir, &processors).expect("write should succeed");
 
-        let types_output_path = ui_dir.join("src/generated/processors.d.ts");
+        let types_output_path = ui_dir.join("src/generated/processors.types.d.ts");
         let types_output =
             fs::read_to_string(types_output_path).expect("generated type file should exist");
 
@@ -479,7 +489,7 @@ mod tests {
 
         write_processor_types(ui_dir, &[]).expect("write should succeed");
 
-        let types_output_path = ui_dir.join("src/generated/processors.d.ts");
+        let types_output_path = ui_dir.join("src/generated/processors.types.d.ts");
         let types_output =
             fs::read_to_string(types_output_path).expect("generated type file should exist");
 
@@ -529,5 +539,25 @@ mod tests {
         assert!(output.contains("'gain-stage'"));
         assert!(output.contains("'gain\"quoted\\\\slash'"));
         assert!(output.contains("'gain\\'single'"));
+    }
+
+    #[test]
+    fn removes_legacy_processors_declaration_file() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let ui_dir = temp.path();
+
+        let generated_dir = ui_dir.join("src/generated");
+        fs::create_dir_all(&generated_dir).expect("generated dir should exist");
+
+        let legacy_output_path = generated_dir.join("processors.d.ts");
+        fs::write(&legacy_output_path, "export {};\n")
+            .expect("legacy generated declaration should be writable");
+
+        write_processor_types(ui_dir, &[processor("output_gain")]).expect("write should succeed");
+
+        assert!(
+            !legacy_output_path.exists(),
+            "legacy processors.d.ts should be removed when regenerating processor types"
+        );
     }
 }

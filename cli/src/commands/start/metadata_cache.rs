@@ -47,9 +47,9 @@ fn stale_sidecar_reason(
         }
     }
 
-    if let Some(processors_src_mtime) = sdk_processors_src_mtime(engine_dir) {
-        if processors_src_mtime > sidecar_mtime {
-            return Some("wavecraft-processors source newer");
+    if let Some(processors_inputs_mtime) = sdk_processors_inputs_mtime(engine_dir) {
+        if processors_inputs_mtime > sidecar_mtime {
+            return Some("wavecraft-processors inputs newer");
         }
     }
 
@@ -62,20 +62,25 @@ fn stale_sidecar_reason(
     None
 }
 
-fn sdk_processors_src_mtime(engine_dir: &Path) -> Option<SystemTime> {
+fn sdk_processors_inputs_mtime(engine_dir: &Path) -> Option<SystemTime> {
     let sdk_template_dir = engine_dir.parent()?;
     if sdk_template_dir.file_name()?.to_str()? != "sdk-template" {
         return None;
     }
 
     let repo_root = sdk_template_dir.parent()?;
-    let processors_src = repo_root
+    let processors_crate = repo_root
         .join("engine")
         .join("crates")
-        .join("wavecraft-processors")
-        .join("src");
+        .join("wavecraft-processors");
 
-    newest_file_mtime_under(&processors_src)
+    let processors_src = processors_crate.join("src");
+    let processors_manifest = processors_crate.join("Cargo.toml");
+
+    max_mtime(
+        newest_file_mtime_under(&processors_src),
+        file_mtime(&processors_manifest),
+    )
 }
 
 fn try_read_cached_sidecar_json<T>(
@@ -154,6 +159,19 @@ fn newest_file_mtime_under(root: &Path) -> Option<SystemTime> {
 fn current_exe_mtime() -> Option<SystemTime> {
     let current_exe = std::env::current_exe().ok()?;
     std::fs::metadata(current_exe).ok()?.modified().ok()
+}
+
+fn file_mtime(path: &Path) -> Option<SystemTime> {
+    std::fs::metadata(path).ok()?.modified().ok()
+}
+
+fn max_mtime(a: Option<SystemTime>, b: Option<SystemTime>) -> Option<SystemTime> {
+    match (a, b) {
+        (Some(a), Some(b)) => Some(std::cmp::max(a, b)),
+        (Some(a), None) => Some(a),
+        (None, Some(b)) => Some(b),
+        (None, None) => None,
+    }
 }
 
 /// Write parameter metadata to the sidecar JSON cache.
@@ -267,6 +285,8 @@ pub(super) async fn load_plugin_metadata(engine_dir: &Path) -> Result<PluginMeta
 #[cfg(test)]
 mod tests {
     use std::fs;
+    use std::thread;
+    use std::time::Duration;
 
     use super::{try_read_cached_params, write_sidecar_cache};
     use wavecraft_protocol::{ParameterInfo, ParameterType};
@@ -347,5 +367,81 @@ mod tests {
         assert!((frequency.min - 20.0).abs() < f32::EPSILON);
         assert!((frequency.max - 20_000.0).abs() < f32::EPSILON);
         assert!((frequency.value - 440.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn sdk_sidecar_cache_invalidates_when_wavecraft_processors_manifest_is_newer() {
+        let temp = tempfile::tempdir().expect("temp dir should be created");
+        let repo_root = temp.path();
+
+        let engine_dir = repo_root.join("sdk-template").join("engine");
+        let src_dir = engine_dir.join("src");
+        let debug_dir = engine_dir.join("target").join("debug");
+
+        fs::create_dir_all(&src_dir).expect("src dir should be created");
+        fs::create_dir_all(&debug_dir).expect("debug dir should be created");
+
+        let processors_crate = repo_root
+            .join("engine")
+            .join("crates")
+            .join("wavecraft-processors");
+        fs::create_dir_all(processors_crate.join("src")).expect("processors src dir");
+        let processors_manifest = processors_crate.join("Cargo.toml");
+        fs::write(
+            &processors_manifest,
+            "[package]\nname = \"wavecraft-processors\"\n",
+        )
+        .expect("processors manifest should be written");
+
+        fs::write(
+            engine_dir.join("Cargo.toml"),
+            "[package]\nname = \"wavecraft-dev-template\"\n[lib]\nname = \"wavecraft_dev_template\"\n",
+        )
+        .expect("Cargo.toml should be written");
+
+        fs::write(src_dir.join("lib.rs"), "// test source").expect("source file should be written");
+
+        #[cfg(target_os = "macos")]
+        let dylib_name = "libwavecraft_dev_template.dylib";
+        #[cfg(target_os = "linux")]
+        let dylib_name = "libwavecraft_dev_template.so";
+        #[cfg(target_os = "windows")]
+        let dylib_name = "wavecraft_dev_template.dll";
+
+        fs::write(debug_dir.join(dylib_name), b"test dylib")
+            .expect("dylib placeholder should be written");
+
+        let params = vec![ParameterInfo {
+            id: "test_tone_enabled".to_string(),
+            name: "Enabled".to_string(),
+            param_type: ParameterType::Bool,
+            value: 0.0,
+            default: 0.0,
+            min: 0.0,
+            max: 1.0,
+            unit: None,
+            group: Some("Test Tone".to_string()),
+            variants: None,
+        }];
+
+        write_sidecar_cache(&engine_dir, &params).expect("sidecar cache should be written");
+        let cached_before = try_read_cached_params(&engine_dir);
+        assert!(
+            cached_before.is_some(),
+            "cache should be valid before processors manifest changes"
+        );
+
+        thread::sleep(Duration::from_millis(20));
+        fs::write(
+            &processors_manifest,
+            "[package]\nname = \"wavecraft-processors\"\nversion = \"0.0.1\"\n",
+        )
+        .expect("processors manifest should be updated");
+
+        let cached_after = try_read_cached_params(&engine_dir);
+        assert!(
+            cached_after.is_none(),
+            "cache should be invalidated when wavecraft-processors/Cargo.toml is newer"
+        );
     }
 }
