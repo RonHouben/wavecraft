@@ -47,6 +47,7 @@ async fn test_param_extraction_cancelled_on_new_change() {
         write_processor_ts_types: None,
         param_loader: slow_loader,
         processor_loader: None,
+        additional_watch_paths: Vec::new(),
     };
 
     let pipeline = RebuildPipeline::new(
@@ -131,6 +132,7 @@ async fn test_param_extraction_completes_normally() {
         write_processor_ts_types: None,
         param_loader: fast_loader,
         processor_loader: None,
+        additional_watch_paths: Vec::new(),
     };
 
     let pipeline = RebuildPipeline::new(

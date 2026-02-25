@@ -111,7 +111,12 @@ impl DevSession {
         let (watch_tx, mut watch_rx) = mpsc::unbounded_channel::<WatchEvent>();
 
         // Create file watcher
-        let watcher = FileWatcher::new(&engine_dir, watch_tx, shutdown_rx.clone())?;
+        let watcher = FileWatcher::new(
+            &engine_dir,
+            &callbacks.additional_watch_paths,
+            watch_tx,
+            shutdown_rx.clone(),
+        )?;
 
         // Create build guard and pipeline
         let guard = Arc::new(BuildGuard::new());

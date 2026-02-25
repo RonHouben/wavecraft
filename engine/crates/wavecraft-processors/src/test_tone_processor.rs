@@ -19,6 +19,9 @@ fn advance_phase(phase: &mut f32, phase_delta: f32) {
 /// Test tone processor parameters.
 #[derive(Clone)]
 pub struct TestToneProcessorParams {
+    /// Enable/disable test tone generation.
+    pub enabled: bool,
+
     /// Frequency in Hz. `factor = 2.5` gives a logarithmic feel in the UI.
     pub frequency: f32,
 
@@ -29,6 +32,7 @@ pub struct TestToneProcessorParams {
 impl Default for TestToneProcessorParams {
     fn default() -> Self {
         Self {
+            enabled: false,
             frequency: 440.0,
             level: 0.5,
         }
@@ -37,7 +41,15 @@ impl Default for TestToneProcessorParams {
 
 impl ProcessorParams for TestToneProcessorParams {
     fn param_specs() -> &'static [ParamSpec] {
-        static SPECS: [ParamSpec; 2] = [
+        static SPECS: [ParamSpec; 3] = [
+            ParamSpec {
+                name: "Enabled",
+                id_suffix: "enabled",
+                range: ParamRange::Stepped { min: 0, max: 1 },
+                default: 0.0,
+                unit: "",
+                group: None,
+            },
             ParamSpec {
                 name: "Frequency",
                 id_suffix: "frequency",
@@ -68,10 +80,13 @@ impl ProcessorParams for TestToneProcessorParams {
     }
 
     fn apply_plain_values(&mut self, values: &[f32]) {
-        if let Some(frequency) = values.first() {
+        if let Some(enabled) = values.first() {
+            self.enabled = *enabled >= 0.5;
+        }
+        if let Some(frequency) = values.get(1) {
             self.frequency = *frequency;
         }
-        if let Some(level) = values.get(1) {
+        if let Some(level) = values.get(2) {
             self.level = *level;
         }
     }
@@ -99,6 +114,10 @@ impl Processor for TestToneProcessor {
         _transport: &Transport,
         params: &Self::Params,
     ) {
+        if !params.enabled {
+            return;
+        }
+
         if self.sample_rate == 0.0 {
             return;
         }
@@ -127,6 +146,7 @@ mod tests {
 
     fn test_params() -> TestToneProcessorParams {
         TestToneProcessorParams {
+            enabled: true,
             frequency: 440.0,
             level: 0.5,
         }
@@ -134,6 +154,7 @@ mod tests {
 
     fn test_params_with_level(level: f32) -> TestToneProcessorParams {
         TestToneProcessorParams {
+            enabled: true,
             frequency: 440.0,
             level,
         }
@@ -276,10 +297,27 @@ mod tests {
     #[test]
     fn apply_plain_values_updates_all_fields() {
         let mut params = TestToneProcessorParams::default();
-        params.apply_plain_values(&[1760.0, 0.9]);
+        params.apply_plain_values(&[1.0, 1760.0, 0.9]);
 
+        assert!(params.enabled);
         assert!((params.frequency - 1760.0).abs() < f32::EPSILON);
         assert!((params.level - 0.9).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_tone_processor_disabled_by_default() {
+        let mut test_tone = TestToneProcessor::default();
+        test_tone.set_sample_rate(48_000.0);
+
+        let mut left = [0.0_f32; 128];
+        let mut right = [0.0_f32; 128];
+        let mut buffer = [&mut left[..], &mut right[..]];
+
+        let params = TestToneProcessorParams::default();
+        test_tone.process(&mut buffer, &Transport::default(), &params);
+
+        assert!(left.iter().all(|sample| sample.abs() <= f32::EPSILON));
+        assert!(right.iter().all(|sample| sample.abs() <= f32::EPSILON));
     }
 
     #[test]

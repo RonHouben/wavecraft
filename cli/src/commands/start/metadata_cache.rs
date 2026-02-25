@@ -47,6 +47,12 @@ fn stale_sidecar_reason(
         }
     }
 
+    if let Some(processors_src_mtime) = sdk_processors_src_mtime(engine_dir) {
+        if processors_src_mtime > sidecar_mtime {
+            return Some("wavecraft-processors source newer");
+        }
+    }
+
     if let Some(cli_mtime) = current_exe_mtime() {
         if cli_mtime > sidecar_mtime {
             return Some("CLI binary newer");
@@ -54,6 +60,22 @@ fn stale_sidecar_reason(
     }
 
     None
+}
+
+fn sdk_processors_src_mtime(engine_dir: &Path) -> Option<SystemTime> {
+    let sdk_template_dir = engine_dir.parent()?;
+    if sdk_template_dir.file_name()?.to_str()? != "sdk-template" {
+        return None;
+    }
+
+    let repo_root = sdk_template_dir.parent()?;
+    let processors_src = repo_root
+        .join("engine")
+        .join("crates")
+        .join("wavecraft-processors")
+        .join("src");
+
+    newest_file_mtime_under(&processors_src)
 }
 
 fn try_read_cached_sidecar_json<T>(
@@ -278,18 +300,32 @@ mod tests {
         fs::write(debug_dir.join(dylib_name), b"test dylib")
             .expect("dylib placeholder should be written");
 
-        let params = vec![ParameterInfo {
-            id: "test_tone_frequency".to_string(),
-            name: "Frequency".to_string(),
-            param_type: ParameterType::Float,
-            value: 440.0,
-            default: 440.0,
-            min: 20.0,
-            max: 20_000.0,
-            unit: Some("Hz".to_string()),
-            group: Some("Test Tone".to_string()),
-            variants: None,
-        }];
+        let params = vec![
+            ParameterInfo {
+                id: "test_tone_enabled".to_string(),
+                name: "Enabled".to_string(),
+                param_type: ParameterType::Bool,
+                value: 0.0,
+                default: 0.0,
+                min: 0.0,
+                max: 1.0,
+                unit: None,
+                group: Some("Test Tone".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "test_tone_frequency".to_string(),
+                name: "Frequency".to_string(),
+                param_type: ParameterType::Float,
+                value: 440.0,
+                default: 440.0,
+                min: 20.0,
+                max: 20_000.0,
+                unit: Some("Hz".to_string()),
+                group: Some("Test Tone".to_string()),
+                variants: None,
+            },
+        ];
 
         write_sidecar_cache(&engine_dir, &params).expect("sidecar cache should be written");
 
@@ -300,6 +336,13 @@ mod tests {
             .iter()
             .find(|param| param.id == "test_tone_frequency")
             .expect("frequency parameter should exist");
+        let enabled = cached
+            .iter()
+            .find(|param| param.id == "test_tone_enabled")
+            .expect("enabled parameter should exist");
+
+        assert_eq!(enabled.param_type, ParameterType::Bool);
+        assert!(enabled.default.abs() <= f32::EPSILON);
 
         assert!((frequency.min - 20.0).abs() < f32::EPSILON);
         assert!((frequency.max - 20_000.0).abs() < f32::EPSILON);

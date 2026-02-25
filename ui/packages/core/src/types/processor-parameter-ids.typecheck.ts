@@ -10,6 +10,7 @@ import type {
   SoftClipParameterIds,
   SoftClipProcessorId,
   TestToneBypassParameterId,
+  TestToneEnabledParameterId,
   TestToneFrequencyParameterId,
   TestToneLevelParameterId,
   TestToneParameterIds,
@@ -34,6 +35,7 @@ import type {
   SoftClipParameterIds as ExportedSoftClipParameterIds,
   SoftClipProcessorId as ExportedSoftClipProcessorId,
   TestToneBypassParameterId as ExportedTestToneBypassParameterId,
+  TestToneEnabledParameterId as ExportedTestToneEnabledParameterId,
   TestToneFrequencyParameterId as ExportedTestToneFrequencyParameterId,
   TestToneLevelParameterId as ExportedTestToneLevelParameterId,
   TestToneParameterIds as ExportedTestToneParameterIds,
@@ -111,11 +113,15 @@ export type _ExportedSoftClipOutputTrimDbParameterIdIsNotNever = Assert<
 >;
 export type _TestToneProcessorIdIsNotNever = Assert<NotNever<TestToneProcessorId>>;
 export type _TestToneBypassParameterIdIsNotNever = Assert<NotNever<TestToneBypassParameterId>>;
+export type _TestToneEnabledParameterIdIsNotNever = Assert<NotNever<TestToneEnabledParameterId>>;
 export type _TestToneFrequencyParameterIdIsNotNever = Assert<NotNever<TestToneFrequencyParameterId>>;
 export type _TestToneLevelParameterIdIsNotNever = Assert<NotNever<TestToneLevelParameterId>>;
 export type _ExportedTestToneProcessorIdIsNotNever = Assert<NotNever<ExportedTestToneProcessorId>>;
 export type _ExportedTestToneBypassParameterIdIsNotNever = Assert<
   NotNever<ExportedTestToneBypassParameterId>
+>;
+export type _ExportedTestToneEnabledParameterIdIsNotNever = Assert<
+  NotNever<ExportedTestToneEnabledParameterId>
 >;
 export type _ExportedTestToneFrequencyParameterIdIsNotNever = Assert<
   NotNever<ExportedTestToneFrequencyParameterId>
@@ -190,6 +196,10 @@ export type _ExportedTestToneProcessorMatchesInternal = Assert<
 
 export type _ExportedTestToneBypassMatchesInternal = Assert<
   Equal<ExportedTestToneBypassParameterId, TestToneBypassParameterId>
+>;
+
+export type _ExportedTestToneEnabledMatchesInternal = Assert<
+  Equal<ExportedTestToneEnabledParameterId, TestToneEnabledParameterId>
 >;
 
 export type _ExportedTestToneFrequencyMatchesInternal = Assert<
@@ -288,6 +298,10 @@ export type _TestToneFrequencySuffixIsAccepted = Assert<
   'test_tone_frequency' extends TestToneFrequencyParameterId ? true : false
 >;
 
+export type _TestToneEnabledSuffixIsAccepted = Assert<
+  'test_tone_enabled' extends TestToneEnabledParameterId ? true : false
+>;
+
 export type _TestToneLevelSuffixIsAccepted = Assert<
   'test_tone_level' extends TestToneLevelParameterId ? true : false
 >;
@@ -321,6 +335,7 @@ export type _TestToneParameterIdsContract = Assert<
     TestToneParameterIds,
     {
       readonly bypass: TestToneBypassParameterId;
+      readonly enabled: TestToneEnabledParameterId;
       readonly frequency: TestToneFrequencyParameterId;
       readonly level: TestToneLevelParameterId;
     }

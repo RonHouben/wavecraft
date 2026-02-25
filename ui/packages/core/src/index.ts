@@ -69,6 +69,7 @@ export type {
   PassthroughParameterIds,
   TestToneProcessorId,
   TestToneBypassParameterId,
+  TestToneEnabledParameterId,
   TestToneFrequencyParameterId,
   TestToneLevelParameterId,
   TestToneParameterIds,

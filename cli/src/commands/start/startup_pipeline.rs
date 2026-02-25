@@ -193,6 +193,8 @@ pub(super) fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u
 }
 
 fn build_rebuild_callbacks(project: &ProjectMarkers) -> RebuildCallbacks {
+    let additional_watch_paths = sdk_additional_watch_paths(project);
+
     RebuildCallbacks {
         package_name: read_engine_package_name(&project.engine_dir),
         write_sidecar: Some(std::sync::Arc::new(
@@ -224,6 +226,32 @@ fn build_rebuild_callbacks(project: &ProjectMarkers) -> RebuildCallbacks {
                     Box<dyn std::future::Future<Output = Result<Vec<ProcessorInfo>>> + Send>,
                 >
         })),
+        additional_watch_paths,
+    }
+}
+
+fn sdk_additional_watch_paths(project: &ProjectMarkers) -> Vec<PathBuf> {
+    if !project.sdk_mode {
+        return Vec::new();
+    }
+
+    let Some(sdk_template_dir) = project.engine_dir.parent() else {
+        return Vec::new();
+    };
+    let Some(repo_root) = sdk_template_dir.parent() else {
+        return Vec::new();
+    };
+
+    let processor_crate_src = repo_root
+        .join("engine")
+        .join("crates")
+        .join("wavecraft-processors")
+        .join("src");
+
+    if processor_crate_src.is_dir() {
+        vec![processor_crate_src]
+    } else {
+        Vec::new()
     }
 }
 

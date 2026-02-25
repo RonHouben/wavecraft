@@ -29,6 +29,10 @@ const INPUT_TRIM_PARAM_ID: &str = "input_trim_level";
 const INPUT_TRIM_BYPASS_PARAM_ID: &str = "input_trim_bypass";
 const LEGACY_INPUT_GAIN_PARAM_ID: &str = "input_gain_level";
 const OUTPUT_GAIN_PARAM_ID: &str = "output_gain_level";
+const TEST_TONE_ENABLED_PARAM_ID: &str = "test_tone_enabled";
+const TEST_TONE_BYPASS_PARAM_ID: &str = "test_tone_bypass";
+const TEST_TONE_FREQUENCY_PARAM_ID: &str = "test_tone_frequency";
+const TEST_TONE_LEVEL_PARAM_ID: &str = "test_tone_level";
 const TEST_TONE_FREQUENCY_MIN_HZ: f32 = 20.0;
 const TEST_TONE_FREQUENCY_MAX_HZ: f32 = 20_000.0;
 const TEST_TONE_FREQUENCY_FALLBACK_HZ: f32 = 440.0;
@@ -134,10 +138,19 @@ pub(super) fn apply_output_modifiers_with_state(
 
     // Focused dev-mode bridge for sdk-template test tone parameters while
     // full generic FFI parameter injection is still being implemented.
-    let test_tone_frequency = param_bridge.read("test_tone_frequency");
-    let test_tone_level = param_bridge.read("test_tone_level");
+    let test_tone_enabled = param_bridge
+        .read(TEST_TONE_ENABLED_PARAM_ID)
+        .is_some_and(normalize_bool_param);
+    let test_tone_bypassed = param_bridge
+        .read(TEST_TONE_BYPASS_PARAM_ID)
+        .is_some_and(normalize_bool_param);
+    let test_tone_frequency = param_bridge.read(TEST_TONE_FREQUENCY_PARAM_ID);
+    let test_tone_level = param_bridge.read(TEST_TONE_LEVEL_PARAM_ID);
 
-    if let (Some(frequency), Some(level)) = (test_tone_frequency, test_tone_level) {
+    if test_tone_enabled
+        && !test_tone_bypassed
+        && let (Some(frequency), Some(level)) = (test_tone_frequency, test_tone_level)
+    {
         if !sample_rate.is_finite() || sample_rate <= 0.0 {
             apply_gain(left, right, combined_gain);
             return;
@@ -402,6 +415,10 @@ fn normalize_test_tone_level(value: f32) -> f32 {
     }
 }
 
+fn normalize_bool_param(value: f32) -> bool {
+    value.is_finite() && value >= 0.5
+}
+
 fn normalize_phase(phase: f32) -> f32 {
     if phase.is_finite() { phase } else { 0.0 }
 }
@@ -420,13 +437,27 @@ mod tests {
     use wavecraft_protocol::{ParameterInfo, ParameterType};
 
     fn test_tone_bridge(
+        enabled: f32,
         frequency: f32,
         level: f32,
+        bypass: f32,
         input_trim_level: f32,
         input_trim_bypass: f32,
         output_gain_level: f32,
     ) -> AtomicParameterBridge {
         AtomicParameterBridge::new(&[
+            ParameterInfo {
+                id: "test_tone_enabled".to_string(),
+                name: "Enabled".to_string(),
+                param_type: ParameterType::Bool,
+                value: enabled,
+                default: enabled,
+                min: 0.0,
+                max: 1.0,
+                unit: None,
+                group: Some("Test Tone".to_string()),
+                variants: None,
+            },
             ParameterInfo {
                 id: "test_tone_frequency".to_string(),
                 name: "Frequency".to_string(),
@@ -446,6 +477,18 @@ mod tests {
                 value: level,
                 default: level,
                 unit: Some("%".to_string()),
+                min: 0.0,
+                max: 1.0,
+                group: Some("Test Tone".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "test_tone_bypass".to_string(),
+                name: "Test Tone Bypass".to_string(),
+                param_type: ParameterType::Bool,
+                value: bypass,
+                default: bypass,
+                unit: None,
                 min: 0.0,
                 max: 1.0,
                 group: Some("Test Tone".to_string()),
@@ -492,7 +535,7 @@ mod tests {
 
     #[test]
     fn output_modifiers_silent_when_test_tone_level_is_zero() {
-        let bridge = test_tone_bridge(880.0, 0.0, 1.0, 0.0, 1.0);
+        let bridge = test_tone_bridge(1.0, 880.0, 0.0, 0.0, 1.0, 0.0, 1.0);
 
         let mut left = [0.25_f32, -0.5, 0.75];
         let mut right = [0.2_f32, -0.4, 0.6];
@@ -505,7 +548,7 @@ mod tests {
 
     #[test]
     fn output_modifiers_generate_runtime_test_tone_from_frequency_and_level() {
-        let bridge = test_tone_bridge(880.0, 0.75, 1.0, 0.0, 1.0);
+        let bridge = test_tone_bridge(1.0, 880.0, 0.75, 0.0, 1.0, 0.0, 1.0);
         let mut left = [0.0_f32; 128];
         let mut right = [0.0_f32; 128];
         let mut phase = 0.0;
@@ -523,6 +566,36 @@ mod tests {
         assert!(peak_right > 0.2, "expected audible generated test tone");
         assert_eq!(left, right, "expected in-phase stereo test tone output");
         assert!(phase > 0.0, "phase should advance after generation");
+    }
+
+    #[test]
+    fn output_modifiers_do_not_generate_test_tone_when_disabled() {
+        let bridge = test_tone_bridge(0.0, 880.0, 0.75, 0.0, 1.0, 0.0, 1.0);
+        let mut left = [0.15_f32; 128];
+        let mut right = [-0.15_f32; 128];
+        let expected_left = left;
+        let expected_right = right;
+        let mut phase = 0.0;
+
+        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
+
+        assert_eq!(left, expected_left);
+        assert_eq!(right, expected_right);
+        assert!(phase.abs() <= f32::EPSILON);
+    }
+
+    #[test]
+    fn output_modifiers_do_not_generate_test_tone_when_bypassed() {
+        let bridge = test_tone_bridge(1.0, 880.0, 0.75, 1.0, 1.0, 0.0, 1.0);
+        let mut left = [0.0_f32; 128];
+        let mut right = [0.0_f32; 128];
+        let mut phase = 0.0;
+
+        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
+
+        assert!(left.iter().all(|sample| sample.abs() <= f32::EPSILON));
+        assert!(right.iter().all(|sample| sample.abs() <= f32::EPSILON));
+        assert!(phase.abs() <= f32::EPSILON);
     }
 
     #[test]

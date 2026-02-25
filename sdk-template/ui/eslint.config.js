@@ -74,9 +74,32 @@ export default [
     },
   },
 
+  // Generated declaration files should be parsed as TypeScript, but not type-checked
+  // against parserOptions.project because TypeScript excludes same-basename .d.ts when a
+  // sibling .ts exists (e.g. processors.d.ts + processors.ts).
+  {
+    files: ['src/generated/**/*.d.ts'],
+    languageOptions: {
+      parser: typescriptParser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
+      globals: {
+        ...globals.browser,
+        process: 'readonly',
+        __APP_VERSION__: 'readonly',
+      },
+    },
+    rules: {
+      'no-unused-vars': 'off',
+    },
+  },
+
   // TypeScript files
   {
     files: ['**/*.{ts,tsx}'],
+    ignores: ['src/generated/**/*.d.ts'],
     languageOptions: {
       parser: typescriptParser,
       parserOptions: {

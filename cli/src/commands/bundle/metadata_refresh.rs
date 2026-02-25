@@ -319,7 +319,7 @@ mod tests {
         thread::sleep(std::time::Duration::from_millis(20));
         fs::write(
             debug_dir.join(PARAM_SIDECAR_FILENAME),
-            r#"[{"id":"test_tone_frequency","name":"Frequency","type":"float","value":440.0,"default":440.0,"min":20.0,"max":20000.0,"unit":"Hz","group":"Test Tone","variants":null}]"#,
+            r#"[{"id":"test_tone_enabled","name":"Enabled","type":"bool","value":0.0,"default":0.0,"min":0.0,"max":1.0,"unit":null,"group":"Test Tone","variants":null},{"id":"test_tone_frequency","name":"Frequency","type":"float","value":440.0,"default":440.0,"min":20.0,"max":20000.0,"unit":"Hz","group":"Test Tone","variants":null}]"#,
         )
         .expect("write param sidecar");
         fs::write(
@@ -331,8 +331,9 @@ mod tests {
         let loaded = try_load_metadata_sidecars(&engine_dir).expect("sidecar load should not fail");
         let (params, processors) = loaded.expect("fresh sidecars should be used");
 
-        assert_eq!(params.len(), 1);
-        assert_eq!(params[0].id, "test_tone_frequency");
+        assert_eq!(params.len(), 2);
+        assert!(params.iter().any(|param| param.id == "test_tone_enabled"));
+        assert!(params.iter().any(|param| param.id == "test_tone_frequency"));
         assert_eq!(processors.len(), 1);
         assert_eq!(processors[0].id, "test_tone");
     }

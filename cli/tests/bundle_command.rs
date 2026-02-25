@@ -371,6 +371,7 @@ fn test_bundle_refreshes_generated_contract_types_from_sidecars() {
 
     let generated_params = fs::read_to_string(root.join("ui/src/generated/parameters.ts"))
         .expect("generated parameter types should exist");
+    assert!(generated_params.contains("test_tone_enabled: boolean;"));
     assert!(generated_params.contains("test_tone_frequency: number;"));
 
     let generated_processors = fs::read_to_string(root.join("ui/src/generated/processors.ts"))
@@ -428,6 +429,18 @@ fn seed_metadata_sidecars(base: &std::path::Path) {
     fs::write(
         debug_dir.join("wavecraft-params.json"),
         r#"[
+    {
+        "id": "test_tone_enabled",
+        "name": "Enabled",
+        "type": "bool",
+        "value": 0.0,
+        "default": 0.0,
+        "min": 0.0,
+        "max": 1.0,
+        "unit": null,
+        "group": "Test Tone",
+        "variants": null
+    },
     {
         "id": "test_tone_frequency",
         "name": "Frequency",

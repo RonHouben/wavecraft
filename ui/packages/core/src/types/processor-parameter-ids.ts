@@ -80,6 +80,7 @@ export type SoftClipOutputTrimDbParameterId = ParameterIdForProcessorSuffix<
 >;
 
 type TestToneProcessorIdDerived = ProcessorIdsWithParameterSuffix<'_bypass'> &
+  ProcessorIdsWithParameterSuffix<'_enabled'> &
   ProcessorIdsWithParameterSuffix<'_frequency'> &
   ProcessorIdsWithParameterSuffix<'_level'>;
 
@@ -93,6 +94,11 @@ export type TestToneBypassParameterId = ParameterIdForProcessorSuffix<
 export type TestToneFrequencyParameterId = ParameterIdForProcessorSuffix<
   TestToneProcessorId,
   '_frequency'
+>;
+
+export type TestToneEnabledParameterId = ParameterIdForProcessorSuffix<
+  TestToneProcessorId,
+  '_enabled'
 >;
 
 export type TestToneLevelParameterId = ParameterIdForProcessorSuffix<TestToneProcessorId, '_level'>;
@@ -116,6 +122,7 @@ export interface PassthroughParameterIds {
 
 export interface TestToneParameterIds {
   readonly bypass: TestToneBypassParameterId;
+  readonly enabled: TestToneEnabledParameterId;
   readonly frequency: TestToneFrequencyParameterId;
   readonly level: TestToneLevelParameterId;
 }

@@ -1,4 +1,4 @@
-import { Col, Knob, Row } from '..';
+import { Col, Knob, Row, Switch } from '..';
 import type { TestToneParameterIds, TestToneProcessorId } from '@wavecraft/core';
 import { useParameter } from '@wavecraft/core';
 import { type JSX } from 'react';
@@ -9,6 +9,7 @@ const TEST_TONE_PROCESSOR_ID: TestToneProcessorId = 'test_tone';
 
 const testToneParameterIds: TestToneParameterIds = {
   bypass: `${TEST_TONE_PROCESSOR_ID}_bypass`,
+  enabled: `${TEST_TONE_PROCESSOR_ID}_enabled`,
   frequency: `${TEST_TONE_PROCESSOR_ID}_frequency`,
   level: `${TEST_TONE_PROCESSOR_ID}_level`,
 };
@@ -22,6 +23,9 @@ export function TestToneProcessor({
   hideWhenNotInSignalChain,
   className,
 }: Readonly<TestToneProcessorProps>): JSX.Element | null {
+  const { param: enabledParameter, setValue: setEnabledValue } = useParameter<boolean>(
+    testToneParameterIds.enabled
+  );
   const { param: frequencyParameter, setValue: setFrequencyValue } = useParameter<number>(
     testToneParameterIds.frequency
   );
@@ -39,6 +43,17 @@ export function TestToneProcessor({
     >
       <Row className="flex-nowrap items-start gap-1.5">
         <Col className="h-auto items-center justify-start self-start">
+          <div className="mb-2 flex w-full items-center justify-between gap-2">
+            <span className="text-type-xs text-plugin-text-secondary">
+              {enabledParameter?.name ?? 'Enabled'}
+            </span>
+            <Switch
+              id={`param-${enabledParameter?.id}-switch`}
+              checked={Boolean(enabledParameter?.value)}
+              size="sm"
+              onChange={setEnabledValue}
+            />
+          </div>
           <Knob
             id={`param-${frequencyParameter?.id}`}
             label={frequencyParameter?.name ?? ''}
