@@ -1,6 +1,5 @@
 import {
   type BypassProcessorId,
-  type ProcessorId,
   useHasProcessorInSignalChain,
   useParameter,
 } from '@wavecraft/core';

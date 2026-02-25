@@ -1,7 +1,5 @@
-import { Col, Knob, Row } from '@wavecraft/components';
-// eslint-disable-next-line no-restricted-imports -- Processor components in this package currently bind typed parameter hooks directly.
+import { Col, Knob, Row } from '..';
 import type { TestToneParameterIds, TestToneProcessorId } from '@wavecraft/core';
-// eslint-disable-next-line no-restricted-imports -- Processor components in this package currently bind typed parameter hooks directly.
 import { useParameter } from '@wavecraft/core';
 import { type JSX } from 'react';
 import { ProcessorCard } from './ProcessorCard';
