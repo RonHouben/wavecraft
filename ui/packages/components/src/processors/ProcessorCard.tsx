@@ -11,7 +11,7 @@ export interface ProcessorCardProps {
   readonly processorId: BypassProcessorId;
   readonly subtitle?: string;
   readonly title: string;
-  readonly children: React.ReactNode;
+  readonly children?: React.ReactNode;
   readonly className?: string;
 }
 

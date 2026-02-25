@@ -132,17 +132,6 @@ pub(super) fn apply_output_modifiers_with_state(
     let output_gain = read_gain_multiplier(param_bridge, OUTPUT_GAIN_PARAM_ID);
     let combined_gain = input_gain * output_gain;
 
-    // Temporary dedicated control for sdk-template test tone source.
-    // 1.0 = on, 0.0 = off.
-    if let Some(enabled) = param_bridge.read("test_tone_enabled")
-        && enabled < 0.5
-    {
-        left.fill(0.0);
-        right.fill(0.0);
-        apply_gain(left, right, combined_gain);
-        return;
-    }
-
     // Focused dev-mode bridge for sdk-template test tone parameters while
     // full generic FFI parameter injection is still being implemented.
     let test_tone_frequency = param_bridge.read("test_tone_frequency");
@@ -430,42 +419,14 @@ mod tests {
     use crate::audio::atomic_params::AtomicParameterBridge;
     use wavecraft_protocol::{ParameterInfo, ParameterType};
 
-    fn bridge_with_enabled(default_value: f32) -> AtomicParameterBridge {
-        AtomicParameterBridge::new(&[ParameterInfo {
-            id: "test_tone_enabled".to_string(),
-            name: "Enabled".to_string(),
-            param_type: ParameterType::Float,
-            value: default_value,
-            default: default_value,
-            unit: Some("%".to_string()),
-            min: 0.0,
-            max: 1.0,
-            group: Some("Test Tone".to_string()),
-            variants: None,
-        }])
-    }
-
     fn test_tone_bridge(
         frequency: f32,
         level: f32,
-        enabled: f32,
         input_trim_level: f32,
         input_trim_bypass: f32,
         output_gain_level: f32,
     ) -> AtomicParameterBridge {
         AtomicParameterBridge::new(&[
-            ParameterInfo {
-                id: "test_tone_enabled".to_string(),
-                name: "Enabled".to_string(),
-                param_type: ParameterType::Float,
-                value: enabled,
-                default: enabled,
-                unit: Some("%".to_string()),
-                min: 0.0,
-                max: 1.0,
-                group: Some("Test Tone".to_string()),
-                variants: None,
-            },
             ParameterInfo {
                 id: "test_tone_frequency".to_string(),
                 name: "Frequency".to_string(),
@@ -530,9 +491,8 @@ mod tests {
     }
 
     #[test]
-    fn output_modifiers_mute_when_test_tone_disabled() {
-        let bridge = bridge_with_enabled(1.0);
-        bridge.write("test_tone_enabled", 0.0);
+    fn output_modifiers_silent_when_test_tone_level_is_zero() {
+        let bridge = test_tone_bridge(880.0, 0.0, 1.0, 0.0, 1.0);
 
         let mut left = [0.25_f32, -0.5, 0.75];
         let mut right = [0.2_f32, -0.4, 0.6];
@@ -545,7 +505,7 @@ mod tests {
 
     #[test]
     fn output_modifiers_generate_runtime_test_tone_from_frequency_and_level() {
-        let bridge = test_tone_bridge(880.0, 0.75, 1.0, 1.0, 0.0, 1.0);
+        let bridge = test_tone_bridge(880.0, 0.75, 1.0, 0.0, 1.0);
         let mut left = [0.0_f32; 128];
         let mut right = [0.0_f32; 128];
         let mut phase = 0.0;

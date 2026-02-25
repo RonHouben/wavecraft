@@ -9,7 +9,6 @@ const TEST_TONE_PROCESSOR_ID: TestToneProcessorId = 'test_tone';
 
 const testToneParameterIds: TestToneParameterIds = {
   bypass: `${TEST_TONE_PROCESSOR_ID}_bypass`,
-  enabled: `${TEST_TONE_PROCESSOR_ID}_enabled`,
   frequency: `${TEST_TONE_PROCESSOR_ID}_frequency`,
   level: `${TEST_TONE_PROCESSOR_ID}_level`,
 };

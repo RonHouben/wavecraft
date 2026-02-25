@@ -7,11 +7,11 @@ describe('ParameterGroup rendering', () => {
   it('renders mixed parameter controls via presentational props', () => {
     const params: ProcessorParameter[] = [
       {
-        id: 'test_tone_enabled',
-        name: 'Enabled',
+        id: 'test_tone_bypass',
+        name: 'Bypass',
         type: 'bool',
-        value: true,
-        default: true,
+        value: false,
+        default: false,
         min: 0,
         max: 1,
         onChange: vi.fn(),
@@ -43,7 +43,7 @@ describe('ParameterGroup rendering', () => {
     render(<ParameterGroup group={{ name: 'Test Tone', parameters: params }} />);
 
     expect(screen.getByRole('heading', { level: 3, name: 'Test Tone' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Enabled')).toBeInTheDocument();
+    expect(screen.getByLabelText('Bypass')).toBeInTheDocument();
     expect(screen.getByLabelText('Frequency')).toBeInTheDocument();
     expect(screen.getByLabelText('Level')).toBeInTheDocument();
   });

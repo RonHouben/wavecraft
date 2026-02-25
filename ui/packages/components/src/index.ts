@@ -76,5 +76,8 @@ export type { TestToneProcessorProps } from './processors/TestToneProcessor';
 export { GainProcessor } from './processors/GainProcessor';
 export type { GainProcessorProps } from './processors/GainProcessor';
 
+export { PassthroughProcessor } from './processors/PassthroughProcessor';
+export type { PassthroughProcessorProps } from './processors/PassthroughProcessor';
+
 export { ToneFilterProcessor } from './processors/ToneFilterProcessor';
 export type { ToneFilterProcessorProps } from './processors/ToneFilterProcessor';

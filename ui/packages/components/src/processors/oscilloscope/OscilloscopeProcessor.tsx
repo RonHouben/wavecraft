@@ -15,7 +15,7 @@ export function OscilloscopeProcessor(
 
   return (
     <ProcessorCard
-      bypassParameterId="oscilloscope_tap_bypass"
+      processorId="oscilloscope_tap"
       title="Oscilloscope"
       hideWhenNotInSignalChain={props.hideWhenNotInSignalChain}
       className={props.className}

@@ -19,6 +19,7 @@ import {
   Row,
   Col,
   GainProcessor,
+  PassthroughProcessor,
 } from '@wavecraft/components';
 
 export function App(): JSX.Element {
@@ -57,6 +58,12 @@ export function App(): JSX.Element {
             title="Input Trim"
             subtitle="My Input Trim"
             hideWhenNotInSignalChain
+          />
+          <PassthroughProcessor
+            processorId="passthrough"
+            className="col-span-3"
+            hideWhenNotInSignalChain
+            title="Passthrough"
           />
           <GainProcessor
             className="col-span-3"

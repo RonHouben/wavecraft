@@ -19,9 +19,6 @@ fn advance_phase(phase: &mut f32, phase_delta: f32) {
 /// Test tone processor parameters.
 #[derive(Clone)]
 pub struct TestToneProcessorParams {
-    /// Enable/disable test tone output.
-    pub enabled: bool,
-
     /// Frequency in Hz. `factor = 2.5` gives a logarithmic feel in the UI.
     pub frequency: f32,
 
@@ -32,7 +29,6 @@ pub struct TestToneProcessorParams {
 impl Default for TestToneProcessorParams {
     fn default() -> Self {
         Self {
-            enabled: false,
             frequency: 440.0,
             level: 0.5,
         }
@@ -41,15 +37,7 @@ impl Default for TestToneProcessorParams {
 
 impl ProcessorParams for TestToneProcessorParams {
     fn param_specs() -> &'static [ParamSpec] {
-        static SPECS: [ParamSpec; 3] = [
-            ParamSpec {
-                name: "Enabled",
-                id_suffix: "enabled",
-                range: ParamRange::Stepped { min: 0, max: 1 },
-                default: 0.0,
-                unit: "",
-                group: None,
-            },
+        static SPECS: [ParamSpec; 2] = [
             ParamSpec {
                 name: "Frequency",
                 id_suffix: "frequency",
@@ -80,13 +68,10 @@ impl ProcessorParams for TestToneProcessorParams {
     }
 
     fn apply_plain_values(&mut self, values: &[f32]) {
-        if let Some(enabled) = values.first() {
-            self.enabled = *enabled >= 0.5;
-        }
-        if let Some(frequency) = values.get(1) {
+        if let Some(frequency) = values.first() {
             self.frequency = *frequency;
         }
-        if let Some(level) = values.get(2) {
+        if let Some(level) = values.get(1) {
             self.level = *level;
         }
     }
@@ -114,10 +99,6 @@ impl Processor for TestToneProcessor {
         _transport: &Transport,
         params: &Self::Params,
     ) {
-        if !params.enabled {
-            return;
-        }
-
         if self.sample_rate == 0.0 {
             return;
         }
@@ -144,11 +125,17 @@ mod tests {
     use super::*;
     use wavecraft_dsp::Bypassed;
 
-    fn test_params(enabled: bool) -> TestToneProcessorParams {
+    fn test_params() -> TestToneProcessorParams {
         TestToneProcessorParams {
-            enabled,
             frequency: 440.0,
             level: 0.5,
+        }
+    }
+
+    fn test_params_with_level(level: f32) -> TestToneProcessorParams {
+        TestToneProcessorParams {
+            frequency: 440.0,
+            level,
         }
     }
 
@@ -161,7 +148,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tone_processor_preserves_passthrough_when_disabled() {
+    fn test_tone_processor_preserves_passthrough_when_level_is_zero() {
         let mut test_tone = TestToneProcessor::default();
         test_tone.set_sample_rate(48_000.0);
 
@@ -171,7 +158,11 @@ mod tests {
         let right_in = right;
         let mut buffer = [&mut left[..], &mut right[..]];
 
-        test_tone.process(&mut buffer, &Transport::default(), &test_params(false));
+        test_tone.process(
+            &mut buffer,
+            &Transport::default(),
+            &test_params_with_level(0.0),
+        );
 
         for (actual, expected) in left.iter().zip(left_in.iter()) {
             assert!((actual - expected).abs() <= f32::EPSILON);
@@ -183,7 +174,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tone_processor_generates_signal_when_enabled_on_silent_input() {
+    fn test_tone_processor_generates_signal_on_silent_input() {
         let mut test_tone = TestToneProcessor::default();
         test_tone.set_sample_rate(48_000.0);
 
@@ -191,7 +182,7 @@ mod tests {
         let mut right = [0.0_f32; 128];
         let mut buffer = [&mut left[..], &mut right[..]];
 
-        test_tone.process(&mut buffer, &Transport::default(), &test_params(true));
+        test_tone.process(&mut buffer, &Transport::default(), &test_params());
 
         let peak_left = left
             .iter()
@@ -211,7 +202,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tone_processor_enabled_adds_signal_without_removing_input() {
+    fn test_tone_processor_adds_signal_without_removing_input() {
         let mut test_tone_mixed = TestToneProcessor::default();
         test_tone_mixed.set_sample_rate(48_000.0);
 
@@ -221,7 +212,7 @@ mod tests {
         let right_input = right_mixed;
         let mut mixed_buffer = [&mut left_mixed[..], &mut right_mixed[..]];
 
-        test_tone_mixed.process(&mut mixed_buffer, &Transport::default(), &test_params(true));
+        test_tone_mixed.process(&mut mixed_buffer, &Transport::default(), &test_params());
 
         let mut test_tone_only = TestToneProcessor::default();
         test_tone_only.set_sample_rate(48_000.0);
@@ -230,11 +221,7 @@ mod tests {
         let mut right_tone_only = [0.0_f32; 128];
         let mut tone_only_buffer = [&mut left_tone_only[..], &mut right_tone_only[..]];
 
-        test_tone_only.process(
-            &mut tone_only_buffer,
-            &Transport::default(),
-            &test_params(true),
-        );
+        test_tone_only.process(&mut tone_only_buffer, &Transport::default(), &test_params());
 
         for i in 0..left_mixed.len() {
             let additive_component_left = left_mixed[i] - left_input[i];
@@ -252,7 +239,7 @@ mod tests {
 
         type WrappedParams = <Bypassed<TestToneProcessor> as Processor>::Params;
         let bypassed_params = WrappedParams {
-            inner: test_params(true),
+            inner: test_params(),
             bypassed: true,
         };
 
@@ -289,9 +276,8 @@ mod tests {
     #[test]
     fn apply_plain_values_updates_all_fields() {
         let mut params = TestToneProcessorParams::default();
-        params.apply_plain_values(&[1.0, 1760.0, 0.9]);
+        params.apply_plain_values(&[1760.0, 0.9]);
 
-        assert!(params.enabled);
         assert!((params.frequency - 1760.0).abs() < f32::EPSILON);
         assert!((params.level - 0.9).abs() < f32::EPSILON);
     }

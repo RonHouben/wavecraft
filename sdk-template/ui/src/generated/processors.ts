@@ -14,6 +14,7 @@ declare global {
     input_trim: true;
     oscilloscope_tap: true;
     output_gain: true;
+    passthrough: true;
     soft_clip: true;
     test_tone: true;
     tone_filter: true;
@@ -25,6 +26,7 @@ const PROCESSOR_IDS = [
   'input_trim',
   'oscilloscope_tap',
   'output_gain',
+  'passthrough',
   'soft_clip',
   'test_tone',
   'tone_filter',
