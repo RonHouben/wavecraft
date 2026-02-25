@@ -17,9 +17,9 @@ export interface UseMeterSignalActivityOptions {
   readonly smoothing?: MeterSignalActivitySmoothing;
 }
 
-export function useMeterSignalActivity(
-  options: Readonly<UseMeterSignalActivityOptions> = {}
-): boolean {
+export function useMeterSignalActivity(options: Readonly<UseMeterSignalActivityOptions> = {}): {
+  isSignalActive: boolean;
+} {
   const intervalMs = options.intervalMs ?? DEFAULT_INTERVAL_MS;
   const threshold = options.threshold ?? DEFAULT_THRESHOLD;
   const smoothingEnabled = options.smoothing?.enabled ?? false;
@@ -71,7 +71,7 @@ export function useMeterSignalActivity(
     };
   }, []);
 
-  return isSignalActive;
+  return { isSignalActive };
 }
 
 export function getMeterSignalLevel(frame: MeterFrame | null | undefined): number {

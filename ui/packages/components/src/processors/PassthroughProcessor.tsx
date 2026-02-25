@@ -25,7 +25,7 @@ export function PassthroughProcessor({
   hideWhenNotInSignalChain,
   className,
 }: Readonly<PassthroughProcessorProps>): JSX.Element | null {
-  const isSignalActive = useMeterSignalActivity({
+  const { isSignalActive } = useMeterSignalActivity({
     smoothing: {
       enabled: true,
     },
