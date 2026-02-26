@@ -146,8 +146,16 @@ export { useLatencyMonitor } from './hooks/useLatencyMonitor';
 export type { UseLatencyMonitorResult } from './hooks/useLatencyMonitor';
 
 export { useMeterFrame } from './hooks/useMeterFrame';
-export { useMeterSignalActivity, getMeterSignalLevel } from './hooks/useMeterSignalActivity';
+export {
+  useMeterSignalActivity,
+  getMeterSignalLevel,
+  getMeterSignalIntensity,
+  getMeterClipWarningIntensity,
+} from './hooks/useMeterSignalActivity';
 export type {
+  MeterSignalActivityState,
+  MeterSignalIntensityRange,
+  MeterClipWarningRange,
   MeterSignalActivitySmoothing,
   UseMeterSignalActivityOptions,
 } from './hooks/useMeterSignalActivity';
