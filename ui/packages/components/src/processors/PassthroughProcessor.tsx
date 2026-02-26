@@ -83,11 +83,14 @@ export function PassthroughProcessor({
     <ProcessorCard
       processorId={processorId}
       hideWhenNotInSignalChain={hideWhenNotInSignalChain}
-      title={title ?? 'Passthrough'}
-      subtitle={subtitle ?? 'Bypass'}
-      className={mergeClassNames('h-full w-full', className)}
+      title={title ?? ''}
+      subtitle={subtitle}
+      className={mergeClassNames(
+        'flex h-full w-full flex-col [&>div:last-child]:flex-1',
+        className
+      )}
     >
-      <div className="flex flex-1 items-center justify-center">
+      <div className="flex h-full w-full flex-1 items-center justify-center">
         <div
           aria-hidden="true"
           data-testid="passthrough-eye"
