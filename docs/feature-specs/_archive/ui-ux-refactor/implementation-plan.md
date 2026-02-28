@@ -14,7 +14,7 @@
 
 ## Overview
 
-This plan translates the low-level design and UX improvement plan into phased, coder-ready implementation tasks. Each phase produces independently verifiable, independently revertable diffs. No phase changes core audio, transport, or Rust engine behavior.
+This plan translates the low-level design and UX improvement plan into phased, coderready implementation tasks. Each phase produces independently verifiable, independently revertable diffs. No phase changes core audio, transport, or Rust engine behavior.
 
 **Scope:** `ui/packages/` and `sdk-template/ui/` only.
 
@@ -67,7 +67,7 @@ Establish a reproducible visual baseline and add static-analysis guardrails **be
 **Steps:**
 
 1. Run `cargo xtask dev` to start the dev servers.
-2. Using the `playwright-mcp-ui-testing` skill, capture full-viewport screenshots of all primary surfaces: plugin root, slider controls, toggle buttons, selectable rows, meter display, version badge, any overlay/modal flows.
+2. Using the `simple-browser-ui-testing` skill, capture full-viewport screenshots of all primary surfaces: plugin root, slider controls, toggle buttons, selectable rows, meter display, version badge, any overlay/modal flows.
 3. Save screenshots to `docs/feature-specs/ui-ux-refactor/visual-baseline/` (create directory).
 4. Document any pre-existing visual QA caveats (focus, interaction states) in a brief `baseline-notes.md` in the same directory.
 
@@ -135,10 +135,10 @@ Establish a reproducible visual baseline and add static-analysis guardrails **be
 
 ### Phase 0 Risk Controls
 
-| Risk                                | Control                                                                                 |
-| ----------------------------------- | --------------------------------------------------------------------------------------- |
-| Playwright screenshots unavailable  | Use browser-dev mode (`cargo xtask dev`); record any limitations in `baseline-notes.md` |
-| ESLint rule breaks existing imports | Add temporary `// eslint-disable-next-line` with `TODO(phase-4)` tracker comment        |
+| Risk                                   | Control                                                                                 |
+| -------------------------------------- | --------------------------------------------------------------------------------------- |
+| Simple Browser screenshots unavailable | Use browser-dev mode (`cargo xtask dev`); record any limitations in `baseline-notes.md` |
+| ESLint rule breaks existing imports    | Add temporary `// eslint-disable-next-line` with `TODO(phase-4)` tracker comment        |
 
 ### Phase 0 Rollback
 
@@ -214,7 +214,7 @@ export const interactionStateClass =
 - [ ] Focus ring is present in both light-mode and dark-mode (plugin-dark) contexts.
 - [ ] No `outline-none` without a `focus-visible` ring replacement.
 
-**Verification:** Manual keyboard pass (Tab through all controls) in browser-dev mode; before/after Playwright screenshots compared.
+**Verification:** Manual keyboard pass (Tab through all controls) in browser-dev mode; before/after Simple Browser screenshots compared.
 
 ---
 
@@ -235,7 +235,7 @@ export const interactionStateClass =
 - [ ] Compound states do not produce conflicting visual results.
 - [ ] No regressions in controls not included in this task.
 
-**Verification:** Playwright screenshots for each control; keyboard + mouse interaction spot-check.
+**Verification:** Simple Browser screenshots for each control; keyboard + mouse interaction spot-check.
 
 ---
 
@@ -353,7 +353,7 @@ Replace ad-hoc color/spacing/typography values with design tokens and improve vi
 **Acceptance criteria:**
 
 - [ ] Zero `bg-[#...]` or `border-[#...]` ad-hoc color values remain in touched files.
-- [ ] Visual output is equivalent (before/after Playwright comparison).
+- [ ] Visual output is equivalent (before/after Simple Browser comparison).
 
 **Verification:** Before/after screenshots; `cargo xtask ci-check` passes.
 
@@ -398,29 +398,30 @@ Replace ad-hoc color/spacing/typography values with design tokens and improve vi
 - [ ] All new spacing and type values use Tailwind scale (no ad-hoc values).
 - [ ] No regressions in overall layout.
 
-**Verification:** Before/after Playwright screenshots; `cargo xtask ci-check` passes.
+**Verification:** Before/after screenshots; `design-token-compliance` skill review on PR.
 
 ---
 
 ### Phase 2 Risk Controls
 
-| Risk                                                       | Control                                                                               |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| Token replacement changes visual weight in unintended ways | Before/after screenshot comparison per component; revert token change if diff is wrong |
+| Risk                                        | Control                                                                             |
+| ------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Token substitution causes visual regression | Before/after screenshot diff required; revert per-component (non-breaking)          |
+| Token doesn't match visual intent           | Document exception in PR with rationale; add `// token-exception: <reason>` comment |
 
 ### Phase 2 Rollback
 
-- Each task is a per-component, per-file change. Revert individual files as needed.
+- Per-component PR structure means each file change is independently revertable.
+- No API surface, state, or behavior changes.
 
 ### Phase 2 PR Slices
 
 ```
-fix(ui): token normalization — bg and border values          ← Task 2.2
-fix(ui): token normalization — text and inline style values  ← Task 2.3
-fix(ui): hierarchy normalization — typography and spacing    ← Task 2.4
+chore(ui): token audit inventory — add token-audit.md                         ← Task 2.1
+fix(ui): replace ad-hoc background/border colors with design tokens            ← Task 2.2
+fix(ui): replace ad-hoc text/inline style overrides with design tokens         ← Task 2.3
+fix(ui): normalize typography and spacing hierarchy in targeted surfaces        ← Task 2.4
 ```
-
-Task 2.1 (audit) is embedded in the Phase 2 kickoff work; no separate PR.
 
 ---
 
@@ -428,10 +429,11 @@ Task 2.1 (audit) is embedded in the Phase 2 kickoff work; no separate PR.
 
 **Depends on:** Phase 0 complete.
 **Parallel-safe with:** Phase 1, Phase 2.
+**Must complete before:** Phase 4 (smart containers will reference `IpcMethods`).
 
 ### Objective
 
-Eliminate raw IPC method string literals at UI call sites. Add a `IpcMethods`/`IpcEvents` constants export to `@wavecraft/core`; migrate all in-scope call sites to use it. Maps to **P2 User Story 5**.
+Eliminate raw IPC method strings at UI call sites by adding a canonical `IpcMethods` / `IpcEvents` constants object to `@wavecraft/core`. Maps to **P2 User Story 5**.
 
 ### Tasks
 
@@ -439,14 +441,13 @@ Eliminate raw IPC method string literals at UI call sites. Add a `IpcMethods`/`I
 
 **Files affected:**
 
-- `ui/packages/core/src/ipc/constants.ts` (new)
-- `ui/packages/core/src/index.ts` (update exports)
+- `ui/packages/core/src/ipc/constants.ts` (new file)
+- `ui/packages/core/src/index.ts` (add export)
 
 **Changes:**
 
 ```typescript
 // ui/packages/core/src/ipc/constants.ts
-
 export const IpcMethods = {
   GET_PARAMETER: 'getParameter',
   SET_PARAMETER: 'setParameter',
@@ -466,324 +467,363 @@ export const IpcEvents = {
 export type IpcEvent = (typeof IpcEvents)[keyof typeof IpcEvents];
 ```
 
-- Export `IpcMethods`, `IpcEvents`, `IpcMethod`, `IpcEvent` from `index.ts`.
-
 **Acceptance criteria:**
 
-- [ ] `IpcMethods` and `IpcEvents` exported from `@wavecraft/core`.
-- [ ] TypeScript types enforced (`IpcMethod`, `IpcEvent`).
-- [ ] Existing build passes; no behavioral change.
+- [ ] `IpcMethods` and `IpcEvents` are exported from `@wavecraft/core` public API.
+- [ ] TypeScript types `IpcMethod` and `IpcEvent` are available.
+- [ ] No existing runtime behavior changes; this is a pure addition.
+- [ ] `cargo xtask ci-check` passes.
 
-**Verification:** `cargo xtask ci-check` passes.
+**Verification:** `tsc --noEmit`; `cargo xtask ci-check`.
 
 ---
 
-#### 3.2 — Migrate in-scope call sites in `@wavecraft/core` to use constants
+#### 3.2 — Migrate internal `@wavecraft/core` call sites to use constants
 
 **Files affected:**
 
-- `ui/packages/core/src/` — any internally-defined call sites using raw IPC string literals.
+- `ui/packages/core/src/ipc/` — `IpcBridge.ts`, `ParameterClient.ts`, `MeterClient.ts` (any that reference raw string method names internally)
 
 **Changes:**
 
-- Replace any `bridge.invoke('getParameter', ...)`, `bridge.invoke('setParameter', ...)` etc. with `bridge.invoke(IpcMethods.GET_PARAMETER, ...)`.
-- Do **not** modify `sdk-template/` call sites yet — those are Phase 4 scope.
+- Replace `'getParameter'` → `IpcMethods.GET_PARAMETER`, etc. inside the core package.
 
 **Acceptance criteria:**
 
-- [ ] No raw IPC method strings at call sites within `ui/packages/core/src/` (except inside `ipc/constants.ts` itself).
-- [ ] ESLint `no-restricted-syntax` rule from Phase 0.3 passes cleanly.
+- [ ] No raw IPC method strings remain inside `ui/packages/core/src/` (excluding `constants.ts` itself).
+- [ ] All tests pass; no behavioral change.
 
-**Verification:** `cargo xtask ci-check` passes; grep check confirms zero violations.
+**Verification:** `grep -rn '"getParameter"\|"setParameter"\|"getMeterFrame"\|"getAudioStatus"\|"ping"' ui/packages/core/src/` returns only the constants definition file.
 
 ---
 
-#### 3.3 — Migrate in-scope call sites in `sdk-template/ui/` to use constants
+#### 3.3 — Migrate external call sites in `sdk-template/ui/`
 
 **Files affected:**
 
-- `sdk-template/ui/src/` — any components or hooks using raw IPC method string literals.
+- `sdk-template/ui/src/` — any component or hook calling `IpcBridge.invoke(...)` with a raw string.
 
 **Changes:**
 
-- Import `IpcMethods`/`IpcEvents` from `@wavecraft/core`; replace all in-scope raw string literals.
+- Import `IpcMethods` from `@wavecraft/core` at call sites; replace raw strings.
+- Remove ESLint `// eslint-disable` annotations added in Phase 0 (Task 0.3) for these files.
 
 **Acceptance criteria:**
 
-- [ ] No raw IPC method strings at call sites within `sdk-template/ui/src/`.
-- [ ] Build and tests pass.
+- [ ] Zero raw IPC method strings at non-constants call sites (`grep` check passes cleanly).
+- [ ] No new ESLint `no-restricted-syntax` violations.
 
-**Verification:** `cargo xtask ci-check` passes.
+**Verification:** `cargo xtask ci-check`; grep verification identical to 3.2.
 
 ---
 
 ### Phase 3 Risk Controls
 
-| Risk                                       | Control                                                                  |
-| ------------------------------------------ | ------------------------------------------------------------------------ |
-| `IpcMethods` value differs from raw string | Constants values are identical strings; wire format is unchanged          |
-| New raw strings introduced in later PRs    | ESLint `no-restricted-syntax` rule from Phase 0.3 is the guard           |
+| Risk                                 | Control                                                                                            |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| Constants string value typo          | TypeScript `as const` ensures type safety; unit test `IpcMethods.GET_PARAMETER === 'getParameter'` |
+| Partial migration leaves mixed usage | Merge 3.2 + 3.3 in sequence; grep check in PR description required before merge                    |
 
 ### Phase 3 Rollback
 
-- Revert `ipc/constants.ts` and its exports; re-introduce string literals at call sites.
+- Remove `constants.ts` and the `index.ts` re-export; restore raw strings. No runtime wire-format changes occurred.
 
 ### Phase 3 PR Slices
 
 ```
-feat(core): add IpcMethods and IpcEvents constants export     ← Task 3.1
-refactor(core): migrate call sites to use IPC constants       ← Task 3.2
-refactor(template): migrate template call sites to IPC consts ← Task 3.3
+feat(core): add IpcMethods and IpcEvents constants                             ← Task 3.1
+refactor(core): migrate internal IPC call sites to use IpcMethods              ← Task 3.2
+refactor(ui): migrate sdk-template IPC call sites to use IpcMethods            ← Task 3.3
 ```
 
 ---
 
-## Phase 4 — Smart/Presentational Split + Fan-out Reduction
+## Phase 4 — Smart / Presentational Split + Fan-out Reduction
 
-**Depends on:** Phase 3 complete.
-**Parallel-safe with:** Phase 5 (partially — per-surface tasks may interleave).
+**Depends on:** Phase 0 + Phase 3 complete.
+**Partially parallel with:** Phase 5 (per-surface tasks may interleave).
 
 ### Objective
 
-Remove hook imports from `@wavecraft/components` presentational components. Lift parameter subscriptions to smart containers in `sdk-template/ui/`. Reduce duplicate state subscriptions. Maps to **P1 User Story 4**.
+Lift hook subscriptions out of presentational components into smart containers. Eliminate duplicate `useParameter` subscriptions for the same param ID. Maps to **P1 User Story 4** and the fan-out concern in **P1 User Story 3**.
 
 ### Tasks
 
-#### 4.1 — Inventory and map current state fan-out
+#### 4.1 — Identify fan-out surfaces and components with internal hook usage
 
 **Files affected:**
 
-- Read-only analysis pass.
+- `ui/packages/components/src/` — audit for `useParameter`, `useAllParameters`, `useMeterFrame` import usage
+- `sdk-template/ui/src/` — identify surfaces with multiple `useParameter(id)` calls for the same ID
 
 **Steps:**
 
-1. For each `@wavecraft/components` component, list all `use*` hook calls.
-2. For each hook call, identify which smart container should own the subscription.
-3. Produce a fan-out map: component → hook → smart container owner.
-4. Commit to `docs/feature-specs/ui-ux-refactor/fan-out-inventory.md`.
+1. Run: `grep -rn "useParameter\|useAllParameters\|useMeterFrame" ui/packages/components/`
+2. Document results in `docs/feature-specs/ui-ux-refactor/fan-out-inventory.md`.
 
 **Acceptance criteria:**
 
-- [ ] Fan-out map exists and is verified against the actual codebase.
+- [ ] Inventory exists listing every presentational component with internal hook usage.
+- [ ] Each duplicate subscription (same param ID, multiple subscribers in one surface) is listed.
 
 ---
 
-#### 4.2 — Extract props interfaces for each presentational component
+#### 4.2 — Extract hook calls from presentational components — per component
+
+**Files affected (per component identified in 4.1):**
+
+- `ui/packages/components/src/<Component>.tsx` — remove hook imports and calls
+- `sdk-template/ui/src/<Container>.tsx` — add smart container that owns hook + passes props
+
+**Changes pattern per component:**
+
+1. Add the clean props interface to the presentational component (see LLD Section 4.2):
+   - `value`, `onChange`, `disabled`, `aria-label` / `name`
+   - `data-*` passthrough as needed
+2. Remove `useParameter` (or other hook) import and call from inside the component.
+3. Add (or extend) a smart container in `sdk-template/ui/` that calls the hook and passes props down.
+4. Annotate removed hook usage with `// Lifted to <ContainerName> — Phase 4` comment for traceability during transition.
+
+**Acceptance criteria (per component):**
+
+- [ ] Component file has zero imports from `@wavecraft/core`.
+- [ ] ESLint `import/no-restricted-paths` rule produces zero violations for the file.
+- [ ] Smart container test: render the component in isolation (Vitest/React Testing Library) with mock props — works without IPC context.
+- [ ] No behavioral regression in plugin-host and browser-dev mode.
+
+**Verification:** ESLint pass; unit test passes; Simple Browser visual regression check.
+
+---
+
+#### 4.3 — Remove `legacyProps` gate once all consumers are migrated (per surface)
 
 **Files affected:**
 
-- `ui/packages/components/src/` — each component being migrated.
+- `ui/packages/components/src/<Component>.tsx` — remove `legacyProps` fallback and associated code.
 
 **Changes:**
 
-- Define a clean `Props` interface for each component with no IPC or hook coupling (as per LLD Section 4.2).
-- Add the `legacyProps` fallback mechanism described in LLD Section 6.3:
-
-```typescript
-interface BaseProps {
-  value: number;
-  onChange: (v: number) => void;
-  disabled?: boolean;
-}
-
-interface LegacyProps {
-  legacyProps: true;
-  parameterId: string; // uses internal hook; remove in Phase 4 cleanup
-}
-
-type Props = BaseProps | LegacyProps;
-```
+- Once all call sites of a component pass the new clean props, delete the legacy hook path entirely.
 
 **Acceptance criteria:**
 
-- [ ] Clean `Props` interface defined for each component.
-- [ ] `legacyProps` fallback path available and tested.
-- [ ] TypeScript compiles cleanly.
+- [ ] No `legacyProps` prop or internal hook call remains in the component.
+- [ ] `cargo xtask ci-check` passes with no TypeScript errors from removed prop.
 
----
-
-#### 4.3 — Lift hook ownership to smart containers
-
-**Files affected:**
-
-- `sdk-template/ui/src/` — smart container components (e.g., `App.tsx`, processor-specific smartwrappers)
-- `ui/packages/components/src/` — components being migrated (removed hook dependencies)
-
-**Changes (per component):**
-
-1. Remove hook calls from the presentational component.
-2. Accept all data as typed props.
-3. In the smart container: add `useParameter(id)` (or `useAllParameters()`) subscription; pass resolved values as props.
-
-**Acceptance criteria:**
-
-- [ ] No `use*` hook imports remain in `ui/packages/components/src/` files.
-- [ ] All hook subscriptions are in `sdk-template/ui/src/` smart containers.
-- [ ] ESLint `import/no-restricted-paths` rule from Phase 0.2 passes cleanly.
-- [ ] Presentational components render correctly with props-only data (no hook fallback needed).
-
----
-
-#### 4.4 — Remove `legacyProps` fallback and clean up
-
-**Files affected:**
-
-- All components migrated in 4.2 and 4.3.
-
-**Changes:**
-
-- Remove `legacyProps` interface branches and internal hook calls from each component.
-- Confirm `import/no-restricted-paths` ESLint rule has no active suppressions remaining.
-
-**Acceptance criteria:**
-
-- [ ] No `legacyProps` or internal hook calls remain in `@wavecraft/components`.
-- [ ] All ESLint `// eslint-disable` lines added during Phase 0/4 are removed.
-- [ ] `cargo xtask ci-check --full` passes.
+**Verification:** `cargo xtask ci-check`; Simple Browser before/after.
 
 ---
 
 ### Phase 4 Risk Controls
 
-| Risk                                              | Control                                                                                           |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| Smart container must subscribe to many parameters | Use `useAllParameters()` to get all params; filter locally; one subscription per surface           |
-| Rendering regression during hook-lift             | `legacyProps` fallback allows side-by-side testing before cleanup                                |
-| New hook-coupling introduced in components        | ESLint `import/no-restricted-paths` guard; blocked at PR review                                  |
+| Risk                                                    | Control                                                                                     |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Presentational component re-imports a hook accidentally | ESLint `import/no-restricted-paths` rule (added Phase 0) catches it immediately             |
+| Duplicate subscriber not lifted (missed fan-out)        | Smart container checklist: confirm exactly one `useParameter(id)` per surface per param ID  |
+| Isolation test missing                                  | PR gate: each extracted component must have at least one Vitest render test with mock props |
 
 ### Phase 4 Rollback
 
-- Revert to `legacyProps` path; defer cleanup to next cycle.
+- While `legacyProps` gate exists (Task 4.2 in progress), rollback = set `legacyProps: true` at the consumer.
+- After Task 4.3, rollback = revert the component extraction PR.
 
 ### Phase 4 PR Slices
 
 ```
-refactor(components): define clean props interface + legacyProps fallback  ← Task 4.2
-refactor(components+template): lift hook ownership to smart containers     ← Task 4.3
-chore(components): remove legacyProps and clean up Phase 4 stubs           ← Task 4.4
+chore(ui): fan-out inventory — add fan-out-inventory.md                        ← Task 4.1
+refactor(components): extract <ParameterSlider> to clean props interface        ← Task 4.2 (per component)
+refactor(components): extract <ToggleButton> to clean props interface           ← Task 4.2 (per component)
+refactor(components): remove legacyProps gate from <ParameterSlider>            ← Task 4.3 (per component)
 ```
 
 ---
 
 ## Phase 5 — Resize Ownership Unification
 
-**Depends on:** Phase 4 smart containers established.
-**Parallel-safe with:** Phase 4 per-surface tasks.
+**Depends on:** Phase 4 smart containers in place (containers are the correct ownership site).
+**Parallel-safe with:** Phase 4 per-surface tasks once first smart container exists.
 
 ### Objective
 
-Establish singular, deterministic resize authority in smart containers. Remove competing `ResizeObserver` instances from presentational components. Clarify IPC-facing window resize notification path. Maps to **P2 User Story 5**.
+Establish singular `ResizeObserver` authority per surface. Eliminate duplicate or conflicting resize paths. Maps to **P2 User Story 5**.
 
 ### Tasks
 
-#### 5.1 — Inventory resize ownership per surface
+#### 5.1 — Identify all active `ResizeObserver` and resize-event sites
 
 **Files affected:**
 
-- Read-only analysis pass.
+- `ui/packages/components/src/` — grep for `ResizeObserver`
+- `sdk-template/ui/src/` — grep for `ResizeObserver`
 
 **Steps:**
 
-1. Grep for `ResizeObserver` and `resize` event listeners in `ui/packages/` and `sdk-template/ui/src/`.
-2. Map: surface → current owner(s) → target smart container owner.
-3. Commit map to `docs/feature-specs/ui-ux-refactor/resize-inventory.md`.
-
----
-
-#### 5.2 — Add declarative resize ownership to smart containers
-
-**Files affected:**
-
-- `sdk-template/ui/src/` — relevant smart container (e.g., `App.tsx` or root container).
-
-**Changes:**
-
-- Add single `ResizeObserver` instance managed in the smart container root.
-- Pass `onResize` callback as prop to any child requiring size-aware rendering.
-- Gate legacy path with `legacyResize: true` prop on affected components.
+1. Run: `grep -rn "ResizeObserver" ui/packages/ sdk-template/ui/src/`
+2. Classify each occurrence as: smart-container-owned (correct), presentational-owned (needs migration), or legacy (needs gate).
 
 **Acceptance criteria:**
 
-- [ ] Single `ResizeObserver` instance per surface.
-- [ ] Resize events flow as props; no resize observer in presentational layer.
+- [ ] Inventory exists in `docs/feature-specs/ui-ux-refactor/resize-inventory.md`.
 
 ---
 
-#### 5.3 — Remove legacy resize path
+#### 5.2 — Migrate presentational `ResizeObserver` usage to smart containers
+
+**Files affected (per surface):**
+
+- `ui/packages/components/src/<Component>.tsx` — remove `ResizeObserver` construction
+- `sdk-template/ui/src/<Container>.tsx` — add `ResizeObserver` + pass `onResize` prop down
+
+**Changes pattern:**
+
+1. Add `onResize?: (entry: ResizeObserverEntry) => void` prop to the presentational component.
+2. Hook into the existing smart container's resize ownership (from Phase 4 container) to call the prop.
+3. Remove the `ResizeObserver` construction from the presentational component.
+4. Gate legacy path: add `legacyResize?: boolean` prop that defaults to `false` once declarative path is active.
+
+**Acceptance criteria (per surface):**
+
+- [ ] Only one `ResizeObserver` instance active per surface.
+- [ ] Resize behavior verified in browser-dev mode: no jitter; correct dimensions propagated.
+- [ ] `legacyResize` prop defaults to `false` and legacy path is documented.
+
+**Verification:** Manual resize test in browser-dev mode; Simple Browser screenshot stability check.
+
+---
+
+#### 5.3 — Remove `legacyResize` gates and legacy observer construction
 
 **Files affected:**
 
-- Components previously using internal resize logic.
+- `ui/packages/components/src/<Component>.tsx` — remove `legacyResize` prop and legacy `ResizeObserver` usage.
 
 **Changes:**
 
-- Set `legacyResize` default to `false`; delete `legacyResize` path.
-- Remove any `ResizeObserver` instances from presentational components.
+- Delete the `legacyResize` prop fallback code.
+- Final state: component accepts `onResize` callback; constructs no observer itself.
 
 **Acceptance criteria:**
 
-- [ ] No `ResizeObserver` or `resize` event listeners in `ui/packages/components/src/`.
-- [ ] `cargo xtask ci-check --full` passes.
+- [ ] No `ResizeObserver` construction inside `ui/packages/components/`.
+- [ ] Resize ownership is singular and exclusively in smart containers.
+- [ ] Plugin host resize behavior validated in WKWebView context where feasible.
+
+**Verification:** `grep -rn "new ResizeObserver" ui/packages/components/` returns zero results; Simple Browser resize test.
 
 ---
 
 ### Phase 5 Risk Controls
 
-| Risk                                                              | Control                                                                    |
-| ----------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Resize jitter during transition                                   | `legacyResize: true` keeps old path active until declarative path verified |
-| WKWebView and browser-dev mode have different resize event timing | Test in both modes before removing legacy path                             |
+| Risk                                           | Control                                                                                          |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Resize jitter during `legacyResize` transition | Keep surfaces on `legacyResize: true` until both browser-dev and plugin-host paths are validated |
+| Missing `onResize` call in smart container     | Test: resize browser window and verify component receives dimensions correctly                   |
+| WKWebView behaves differently                  | Test in plugin host before removing `legacyResize` gate                                          |
 
 ### Phase 5 Rollback
 
-- Set `legacyResize: true`; revert to prior path.
+- Set `legacyResize: true` at consumer to restore legacy observer path.
+- After Task 5.3: revert component PR.
 
 ### Phase 5 PR Slices
 
 ```
-feat(template): add declarative ResizeObserver in smart container root     ← Task 5.2
-refactor(components): remove legacy resize paths and legacyResize prop     ← Task 5.3
+chore(ui): resize ownership inventory — add resize-inventory.md                ← Task 5.1
+refactor(components): gate <Meter> ResizeObserver behind legacyResize prop      ← Task 5.2 (per surface)
+refactor(ui): unify resize ownership for plugin root surface                   ← Task 5.2 (per surface)
+refactor(components): remove legacyResize gate from <Meter>                    ← Task 5.3 (per surface)
 ```
 
 ---
 
-## Implementation Risk Summary
+## Risk Controls Summary
 
-| Risk                                        | Phase     | Mitigation                                                         |
-| ------------------------------------------- | --------- | ------------------------------------------------------------------ |
-| Focus ring breaks in WKWebView              | 1         | Test in plugin host after Phase 1; record in test plan             |
-| Token substitution changes visual weight    | 2         | Per-component before/after screenshot comparison                   |
-| `IpcMethods` constant value differs         | 3         | Values are identical strings; no wire format change                |
-| Hook-lift causes rendering regression       | 4         | `legacyProps` fallback; `cargo xtask ci-check` gate               |
-| Resize jitter during observer transition    | 5         | `legacyResize: true` gate; validate in both modes                  |
-| New coupling regressions introduced post-PR | Ongoing   | ESLint `import/no-restricted-paths` + `no-restricted-syntax` rules |
+| Risk                                      | Phase | Control                                                                 |
+| ----------------------------------------- | ----- | ----------------------------------------------------------------------- |
+| Focus ring breaks WKWebView               | 1     | Post-merge plugin-host test; record in test plan                        |
+| Visual regression from token swap         | 2     | Before/after Simple Browser screenshots required per PR                 |
+| IPC string typo in constants              | 3     | `as const` + unit test (`IpcMethods.GET_PARAMETER === 'getParameter'`)  |
+| Presentational re-import of hook          | 4     | ESLint `import/no-restricted-paths` (Phase 0 guardrail)                 |
+| Duplicate subscriber not lifted           | 4     | Smart container checklist; grep for duplicate `useParameter(id)`        |
+| Resize jitter during transition           | 5     | `legacyResize: true` gate; validate in both browser-dev and plugin-host |
+| A11y regression in reduced-motion context | 1     | All new transitions use `motion-safe:`; devtools simulation check       |
+| IPC string drift re-emerges               | 3     | `no-restricted-syntax` ESLint rule (Phase 0 guardrail) post Phase 3     |
 
 ---
 
-## PR Strategy
+## PR Slicing Strategy
 
-Each phase maps to one or more small, focused PRs (see per-phase PR Slices). Merged incrementally, targeting `main`:
+Each PR must:
 
-1. **Phase 0 PR** — visual baseline + guardrails (no runtime behavior change)
-2. **Phase 1 PRs** — focus rings + interaction states
-3. **Phase 2 PRs** — token normalization (parallel to Phase 1)
-4. **Phase 3 PRs** — IPC constants
-5. **Phase 4 PRs** — smart/presentational split, hook lift, cleanup
-6. **Phase 5 PRs** — resize unification
+1. Map to exactly one migration slice (A–E from LLD Section 6.1) or one phase task.
+2. Include a "before/after behavior" note in the PR description.
+3. Pass `cargo xtask ci-check` with zero new violations.
+4. Reference the task number (e.g., `Phase 1 — Task 1.2`) in the PR description.
+
+**Merge order constraint:**
+
+```
+Phase 0 PRs → merge first (unblocks all)
+Phase 1 + 2 + 3 PRs → can merge in any order relative to each other
+Phase 4 PRs → merge after Phase 3 is merged
+Phase 5 PRs → merge after Phase 4 smart containers for relevant surfaces
+```
+
+**PR naming convention:**
+
+| Slice                 | Prefix                  |
+| --------------------- | ----------------------- |
+| A (Focus/Interaction) | `feat(ui):`             |
+| B (Token)             | `fix(ui):`              |
+| C (Smart/Pres split)  | `refactor(components):` |
+| D (IPC constants)     | `refactor(core):`       |
+| E (Resize)            | `refactor(ui):`         |
+| Inventory/docs        | `chore(ui):`            |
+
+---
+
+## Coder / Tester Handoff Checklist
+
+### Coder Pre-Handoff (each PR)
+
+- [ ] `cargo xtask ci-check` passes (lint, type-check, tests).
+- [ ] No new TypeScript errors (`tsc --noEmit`).
+- [ ] No new ESLint violations (especially `import/no-restricted-paths` and `no-restricted-syntax`).
+- [ ] Before/after Simple Browser screenshots captured for any visual change.
+- [ ] PR description includes: task reference, files changed, rollback method, and behavior notes.
+- [ ] No `@wavecraft/core` imports added to `ui/packages/components/` (Phase 4+).
+- [ ] No raw IPC method strings added outside `ui/packages/core/src/ipc/` (Phase 3+).
+- [ ] Any new transitions use `motion-safe:` prefix.
+- [ ] Any ad-hoc style values include a `// token-exception: <reason>` comment.
+
+### Tester Verification (each Phase)
+
+- [ ] `cargo xtask ci-check` passes on the merged phase branch.
+- [ ] Simple Browser before/after screenshots compared; no unintended regressions in adjacent surfaces.
+- [ ] Keyboard-only navigation pass: Tab order, Enter/Space activation, no traps.
+- [ ] Focus ring visible for all interactive controls in primary surfaces.
+- [ ] `prefers-reduced-motion` devtools simulation: new transitions suppressed.
+- [ ] Core interaction states (hover/focus/active/disabled) visually distinct and consistent.
+- [ ] Token audit: no new `bg-[#...]` or inline `style={{ color: ... }}` in changed files.
+- [ ] Phase 4: confirm zero `@wavecraft/core` imports in `@wavecraft/components` (ESLint clean).
+- [ ] Phase 4: confirm no duplicate `useParameter(id)` subscriptions for same param in same surface.
+- [ ] Phase 3+: `grep` for raw IPC strings returns zero results outside `constants.ts`.
+- [ ] Phase 5: `grep` for `new ResizeObserver` in `ui/packages/components/` returns zero results.
+- [ ] WKWebView plugin-host: focus ring and resize behavior validated (Phases 1 and 5).
+- [ ] Test plan (`test-plan.md`) updated with phase results and caveat closure evidence.
 
 ---
 
 ## Definition of Done
 
-Feature is considered done when:
+This feature is complete when all of the following are true:
 
-- [ ] All six phases completed for in-scope surfaces
-- [ ] Every PR has passed `cargo xtask ci-check`
-- [ ] Visual QA caveats for focus and interaction states are closed (evidence in test plan)
-- [ ] Keyboard + a11y pass completed and documented
-- [ ] ESLint rules — no active suppressions remaining in `@wavecraft/components`
-- [ ] No `@wavecraft/core` imports remain in `@wavecraft/components`
-- [ ] No raw IPC method strings at call sites
-- [ ] Single `ResizeObserver` authority per surface confirmed
-- [ ] All phases independently revertable confirmed
-- [ ] `test-plan.md` updated with final test results and release recommendation
+- [ ] Phases 0–5 tasks are implemented and merged.
+- [ ] All acceptance criteria across phases are verified and signed off in `test-plan.md`.
+- [ ] Visual QA caveats for focus and interaction states are closed with before/after screenshot evidence.
+- [ ] Zero `@wavecraft/core` imports remain inside `ui/packages/components/`.
+- [ ] Zero raw IPC method strings at non-`IpcBridge` call sites (grep confirms).
+- [ ] Single `ResizeObserver` authority per surface confirmed (grep confirms).
+- [ ] `cargo xtask ci-check` passes on main branch post-merge of all slices.
+- [ ] Keyboard + a11y pass documented in `test-plan.md` for all changed surfaces.
+- [ ] Rollback paths documented and verified revertable per phase.

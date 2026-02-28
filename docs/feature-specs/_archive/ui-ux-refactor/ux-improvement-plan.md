@@ -166,7 +166,7 @@ Based on prior UX, visual QA, and architect findings:
 
 - Break each phase into small, independently verifiable tasks by control family and surface.
 - Prioritize Phase A items that directly close visual QA caveats (focus + interaction states).
-- Include explicit "layering safety" checks for any Phase C structural task.
+- Include explicit “layering safety” checks for any Phase C structural task.
 
 ### Coder handoff
 

@@ -152,13 +152,13 @@ Plugin-specific badges (`bypassed`, `armed`, `mapped`) layer on top of baseline 
 
 ### 6.2 Linear Fader
 
-| Spec area             | Definition                                                                                                                                                                                      |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Size variants         | Vertical: 120/160/220px track; Horizontal: 120/180/240px track                                                                                                                                  |
-| Label/value placement | Label above track, value at end-cap or below, unit suffix aligned                                                                                                                               |
-| Spacing               | thumb clearance `space-2`; label gap `space-2`; grouped channels gap `space-4`                                                                                                                  |
-| States                | hover thumb highlight; focus ring on track; active thumb glow; disabled muted track; loading skeleton thumb; error danger border; bypassed striped overlay; armed amber edge; mapped info badge |
-| Accessibility notes   | Ensure hit area >= 24px for thumb; keyboard increments/decrements; page up/down coarse step                                                                                                     |
+| Spec area             | Definition                                                                                                                                                                                           |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Size variants         | Vertical: 120/160/220px track; Horizontal: 120/180/240px track                                                                                                                                       |
+| Label/value placement | Label above track, value at end-cap or below, unit suffix aligned                                                                                                                                    |
+| Spacing               | thumb clearance `space-2`; label gap `space-2`; grouped channels gap `space-4`                                                                                                                       |
+| States                | hover thumb highlight; focus ring on track; active thumb glow; disabled muted track; loading skeleton thumb; error danger border; bypassed striped overlay; armed amber edge; mapped info badge      |
+| Accessibility notes   | Implement as `<input type="range">`; keyboard increments/decrements and page up/down coarse step are provided natively — no custom key handlers required. Ensure hit area >= 24px for thumb via CSS. |
 
 ### 6.3 Button (momentary/latch)
 
@@ -198,174 +198,303 @@ Plugin-specific badges (`bypassed`, `armed`, `mapped`) layer on top of baseline 
 | Label/value placement | Label centered; optional count badge trailing                                                                                                                                                                              |
 | Spacing               | item gap `space-1`; bar padding `space-1`                                                                                                                                                                                  |
 | States                | selected accent fill; hover surface raise; focus ring per tab; active press effect; disabled muted; loading ghost tabs; error tab with indicator dot; bypassed tab section desaturation; armed tab badge; mapped tab badge |
-| Accessibility notes   | Use `role="tablist"` / `role="tab"` / `role="tabpanel"` pattern; arrow-key navigation within tablist; space/enter to activate tab                                                                                         |
+| Accessibility notes   | Use `tablist`/`tab` semantics and arrow key nav; preserve visible selected + focus distinction                                                                                                                             |
 
-### 6.7 Graph Editor (EQ/Filter curve editor)
+### 6.7 Graph Editor (EQ/filter/curve)
 
-| Spec area             | Definition                                                                                                                                                               |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Size variants         | Responsive width 100%; heights 140/180/240px                                                                                                                             |
-| Label/value placement | Frequency axis bottom (x), magnitude axis left (y); current selected node readout top or overlay tooltip                                                                |
-| Spacing               | axis label gap `space-2`; outer padding `space-3`                                                                                                                        |
-| States                | node default/hover highlight ring; active drag cursor; selected node accent fill; disabled frozen (no interaction); loading skeleton curve; error domain constraint cues |
-| Accessibility notes   | Provide alternative text-based parameter control for screen reader / keyboard-only users; graph edits are progressive enhancement                                        |
+| Spec area             | Definition                                                                                                                                                                                                          |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Size variants         | Min canvas 280x160; preferred 420x220; expanded 640x300                                                                                                                                                             |
+| Label/value placement | Axis labels outer edges; point values in floating readout                                                                                                                                                           |
+| Spacing               | toolbar to graph `space-3`; graph padding `space-3`                                                                                                                                                                 |
+| States                | hover point enlargement; focus ring on selected node; active drag path highlight; disabled lock overlay; loading skeleton grid; error banner top; bypassed curve dim; armed write-mode badge; mapped node highlight |
+| Accessibility notes   | Keyboard node selection + nudging; provide textual list fallback for nodes/values                                                                                                                                   |
 
 ### 6.8 Envelope / LFO Editor
 
-| Spec area             | Definition                                                                                                                             |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Size variants         | Responsive width; height 80/120/160px                                                                                                  |
-| Label/value placement | Shape name or rate display above or inside; segments labeled on hover                                                                  |
-| Spacing               | handle clearance `space-2`; outer padding `space-3`                                                                                    |
-| States                | handle hover/focus ring; active drag; bipolar zero-crossing accent line; bypassed desaturated outline; armed pulsing edge              |
-| Accessibility notes   | Provide discrete parameter fallbacks (attack, decay, sustain, release as numeric inputs); graph is progressive enhancement              |
+| Spec area             | Definition                                                                                                                                                                                                                      |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Size variants         | Compact 260x120; default 360x160; expanded 520x220                                                                                                                                                                              |
+| Label/value placement | Mode/polarity controls top row; rate/depth values right-aligned                                                                                                                                                                 |
+| Spacing               | control row gap `space-2`; editor margin `space-3`                                                                                                                                                                              |
+| States                | active segment highlight; hover handle tooltips; focus-visible handles; disabled lock; loading shimmer curve; error invalid-shape alert; bypassed desaturated waveform; armed modulation-capture badge; mapped destination chip |
+| Accessibility notes   | Expose alternate numeric editing for points/segments; avoid motion-heavy previews without reduced-motion fallback                                                                                                               |
 
 ### 6.9 Preset Browser
 
-| Spec area             | Definition                                                                                                                                                      |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Size variants         | Panel overlay or inline; min-width 220px, resizable                                                                                                             |
-| Label/value placement | Category list left panel; preset list right; search top                                                                                                         |
-| Spacing               | row height `space-8` (32px); list item padding h: `space-3` v: `space-2`                                                                                       |
-| States                | row hover surface; row selected accent; active (auditioned) indicator dot; disabled row muted; loading skeleton rows; error badge on failed preset; mapped row tag |
-| Accessibility notes   | List items as `button` or `option`; search input labeled; keyboard nav with arrow keys; Enter to load preset; result count announced to screen reader           |
+| Spec area             | Definition                                                                                                                                                                                                             |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Size variants         | Sidebar 220/280px; list row heights 28/34/40px; modal width 640/840px                                                                                                                                                  |
+| Label/value placement | Category left, preset name center-left, metadata right                                                                                                                                                                 |
+| Spacing               | row horizontal padding `space-3`; section spacing `space-4`                                                                                                                                                            |
+| States                | hover row tint; focus row ring; active selected row with accent bar; disabled unavailable rows; loading skeleton rows; error inline retry row; bypassed not applicable; armed favorite-write state; mapped macro badge |
+| Accessibility notes   | Full keyboard list navigation and type-to-search; maintain visible active item + focus item differentiation                                                                                                            |
 
-### 6.10 Macro / XY Pad
+### 6.10 Macro Controls
 
-| Spec area             | Definition                                                                                                             |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Size variants         | `sm` 80px², `md` 120px², `lg` 160px²; fullscreen variant                                                               |
-| Label/value placement | Axis labels bottom / right; cursor position readout overlay                                                            |
-| Spacing               | outer padding `space-3`; label gap `space-2`                                                                           |
-| States                | default crosshair; hover highlight ring; focus border ring; active drag tracking; disabled frozen; armed pulse border  |
-| Accessibility notes   | Provide discrete X/Y numeric inputs as accessible alternative; XY surface as progressive enhancement                  |
+| Spec area             | Definition                                                                                                                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Size variants         | 4/8 macro slots; each slot 72x72 (`sm`), 96x96 (`md`)                                                                                                                                                         |
+| Label/value placement | Macro label above, control center, assignment count below                                                                                                                                                     |
+| Spacing               | slot gap `space-3`; section padding `space-4`                                                                                                                                                                 |
+| States                | hover highlight; focus ring; active animation (respect reduced motion); disabled muted; loading assignment spinner; error conflict badge; bypassed macro muted; armed learn border; mapped chain icon + count |
+| Accessibility notes   | Announce mapping count and learn state textually, not by color alone                                                                                                                                          |
 
-### 6.11 Status Bar / Telemetry
+### 6.11 XY Pad
 
-| Spec area             | Definition                                                                                                              |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Size variants         | Full-width strip; height `space-6` (24px) compact; `space-8` (32px) comfortable                                        |
-| Label/value placement | Left: transport status + connection, Center: CPU/voice info, Right: automation/mapping mode indicators                 |
-| Spacing               | item gap `space-4`; icon+label gap `space-1`                                                                            |
-| States                | default text; hover tooltip activation; armed indicators amber; mapping mode icon + info color; error critical red text |
-| Accessibility notes   | Provide live region (`aria-live="polite"`) for connection and error state changes                                       |
+| Spec area             | Definition                                                                                                                                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Size variants         | 160x160, 220x220, 320x320                                                                                                                                                                  |
+| Label/value placement | Axis labels at edges; current X/Y values below in tabular text                                                                                                                             |
+| Spacing               | label-to-pad `space-2`; value row margin-top `space-2`                                                                                                                                     |
+| States                | hover crosshair; focus ring perimeter; active puck glow; disabled lock overlay; loading grid shimmer; error out-of-range warning; bypassed dim puck; armed capture dot; mapped axis badges |
+| Accessibility notes   | Keyboard nudging (arrow keys), coarse/fine modifiers, textual coordinate entry fallback                                                                                                    |
 
----
+### 6.12 Status Bar
 
-## 7) Theme: Dark (Primary)
-
-> Named `dark`. All color role tokens below.
-
-| Role                     | Value (named Tailwind extension) | Notes                             |
-| ------------------------ | -------------------------------- | --------------------------------- |
-| `--color-bg-canvas`      | `#1a1a1a` / `plugin-dark`        | Main background                   |
-| `--color-bg-surface-1`   | `#2a2a2a` / `plugin-surface`     | Cards, panels                     |
-| `--color-bg-surface-2`   | `#333333`                        | Inset trays, header bars          |
-| `--color-border-default` | `#3a3a3a` / `plugin-border`      | Default dividers                  |
-| `--color-border-strong`  | `#555555`                        | Emphasis/selected borders         |
-| `--color-text-primary`   | `#e0e0e0`                        | Main text                         |
-| `--color-text-secondary` | `#aaaaaa`                        | Labels, metadata                  |
-| `--color-text-muted`     | `#666666`                        | Disabled/inactive                 |
-| `--color-accent`         | `#4a9eff` / `accent`             | Primary highlights                |
-| `--color-accent-soft`    | `#1c3a5e`                        | Accent-tinted bg                  |
-| `--color-focus-ring`     | `#4a9eff` / `accent`             | Focus indicator                   |
-| `--color-success`        | `#22c55e`                        | OK / safe                         |
-| `--color-warning`        | `#f59e0b`                        | Warning                           |
-| `--color-danger`         | `#ef4444`                        | Error / clip                      |
-| `--color-info`           | `#38bdf8`                        | Mapping/learn info                |
-| `--color-meter-safe`     | `#22c55e` / `meter-safe`         | Safe zone                         |
-| `--color-meter-warn`     | `#f59e0b` / `meter-warning`      | Warn zone                         |
-| `--color-meter-clip`     | `#ef4444` / `meter-clip`         | Clip zone                         |
+| Spec area             | Definition                                                                                                                                                                                                           |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Size variants         | Heights 24/28/32px                                                                                                                                                                                                   |
+| Label/value placement | Left: transport/session; center: context; right: CPU/sample rate/latency/state icons                                                                                                                                 |
+| Spacing               | section padding `space-2`/`space-3`; item gap `space-2`                                                                                                                                                              |
+| States                | normal neutral; hover on clickable chips; focus ring for interactive areas; active chip accent; disabled muted; loading spinner chip; error danger strip; bypassed module badge; armed recording badge; mapped badge |
+| Accessibility notes   | Use live region sparingly for important status changes only; avoid noisy announcements                                                                                                                               |
 
 ---
 
-## 8) Accessibility Acceptance Notes
+## 7) Theme Definitions
 
-| Check                    | Requirement                                                |
-| ------------------------ | ---------------------------------------------------------- |
-| Color contrast (text)    | WCAG AA ≥ 4.5:1 for normal text; 3:1 for large text        |
-| Color contrast (UI)      | WCAG AA ≥ 3:1 for interactive boundaries                   |
-| Focus visibility         | Non-color-only cue; ring contrast ≥ 3:1 against background |
-| Reduced motion           | All transitions guarded by `motion-safe:` or media query   |
-| Keyboard operability     | All interactive elements reachable and activatable         |
-| Accessible names         | All controls have visible label or `aria-label`            |
-| Plugin-specific states   | `bypassed`, `armed`, `mapped` use icon+text, not color only |
+## 7.1 Dark Studio (default)
+
+| Role token               | Suggested value |
+| ------------------------ | --------------- |
+| `--color-bg-canvas`      | `#13161A`       |
+| `--color-bg-surface-1`   | `#1B2129`       |
+| `--color-bg-surface-2`   | `#242C36`       |
+| `--color-border-default` | `#334050`       |
+| `--color-border-strong`  | `#48607A`       |
+| `--color-text-primary`   | `#E8EEF5`       |
+| `--color-text-secondary` | `#B9C7D8`       |
+| `--color-text-muted`     | `#7D8DA1`       |
+| `--color-accent`         | `#4AA3FF`       |
+| `--color-accent-soft`    | `#1E3C5A`       |
+| `--color-focus-ring`     | `#8BC3FF`       |
+| `--color-success`        | `#36C27B`       |
+| `--color-warning`        | `#F0B429`       |
+| `--color-danger`         | `#FF5D6C`       |
+| `--color-info`           | `#64B5FF`       |
+| `--color-meter-safe`     | `#4BC96A`       |
+| `--color-meter-warn`     | `#F2D94E`       |
+| `--color-meter-clip`     | `#FF4A57`       |
+
+## 7.2 Light Neutral
+
+| Role token               | Suggested value |
+| ------------------------ | --------------- |
+| `--color-bg-canvas`      | `#F4F6F8`       |
+| `--color-bg-surface-1`   | `#FFFFFF`       |
+| `--color-bg-surface-2`   | `#EDEFF3`       |
+| `--color-border-default` | `#CCD3DD`       |
+| `--color-border-strong`  | `#A8B4C4`       |
+| `--color-text-primary`   | `#1F2732`       |
+| `--color-text-secondary` | `#455468`       |
+| `--color-text-muted`     | `#6E7B8C`       |
+| `--color-accent`         | `#2D7EEA`       |
+| `--color-accent-soft`    | `#D9E8FF`       |
+| `--color-focus-ring`     | `#2F80ED`       |
+| `--color-success`        | `#238A55`       |
+| `--color-warning`        | `#B87A00`       |
+| `--color-danger`         | `#CC3D4C`       |
+| `--color-info`           | `#2A7FD1`       |
+| `--color-meter-safe`     | `#2FA55A`       |
+| `--color-meter-warn`     | `#D2A900`       |
+| `--color-meter-clip`     | `#D73A49`       |
+
+### Theme role mapping guidance
+
+- Maintain semantic parity: role token meaning must not change across themes.
+- Validate contrast for text + icons in all key states.
+- For warning/danger in light theme, increase border/icon weight when fill contrast is reduced.
 
 ---
 
-## 9) React / Tailwind Implementation Guidance
+## 8) Accessibility Notes (global)
 
-### Class Pattern
+- Use native semantic elements first (`button`, `input`, `select`, `tab` pattern).
+- All interactive controls require keyboard operability and visible focus.
+- Do not rely on color alone for state (add icon, text, pattern, or shape cue).
+- Respect reduced motion (`prefers-reduced-motion`) for animations and meter embellishments.
+- Provide alternative numeric/text entry for graph-like controls where feasible.
 
-```typescript
-// ✅ Correct
-import { focusRingClass, interactionStateClass } from './utils/classNames';
+### 8.1 Native-first keyboard policy
 
-const buttonClass = cn(
-  'rounded-md border px-3 py-1.5 text-sm font-medium',
-  'bg-plugin-surface border-plugin-border text-plugin-primary',
-  interactionStateClass,
-  focusRingClass,
-  disabled && 'opacity-50 cursor-not-allowed'
-);
-```
+Native HTML elements provide keyboard behavior out of the box — do not reimplement it.
 
-### Avoid
+**What is already handled natively (no custom `onKeyDown` needed):**
 
-```typescript
-// ❌ Do not use ad-hoc hex colors
-className="bg-[#2a2a2a] text-[#e0e0e0] border-[#3a3a3a]"
+- **Tab focus** — all focusable native elements (buttons, links, inputs, ranges) participate in the tab order automatically.
+- **Enter / Space activation** — `<button>` responds to both keys without any event handler.
+- **Radio group navigation** — `<input type="radio">` elements sharing a `name` attribute already cycle focus with arrow keys.
+- **Range increment / decrement** — `<input type="range">` responds to arrow keys and Page Up / Page Down natively.
 
-// ❌ Do not suppress focus without replacement
-className="focus:outline-none"
+**Prohibited:** Adding `onKeyDown` handlers that duplicate behavior already provided by native semantics (e.g., responding to Space on a real `<button>`, or rewriting arrow-key movement for a native radio group).
 
-// ❌ Do not use inline style for token-covered values
-style={{ color: '#4a9eff' }}
-```
+**Custom keyboard handling is only permitted for:**
 
-### State Model Pattern
+- Composite widgets with no native equivalent: tab panels, listboxes, menus, tree views.
+- Canvas or SVG controls: knobs, XY pads, graph editors, envelope editors.
+- Dialog focus trapping and Escape-to-close.
 
-```typescript
-// ✅ Layered state composition
-cn(
-  baseClasses,               // layout and container
-  defaultStateClasses,       // default appearance
-  'hover:...',               // hover layer
-  'focus-visible:...',       // focus layer
-  isSelected && 'bg-accent', // selected semantic layer
-  isDisabled && 'opacity-50 cursor-not-allowed', // disabled semantic layer
-  isError && 'border-danger' // error semantic layer
-)
-```
+### 8.2 Keyboard interaction documentation requirement
+
+Any component that implements custom keyboard handling **must** document the following in its spec entry (section 6.x) or inline JSDoc:
+
+- **Supported keys** — full list of handled key codes and their actions.
+- **Focus movement rules** — how focus moves within the widget (e.g., arrow wrapping, roving `tabindex`).
+- **Escape / close behavior** — whether Escape dismisses, collapses, or resets the widget (if applicable).
+- **Test coverage expectations** — at minimum one keyboard-only test path per interactive widget.
+
+Components that rely entirely on native element behavior do **not** require this documentation beyond a note confirming the native element used (e.g., "Implemented as `<input type=range>`; keyboard behavior is native").
+
+---
+
+## 9) React/Tailwind Implementation Guidance
+
+- Model state via data attributes or variant classes:
+  - `data-state="active|disabled|loading|error"`
+  - `data-plugin-state="bypassed|armed|mapped"`
+- Compose shared primitives:
+  - `ControlShell`, `ValueReadout`, `StateBadge`, `FocusRing`
+- Keep token use semantic:
+  - `bg-plugin-surface`, `text-plugin-primary`, `ring-plugin-focus`, `border-plugin-default`
+- Prefer reusable variant maps over duplicated class strings.
+
+### 9.1 Tailwind Token Mapping (aligned to `ui/tailwind.config.js`)
+
+Use this table as the source-of-truth mapping when implementing React components with Tailwind utilities.
+
+#### Semantic role → Tailwind theme key → utility examples
+
+| Semantic role token      | Tailwind theme key                 | Utility class examples                                                                                                   |
+| ------------------------ | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `--color-bg-canvas`      | `colors.plugin.dark`               | `bg-plugin-dark`                                                                                                         |
+| `--color-bg-surface-1`   | `colors.plugin.surface`            | `bg-plugin-surface`                                                                                                      |
+| `--color-bg-surface-2`   | `colors.plugin.surface`            | `bg-plugin-surface/80`, `bg-plugin-surface` + `border border-plugin-border`                                              |
+| `--color-border-default` | `colors.plugin.border`             | `border-plugin-border`, `divide-plugin-border`                                                                           |
+| `--color-border-strong`  | `colors.plugin.border`             | `border-plugin-border/90`, `ring-1 ring-plugin-border`                                                                   |
+| `--color-text-primary`   | _(base Tailwind scale)_            | `text-slate-100` (dark canvas), `text-slate-900` (light surface)                                                         |
+| `--color-text-secondary` | _(base Tailwind scale)_            | `text-slate-300` (dark), `text-slate-600` (light)                                                                        |
+| `--color-text-muted`     | _(base Tailwind scale)_            | `text-slate-500`                                                                                                         |
+| `--color-accent`         | `colors.accent.DEFAULT`            | `text-accent`, `bg-accent`, `border-accent`, `ring-accent`                                                               |
+| `--color-accent-soft`    | `colors.accent.light`              | `bg-accent-light/20`, `text-accent-light`                                                                                |
+| `--color-focus-ring`     | `colors.accent.light`              | `focus-visible:ring-2 focus-visible:ring-accent-light focus-visible:ring-offset-2 focus-visible:ring-offset-plugin-dark` |
+| `--color-success`        | `colors.meter.safe`                | `text-meter-safe`, `bg-meter-safe/15`, `border-meter-safe`                                                               |
+| `--color-warning`        | `colors.meter.warning`             | `text-meter-warning`, `bg-meter-warning/15`, `border-meter-warning`                                                      |
+| `--color-danger`         | `colors.meter.clip`                | `text-meter-clip`, `bg-meter-clip/15`, `border-meter-clip`                                                               |
+| `--color-meter-safe`     | `colors.meter.safe`                | `from-meter-safe to-meter-safe-light`                                                                                    |
+| `--color-meter-warn`     | `colors.meter.warning`             | `via-meter-warning`                                                                                                      |
+| `--color-meter-clip`     | `colors.meter.clip` / `.clip-dark` | `to-meter-clip`, `shadow-[0_0_0_1px_theme(colors.meter.clip-dark)]`                                                      |
+| `--color-info`           | `colors.accent.DEFAULT`            | `text-accent`, `bg-accent/10`, `border-accent/40`                                                                        |
+
+Implementation note:
+
+- `text-plugin-primary` and `ring-plugin-focus` are semantic aliases from this spec, not current theme keys. Until aliases are added, use the concrete mapped classes above.
+
+#### Spacing / radius / shadow / type mappings
+
+These roles should map to existing Tailwind scale names (no ad-hoc pixel values unless justified).
+
+| Spec token     | Tailwind scale name | Utility examples                                     |
+| -------------- | ------------------- | ---------------------------------------------------- |
+| `space-1`      | `1`                 | `gap-1`, `px-1`, `mt-1`                              |
+| `space-2`      | `2`                 | `gap-2`, `px-2`, `py-2`                              |
+| `space-3`      | `3`                 | `gap-3`, `px-3`, `pt-3`                              |
+| `space-4`      | `4`                 | `gap-4`, `p-4`, `mx-4`                               |
+| `space-5`      | `5`                 | `gap-5`, `px-5`                                      |
+| `space-6`      | `6`                 | `gap-6`, `p-6`, `mt-6`                               |
+| `radius-sm`    | `rounded-sm`        | `rounded-sm`                                         |
+| `radius-md`    | `rounded-md`        | `rounded-md`                                         |
+| `radius-lg`    | `rounded-lg`        | `rounded-lg`                                         |
+| `radius-xl`    | `rounded-xl`        | `rounded-xl`                                         |
+| `radius-round` | `rounded-full`      | `rounded-full`                                       |
+| `shadow-0`     | none                | `shadow-none`                                        |
+| `shadow-1`     | small               | `shadow-sm`                                          |
+| `shadow-2`     | medium              | `shadow`                                             |
+| `shadow-focus` | ring emphasis       | `focus-visible:ring-2 ring-accent-light/70`          |
+| `type-2xs`     | custom text size    | `text-[10px] leading-3 font-medium`                  |
+| `type-xs`      | `text-xs`           | `text-xs leading-4 font-medium`                      |
+| `type-sm`      | `text-sm`           | `text-sm leading-4 font-medium`                      |
+| `type-md`      | base                | `text-base leading-5 font-medium`                    |
+| `type-lg`      | lg                  | `text-lg leading-6 font-semibold`                    |
+| `type-xl-num`  | xl + mono tabular   | `text-xl leading-6 font-bold font-mono tabular-nums` |
+
+#### State class patterns (baseline + plugin-specific)
+
+Use data attributes for deterministic styling and accessibility-friendly state signaling:
+
+- Base selector contract:
+  - `data-state="default|hover|focus|active|disabled|loading|error"`
+  - `data-plugin-state="bypassed|armed|mapped"`
+
+Recommended class patterns:
+
+- `default`: `bg-plugin-surface border border-plugin-border text-slate-100`
+- `hover`: `hover:bg-plugin-surface/90 hover:border-accent/40`
+- `focus-visible`: `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-light focus-visible:ring-offset-2 focus-visible:ring-offset-plugin-dark`
+- `active`: `data-[state=active]:bg-accent/20 data-[state=active]:border-accent`
+- `disabled`: `disabled:opacity-50 disabled:cursor-not-allowed disabled:saturate-50`
+- `error`: `data-[state=error]:border-meter-clip data-[state=error]:ring-1 data-[state=error]:ring-meter-clip/60`
+- `loading`: `data-[state=loading]:animate-pulse aria-busy:true`
+- `bypassed`: `data-[plugin-state=bypassed]:opacity-60 data-[plugin-state=bypassed]:grayscale`
+- `armed`: `data-[plugin-state=armed]:border-meter-warning data-[plugin-state=armed]:ring-1 data-[plugin-state=armed]:ring-meter-warning/50`
+- `mapped`: `data-[plugin-state=mapped]:border-accent data-[plugin-state=mapped]:shadow-sm`
+
+Accessibility reinforcement rules for states:
+
+- Never rely on color-only cues for `error`, `armed`, `mapped`, or `clip`; include icon/text/badge.
+- Preserve visible focus in all themes and states (including `disabled` siblings).
+- Keep `aria-pressed`, `aria-busy`, and `aria-invalid` synced with visual state.
+
+#### Dark/light theme application approach
+
+Current Tailwind config provides plugin-dark-first tokens. For implementation consistency:
+
+1. Default to dark studio classes (`bg-plugin-dark`, `bg-plugin-surface`, `border-plugin-border`).
+2. Apply theme switching at root (`html[data-theme='dark'|'light']`) using CSS variables for text neutrals and any future semantic aliases.
+3. Keep component class names semantic and stable; swap actual values via theme layer rather than rewriting component classes.
+4. Validate contrast for both themes, especially warning/danger text and focus rings.
+
+Suggested pattern:
+
+- Keep utilities for structural roles (`bg-plugin-surface`, `border-plugin-border`, `text-accent`).
+- For light theme neutrals, use CSS-variable-backed utilities or `dark:` variants to avoid duplicated component markup.
 
 ---
 
 ## 10) Visual QA Acceptance Checklist
 
-Before marking any component spec as ready:
+### Must-pass criteria
 
-- [ ] All role token usages mapped to Tailwind theme extensions (no ad-hoc hex classes)
-- [ ] All 7 baseline states implemented and verified visually: default, hover, focus-visible, active, disabled, loading, error
-- [ ] Plugin-specific states (bypassed, armed, mapped) implemented for relevant components
-- [ ] Accessibility notes applied: keyboard operability, `aria-*`, visible focus, non-color state cues
-- [ ] Reduced motion verified in browser devtools simulation (`prefers-reduced-motion: reduce`)
-- [ ] Before/after Playwright screenshots for each state demonstrating intended appearance
-- [ ] Component renders identically as props-only surface (no internal hook dependencies)
+- [ ] Every component supports required baseline states: default/hover/focus/active/disabled/loading/error.
+- [ ] Plugin-specific states are visible and distinguishable: bypassed/armed/mapped.
+- [ ] Label/value placement follows the spec for each component type.
+- [ ] Size variants render without clipping at minimum plugin size.
+- [ ] Color contrast and focus visibility are acceptable in both Dark Studio and Light Neutral themes.
+- [ ] Keyboard operation works for all interactive controls, including graph/XY alternatives.
+- [ ] Reduced-motion mode removes non-essential motion while preserving clarity.
+- [ ] Meter warning/clip cues are perceivable with non-color reinforcement.
+- [ ] No ad-hoc visual values where role tokens exist.
+- [ ] Visual regressions checked in affected processor screens.
+
+### Nice-to-have checks
+
+- [ ] Micro-interaction timing is consistent across controls.
+- [ ] Numeric formatting is consistent for value readouts.
+- [ ] Loading/error copy is concise and contextual.
 
 ---
 
 ## 11) Handoff Notes
 
-### For Coder
-
-- All visual specs in this document are guidelines for React/Tailwind implementation, not prescriptive CSS.
-- Tailwind utilities should be drawn from the existing `tailwind.config.js` theme tokens (see [CSS & Styling Standards](../../architecture/coding-standards-css.md)).
-- Component implementations go in `ui/packages/components/src/`; smart container wiring in `sdk-template/ui/src/`.
-- Follow the smart/presentational boundary rules from [low-level-design-ui-ux-refactor.md](./low-level-design-ui-ux-refactor.md) Section 2.2.
-
-### For Tester / QA
-
-- Use this spec as the visual acceptance baseline for any UI/UX component work.
-- State model (Section 5) defines the expected interactions for all components.
-- Accessibility notes per component define the minimum testable a11y bar.
-- Visual QA acceptance checklist (Section 10) is the gate for component acceptance.
+- This sheet is implementation-oriented and intended for component library build-out.
+- If a component requires deviation (space, color, behavior), document rationale in the feature folder before merging.

@@ -269,6 +269,7 @@ These items eliminate the largest duplication clusters with low API-surface risk
 | P1-2 | Extract private `MeterChannel` into `Meter.tsx`; replace two parallel state/ref/effect/JSX channel blocks with a mapped array | `Meter.tsx` | −45 to −55 |
 | P1-3 | Delete 5 thin wrappers from `@wavecraft/components` (`InputTrimProcessor`, `OutputGainProcessor`, `SoftClipProcessor`, `ToneFilterProcessor`, `OscillatorProcessor`); add backward-compatible re-exports in `compat.ts` shim | 5 deleted files (~65 LOC), `compat.ts` (new ~25 LOC), `index.ts` (−5 direct exports, +1 compat re-export) | −40 to −50 |
 | P1-4 | Extract a private internal helper (e.g., `hooks/_usePollingSubscription.ts`, `_`-prefixed to signal non-public) consolidating the subscribe-on-mount / unsubscribe-on-cleanup mechanics shared by `useMeterFrame`, `useLatencyMonitor`, `useOscilloscopeFrame`, and `useAudioStatus`; **not exported from `index.ts`** | `hooks/_usePollingSubscription.ts` (new, ~25 LOC), 4 existing hook files refactored | −25 to −35 |
+
 | P1-5 | Split `WavecraftProvider.tsx` internals into four `_`-prefixed private modules (`_fetchController.ts`, `_writeReconciler.ts`, `_subscriptionWiring.ts`, `_valueHelpers.ts`); `WavecraftProvider.tsx` becomes a thin orchestrator; **no change to public API or Context type** | `ui/packages/core/src/context/WavecraftProvider.tsx` (−60 to −80 net after delegation), 4 new private files (~120 LOC total extracted) | −50 to −70 net (extracted code is reorganised, not deleted, but provider body shrinks significantly) |
 
 **Expected net P1 reduction:** −195 to −250 LOC.
@@ -333,7 +334,7 @@ The `WavecraftProvider` decomposition (§3.7 / P1-5) is strictly internal to `@w
 
 - **No new public exports.** None of the four private modules (`_fetchController`, `_writeReconciler`, `_subscriptionWiring`, `_valueHelpers`) may appear in `index.ts`, in `package.json` `exports`, or in any subpath export map.
 - **No behavior drift for hooks.** All hooks that consume `WavecraftContext` (`useParameter`, `useAllParameters`, `useConnectionStatus`, etc.) must exhibit identical behavior before and after P1-5 lands. The context shape and value derivation are unchanged.
-- **Rollback race behavior preserved.** The write-rollback ordering guarantee — that a failed `setParameter` restores the pre-write snapshot even when a concurrent successful write has landed — must be explicitly preserved in `_writeReconciler.ts`.
+- **Rollback race behavior preserved.** The write-rollback ordering guarantee — that a failed `setParameter` restores the pre-write snapshot even when a concurrent successful write has landed — must be explicitly preserved in `_writeReconciler.ts`. See §7 acceptance checks.
 - **No change to `WavecraftProvider` props or Context type.** The component signature (`children`) and the context object shape are frozen for this PR.
 
 ### `@wavecraft/core` Entrypoint Stability

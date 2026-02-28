@@ -27,7 +27,7 @@ Modern plugin UIs consistently prioritize **dense information layouts**, **singl
 
 1. **Dark-biased canvases** for low-fatigue studio use, with bright, role-specific accents.
 2. **Immediate state signaling** (armed, mapped, bypassed, clipping, loading) using shape + icon + color, not color only.
-3. **Hybrid interaction surfaces**: compact "control strip" plus expandable advanced panel (graph/editor/browser).
+3. **Hybrid interaction surfaces**: compact “control strip” plus expandable advanced panel (graph/editor/browser).
 4. **Strong meter visibility** and high refresh smoothness for confidence during gain staging.
 5. **Hierarchical typography**: tiny labels, mid-size values, selective large numerics for critical readouts.
 
@@ -81,7 +81,7 @@ Modern plugin UIs consistently prioritize **dense information layouts**, **singl
 | Graph editors (EQ/comp/filter) |             Medium-high | Direct visual manipulation improves understanding and speed for spectral/dynamic decisions                    |
 | Envelope/LFO editors           |   Medium-high in synths | Motion/modulation programming requires shape + timing visualization                                           |
 | Preset browser                 |                    High | Core workflow accelerator for recall, audition, and categorization                                            |
-| Macro controls                 |             Medium-high | Reduces complexity by exposing "musical" top-level controls                                                   |
+| Macro controls                 |             Medium-high | Reduces complexity by exposing “musical” top-level controls                                                   |
 | XY pad                         |                  Medium | Powerful expressive control and performance automation in limited screen area                                 |
 | Status/telemetry bar           |             Medium-high | Keeps transport/CPU/voice/mapping state visible without context switching                                     |
 
@@ -97,3 +97,25 @@ Modern plugin UIs consistently prioritize **dense information layouts**, **singl
 
 3. **Graphical editors increase speed when paired with explicit handles and constraints**
    - Cursor affordances, focus rings, and modifier hints reduce accidental edits.
+
+4. **Metering is treated as a first-class component, not decoration**
+   - Consistent scale, clipping thresholds, and decay behavior improve decision quality.
+
+5. **Theme systems are expected to preserve role contrast under studio lighting**
+   - Dark defaults dominate, but high-end products increasingly support lighter neutral variants.
+
+---
+
+## Practical Implications for Wavecraft Implementation
+
+- Build around a reusable visual state contract that includes plugin-specific states (`bypassed`, `armed`, `mapped`).
+- Prioritize knob, meter, and graph editor quality first; these are highest-impact trust surfaces.
+- Keep tokens semantic (`surface`, `accent`, `danger`, `focus-ring`) and avoid one-off color usage.
+- Use compact default density with optional relaxed spacing variant for browser/dev mode.
+- Standardize value formatting and label placement for consistency across processors.
+
+## Research-to-Design Handoff Notes
+
+- This research supports the companion spec: `vst-component-spec-sheet.md`.
+- For implementation-ready class decisions, use `vst-component-spec-sheet.md` section **9.1 Tailwind Token Mapping (aligned to `ui/tailwind.config.js`)**.
+- Implementers should treat this document as rationale; concrete measurements and state definitions live in the spec sheet.

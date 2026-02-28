@@ -336,7 +336,7 @@ Each slice targets its own minimal-scope PR:
 | Risk                                                                         | Likelihood | Impact     | Mitigation                                                                                          |
 | ---------------------------------------------------------------------------- | ---------- | ---------- | --------------------------------------------------------------------------------------------------- |
 | Coupling regression: presentational component accidentally re-imports a hook | Medium     | High       | ESLint `import/no-restricted-paths` rule; PR gate via `design-token-compliance` skill               |
-| Token substitution causes subtle visual regression                           | Medium     | Low–Medium | Before/after Playwright screenshots per PR; visual diff review required                             |
+| Token substitution causes subtle visual regression                           | Medium     | Low–Medium | Before/after Simple Browser screenshots per PR; visual diff review required                         |
 | Incomplete fan-out lift leaves duplicate subscribers                         | Medium     | Medium     | Smart container checklist in implementation plan; tester validates no duplicate renders             |
 | Resize jitter during `legacyResize` transition                               | Low        | Medium     | Keep surfaces on `legacyResize: true` until both paths are validated in browser-dev and plugin-host |
 | Focus styling breaks in WKWebView                                            | Low        | High       | Test critical focus indicators inside plugin host, not only browser-dev                             |
@@ -355,7 +355,7 @@ Each slice targets its own minimal-scope PR:
 
 ### 8.2 Visual Verification (per Phase)
 
-- **Before/after Playwright screenshots** captured for every changed primary surface using the `playwright-mcp-ui-testing` skill.
+- **Before/after Simple Browser screenshots** captured for every changed primary surface using the `simple-browser-ui-testing` skill.
 - Screenshot comparison must show focus indicator improvement (Slice A), token consistency (Slice B), and no unintended regressions in adjacent unmodified surfaces.
 - Caveat closure: QA caveats from prior visual review must be explicitly re-checked and documented as resolved.
 
@@ -373,7 +373,7 @@ Using the `ui-accessibility-review` skill checklist:
 
 ### 8.4 Regression Guard
 
-- Unmodified surfaces: baseline Playwright screenshots must remain unchanged (no unintended side-effects from shared class changes).
+- Unmodified surfaces: baseline Simple Browser screenshots must remain unchanged (no unintended side-effects from shared class changes).
 - Core audio behavior: no functional parameter or metering regressions; verified via existing Rust + UI unit test suite.
 - Plugin host mode: resize and focus behavior validated in WKWebView context where feasible.
 
