@@ -29,6 +29,24 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
     } = input;
 
     let n = processors.len();
+
+    // Detect if OscilloscopeTap is in the processors list by type name.
+    // This is used to enable position-aware capture (scratch buffer approach).
+    // NOTE: OscilloscopeTap must be used directly — aliasing via wavecraft_processor!
+    // disables position-aware capture (falls back to final-output capture).
+    let osc_tap_slot: Option<usize> = processors.iter().position(|ty| {
+        if let syn::Type::Path(tp) = ty {
+            tp.path
+                .segments
+                .last()
+                .map(|s| s.ident == "OscilloscopeTap")
+                .unwrap_or(false)
+        } else {
+            false
+        }
+    });
+    let has_osc_in_chain = osc_tap_slot.is_some();
+
     let n_lit = syn::LitInt::new(&n.to_string(), proc_macro2::Span::call_site());
     let np1_lit = syn::LitInt::new(&(n + 1).to_string(), proc_macro2::Span::call_site());
 
@@ -107,6 +125,26 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
         .map(|(i, (ty, fname))| {
             let i_lit = syn::LitInt::new(&i.to_string(), proc_macro2::Span::call_site());
             let i_lit_usize = syn::LitInt::new(&format!("{}", i), proc_macro2::Span::call_site());
+
+            // For OscilloscopeTap: capture sample to scratch instead of calling process().
+            // process() is not called because:
+            //   1. OscilloscopeTap is audio-passthrough (no effect on samples).
+            //   2. capture_stereo() is designed for block-level use; calling it per-sample
+            //      with 1-sample slices produces malformed 1024-point frames.
+            //   3. The actual block-level capture happens after the per-sample loop.
+            if osc_tap_slot == Some(i) {
+                return quote! {
+                    #i_lit => {
+                        // OscilloscopeTap: observation-only. Capture sample to pre-allocated
+                        // scratch for block-level oscilloscope publish after the loop.
+                        // SAFETY: __sample_idx < __num_samples (outer loop bound).
+                        self.__osc_scratch_l[__sample_idx] = __stereo[0];
+                        self.__osc_scratch_r[__sample_idx] = __stereo[1];
+                        // Audio samples are NOT modified (OscilloscopeTap is pass-through).
+                    }
+                };
+            }
+
             quote! {
                 #i_lit => {
                     let __start = self.__param_offsets[#i_lit_usize];
@@ -145,6 +183,61 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
             }
         })
         .collect();
+
+    // Oscilloscope scratch buffer fields (only emitted when OscilloscopeTap is in chain)
+    let osc_scratch_fields = if has_osc_in_chain {
+        quote! {
+            __osc_scratch_l: ::std::vec::Vec<f32>,
+            __osc_scratch_r: ::std::vec::Vec<f32>,
+        }
+    } else {
+        quote! {}
+    };
+
+    // Oscilloscope scratch buffer default initialisers
+    let osc_scratch_defaults = if has_osc_in_chain {
+        quote! {
+            __osc_scratch_l: ::std::vec::Vec::new(),
+            __osc_scratch_r: ::std::vec::Vec::new(),
+        }
+    } else {
+        quote! {}
+    };
+
+    // Oscilloscope scratch resize in initialize()
+    let osc_scratch_init = if has_osc_in_chain {
+        quote! {
+            let __max_buf = _buffer_config.max_buffer_size as usize;
+            self.__osc_scratch_l.resize(__max_buf, 0.0_f32);
+            self.__osc_scratch_r.resize(__max_buf, 0.0_f32);
+        }
+    } else {
+        quote! {}
+    };
+
+    // Block-end oscilloscope capture: position-aware when tap is in chain, final-output fallback otherwise
+    let osc_block_capture = if has_osc_in_chain {
+        quote! {
+            self.oscilloscope_tap
+                .capture_stereo(
+                    &self.__osc_scratch_l[..__num_samples],
+                    &self.__osc_scratch_r[..__num_samples],
+                );
+        }
+    } else {
+        quote! {
+            if __channels >= 1 {
+                let __left_snap: ::std::vec::Vec<f32> = buffer.as_slice()[0].to_vec();
+                let __right_snap: ::std::vec::Vec<f32> = if __channels >= 2 {
+                    buffer.as_slice()[1].to_vec()
+                } else {
+                    __left_snap.clone()
+                };
+                self.oscilloscope_tap
+                    .capture_stereo(&__left_snap, &__right_snap);
+            }
+        }
+    };
 
     quote! {
         // Keep SignalChain type alias for dev-FFI vtable (uses static dispatch in registration order)
@@ -187,6 +280,10 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
             __cf_dir: i8, // -1 = fade-down, 0 = normal, 1 = fade-up
             // Pre-allocated parameter scratch buffer (reused each block, zero allocation after init)
             __param_scratch: ::std::vec::Vec<f32>,
+            // Oscilloscope scratch buffers (only when OscilloscopeTap is in chain).
+            // Pre-allocated in initialize(); exactly one sample per block written per
+            // position in the chain. Zero RT allocation after init.
+            #osc_scratch_fields
             // --- Metering ---
             oscilloscope_tap: #krate::OscilloscopeTap,
             meter_producer: #krate::MeterProducer,
@@ -456,6 +553,7 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                     __cf_dir: 0i8,
                     // Pre-grow to total param count so process() never reallocates.
                     __param_scratch: ::std::vec::Vec::with_capacity(__param_offsets[#n_lit]),
+                    #osc_scratch_defaults
                     oscilloscope_tap: #krate::OscilloscopeTap::with_output(oscilloscope_producer),
                     meter_producer,
                     #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -534,6 +632,7 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                 #(#set_sample_rate_calls)*
                 self.oscilloscope_tap
                     .set_sample_rate_hz(_buffer_config.sample_rate);
+                #osc_scratch_init
                 true
             }
 
@@ -666,17 +765,9 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                         .fold(0.0_f32, f32::max);
                 }
 
-                // Block-end snapshot: acceptable once-per-block allocation.
-                if __channels >= 1 {
-                    let __left_snap: ::std::vec::Vec<f32> = buffer.as_slice()[0].to_vec();
-                    let __right_snap: ::std::vec::Vec<f32> = if __channels >= 2 {
-                        buffer.as_slice()[1].to_vec()
-                    } else {
-                        __left_snap.clone()
-                    };
-                    self.oscilloscope_tap
-                        .capture_stereo(&__left_snap, &__right_snap);
-                }
+                // Block-end snapshot: position-aware when OscilloscopeTap is in chain,
+                // fallback to final-output capture otherwise.
+                #osc_block_capture
 
                 let _ = self.meter_producer.push(#krate::MeterFrame {
                     peak_l: __peak_l,
