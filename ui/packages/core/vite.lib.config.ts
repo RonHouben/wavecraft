@@ -11,7 +11,7 @@ export default defineConfig({
       exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'src/**/*.typecheck.ts'],
       logLevel: 'silent',
       skipDiagnostics: true,
-      rollupTypes: true,
+      rollupTypes: false,
     }),
   ],
   build: {
