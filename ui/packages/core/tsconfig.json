@@ -15,7 +15,11 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "declaration": true,
-    "declarationDir": "./dist"
+    "declarationDir": "./dist",
+    "paths": {
+      "@wavecraft/core": ["./src/index.ts"],
+      "@wavecraft/core/*": ["./src/*"]
+    }
   },
   "include": [
     "src",
