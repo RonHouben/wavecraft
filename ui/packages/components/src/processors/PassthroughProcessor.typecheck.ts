@@ -1,4 +1,3 @@
-// eslint-disable-next-line no-restricted-imports -- Type-level assertions intentionally validate public core ID contracts.
 import type {
   PassthroughBypassParameterId as CorePassthroughBypassParameterId,
   PassthroughParameterIds as CorePassthroughParameterIds,

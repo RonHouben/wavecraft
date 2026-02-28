@@ -1,6 +1,6 @@
-import { useOscilloscopeFrame, useConnectionStatus } from '@wavecraft/core';
-import { OscilloscopeView } from './OscilloscopeView';
+import { useConnectionStatus, useOscilloscopeFrame } from '@wavecraft/core';
 import { ProcessorCard } from '../ProcessorCard';
+import { OscilloscopeView } from './OscilloscopeView';
 
 export interface OscilloscopeProcessorProps {
   readonly hideWhenNotInSignalChain?: boolean;

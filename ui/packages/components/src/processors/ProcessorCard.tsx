@@ -5,7 +5,6 @@ import {
 } from '@wavecraft/core';
 import { Card, Switch } from '..';
 import { mergeClassNames } from '../utils/classNames';
-import { Row } from '../Row';
 
 export interface ProcessorCardProps {
   readonly hideWhenNotInSignalChain?: boolean;

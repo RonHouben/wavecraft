@@ -1,12 +1,11 @@
-// eslint-disable-next-line no-restricted-imports -- Existing processor component contract uses core hook/types directly.
 import {
-  dbToLinear,
   getMeterClipWarningIntensity,
   useMeterSignalActivity,
   type PassthroughBypassParameterId as CorePassthroughBypassParameterId,
   type PassthroughProcessorId as CorePassthroughProcessorId,
 } from '@wavecraft/core';
-import { type JSX, useEffect, useState } from 'react';
+import { dbToLinear } from '@wavecraft/core/meters';
+import { useEffect, useState, type JSX } from 'react';
 import { mergeClassNames } from '../utils/classNames';
 import { ProcessorCard } from './ProcessorCard';
 
@@ -83,8 +82,8 @@ export function PassthroughProcessor({
     <ProcessorCard
       processorId={processorId}
       hideWhenNotInSignalChain={hideWhenNotInSignalChain}
-      title={title ?? ''}
-      subtitle={subtitle}
+      title={title ?? 'Passthrough'}
+      subtitle={subtitle ?? 'Bypass'}
       className={mergeClassNames(
         'flex h-full w-full flex-col [&>div:last-child]:flex-1',
         className

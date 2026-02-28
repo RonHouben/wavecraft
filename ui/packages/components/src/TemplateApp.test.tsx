@@ -8,6 +8,9 @@ const mockUseAudioStatus = vi.hoisted(() => vi.fn());
 const mockUseLatencyMonitor = vi.hoisted(() => vi.fn());
 const mockUseMeterFrame = vi.hoisted(() => vi.fn());
 const mockUseRequestResize = vi.hoisted(() => vi.fn());
+const mockUseParameter = vi.hoisted(() => vi.fn());
+const mockUseHasProcessorInSignalChain = vi.hoisted(() => vi.fn());
+const mockUseOscilloscopeFrame = vi.hoisted(() => vi.fn());
 
 vi.mock('@wavecraft/core', () => ({
   WavecraftProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -17,6 +20,9 @@ vi.mock('@wavecraft/core', () => ({
   useLatencyMonitor: mockUseLatencyMonitor,
   useMeterFrame: mockUseMeterFrame,
   useRequestResize: mockUseRequestResize,
+  useParameter: mockUseParameter,
+  useHasProcessorInSignalChain: mockUseHasProcessorInSignalChain,
+  useOscilloscopeFrame: mockUseOscilloscopeFrame,
 }));
 
 vi.mock('@wavecraft/components', async () => {
@@ -25,27 +31,43 @@ vi.mock('@wavecraft/components', async () => {
   return {
     ...actual,
     VersionBadge: () => <div data-testid="version-badge" />,
+    TestToneProcessor: () => <div data-testid="processor-test-tone" />,
+    GainProcessor: ({ processorId }: { processorId: string }) => (
+      <div data-testid={`processor-${processorId}`} />
+    ),
+    SaturatorProcessor: () => <div data-testid="processor-soft_clip" />,
+    ToneFilterProcessor: () => <div data-testid="processor-tone_filter" />,
+    PassthroughProcessor: () => <div data-testid="processor-example" />,
+    OscilloscopeProcessor: () => <div data-testid="oscilloscope" />,
   };
 });
-
-vi.mock('../../../../sdk-template/ui/src/processors/OscilloscopeProcessor', () => ({
-  OscilloscopeProcessor: () => <div data-testid="oscilloscope" />,
-}));
-vi.mock('../../../../sdk-template/ui/src/processors/TestToneProcessor', () => ({
-  TestToneProcessor: () => <div data-testid="processor-test-tone" />,
-}));
-vi.mock('../../../../sdk-template/ui/src/processors/SmartProcessor', () => ({
-  SmartProcessor: ({ id }: { id: string }) => <div data-testid={`processor-${id}`} />,
-}));
-
-vi.mock('../../../../sdk-template/ui/src/processors/ExampleProcessor', () => ({
-  ExampleProcessor: () => <div data-testid="processor-example" />,
-}));
 
 import { App } from '../../../../sdk-template/ui/src/App';
 
 describe('sdk-template App layout', () => {
   it('renders test tone panel and resize handle', () => {
+    mockUseHasProcessorInSignalChain.mockReturnValue(true);
+    mockUseParameter.mockReturnValue({
+      param: {
+        id: 'test_parameter',
+        name: 'Test Parameter',
+        type: 'float',
+        value: 0,
+        default: 0,
+        min: 0,
+        max: 1,
+        unit: '',
+      },
+      setValue: vi.fn(),
+    });
+    mockUseOscilloscopeFrame.mockReturnValue({
+      points_l: new Array(128).fill(0),
+      points_r: new Array(128).fill(0),
+      sample_rate: 44100,
+      timestamp: 0,
+      no_signal: true,
+      trigger_mode: 'risingZeroCrossing',
+    });
     mockUseConnectionStatus.mockReturnValue({ connected: true, transport: 'websocket' });
     mockUseAudioStatus.mockReturnValue({
       phase: 'runningFullDuplex',
@@ -65,13 +87,7 @@ describe('sdk-template App layout', () => {
     expect(screen.getByTestId('processor-soft_clip')).toBeInTheDocument();
     expect(screen.getByTestId('processor-example')).toBeInTheDocument();
     expect(screen.getByTestId('processor-output_gain')).toBeInTheDocument();
-    expect(screen.getByTestId('processor-grid')).toHaveClass(
-      'grid',
-      'grid-cols-1',
-      'gap-4',
-      'md:grid-cols-2',
-      'xl:grid-cols-4'
-    );
+    expect(document.querySelector('.grid.grid-cols-12.gap-2.bg-purple-500')).toBeInTheDocument();
     expect(screen.getByLabelText('Resize window')).toBeInTheDocument();
   });
 });

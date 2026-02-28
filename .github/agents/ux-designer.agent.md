@@ -2,6 +2,7 @@
 name: ux-designer
 description: UX design system owner and UI implementation specialist for Wavecraft frontend
 model:
+  - Claude Sonnet 4.6 (copilot)
   - GPT-5.3-Codex (copilot)
   - GPT-5.2-Codex (copilot)
   - Claude Opus 4.6 (copilot)

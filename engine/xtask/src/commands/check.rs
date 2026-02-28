@@ -3,7 +3,7 @@
 //! This command runs all the checks that would run in the CI pipeline:
 //! 0. Documentation link checking (`scripts/check-links.sh`)
 //! 1. UI dist build (always rebuild to mirror CI)
-//! 2. Linting + type-checking (with optional auto-fix for lint/format)
+//! 2. Linting + type-checking (with auto-fix for lint/format)
 //! 3. Automated tests (engine + UI)
 //! 4. Template validation (`validate-template`) [--full only]
 //! 5. CD dry-run (`cd_dry_run`) [--full only]
@@ -26,7 +26,7 @@ use xtask::paths;
 /// Check configuration options.
 #[derive(Debug, Clone, Default)]
 pub struct CheckConfig {
-    /// Auto-fix linting issues where possible
+    /// Auto-fix linting issues (always enabled via ci-check)
     pub fix: bool,
     /// Skip documentation checks
     pub skip_docs: bool,

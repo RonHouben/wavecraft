@@ -1,4 +1,3 @@
-// eslint-disable-next-line no-restricted-imports -- Type-level assertions intentionally validate public core ID contracts.
 import type {
   ToneFilterBypassParameterId,
   ToneFilterCutoffHzParameterId,
@@ -23,9 +22,7 @@ export type _ToneFilterProcessorIdIncludesToneFilter = Assert<
 export type _ToneFilterBypassIdIsNotNever = Assert<NotNever<ToneFilterBypassParameterId>>;
 export type _ToneFilterModeIdIsNotNever = Assert<NotNever<ToneFilterModeParameterId>>;
 export type _ToneFilterCutoffIdIsNotNever = Assert<NotNever<ToneFilterCutoffHzParameterId>>;
-export type _ToneFilterResonanceIdIsNotNever = Assert<
-  NotNever<ToneFilterResonanceQParameterId>
->;
+export type _ToneFilterResonanceIdIsNotNever = Assert<NotNever<ToneFilterResonanceQParameterId>>;
 
 export type _ToneFilterBypassSuffixIsParameterId = Assert<
   'tone_filter_bypass' extends ToneFilterBypassParameterId ? true : false

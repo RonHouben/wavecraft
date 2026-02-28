@@ -1,9 +1,9 @@
+import { omit } from 'lodash';
 import React, { useId } from 'react';
+import { Row } from './Row';
+import { PolymorphicProps } from './types';
 import { focusRingClass, mergeClassNames } from './utils/classNames';
 import { getControlStateClass } from './utils/controlStates';
-import { PolymorphicProps } from './types';
-import { omit } from 'lodash';
-import { Row } from './Row';
 
 type RadioGroupValue = string | number;
 
@@ -87,6 +87,7 @@ export function RadioGroup<T extends RadioGroupValue>(
             'aria-disabled': isDisabled || undefined,
             className,
             disabled: isDisabled,
+            tabIndex: -1,
           };
 
           if (option.as) {
@@ -110,6 +111,19 @@ export function RadioGroup<T extends RadioGroupValue>(
                 checked={isChecked}
                 {...commonProps}
                 type="radio"
+                onKeyDown={(event): void => {
+                  if (
+                    event.key === ' ' ||
+                    event.key === 'Enter' ||
+                    event.key === 'ArrowRight' ||
+                    event.key === 'ArrowLeft' ||
+                    event.key === 'ArrowUp' ||
+                    event.key === 'ArrowDown'
+                  ) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }
+                }}
                 onChange={() => selectOption(index)}
               />
             </Row>

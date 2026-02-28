@@ -5,27 +5,31 @@
  * that allow testing components without the Rust engine.
  */
 
-import { useState, useCallback } from 'react';
 import type {
+  ConnectionStatus,
+  MeterFrame,
+  OscilloscopeFrame,
+  ParameterId,
   ParameterInfo,
   ParameterValue,
   ParameterVariant,
-  MeterFrame,
-  OscilloscopeFrame,
-  UseParameterResult,
   UseAllParametersResult,
-  ConnectionStatus,
+  UseParameterResult,
 } from '@wavecraft/core';
+import { useCallback, useState } from 'react';
 
 // Re-export types
+// Re-export types
+// Re-export types
+// Re-export types
 export type {
-  ParameterInfo,
-  ParameterType,
+  ConnectionStatus,
   MeterFrame,
   OscilloscopeFrame,
-  UseParameterResult,
+  ParameterInfo,
+  ParameterType,
   UseAllParametersResult,
-  ConnectionStatus,
+  UseParameterResult,
 } from '@wavecraft/core';
 
 // ============================================================================
@@ -46,7 +50,7 @@ let mockOscilloscopeFrame: OscilloscopeFrame | null = null;
 export function setMockParameter(id: string, info: Partial<ParameterInfo>): void {
   const existing = mockParameters.get(id);
   const fullInfo: ParameterInfo = {
-    id,
+    id: id as ParameterId,
     name: info.name ?? existing?.name ?? id,
     value: info.value ?? existing?.value ?? 0,
     default: info.default ?? existing?.default ?? 0,

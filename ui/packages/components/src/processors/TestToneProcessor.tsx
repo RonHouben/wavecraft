@@ -1,9 +1,9 @@
-import { Col, Knob, Row, Switch } from '..';
 import type { TestToneParameterIds, TestToneProcessorId } from '@wavecraft/core';
 import { useParameter } from '@wavecraft/core';
 import { type JSX } from 'react';
-import { ProcessorCard } from './ProcessorCard';
+import { Knob, Row, Switch } from '..';
 import { mergeClassNames } from '../utils/classNames';
+import { ProcessorCard } from './ProcessorCard';
 
 const TEST_TONE_PROCESSOR_ID: TestToneProcessorId = 'test_tone';
 

@@ -29,7 +29,7 @@ interface CardFooterProps extends NativeDivProps {
   readonly children: ReactNode;
 }
 
-function CardHeader({
+export function CardHeader({
   children,
   className,
   ...props
@@ -44,7 +44,11 @@ function CardHeader({
   );
 }
 
-function CardTitle({ children, className, ...props }: Readonly<CardTitleProps>): React.JSX.Element {
+export function CardTitle({
+  children,
+  className,
+  ...props
+}: Readonly<CardTitleProps>): React.JSX.Element {
   return (
     <h3
       className={mergeClassNames('text-type-md font-semibold text-plugin-text-primary', className)}
@@ -55,7 +59,7 @@ function CardTitle({ children, className, ...props }: Readonly<CardTitleProps>):
   );
 }
 
-function CardDescription({
+export function CardDescription({
   children,
   className,
   ...props
@@ -70,7 +74,7 @@ function CardDescription({
   );
 }
 
-function CardContent({
+export function CardContent({
   children,
   className,
   ...props
@@ -82,7 +86,7 @@ function CardContent({
   );
 }
 
-function CardFooter({
+export function CardFooter({
   children,
   className,
   ...props

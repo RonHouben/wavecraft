@@ -211,10 +211,6 @@ enum Commands {
         name = "ci-check"
     )]
     Check {
-        /// Auto-fix linting issues where possible
-        #[arg(long)]
-        fix: bool,
-
         /// Include full validation: template validation + CD dry-run
         #[arg(short = 'F', long)]
         full: bool,
@@ -435,7 +431,6 @@ fn main() -> Result<()> {
         }
         Some(Commands::Dev { port }) => commands::dev::run(port, cli.verbose),
         Some(Commands::Check {
-            fix,
             full,
             skip_docs,
             skip_lint,
@@ -444,7 +439,7 @@ fn main() -> Result<()> {
             skip_cd,
         }) => {
             let config = commands::check::CheckConfig {
-                fix,
+                fix: true,
                 skip_docs,
                 skip_lint,
                 skip_tests,

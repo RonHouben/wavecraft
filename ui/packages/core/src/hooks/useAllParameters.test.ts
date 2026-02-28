@@ -1,20 +1,20 @@
-import { renderHook, waitFor, act } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { WavecraftProvider } from '../context/WavecraftProvider';
 import { IpcBridge } from '../ipc/IpcBridge';
 import { ParameterClient } from '../ipc/ParameterClient';
-import { MockTransport } from '../transports/MockTransport';
 import * as transportsModule from '../transports';
+import { MockTransport } from '../transports/MockTransport';
+import type { ParameterId, ParameterInfo } from '../types/parameters';
 import * as environmentModule from '../utils/environment';
-import type { ParameterInfo } from '../types/parameters';
 import { useAllParameters } from './useAllParameters';
 import { useParameter } from './useParameter';
 
 const mockParams: ParameterInfo[] = [
   {
-    id: 'gain',
+    id: 'gain' as ParameterId,
     name: 'Gain',
     type: 'float',
     value: 0.5,
@@ -87,7 +87,7 @@ describe('useAllParameters', () => {
     const getAllSpy = vi.spyOn(client, 'getAllParameters').mockResolvedValue(mockParams);
 
     const { result } = renderHook(
-      () => ({ all: useAllParameters(), single: useParameter('gain') }),
+      () => ({ all: useAllParameters(), single: useParameter('gain' as ParameterId) }),
       {
         wrapper: providerWrapper,
       }
@@ -116,11 +116,11 @@ describe('useAllParameters', () => {
     });
 
     await act(async () => {
-      await result.current.setParameter('gain', 0.8);
+      await result.current.setParameter('gain' as ParameterId, 0.8);
     });
 
     expect(setSpy).toHaveBeenCalledWith('gain', 0.8);
-    const gain = result.current.params.find((param) => param.id === 'gain');
+    const gain = result.current.params.find((param) => param.id === ('gain' as ParameterId));
     expect(gain?.value).toBe(0.8);
   });
 });

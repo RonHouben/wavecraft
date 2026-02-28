@@ -1,7 +1,6 @@
 import type { SoftClipParameterIds, SoftClipProcessorId } from '@wavecraft/core';
 import { useParameter } from '@wavecraft/core';
 import { type JSX } from 'react';
-import { Col } from '../Col';
 import { Knob } from '../Knob';
 import { Row } from '../Row';
 import { mergeClassNames } from '../utils/classNames';
