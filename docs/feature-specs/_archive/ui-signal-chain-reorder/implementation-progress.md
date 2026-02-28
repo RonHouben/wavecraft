@@ -186,4 +186,28 @@ Files:
 - [x] `npm run typecheck` passes (exit 0)
 - [x] `npm test` — 218/218 tests passed
 - [x] `cargo xtask ci-check` passes (full pipeline) — verified 28 Feb 2026 (Documentation ✓, Linting ✓, Tests ✓, 69.2s)
+- [x] QA findings resolved — verified 28 Feb 2026 (all 4 findings addressed, `cargo xtask ci-check` passes)
 - [ ] PR created
+
+## QA Fixes (28 Feb 2026)
+
+Resolved all findings from QA report after initial review:
+
+### Finding 1 — RT allocations eliminated
+
+- Added `__param_scratch: Vec<f32>` field to `__WavecraftPlugin`, pre-grown at construction to total param count. Per-block `clear()` + `push()` loop replaces per-block `collect()` — zero heap allocation after init.
+- Replaced per-sample `Vec<Vec<f32>>` + `Vec<&mut [f32]>` with stack `[f32; 2]` + `[&mut [f32]; 2]` using `split_at_mut` inside an inner block for borrow discipline.
+- Oscilloscope `to_vec()`/`clone()` retained with doc comment noting it is an acceptable once-per-block allocation.
+
+### Finding 2 — Permutation validation in InMemoryParameterHost
+
+- `set_processor_order` now parses each slot as `usize`, validates in-range + no-duplicates, and returns `BridgeError::InvalidProcessorOrder` with a descriptive reason on failure — matching the generated `ProcessorOrderAccess::set_order()` rigor.
+- Five new unit tests added to `in_memory_host.rs`.
+
+### Finding 3 — Not Applicable (by design)
+
+- LLD confirms `processorOrderChanged` is only emitted after `setProcessorOrder`, state restore, and initial sync — not after GET. Doc comment added to `handle_get_processor_order` explaining the design decision.
+
+### Finding 4 — SAFETY comments added
+
+- Added focused SAFETY comments to every unsafe block in the `wavecraft_dev_create_processor` FFI vtable: instance casts, channel pointer reads, `from_raw_parts_mut`/`from_raw_parts`, and `Box::from_raw`.
