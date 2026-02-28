@@ -5,32 +5,42 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import { useAllParameters } from './useAllParameters';
-import type { ParameterId, ParameterInfo, ParameterValue } from '../types/parameters';
+import type {
+  ParameterId,
+  ParameterInfo,
+  ParameterValue,
+  ParameterVariant,
+} from '../types/parameters';
 
 function toError(err: unknown): Error {
   return err instanceof Error ? err : new Error(String(err));
 }
 
-export interface UseParameterResult {
-  param: ParameterInfo | null;
-  setValue: (value: ParameterValue) => Promise<void>;
+export interface UseParameterResult<T extends ParameterValue, V extends ParameterVariant> {
+  param: ParameterInfo<T, V> | null;
+  setValue: (value: T) => Promise<void>;
   isLoading: boolean;
   error: Error | null;
 }
 
 function toBackendValue(value: ParameterValue): number {
-  return typeof value === 'boolean' ? (value ? 1 : 0) : value;
+  return typeof value === 'boolean' ? (value ? 1 : 0) : typeof value === 'number' ? value : 0;
 }
 
-function toFrontendValue(paramType: ParameterInfo['type'], value: ParameterValue): ParameterValue {
+function toFrontendValue<T extends ParameterValue, V extends ParameterVariant>(
+  paramType: ParameterInfo<T, V>['type'],
+  value: T
+): T {
   if (paramType === 'bool') {
-    return typeof value === 'boolean' ? value : value >= 0.5;
+    return (typeof value === 'boolean' ? value : (value as number) >= 0.5) as T;
   }
 
-  return typeof value === 'boolean' ? (value ? 1 : 0) : value;
+  return (typeof value === 'boolean' ? (value ? 1 : 0) : value) as T;
 }
 
-function normalizeParameter(param: ParameterInfo): ParameterInfo {
+function normalizeParameter<T extends ParameterValue, V extends ParameterVariant>(
+  param: ParameterInfo<T, V>
+): ParameterInfo<T, V> {
   return {
     ...param,
     value: toFrontendValue(param.type, param.value),
@@ -38,17 +48,19 @@ function normalizeParameter(param: ParameterInfo): ParameterInfo {
   };
 }
 
-export function useParameter(id: ParameterId): UseParameterResult {
+export function useParameter<T extends ParameterValue, V extends ParameterVariant = undefined>(
+  id: ParameterId
+): UseParameterResult<T, V> {
   const { params, isLoading, error: sharedError, setParameter } = useAllParameters();
   const [writeError, setWriteError] = useState<Error | null>(null);
 
-  const param = useMemo<ParameterInfo | null>(() => {
+  const param = useMemo<ParameterInfo<T, V> | null>(() => {
     const found = params.find((candidate) => candidate.id === id);
     if (!found) {
       return null;
     }
 
-    return normalizeParameter(found);
+    return normalizeParameter<T, V>(found as ParameterInfo<T, V>);
   }, [id, params]);
 
   const notFoundError = useMemo(
@@ -59,7 +71,7 @@ export function useParameter(id: ParameterId): UseParameterResult {
   const error = writeError ?? sharedError ?? notFoundError;
 
   const setValue = useCallback(
-    async (value: ParameterValue) => {
+    async (value: T) => {
       try {
         await setParameter(id, toBackendValue(value));
         setWriteError(null);

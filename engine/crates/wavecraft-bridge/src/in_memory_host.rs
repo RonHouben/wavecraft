@@ -396,7 +396,7 @@ mod tests {
                 value: 440.0,
                 default: 440.0,
                 min: 20.0,
-                max: 5_000.0,
+                max: 20_000.0,
                 unit: Some("Hz".to_string()),
                 group: None,
                 variants: None,
@@ -449,30 +449,30 @@ mod tests {
     #[test]
     fn test_set_parameter_uses_declared_range_not_normalized_range() {
         let host = InMemoryParameterHost::new(vec![ParameterInfo {
-            id: "oscillator_frequency".to_string(),
+            id: "test_tone_frequency".to_string(),
             name: "Frequency".to_string(),
             param_type: ParameterType::Float,
             value: 440.0,
             default: 440.0,
             min: 20.0,
-            max: 5_000.0,
+            max: 20_000.0,
             unit: Some("Hz".to_string()),
-            group: Some("Oscillator".to_string()),
+            group: Some("Test Tone".to_string()),
             variants: None,
         }]);
 
-        host.set_parameter("oscillator_frequency", 2_000.0)
+        host.set_parameter("test_tone_frequency", 2_000.0)
             .expect("frequency in declared range should be accepted");
 
         let freq = host
-            .get_parameter("oscillator_frequency")
+            .get_parameter("test_tone_frequency")
             .expect("frequency should exist");
         assert!((freq.value - 2_000.0).abs() < f32::EPSILON);
 
-        let too_low = host.set_parameter("oscillator_frequency", 10.0);
+        let too_low = host.set_parameter("test_tone_frequency", 10.0);
         assert!(too_low.is_err(), "value below min should be rejected");
 
-        let too_high = host.set_parameter("oscillator_frequency", 10_000.0);
+        let too_high = host.set_parameter("test_tone_frequency", 30_000.0);
         assert!(too_high.is_err(), "value above max should be rejected");
     }
 }

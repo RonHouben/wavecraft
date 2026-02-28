@@ -1,17 +1,66 @@
-export type ParameterType = 'float' | 'bool' | 'enum';
-export type ParameterValue = number | boolean;
+import type { ElementType, ComponentPropsWithoutRef } from 'react';
 
-export interface ParameterInfo {
+export type ParameterType = 'float' | 'bool' | 'enum';
+export type ParameterValue = number | boolean | string;
+export type ParameterVariant = string | undefined;
+
+type AsyncChange<T> = (value: T) => void | Promise<void>;
+
+type ProcessorParameterCommon = {
   id: string;
   name: string;
-  type: ParameterType;
-  value: ParameterValue;
-  default: ParameterValue;
   min: number;
   max: number;
   unit?: string;
   group?: string;
-  variants?: string[];
+  disabled?: boolean;
+  variants?: readonly ParameterVariant[];
+};
+
+export type ProcessorParameter =
+  | (ProcessorParameterCommon & {
+      type: 'float';
+      value: number;
+      default: number;
+      onChange: AsyncChange<number>;
+    })
+  | (ProcessorParameterCommon & {
+      type: 'enum';
+      value: number;
+      default: number;
+      onChange: AsyncChange<number>;
+    })
+  | (ProcessorParameterCommon & {
+      type: 'bool';
+      value: boolean;
+      default: boolean;
+      onChange: AsyncChange<boolean>;
+    });
+
+export type ControlVisualState =
+  | 'default'
+  | 'hover'
+  | 'focus'
+  | 'active'
+  | 'disabled'
+  | 'loading'
+  | 'error';
+export type PluginVisualState = 'bypassed' | 'armed' | 'mapped';
+
+export interface ParameterInfo<
+  T extends ParameterValue = ParameterValue,
+  V extends ParameterVariant = ParameterVariant,
+> {
+  id: string;
+  name: string;
+  type: ParameterType;
+  value: T;
+  default: T;
+  min: number;
+  max: number;
+  unit?: string;
+  group?: string;
+  variants?: V[];
 }
 
 export interface MeterFrame {
@@ -47,3 +96,7 @@ export interface OscilloscopeFrame {
 
 export type OscilloscopeChannelView = 'overlay' | 'left' | 'right';
 export type OscilloscopeTriggerMode = 'risingZeroCrossing';
+
+export type PolymorphicProps<C extends ElementType, OwnProps> = OwnProps & {
+  as?: C;
+} & Omit<ComponentPropsWithoutRef<C>, keyof OwnProps | 'as'>;

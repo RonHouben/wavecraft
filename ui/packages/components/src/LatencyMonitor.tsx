@@ -3,12 +3,14 @@
  */
 
 import React from 'react';
+import { mergeClassNames } from './utils/classNames';
 
 export interface LatencyMonitorProps {
   readonly latency: number | null;
   readonly avg: number;
   readonly max: number;
   readonly count: number;
+  readonly className?: string;
 }
 
 export function LatencyMonitor({
@@ -16,6 +18,7 @@ export function LatencyMonitor({
   avg,
   max,
   count,
+  className,
 }: Readonly<LatencyMonitorProps>): React.JSX.Element {
   const getStatusColor = (): string => {
     if (avg < 5) return 'text-green-400';
@@ -30,7 +33,12 @@ export function LatencyMonitor({
   };
 
   return (
-    <div className="mb-4 rounded-lg border border-plugin-border bg-plugin-surface p-4">
+    <div
+      className={mergeClassNames(
+        'mb-4 rounded-lg border border-plugin-border bg-plugin-surface p-4',
+        className
+      )}
+    >
       <h3 className="m-0 mb-3 text-base font-semibold text-gray-200">IPC Latency</h3>
       <div className="grid grid-cols-2 gap-2">
         <div className="flex justify-between rounded bg-plugin-dark p-2">

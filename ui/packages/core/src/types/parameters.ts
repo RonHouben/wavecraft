@@ -7,16 +7,22 @@
 import { IpcEvents, IpcMethods } from '../ipc/constants';
 
 export type ParameterType = 'float' | 'bool' | 'enum';
-export type ParameterValue = number | boolean;
+export type ParameterValue = number | boolean | string;
+export type ParameterVariant = string | undefined;
 
 /**
  * Augmentable parameter ID registry.
  *
- * The generated `ui/src/generated/parameters.ts` file augments this interface
- * with the plugin's concrete parameter IDs.
+ * The generated `ui/src/generated/parameters.ts` file augments the global
+ * `WavecraftParameterIdMap` interface with the plugin's concrete parameter IDs.
  */
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  interface WavecraftParameterIdMap {}
+}
+
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ParameterIdMap {}
+export interface ParameterIdMap extends WavecraftParameterIdMap {}
 
 type ParameterIdMapEntryValue = true | number | boolean;
 
@@ -41,38 +47,39 @@ export type ParameterValueForId<TId extends ParameterId> =
       : number;
 
 /**
- * Internal marker key added by generated module augmentation.
+ * Internal marker key added by generated type augmentation.
  *
- * Used to distinguish:
- * - unaugmented projects (fallback `string` for backward compatibility)
- * - augmented projects with zero parameters (resolves to `never`)
+ * Used to distinguish generated entries from concrete parameter IDs.
  */
 export type ParameterIdMapAugmentedMarker = '__wavecraft_internal_augmented__';
 
 /**
  * Type-safe parameter identifier.
  *
- * When generated augmentation is present, this resolves to a literal string
- * union of plugin parameter IDs. If augmentation is present but no parameters
- * exist, this resolves to `never`. Without augmentation, it falls back to
- * `string` for backward compatibility.
+ * Resolves to a literal string union of plugin parameter IDs derived from the
+ * generated augmentation map. When no IDs are generated, this resolves to
+ * `never`.
  */
-export type ParameterId = ParameterIdMapAugmentedMarker extends keyof ParameterIdMap
-  ? Exclude<Extract<keyof ParameterIdMap, string>, ParameterIdMapAugmentedMarker>
-  : string;
+export type ParameterId = Exclude<
+  Extract<keyof ParameterIdMap, string>,
+  ParameterIdMapAugmentedMarker
+>;
 
-export interface ParameterInfo {
+export interface ParameterInfo<
+  T extends ParameterValue = ParameterValue,
+  V extends ParameterVariant = ParameterVariant,
+> {
   id: ParameterId;
   name: string;
   type: ParameterType;
-  value: ParameterValue;
-  default: ParameterValue;
+  value: T;
+  default: T;
   min: number;
   max: number;
   unit?: string;
   group?: string;
   /** Variant labels for enum parameters (e.g., ["Sine", "Square", "Saw", "Triangle"]). */
-  variants?: string[];
+  variants?: V[];
 }
 
 // getParameter
@@ -94,8 +101,11 @@ export interface SetParameterParams {
 export type SetParameterResult = Record<string, never>;
 
 // getAllParameters
-export interface GetAllParametersResult {
-  parameters: ParameterInfo[];
+export interface GetAllParametersResult<
+  T extends ParameterValue = ParameterValue,
+  V extends ParameterVariant = ParameterVariant,
+> {
+  parameters: ParameterInfo<T, V>[];
 }
 
 // Notification: parameterChanged

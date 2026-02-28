@@ -8,16 +8,21 @@ import {
   useWindowResizeSync,
 } from '@wavecraft/core';
 import { type JSX } from 'react';
-import { ExampleProcessor } from './processors/ExampleProcessor';
-import { SmartProcessor } from './processors/SmartProcessor';
 import {
   Meter,
   VersionBadge,
   ConnectionStatus,
   LatencyMonitor,
   ResizeHandle,
+  TestToneProcessor,
+  OscilloscopeProcessor,
+  Row,
+  Col,
+  GainProcessor,
+  PassthroughProcessor,
+  SaturatorProcessor,
+  ToneFilterProcessor,
 } from '@wavecraft/components';
-import { OscilloscopeProcessor } from './processors/OscilloscopeProcessor';
 
 export function App(): JSX.Element {
   useWindowResizeSync();
@@ -29,55 +34,76 @@ export function App(): JSX.Element {
 
   return (
     <WavecraftProvider>
-      <div className="flex h-screen flex-col gap-4 bg-plugin-dark p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-100">My Plugin</h1>
-          <div className="flex items-center gap-2">
-            <ConnectionStatus
-              connected={connected}
-              transport={transport}
-              phase={phase}
-              isReady={isReady}
-              isDegraded={isDegraded}
-              diagnostic={diagnostic}
-            />
-            <VersionBadge />
-          </div>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-100">My Plugin</h1>
+        <div className="flex items-center gap-2">
+          <ConnectionStatus
+            connected={connected}
+            transport={transport}
+            phase={phase}
+            isReady={isReady}
+            isDegraded={isDegraded}
+            diagnostic={diagnostic}
+          />
+          <VersionBadge />
         </div>
+      </div>
 
-        {/* Main Content */}
-        <div className="flex flex-1 flex-col gap-6">
-          <div className="grid grid-cols-1 gap-4">
-            <SmartProcessor id="oscillator" title="Oscillator" hideWhenNotInSignalChain />
-            <SmartProcessor id="input_trim" title="Input Trim" hideWhenNotInSignalChain />
-            <SmartProcessor id="tone_filter" title="Tone Filter" hideWhenNotInSignalChain />
-            <SmartProcessor id="soft_clip" title="Soft Clip" hideWhenNotInSignalChain />
-            <ExampleProcessor hideWhenNotInSignalChain />
-            <SmartProcessor id="output_gain" title="Output Gain" hideWhenNotInSignalChain />
-            <OscilloscopeProcessor hideWhenNotInSignalChain />
-          </div>
-
-          {/* Metering Section */}
-          <div className="rounded-lg border border-plugin-border bg-plugin-surface p-4">
-            <h2 className="mb-3 text-base font-semibold text-gray-200">Output Metering</h2>
-            <Meter connected={connected} frame={frame} />
-          </div>
-
-          {/* Info Section */}
-          <div className="rounded-lg border border-plugin-border bg-plugin-surface p-4">
-            <h2 className="mb-3 text-base font-semibold text-gray-200">Info</h2>
+      {/* Main Content */}
+      <Col className="gap-2 bg-purple-500 px-4 sm:bg-red-500 md:bg-amber-500 lg:bg-green-500">
+        <Row className="gap-2">
+          <TestToneProcessor
+            className="col-span-full sm:col-span-8 md:col-span-4"
+            hideWhenNotInSignalChain
+          />
+          <Col className="col-span-8 gap-2 sm:col-span-4 md:col-span-4">
+            <GainProcessor
+              className="col-span-full"
+              processorId="input_trim"
+              title="Input Trim"
+              subtitle="My Input Trim"
+              hideWhenNotInSignalChain
+            />
+            <GainProcessor
+              className="col-span-full"
+              processorId="output_gain"
+              title="Output Gain"
+              subtitle="My Output Gain"
+              hideWhenNotInSignalChain
+            />
+          </Col>
+          <PassthroughProcessor
+            processorId="passthrough"
+            className="col-span-4 sm:col-span-12 md:col-span-4"
+            hideWhenNotInSignalChain
+            title="Passthrough"
+          />
+          <SaturatorProcessor
+            className="col-span-full sm:col-span-full md:col-span-6"
+            hideWhenNotInSignalChain
+          />
+          <ToneFilterProcessor
+            className="col-span-full sm:col-span-full md:col-span-6"
+            hideWhenNotInSignalChain
+          />
+        </Row>
+        <Row className="col-span-full gap-2">
+          <OscilloscopeProcessor className="col-span-full md:col-span-6" hideWhenNotInSignalChain />
+          <Col className="col-span-full gap-2 md:col-span-6">
+            <Meter className="col-span-full justify-center" connected={connected} frame={frame} />
             <LatencyMonitor
+              className="col-span-full justify-center"
               latency={latency.latency}
               avg={latency.avg}
               max={latency.max}
               count={latency.count}
             />
-          </div>
-        </div>
+          </Col>
+        </Row>
+      </Col>
 
-        <ResizeHandle onRequestResize={requestResize} />
-      </div>
+      <ResizeHandle onRequestResize={requestResize} />
     </WavecraftProvider>
   );
 }

@@ -52,7 +52,7 @@ impl StartCommand {
         let cwd = std::env::current_dir().context("Failed to get current directory")?;
         let project = ProjectMarkers::detect(&cwd)?;
 
-        if resolve_execution_mode(&project, self) == StartExecutionMode::DelegateToSdkXtask {
+        if resolve_execution_mode(&cwd, &project, self) == StartExecutionMode::DelegateToSdkXtask {
             return run_sdk_xtask_dev(&cwd, self.port);
         }
 
@@ -65,11 +65,16 @@ impl StartCommand {
     }
 }
 
-fn resolve_execution_mode(project: &ProjectMarkers, command: &StartCommand) -> StartExecutionMode {
-    resolve_execution_mode_with_guard(project, command, xtask_delegation_guard_enabled())
+fn resolve_execution_mode(
+    cwd: &Path,
+    project: &ProjectMarkers,
+    command: &StartCommand,
+) -> StartExecutionMode {
+    resolve_execution_mode_with_guard(cwd, project, command, xtask_delegation_guard_enabled())
 }
 
 fn resolve_execution_mode_with_guard(
+    cwd: &Path,
     project: &ProjectMarkers,
     command: &StartCommand,
     delegation_guard_enabled: bool,
@@ -82,6 +87,10 @@ fn resolve_execution_mode_with_guard(
         return StartExecutionMode::Direct;
     }
 
+    if !has_sdk_xtask_dev(cwd) {
+        return StartExecutionMode::Direct;
+    }
+
     if !is_xtask_compatible_start(command) {
         return StartExecutionMode::Direct;
     }
@@ -91,6 +100,10 @@ fn resolve_execution_mode_with_guard(
 
 fn is_xtask_compatible_start(command: &StartCommand) -> bool {
     command.ui_port == 5173 && !command.install && !command.no_install
+}
+
+fn has_sdk_xtask_dev(cwd: &Path) -> bool {
+    cwd.join("engine/xtask/Cargo.toml").is_file()
 }
 
 fn xtask_delegation_guard_enabled() -> bool {
@@ -151,6 +164,7 @@ mod tests {
     fn create_sdk_repo_root(root: &Path) {
         fs::create_dir_all(root.join("ui")).expect("ui dir");
         fs::create_dir_all(root.join("engine/crates/wavecraft-core")).expect("core crate dir");
+        fs::create_dir_all(root.join("engine/xtask")).expect("xtask dir");
         fs::create_dir_all(root.join("sdk-template/ui")).expect("template ui dir");
         fs::create_dir_all(root.join("sdk-template/engine/src")).expect("template engine dir");
         fs::create_dir_all(root.join("cli")).expect("cli dir");
@@ -166,6 +180,11 @@ mod tests {
             "[package]\nname = \"wavecraft-core\"\nversion = \"0.1.0\"\n",
         )
         .expect("core cargo");
+        fs::write(
+            root.join("engine/xtask/Cargo.toml"),
+            "[package]\nname = \"xtask\"\nversion = \"0.1.0\"\n",
+        )
+        .expect("xtask cargo");
         fs::write(
             root.join("cli/Cargo.toml"),
             "[package]\nname = \"wavecraft\"\nversion = \"0.1.0\"\n",
@@ -187,7 +206,8 @@ mod tests {
         let project = ProjectMarkers::detect(temp.path()).expect("plugin markers");
         assert!(!project.sdk_mode);
 
-        let mode = resolve_execution_mode_with_guard(&project, &default_command(), false);
+        let mode =
+            resolve_execution_mode_with_guard(temp.path(), &project, &default_command(), false);
         assert_eq!(mode, StartExecutionMode::Direct);
     }
 
@@ -199,8 +219,24 @@ mod tests {
         let project = ProjectMarkers::detect(temp.path()).expect("sdk markers");
         assert!(project.sdk_mode);
 
-        let mode = resolve_execution_mode_with_guard(&project, &default_command(), false);
+        let mode =
+            resolve_execution_mode_with_guard(temp.path(), &project, &default_command(), false);
         assert_eq!(mode, StartExecutionMode::DelegateToSdkXtask);
+    }
+
+    #[test]
+    fn sdk_root_without_xtask_stays_on_direct_start_flow() {
+        let temp = TempDir::new().expect("temp dir");
+        create_sdk_repo_root(temp.path());
+        fs::remove_file(temp.path().join("engine/xtask/Cargo.toml"))
+            .expect("remove xtask manifest");
+
+        let project = ProjectMarkers::detect(temp.path()).expect("sdk markers");
+        assert!(project.sdk_mode);
+
+        let mode =
+            resolve_execution_mode_with_guard(temp.path(), &project, &default_command(), false);
+        assert_eq!(mode, StartExecutionMode::Direct);
     }
 
     #[test]

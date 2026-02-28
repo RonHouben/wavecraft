@@ -1,26 +1,28 @@
 import { useMemo } from 'react';
 
 import { PROCESSOR_BYPASS_SUFFIX } from '../processors/bypass';
-import type { ParameterId, ParameterInfo, ParameterValue } from '../types/parameters';
+import type {
+  ParameterId,
+  ParameterInfo,
+  ParameterValue,
+  ParameterVariant,
+} from '../types/parameters';
 import type { ProcessorId } from '../types/processors';
 import { useAllParameters } from './useAllParameters';
 
-export interface UseParametersForProcessorResult {
+export interface UseParametersForProcessorResult<T extends ParameterValue> {
   processorId: ProcessorId;
-  params: ParameterInfo[];
+  params: ParameterInfo<T>[];
   isLoading: boolean;
   error: Error | null;
-  setParameter: (id: ParameterId, value: ParameterValue) => Promise<void>;
+  setParameter: (id: ParameterId, value: T) => Promise<void>;
   reload: () => Promise<void>;
 }
 
-/** @deprecated Use UseParametersForProcessorResult instead. */
-export type UseAllParameterForResult = UseParametersForProcessorResult;
-
-function selectProcessorParams(
-  allParams: readonly ParameterInfo[],
-  processorId: ProcessorId
-): ParameterInfo[] {
+function selectProcessorParams<
+  T extends ParameterValue = ParameterValue,
+  V extends ParameterVariant = ParameterVariant,
+>(allParams: readonly ParameterInfo<T, V>[], processorId: ProcessorId): ParameterInfo<T, V>[] {
   const bypassId = `${processorId}${PROCESSOR_BYPASS_SUFFIX}`;
 
   return allParams.filter(
@@ -30,7 +32,7 @@ function selectProcessorParams(
 
 export function useParametersForProcessor(
   processorId: ProcessorId
-): UseParametersForProcessorResult {
+): UseParametersForProcessorResult<ParameterValue> {
   const { params, isLoading, error, setParameter, reload } = useAllParameters();
 
   const processorParams = useMemo(
@@ -46,9 +48,4 @@ export function useParametersForProcessor(
     setParameter,
     reload,
   };
-}
-
-/** @deprecated Use useParametersForProcessor instead. */
-export function useAllParametersFor(processorId: ProcessorId): UseAllParameterForResult {
-  return useParametersForProcessor(processorId);
 }

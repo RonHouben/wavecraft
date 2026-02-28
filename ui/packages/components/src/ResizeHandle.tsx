@@ -97,7 +97,7 @@ export function ResizeHandle({ onRequestResize }: Readonly<ResizeHandleProps>): 
   return (
     <button
       data-testid="resize-handle"
-      className={`group fixed bottom-2 right-2 z-[9999] flex h-11 w-11 cursor-nwse-resize select-none items-center justify-center rounded-md border border-plugin-border bg-plugin-surface p-0 shadow-sm ${focusRingClass} ${interactionStateClass} ${
+      className={`group fixed bottom-4 right-4 z-30 flex h-11 w-11 cursor-nwse-resize select-none items-center justify-center rounded-md border border-plugin-border bg-plugin-surface p-0 shadow-sm ${focusRingClass} ${interactionStateClass} ${
         isDragging ? 'border-accent/60 bg-accent/25' : 'hover:border-white/35 hover:bg-white/15'
       }`}
       onMouseDown={handleMouseDown}

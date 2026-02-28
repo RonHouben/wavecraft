@@ -103,11 +103,11 @@ describe('ParameterSlider', () => {
   it('uses full frequency range and shows Hz without percent scaling', () => {
     render(
       <ParameterSlider
-        id="oscillator_frequency"
-        name="Oscillator Frequency"
+        id="test_tone_frequency"
+        name="Test Tone Frequency"
         value={440}
         min={20}
-        max={5000}
+        max={20000}
         unit="Hz"
         onChange={onChange}
       />
@@ -115,7 +115,7 @@ describe('ParameterSlider', () => {
 
     const slider = screen.getByRole('slider');
     expect(slider).toHaveAttribute('min', '20');
-    expect(slider).toHaveAttribute('max', '5000');
+    expect(slider).toHaveAttribute('max', '20000');
     expect(screen.getByText('440.0 Hz')).toBeInTheDocument();
   });
 });

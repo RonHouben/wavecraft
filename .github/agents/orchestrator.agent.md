@@ -1,42 +1,13 @@
 ---
 name: orchestrator
 model:
+  - Claude Sonnet 4.6 (copilot)
   - GPT-5.3-Codex (copilot)
   - Claude Opus 4.6 (copilot)
-  - Claude Sonnet 4.6 (copilot)
 tools:
   ['read', 'search', 'agent', 'web', 'todo', 'memory', 'excalidraw/*', 'vscode']
 agents: ['*']
 user-invokable: true
-handoffs:
-  - label: Requirements Phase
-    agent: po
-    prompt: Define user stories and requirements for this feature.
-    send: true
-  - label: Design Phase
-    agent: architect
-    prompt: Create low-level design for this feature.
-    send: true
-  - label: Planning Phase
-    agent: planner
-    prompt: Create detailed implementation plan for this feature.
-    send: true
-  - label: Implementation Phase
-    agent: coder
-    prompt: Implement this feature according to the plan.
-    send: true
-  - label: UI/UX Phase
-    agent: ux-designer
-    prompt: Implement UI/UX changes, following required UX skill order (ui-ux-change-workflow → design-token-compliance → ui-accessibility-review), then hand off to tester.
-    send: true
-  - label: Testing Phase
-    agent: tester
-    prompt: Test this implementation.
-    send: true
-  - label: QA Phase
-    agent: qa
-    prompt: Perform quality review of this implementation.
-    send: true
 ---
 
 # Orchestrator Agent
@@ -142,7 +113,7 @@ Orchestrator → Coder → Tester → (if needed) QA
 ### UI/UX Change
 
 ```
-Orchestrator → UX Designer → Tester → (if issues) UX Designer → (if pass) Orchestrator
+Orchestrator → UX Designer → Tester (required VS Code integrated browser (Simple Browser) screenshot-based in-app checks for UI/visual changes) → (if issues) UX Designer → (if pass) Orchestrator
 ```
 
 ## When Agents Hand Back to You

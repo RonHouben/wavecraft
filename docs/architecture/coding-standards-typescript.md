@@ -87,6 +87,48 @@ export function on(event: string, callback: Function): () => void {
 
 **Rule:** Use functional components with hooks for all React code.
 
+**Rule:** Define component-specific helper functions at the bottom of the file, after the component's state logic and return block.
+
+**Do:**
+
+```typescript
+export function ParameterSlider({ id, name, min, max }: Props) {
+  const { param, setValue } = useParameter(id);
+
+  return (
+    <input
+      type="range"
+      value={param?.value ?? 0}
+      onChange={(e) => setValue(parseFloat(e.target.value))}
+    />
+  );
+}
+
+function clampValue(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+```
+
+**Don't:**
+
+```typescript
+function clampValue(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+export function ParameterSlider({ id, name, min, max }: Props) {
+  const { param, setValue } = useParameter(id);
+
+  return (
+    <input
+      type="range"
+      value={param?.value ?? 0}
+      onChange={(e) => setValue(clampValue(parseFloat(e.target.value), min, max))}
+    />
+  );
+}
+```
+
 ```typescript
 // ✅ Functional component with hooks
 export function ParameterSlider({ id, name, min, max }: Props) {
@@ -265,6 +307,45 @@ In **SDK dev mode**, generated augmentation is part of the required current cont
 - The augmentation marker (`__wavecraft_internal_augmented__`) distinguishes "not augmented" from "augmented but empty"
 - Generated files go in `ui/src/generated/` and are gitignored
 - The `export {};` at the end makes the file a module (required for `declare module` to work)
+
+### Keyboard Accessibility: Native-First Rule
+
+**Rule:** Prefer semantic native HTML elements and their built-in keyboard behavior before writing custom key handlers.
+
+Native elements (`button`, `a[href]`, `input`, `select`, `textarea`, `<input type="radio">`, `<input type="checkbox">`) provide tab focus, activation, and navigation for free. Do not reimplement what the browser already provides.
+
+**What comes out of the box — no custom handlers needed:**
+
+- **Tab focus** — all native focusable elements receive focus via Tab without any `onKeyDown`.
+- **Enter / Space activation** — `<button>` responds to both keys natively.
+- **Radio group arrows** — `<input type="radio">` elements sharing a `name` already cycle focus with arrow keys.
+- **Range increment / decrement** — `<input type="range">` responds to arrow keys and Page Up / Page Down natively.
+
+**Custom keyboard handling is only required for:**
+
+- Composite widgets with no native equivalent: tab panels (`role="tablist"`), listboxes, menus, tree views.
+- Canvas or SVG controls: knobs, XY pads, graph editors, envelope editors.
+- Dialog focus trapping and Escape-to-close.
+- Any element using a `role="…"` override that does not inherit native keyboard behavior.
+
+**If you add custom keyboard handling:**
+
+- Document the supported key map in the component or its spec entry.
+- Include at least one keyboard-only test path.
+- Do not add handlers that duplicate behavior already provided by native semantics (e.g., Space on a real `<button>`).
+
+| Pattern            | Native baseline                                         | Custom handling required?                             |
+| ------------------ | ------------------------------------------------------- | ----------------------------------------------------- |
+| Button             | `<button>` — Tab focus, Enter/Space activation          | ❌ No (unless using `role="button"` on a `<div>`)     |
+| Link               | `<a href>` — Tab focus, Enter activation                | ❌ No                                                 |
+| Text input         | `<input>`, `<textarea>` — Tab focus, all typing         | ❌ No                                                 |
+| Radio group        | `<input type="radio">` — Tab to group, arrows within    | ❌ No                                                 |
+| Tabs               | `role="tablist"` + `role="tab"` — no native equivalent  | ✅ Yes — arrow key tab switching                      |
+| Listbox / menu     | `role="listbox"` / `role="menu"` — no native equivalent | ✅ Yes — arrow navigation, Enter select, Escape close |
+| Dialog / modal     | `<dialog>` or `role="dialog"`                           | ✅ Yes — focus trap, Escape close                     |
+| Graph / XY control | Canvas / SVG — no native equivalent                     | ✅ Yes — arrow nudge, Shift fine-step, text fallback  |
+
+---
 
 ### Naming Conventions
 

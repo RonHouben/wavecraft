@@ -16,28 +16,27 @@ describe('ParameterSelect', () => {
   it('renders dropdown with enum variant labels', () => {
     render(
       <ParameterSelect
-        id="oscillator_waveform"
-        name="Waveform"
+        id="tone_filter_mode"
+        name="Mode"
         value={1}
-        options={['Sine', 'Square', 'Saw', 'Triangle']}
+        options={['Lowpass', 'Bandpass', 'Highpass']}
         onChange={mockSetValue}
       />
     );
 
-    expect(screen.getByText('Waveform')).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Sine' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Square' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Saw' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Triangle' })).toBeInTheDocument();
+    expect(screen.getByText('Mode')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Lowpass' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Bandpass' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Highpass' })).toBeInTheDocument();
   });
 
   it('displays current value as selected option', () => {
     render(
       <ParameterSelect
-        id="oscillator_waveform"
-        name="Waveform"
+        id="tone_filter_mode"
+        name="Mode"
         value={1}
-        options={['Sine', 'Square', 'Saw', 'Triangle']}
+        options={['Lowpass', 'Bandpass', 'Highpass']}
         onChange={mockSetValue}
       />
     );
@@ -49,18 +48,18 @@ describe('ParameterSelect', () => {
   it('calls setValue with numeric index on change', async () => {
     render(
       <ParameterSelect
-        id="oscillator_waveform"
-        name="Waveform"
+        id="tone_filter_mode"
+        name="Mode"
         value={1}
-        options={['Sine', 'Square', 'Saw', 'Triangle']}
+        options={['Lowpass', 'Bandpass', 'Highpass']}
         onChange={mockSetValue}
       />
     );
 
     const select = screen.getByRole('combobox');
-    fireEvent.change(select, { target: { value: '3' } });
+    fireEvent.change(select, { target: { value: '2' } });
 
-    expect(mockSetValue).toHaveBeenCalledWith(3);
+    expect(mockSetValue).toHaveBeenCalledWith(2);
   });
 
   it('renders a disabled select with helper text when enum variants are missing', () => {

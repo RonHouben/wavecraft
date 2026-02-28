@@ -101,6 +101,7 @@ pub(super) fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u
 
     // Create rebuild callbacks: wire CLI-specific functions into the dev-server pipeline
     let callbacks = build_rebuild_callbacks(project);
+    let additional_watch_paths = callbacks.additional_watch_paths.clone();
 
     let dev_session = runtime.block_on(async {
         DevSession::new(
@@ -114,14 +115,25 @@ pub(super) fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u
         )
     })?;
     let watched_path = project.engine_dir.join("src");
+    let current_dir = std::env::current_dir().unwrap_or_default();
     let relative_path = watched_path
-        .strip_prefix(std::env::current_dir().unwrap_or_default())
+        .strip_prefix(&current_dir)
         .unwrap_or(&watched_path);
     println!(
         "{} Watching {} for changes",
         style("👀").cyan(),
         relative_path.display()
     );
+
+    for watch_path in &additional_watch_paths {
+        let relative_watch_path = watch_path.strip_prefix(&current_dir).unwrap_or(watch_path);
+        println!(
+            "  {} Also watching {}",
+            style("↳").dim(),
+            relative_watch_path.display()
+        );
+    }
+
     println!();
 
     // 5. Start audio in-process via FFI (strict in SDK dev mode)
@@ -193,6 +205,8 @@ pub(super) fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u
 }
 
 fn build_rebuild_callbacks(project: &ProjectMarkers) -> RebuildCallbacks {
+    let additional_watch_paths = sdk_additional_watch_paths(project);
+
     RebuildCallbacks {
         package_name: read_engine_package_name(&project.engine_dir),
         write_sidecar: Some(std::sync::Arc::new(
@@ -224,7 +238,45 @@ fn build_rebuild_callbacks(project: &ProjectMarkers) -> RebuildCallbacks {
                     Box<dyn std::future::Future<Output = Result<Vec<ProcessorInfo>>> + Send>,
                 >
         })),
+        additional_watch_paths,
     }
+}
+
+fn sdk_additional_watch_paths(project: &ProjectMarkers) -> Vec<PathBuf> {
+    if !project.sdk_mode {
+        return Vec::new();
+    }
+
+    let Some(sdk_template_dir) = project.engine_dir.parent() else {
+        return Vec::new();
+    };
+    let Some(repo_root) = sdk_template_dir.parent() else {
+        return Vec::new();
+    };
+
+    let processor_crate_src = repo_root
+        .join("engine")
+        .join("crates")
+        .join("wavecraft-processors")
+        .join("src");
+
+    let processor_crate_manifest = repo_root
+        .join("engine")
+        .join("crates")
+        .join("wavecraft-processors")
+        .join("Cargo.toml");
+
+    let mut watch_paths = Vec::new();
+
+    if processor_crate_src.is_dir() {
+        watch_paths.push(processor_crate_src);
+    }
+
+    if processor_crate_manifest.is_file() {
+        watch_paths.push(processor_crate_manifest);
+    }
+
+    watch_paths
 }
 
 fn start_ui_dev_server(project: &ProjectMarkers, ui_port: u16) -> Result<GroupChild> {
@@ -251,7 +303,65 @@ fn start_ui_dev_server(project: &ProjectMarkers, ui_port: u16) -> Result<GroupCh
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
     use super::parse_allow_no_audio_env;
+    use super::sdk_additional_watch_paths;
+    use crate::project::ProjectMarkers;
+
+    #[test]
+    fn sdk_additional_watch_paths_include_wavecraft_processors_sources_and_manifest() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let repo_root = temp.path();
+
+        let engine_dir = repo_root.join("sdk-template").join("engine");
+        let ui_dir = repo_root.join("sdk-template").join("ui");
+        fs::create_dir_all(&engine_dir).expect("engine dir");
+        fs::create_dir_all(&ui_dir).expect("ui dir");
+
+        let processors_dir = repo_root
+            .join("engine")
+            .join("crates")
+            .join("wavecraft-processors");
+        let processors_src = processors_dir.join("src");
+        fs::create_dir_all(&processors_src).expect("processors src dir");
+        fs::write(
+            processors_dir.join("Cargo.toml"),
+            "[package]\nname = \"wavecraft-processors\"\n",
+        )
+        .expect("processors cargo");
+
+        let project = ProjectMarkers {
+            ui_dir: ui_dir.clone(),
+            engine_dir: engine_dir.clone(),
+            ui_package_json: ui_dir.join("package.json"),
+            engine_cargo_toml: engine_dir.join("Cargo.toml"),
+            sdk_mode: true,
+        };
+
+        let watch_paths = sdk_additional_watch_paths(&project);
+
+        assert!(watch_paths.contains(&processors_src));
+        assert!(watch_paths.contains(&processors_dir.join("Cargo.toml")));
+    }
+
+    #[test]
+    fn sdk_additional_watch_paths_are_empty_outside_sdk_mode() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let engine_dir = temp.path().join("engine");
+        let ui_dir = temp.path().join("ui");
+
+        let project = ProjectMarkers {
+            ui_dir: ui_dir.clone(),
+            engine_dir: engine_dir.clone(),
+            ui_package_json: ui_dir.join("package.json"),
+            engine_cargo_toml: engine_dir.join("Cargo.toml"),
+            sdk_mode: false,
+        };
+
+        let watch_paths = sdk_additional_watch_paths(&project);
+        assert!(watch_paths.is_empty());
+    }
 
     #[test]
     fn parse_allow_no_audio_env_accepts_opt_in_values() {

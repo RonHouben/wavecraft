@@ -10,6 +10,9 @@ const isSDKMode = fs.existsSync(path.resolve(currentDir, '../../engine/crates/wa
 export default defineConfig({
   plugins: [react()],
   base: './',
+  css: {
+    devSourcemap: true,
+  },
   resolve: {
     alias: isSDKMode
       ? {
@@ -21,6 +24,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    sourcemap: true,
     rollupOptions: {
       output: {
         manualChunks: undefined,

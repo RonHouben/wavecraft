@@ -3,7 +3,7 @@
 //! This command runs all the checks that would run in the CI pipeline:
 //! 0. Documentation link checking (`scripts/check-links.sh`)
 //! 1. UI dist build (always rebuild to mirror CI)
-//! 2. Linting + type-checking (with optional auto-fix for lint/format)
+//! 2. Linting + type-checking (with auto-fix for lint/format)
 //! 3. Automated tests (engine + UI)
 //! 4. Template validation (`validate-template`) [--full only]
 //! 5. CD dry-run (`cd_dry_run`) [--full only]
@@ -11,9 +11,9 @@
 //! This is much faster than running the full CI pipeline via Docker/act
 //! because it runs natively on the local machine.
 //!
-//! **Note:** Visual testing is done separately via the Playwright MCP skill
+//! **Note:** Visual testing is done separately via the VS Code Simple Browser workflow
 //! by the Tester agent. Use `cargo xtask dev` to start the dev servers,
-//! then invoke the "playwright-mcp-ui-testing" skill for visual validation.
+//! then invoke the "simple-browser-ui-testing" skill for visual validation.
 
 use anyhow::Result;
 use std::process::Command;
@@ -26,7 +26,7 @@ use xtask::paths;
 /// Check configuration options.
 #[derive(Debug, Clone, Default)]
 pub struct CheckConfig {
-    /// Auto-fix linting issues where possible
+    /// Auto-fix linting issues (always enabled via ci-check)
     pub fix: bool,
     /// Skip documentation checks
     pub skip_docs: bool,
@@ -342,7 +342,7 @@ fn print_summary(results: &CheckResults, total_duration: Duration, full: bool) {
         println!("💡 Run with --full to include template validation and CD dry-run.");
     }
     println!("💡 For visual testing, run 'cargo xtask dev' and use the");
-    println!("   'playwright-mcp-ui-testing' skill for browser-based validation.");
+    println!("   'simple-browser-ui-testing' skill for browser-based validation.");
 
     if results.all_passed() {
         println!();

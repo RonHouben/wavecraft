@@ -2,9 +2,10 @@
 name: docwriter
 description: Technical documentation specialist for creating and updating all project documentation. Enforces documentation standards and maintains consistency.
 model:
+  - GPT-5.3-Codex (copilot)
   - Claude Sonnet 4.6 (copilot)
-  - Claude Opus 4.6 (copilot)
   - GPT-5.2 (copilot)
+  - Claude Opus 4.6 (copilot)
 tools: ['read', 'search', 'edit', 'web', 'agent', 'todo', 'memory']
 agents: ['*']
 user-invokable: false
@@ -25,7 +26,7 @@ You are a **Technical Documentation Specialist** responsible for:
 
 > ⚠️ **EDITING POLICY**: You can ONLY edit `.md` files in the `docs/` directory. NEVER edit code files (`.rs`, `.ts`, `.tsx`, `.js`, `.json`, `.toml`, etc.).
 
-> **🔍 Research Rule:** When you need to find, locate, or survey code/docs and don't already know the exact file path, **delegate to the Search agent** via #tool:agent/runSubagent . Do NOT use your own `read`/`search` tools for exploratory research. See [Codebase Research](#codebase-research) for details.
+> **🔍 Research Rule:** When you need to find, locate, or survey code/docs and don't already know the exact file path, **delegate to the Search agent** via #tool:agent/runSubagent . Do NOT use your own `read`/`search` tools for exploratory research. See the **Codebase Research** section below for details.
 
 ---
 

@@ -1,18 +1,18 @@
-import { renderHook, waitFor, act } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { WavecraftProvider } from '../context/WavecraftProvider';
 import { IpcBridge } from '../ipc/IpcBridge';
 import { ParameterClient } from '../ipc/ParameterClient';
-import { MockTransport } from '../transports/MockTransport';
 import * as transportsModule from '../transports';
+import { MockTransport } from '../transports/MockTransport';
+import type { ParameterId, ParameterInfo } from '../types/parameters';
 import * as environmentModule from '../utils/environment';
-import type { ParameterInfo } from '../types/parameters';
 import { useParameter } from './useParameter';
 
 const mockGainParameter: ParameterInfo = {
-  id: 'gain',
+  id: 'gain' as ParameterId,
   name: 'Gain',
   type: 'float',
   value: 0.5,
@@ -61,7 +61,9 @@ describe('useParameter', () => {
     const client = ParameterClient.getInstance();
     vi.spyOn(client, 'getAllParameters').mockResolvedValue([mockGainParameter]);
 
-    const { result } = renderHook(() => useParameter('gain'), { wrapper: providerWrapper });
+    const { result } = renderHook(() => useParameter('gain' as ParameterId), {
+      wrapper: providerWrapper,
+    });
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -94,7 +96,9 @@ describe('useParameter', () => {
     vi.spyOn(client, 'getAllParameters').mockResolvedValue([mockGainParameter]);
     const setSpy = vi.spyOn(client, 'setParameter').mockResolvedValue();
 
-    const { result } = renderHook(() => useParameter('gain'), { wrapper: providerWrapper });
+    const { result } = renderHook(() => useParameter('gain' as ParameterId), {
+      wrapper: providerWrapper,
+    });
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);

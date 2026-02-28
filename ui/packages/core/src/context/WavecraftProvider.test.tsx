@@ -1,20 +1,20 @@
-import { renderHook, waitFor, act } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useAllParameters } from '../hooks/useAllParameters';
-import { IpcBridge } from '../ipc/IpcBridge';
 import { IpcEvents } from '../ipc/constants';
+import { IpcBridge } from '../ipc/IpcBridge';
 import { ParameterClient } from '../ipc/ParameterClient';
-import { MockTransport } from '../transports/MockTransport';
 import * as transportsModule from '../transports';
+import { MockTransport } from '../transports/MockTransport';
+import type { ParameterId, ParameterInfo, ParameterValue } from '../types/parameters';
 import * as environmentModule from '../utils/environment';
-import type { ParameterInfo, ParameterValue } from '../types/parameters';
 import { WavecraftProvider } from './WavecraftProvider';
 
 const initialParams: ParameterInfo[] = [
   {
-    id: 'gain',
+    id: 'gain' as ParameterId,
     name: 'Gain',
     type: 'float',
     value: 0.5,
@@ -31,7 +31,7 @@ function wrapper({ children }: Readonly<{ children: ReactNode }>) {
 
 describe('WavecraftProvider', () => {
   let mockTransport: MockTransport;
-  let onParamChangedCallback: ((id: string, value: ParameterValue) => void) | null = null;
+  let onParamChangedCallback: ((id: ParameterId, value: ParameterValue) => void) | null = null;
 
   beforeEach(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -73,7 +73,7 @@ describe('WavecraftProvider', () => {
     }
 
     await act(async () => {
-      callback('gain', 0.9);
+      callback('gain' as ParameterId, 0.9);
     });
 
     expect(result.current.params[0]?.value).toBe(0.9);
@@ -87,7 +87,7 @@ describe('WavecraftProvider', () => {
       .mockResolvedValueOnce([
         ...initialParams,
         {
-          id: 'drive',
+          id: 'drive' as ParameterId,
           name: 'Drive',
           type: 'float',
           value: 0.2,
@@ -133,7 +133,7 @@ describe('WavecraftProvider', () => {
     let writeError: unknown;
     await act(async () => {
       try {
-        await result.current.setParameter('gain', 1);
+        await result.current.setParameter('gain' as ParameterId, 1);
       } catch (err) {
         writeError = err;
       }
@@ -143,7 +143,7 @@ describe('WavecraftProvider', () => {
     expect((writeError as Error).message).toContain('Write failed');
 
     await waitFor(() => {
-      const gain = result.current.params.find((param) => param.id === 'gain');
+      const gain = result.current.params.find((param) => param.id === ('gain' as ParameterId));
       expect(gain?.value).toBe(0.5);
     });
   });
@@ -173,22 +173,22 @@ describe('WavecraftProvider', () => {
 
     let pendingWrite!: Promise<void>;
     act(() => {
-      pendingWrite = result.current.setParameter('gain', 1);
+      pendingWrite = result.current.setParameter('gain' as ParameterId, 1);
     });
 
     const writeErrorResult = (pendingWrite as Promise<void>).catch((error: unknown) => error);
 
     await waitFor(() => {
-      const gain = result.current.params.find((param) => param.id === 'gain');
+      const gain = result.current.params.find((param) => param.id === ('gain' as ParameterId));
       expect(gain?.value).toBe(1);
     });
 
     await act(async () => {
-      callback('gain', 0.9);
+      callback('gain' as ParameterId, 0.9);
     });
 
     await waitFor(() => {
-      const gain = result.current.params.find((param) => param.id === 'gain');
+      const gain = result.current.params.find((param) => param.id === ('gain' as ParameterId));
       expect(gain?.value).toBe(0.9);
     });
 
@@ -205,7 +205,7 @@ describe('WavecraftProvider', () => {
     expect((writeError as Error).message).toContain('Write failed');
 
     await waitFor(() => {
-      const gain = result.current.params.find((param) => param.id === 'gain');
+      const gain = result.current.params.find((param) => param.id === ('gain' as ParameterId));
       expect(gain?.value).toBe(0.9);
     });
   });

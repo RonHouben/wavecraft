@@ -33,6 +33,7 @@ export type {
   ParameterId,
   ParameterIdMap,
   ParameterType,
+  ParameterVariant,
   GetParameterParams,
   GetParameterResult,
   SetParameterParams,
@@ -46,6 +47,35 @@ export type {
   ProcessorId,
   ProcessorIdMap,
 } from './types/processors';
+
+export type {
+  BypassProcessorId,
+  LevelProcessorId,
+  ProcessorIdForParameterSuffix,
+  ParameterIdForProcessorSuffix,
+  ToneFilterProcessorId,
+  ToneFilterBypassParameterId,
+  ToneFilterModeParameterId,
+  ToneFilterCutoffHzParameterId,
+  ToneFilterResonanceQParameterId,
+  ToneFilterParameterIds,
+  SoftClipProcessorId,
+  SoftClipBypassParameterId,
+  SoftClipDriveDbParameterId,
+  SoftClipOutputDbParameterId,
+  SoftClipMixParameterId,
+  SoftClipToneParameterId,
+  SoftClipParameterIds,
+  PassthroughProcessorId,
+  PassthroughBypassParameterId,
+  PassthroughParameterIds,
+  TestToneProcessorId,
+  TestToneBypassParameterId,
+  TestToneEnabledParameterId,
+  TestToneFrequencyParameterId,
+  TestToneLevelParameterId,
+  TestToneParameterIds,
+} from './types/processor-parameter-ids';
 
 export type {
   // Metering types
@@ -111,11 +141,6 @@ export type { UseAllParametersResult } from './hooks/useAllParameters';
 export { useParametersForProcessor } from './hooks/useAllParameterFor';
 export type { UseParametersForProcessorResult } from './hooks/useAllParameterFor';
 
-/** @deprecated Use useParametersForProcessor instead. */
-export { useAllParametersFor } from './hooks/useAllParameterFor'; // compat: remove after next minor
-/** @deprecated Use UseParametersForProcessorResult instead. */
-export type { UseAllParameterForResult } from './hooks/useAllParameterFor'; // compat: remove after next minor
-
 export { useConnectionStatus } from './hooks/useConnectionStatus';
 export type { ConnectionStatus, TransportType } from './hooks/useConnectionStatus';
 
@@ -123,6 +148,19 @@ export { useLatencyMonitor } from './hooks/useLatencyMonitor';
 export type { UseLatencyMonitorResult } from './hooks/useLatencyMonitor';
 
 export { useMeterFrame } from './hooks/useMeterFrame';
+export {
+  useMeterSignalActivity,
+  getMeterSignalLevel,
+  getMeterSignalIntensity,
+  getMeterClipWarningIntensity,
+} from './hooks/useMeterSignalActivity';
+export type {
+  MeterSignalActivityState,
+  MeterSignalIntensityRange,
+  MeterClipWarningRange,
+  MeterSignalActivitySmoothing,
+  UseMeterSignalActivityOptions,
+} from './hooks/useMeterSignalActivity';
 export { useOscilloscopeFrame } from './hooks/useOscilloscopeFrame';
 export { useAudioStatus } from './hooks/useAudioStatus';
 export type { UseAudioStatusResult } from './hooks/useAudioStatus';

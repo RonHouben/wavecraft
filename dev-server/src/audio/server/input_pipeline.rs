@@ -10,10 +10,13 @@ use super::device_setup::InputStreamBuildContext;
 
 pub(super) struct InputCallbackPipeline {
     frame_counter: u64,
+    sample_rate_hz: f32,
+    test_tone_phase: f32,
     left_buf: Vec<f32>,
     right_buf: Vec<f32>,
     interleave_buf: Vec<f32>,
     plain_values_buf: Vec<f32>,
+    tone_filter_state: super::output_modifiers::StereoToneFilterState,
     processor: Box<dyn DevAudioProcessor>,
     input_channels: usize,
     param_bridge: Arc<AtomicParameterBridge>,
@@ -26,10 +29,13 @@ impl InputCallbackPipeline {
     pub(super) fn new(context: InputStreamBuildContext) -> Self {
         Self {
             frame_counter: 0,
+            sample_rate_hz: context.sample_rate_hz,
+            test_tone_phase: 0.0,
             left_buf: vec![0.0f32; context.buffer_size],
             right_buf: vec![0.0f32; context.buffer_size],
             interleave_buf: vec![0.0f32; context.buffer_size * 2],
             plain_values_buf: vec![0.0f32; context.param_bridge.parameter_count()],
+            tone_filter_state: super::output_modifiers::StereoToneFilterState::default(),
             processor: context.processor,
             input_channels: context.input_channels,
             param_bridge: context.param_bridge,
@@ -63,6 +69,15 @@ impl InputCallbackPipeline {
             let mut channels: [&mut [f32]; 2] = [left, right];
             self.processor.process(&mut channels);
         }
+
+        super::output_modifiers::apply_output_modifiers_with_state(
+            left,
+            right,
+            self.param_bridge.as_ref(),
+            &mut self.test_tone_phase,
+            self.sample_rate_hz,
+            &mut self.tone_filter_state,
+        );
 
         // Re-borrow after process()
         let left = &self.left_buf[..actual_samples];

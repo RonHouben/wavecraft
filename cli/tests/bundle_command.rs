@@ -347,7 +347,7 @@ fn test_bundle_refreshes_generated_contract_types_from_sidecars() {
     fs::create_dir_all(root.join("ui/src/generated")).expect("generated dir");
     fs::write(
         root.join("ui/src/generated/parameters.ts"),
-        "declare module '@wavecraft/core' { interface ParameterIdMap { stale_param: number; } }\n",
+        "declare global { interface WavecraftParameterIdMap { stale_param: number; } }\n",
     )
     .expect("stale parameters");
     fs::write(
@@ -371,12 +371,11 @@ fn test_bundle_refreshes_generated_contract_types_from_sidecars() {
 
     let generated_params = fs::read_to_string(root.join("ui/src/generated/parameters.ts"))
         .expect("generated parameter types should exist");
-    assert!(generated_params.contains("oscillator_enabled: boolean;"));
-    assert!(generated_params.contains("oscillator_waveform: number;"));
+    assert!(generated_params.contains("test_tone_enabled: boolean;"));
+    assert!(generated_params.contains("test_tone_frequency: number;"));
 
     let generated_processors = fs::read_to_string(root.join("ui/src/generated/processors.ts"))
         .expect("generated processor types should exist");
-    assert!(generated_processors.contains("oscillator: true;"));
     assert!(generated_processors.contains("registerAvailableProcessors(PROCESSOR_IDS);"));
 }
 
@@ -431,28 +430,28 @@ fn seed_metadata_sidecars(base: &std::path::Path) {
         debug_dir.join("wavecraft-params.json"),
         r#"[
     {
-        "id": "oscillator_enabled",
-        "name": "Oscillator Enabled",
+        "id": "test_tone_enabled",
+        "name": "Enabled",
         "type": "bool",
-        "value": 1.0,
-        "default": 1.0,
-        "min": 0.0,
-        "max": 1.0,
-        "unit": null,
-        "group": "Oscillator",
-        "variants": null
-    },
-    {
-        "id": "oscillator_waveform",
-        "name": "Oscillator Waveform",
-        "type": "enum",
         "value": 0.0,
         "default": 0.0,
         "min": 0.0,
-        "max": 3.0,
+        "max": 1.0,
         "unit": null,
-        "group": "Oscillator",
-        "variants": ["Sine", "Square", "Saw", "Triangle"]
+        "group": "Test Tone",
+        "variants": null
+    },
+    {
+        "id": "test_tone_frequency",
+        "name": "Frequency",
+        "type": "float",
+        "value": 440.0,
+        "default": 440.0,
+        "min": 20.0,
+        "max": 20000.0,
+        "unit": "Hz",
+        "group": "Test Tone",
+        "variants": null
     }
 ]"#,
     )
@@ -461,7 +460,7 @@ fn seed_metadata_sidecars(base: &std::path::Path) {
     fs::write(
         debug_dir.join("wavecraft-processors.json"),
         r#"[
-    { "id": "oscillator" },
+    { "id": "test_tone" },
     { "id": "output_gain" }
 ]"#,
     )

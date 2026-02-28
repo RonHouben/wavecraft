@@ -73,6 +73,11 @@ pub struct RebuildCallbacks {
     pub param_loader: ParamLoaderFn,
     /// Loads processors from the rebuilt dylib (async).
     pub processor_loader: Option<ProcessorLoaderFn>,
+    /// Additional Rust source paths to watch for hot-reload triggers.
+    ///
+    /// This is primarily used in SDK development mode where the active engine
+    /// depends on sibling workspace crates (e.g. `engine/crates/wavecraft-processors`).
+    pub additional_watch_paths: Vec<PathBuf>,
 }
 
 /// Rebuild pipeline for hot-reload.

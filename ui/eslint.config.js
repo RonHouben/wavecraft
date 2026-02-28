@@ -1,42 +1,15 @@
 import js from '@eslint/js';
 import typescript from '@typescript-eslint/eslint-plugin';
 import typescriptParser from '@typescript-eslint/parser';
+import eslintConfigPrettier from 'eslint-config-prettier';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
-import eslintConfigPrettier from 'eslint-config-prettier';
 import globals from 'globals';
 
 export default [
   // Base JavaScript rules
   js.configs.recommended,
-
-  // Guardrail: prevent direct filesystem imports from core package internals
-  {
-    files: ['packages/components/src/**/*.{ts,tsx}'],
-    ignores: ['packages/components/src/**/*.test.{ts,tsx}'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          paths: [
-            {
-              name: '@wavecraft/core',
-              message:
-                'Presentational components must not import @wavecraft/core directly. Move hook/state logic to sdk-template smart containers and pass data via props.',
-            },
-          ],
-          patterns: [
-            {
-              group: ['../core/*', '../../core/*', '../../../core/*', 'packages/core/*'],
-              message:
-                'Presentational components must not import core internals. Use package public APIs and props boundaries.',
-            },
-          ],
-        },
-      ],
-    },
-  },
 
   // Guardrail: disallow raw IPC method/event literals outside core package
   {

@@ -21,15 +21,17 @@ describe('ResizeHandle', () => {
     });
   });
 
-  it('renders with a visible anchored handle class', () => {
+  it('renders with a visible viewport-anchored handle class', () => {
     render(<ResizeHandle onRequestResize={mockRequestResize} />);
 
     const handle = screen.getByTestId('resize-handle');
-    expect(handle).toHaveClass('bottom-2');
-    expect(handle).toHaveClass('right-2');
+    expect(handle).toHaveClass('fixed');
+    expect(handle).toHaveClass('bottom-4');
+    expect(handle).toHaveClass('right-4');
     expect(handle).toHaveClass('bg-plugin-surface');
     expect(handle).toHaveClass('focus-visible:ring-2');
-    expect(handle).toHaveClass('focus-visible:ring-accent');
+    expect(handle).toHaveClass('focus-visible:ring-accent-light');
+    expect(handle).toHaveAccessibleName('Resize window');
   });
 
   it('requests resize while dragging', () => {

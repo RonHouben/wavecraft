@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import './generated/parameters';
 import './generated/processors';
 import { App } from './App';
 import './index.css';

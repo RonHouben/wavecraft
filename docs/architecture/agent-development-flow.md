@@ -151,7 +151,7 @@ For **UI/UX changes** — React component work, design system adjustments, acces
 
 1. **Orchestrator** routes the UI/UX task to UX Designer
 2. **UX Designer** researches existing patterns → proposes UX approach → implements (following required skill order)
-3. **UX Designer** hands off to **Tester** for visual and functional validation
+3. **UX Designer** hands off to **Tester** for visual and functional validation; for UI/visual changes, VS Code integrated browser (Simple Browser) screenshot-based in-app checks are required
 4. **Tester** returns results; if issues are found, UX Designer iterates
 5. **UX Designer** hands back to **Orchestrator** on completion
 
@@ -262,7 +262,7 @@ The **Coder** agent is responsible for creating Pull Requests using the `create-
 | **Architect**    | Claude Opus 4.6 → GPT-5.3-Codex → Gemini 2.5 Pro    | search, read, web, agent                                         | ❌           |
 | **Planner**      | Claude Opus 4.6 → Claude Sonnet 4.5 → GPT-5.3-Codex | read, search, web, agent                                         | ❌           |
 | **Coder**        | GPT-5.3-Codex → GPT-5.2-Codex → Claude Opus 4.6     | vscode, execute, read, edit, search, web, agent, github/\*, todo | ✅           |
-| **Tester**       | GPT-5.3-Codex → Claude Opus 4.6 → GPT-5.2           | read, search, execute, agent, playwright/_, github/_, web        | ✅           |
+| **Tester**       | GPT-5.3-Codex → Claude Opus 4.6 → GPT-5.2           | read, search, execute, agent, github/\_, web, vscode             | ✅           |
 | **QA**           | GPT-5.3-Codex → Claude Opus 4.6 → Gemini 2.5 Pro    | agent, search, read, web                                         | ❌           |
 | **DocWriter**    | Claude Opus 4.6 → Claude Sonnet 4.5 → GPT-5.2       | read, search, edit, web, agent                                   | ❌           |
 | **Search**       | GPT-5.3-Codex → GPT-5.2-Codex → Claude Opus 4.6     | read, search, web                                                | ❌           |
@@ -380,25 +380,24 @@ This command runs 6 phases:
 4. **Template Validation** (`--full` only): Validates CLI-generated projects compile
 5. **CD Dry-Run** (`--full` only): Git-based change detection matching CD workflow path filters
 
-### Visual Testing with Playwright MCP
+### Visual Testing with VS Code Integrated Browser (Simple Browser)
 
-Visual testing is done separately using the **playwright-mcp-ui-testing** skill:
+For any UI/visual change, visual testing is required using the **VS Code integrated browser (Simple Browser)** workflow:
 
 ```bash
 # 1. Start the dev servers
 cargo xtask dev
 
-# 2. Tester agent uses Playwright MCP tools to:
-#    - Navigate to http://localhost:5173
-#    - Take screenshots
-#    - Validate UI appearance
-#    - Compare against baselines
+# 2. Tester opens http://localhost:5173 in VS Code Simple Browser and:
+#    - Captures screenshots of changed UI states
+#    - Validates UI appearance in-app
+#    - Records screenshot evidence paths/references in test-plan.md
 
 # 3. Stop servers when done
 pkill -f "cargo xtask dev"
 ```
 
-**When to use visual testing:**
+**Required for:**
 
 - UI component changes
 - Styling updates

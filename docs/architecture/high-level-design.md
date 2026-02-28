@@ -8,7 +8,7 @@
 - [Agent Development Flow](./agent-development-flow.md) — Agent roles and handoffs
 - [Roadmap](../roadmap.md) — Project milestones and implementation plan
 - [macOS Signing Guide](../guides/macos-signing.md) — Code signing and notarization setup
-- [Visual Testing Guide](../guides/visual-testing.md) — Browser-based visual testing with Playwright
+- [Visual Testing Guide](../guides/visual-testing.md) — Browser-based visual testing with VS Code Simple Browser
 - [SDK Getting Started](../guides/sdk-getting-started.md) — Building plugins with Wavecraft SDK
 - [SDK Architecture](./sdk-architecture.md) — SDK distribution, crate structure, npm packages
 - [Declarative Plugin DSL](./declarative-plugin-dsl.md) — Macro system and parameter discovery
@@ -341,7 +341,7 @@ References about real-time constraints and ring buffers: best practices and Rust
     •	Mitigation: do host tests early; consider disabling in-webview audio entirely (avoiding audio playback inside the UI).
     2.	Cross-engine rendering differences
     •	Risk: CSS/JS behaves slightly differently across WebKit vs Chromium.
-    •	Mitigation: constrain to common subset of web APIs; automated visual tests per platform. See [Visual Testing Guide](../guides/visual-testing.md) for Playwright-based screenshot comparison.
+    •	Mitigation: constrain to common subset of web APIs; automated visual tests per platform. See [Visual Testing Guide](../guides/visual-testing.md) for VS Code Simple Browser screenshot comparison.
     3.	Binary size / dependency issues
     •	Risk: shipping a large engine increases installer size.
     •	Mitigation: use system webviews (wry/tauri approach) to avoid bundling Chromium; selectively polyfill features.

@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use console::style;
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::SystemTime;
@@ -16,6 +17,29 @@ const PROCESSOR_SIDECAR_FILENAME: &str = "wavecraft-processors.json";
 pub(super) struct PluginMetadata {
     pub(super) params: Vec<ParameterInfo>,
     pub(super) processors: Vec<ProcessorInfo>,
+}
+
+fn legacy_soft_clip_schema_reason(params: &[ParameterInfo]) -> Option<&'static str> {
+    let ids: HashSet<&str> = params.iter().map(|param| param.id.as_str()).collect();
+
+    if !ids.iter().any(|id| id.starts_with("soft_clip_")) {
+        return None;
+    }
+
+    if ids.contains("soft_clip_output_trim_db") {
+        return Some("legacy soft_clip_output_trim_db parameter id");
+    }
+
+    let has_drive = ids.contains("soft_clip_drive_db");
+    let has_output = ids.contains("soft_clip_output_db");
+    let has_mix = ids.contains("soft_clip_mix");
+    let has_tone = ids.contains("soft_clip_tone");
+
+    if has_drive && (!has_output || !has_mix || !has_tone) {
+        return Some("incomplete soft_clip parameter schema");
+    }
+
+    None
 }
 
 fn sidecar_json_path(engine_dir: &Path, file_name: &str) -> Result<PathBuf> {
@@ -47,6 +71,12 @@ fn stale_sidecar_reason(
         }
     }
 
+    if let Some(processors_inputs_mtime) = sdk_processors_inputs_mtime(engine_dir) {
+        if processors_inputs_mtime > sidecar_mtime {
+            return Some("wavecraft-processors inputs newer");
+        }
+    }
+
     if let Some(cli_mtime) = current_exe_mtime() {
         if cli_mtime > sidecar_mtime {
             return Some("CLI binary newer");
@@ -54,6 +84,27 @@ fn stale_sidecar_reason(
     }
 
     None
+}
+
+fn sdk_processors_inputs_mtime(engine_dir: &Path) -> Option<SystemTime> {
+    let sdk_template_dir = engine_dir.parent()?;
+    if sdk_template_dir.file_name()?.to_str()? != "sdk-template" {
+        return None;
+    }
+
+    let repo_root = sdk_template_dir.parent()?;
+    let processors_crate = repo_root
+        .join("engine")
+        .join("crates")
+        .join("wavecraft-processors");
+
+    let processors_src = processors_crate.join("src");
+    let processors_manifest = processors_crate.join("Cargo.toml");
+
+    max_mtime(
+        newest_file_mtime_under(&processors_src),
+        file_mtime(&processors_manifest),
+    )
 }
 
 fn try_read_cached_sidecar_json<T>(
@@ -134,6 +185,19 @@ fn current_exe_mtime() -> Option<SystemTime> {
     std::fs::metadata(current_exe).ok()?.modified().ok()
 }
 
+fn file_mtime(path: &Path) -> Option<SystemTime> {
+    std::fs::metadata(path).ok()?.modified().ok()
+}
+
+fn max_mtime(a: Option<SystemTime>, b: Option<SystemTime>) -> Option<SystemTime> {
+    match (a, b) {
+        (Some(a), Some(b)) => Some(std::cmp::max(a, b)),
+        (Some(a), None) => Some(a),
+        (None, Some(b)) => Some(b),
+        (None, None) => None,
+    }
+}
+
 /// Write parameter metadata to the sidecar JSON cache.
 pub(crate) fn write_sidecar_cache(engine_dir: &Path, params: &[ParameterInfo]) -> Result<()> {
     let json = serde_json::to_string_pretty(params).context("Failed to serialize parameters")?;
@@ -164,13 +228,17 @@ pub(super) async fn load_plugin_metadata(engine_dir: &Path) -> Result<PluginMeta
         try_read_cached_params(engine_dir),
         try_read_cached_processors(engine_dir),
     ) {
-        println!(
-            "{} Loaded {} parameters and {} processors (cached)",
-            style("✓").green(),
-            params.len(),
-            processors.len()
-        );
-        return Ok(PluginMetadata { params, processors });
+        if let Some(reason) = legacy_soft_clip_schema_reason(&params) {
+            println!("  Sidecar cache stale ({reason}), rebuilding...");
+        } else {
+            println!(
+                "{} Loaded {} parameters and {} processors (cached)",
+                style("✓").green(),
+                params.len(),
+                processors.len()
+            );
+            return Ok(PluginMetadata { params, processors });
+        }
     }
 
     // 2. Build with _param-discovery feature (skip nih-plug exports)
@@ -245,9 +313,26 @@ pub(super) async fn load_plugin_metadata(engine_dir: &Path) -> Result<PluginMeta
 #[cfg(test)]
 mod tests {
     use std::fs;
+    use std::thread;
+    use std::time::Duration;
 
-    use super::{try_read_cached_params, write_sidecar_cache};
+    use super::{legacy_soft_clip_schema_reason, try_read_cached_params, write_sidecar_cache};
     use wavecraft_protocol::{ParameterInfo, ParameterType};
+
+    fn soft_clip_param(id: &str) -> ParameterInfo {
+        ParameterInfo {
+            id: id.to_string(),
+            name: id.to_string(),
+            param_type: ParameterType::Float,
+            value: 0.0,
+            default: 0.0,
+            min: 0.0,
+            max: 1.0,
+            unit: None,
+            group: Some("Saturator".to_string()),
+            variants: None,
+        }
+    }
 
     #[test]
     fn cached_sidecar_path_preserves_full_frequency_range_for_browser_dev_mode() {
@@ -278,18 +363,32 @@ mod tests {
         fs::write(debug_dir.join(dylib_name), b"test dylib")
             .expect("dylib placeholder should be written");
 
-        let params = vec![ParameterInfo {
-            id: "oscillator_frequency".to_string(),
-            name: "Frequency".to_string(),
-            param_type: ParameterType::Float,
-            value: 440.0,
-            default: 440.0,
-            min: 20.0,
-            max: 5_000.0,
-            unit: Some("Hz".to_string()),
-            group: Some("Oscillator".to_string()),
-            variants: None,
-        }];
+        let params = vec![
+            ParameterInfo {
+                id: "test_tone_enabled".to_string(),
+                name: "Enabled".to_string(),
+                param_type: ParameterType::Bool,
+                value: 0.0,
+                default: 0.0,
+                min: 0.0,
+                max: 1.0,
+                unit: None,
+                group: Some("Test Tone".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "test_tone_frequency".to_string(),
+                name: "Frequency".to_string(),
+                param_type: ParameterType::Float,
+                value: 440.0,
+                default: 440.0,
+                min: 20.0,
+                max: 20_000.0,
+                unit: Some("Hz".to_string()),
+                group: Some("Test Tone".to_string()),
+                variants: None,
+            },
+        ];
 
         write_sidecar_cache(&engine_dir, &params).expect("sidecar cache should be written");
 
@@ -298,11 +397,119 @@ mod tests {
 
         let frequency = cached
             .iter()
-            .find(|param| param.id == "oscillator_frequency")
+            .find(|param| param.id == "test_tone_frequency")
             .expect("frequency parameter should exist");
+        let enabled = cached
+            .iter()
+            .find(|param| param.id == "test_tone_enabled")
+            .expect("enabled parameter should exist");
+
+        assert_eq!(enabled.param_type, ParameterType::Bool);
+        assert!(enabled.default.abs() <= f32::EPSILON);
 
         assert!((frequency.min - 20.0).abs() < f32::EPSILON);
-        assert!((frequency.max - 5_000.0).abs() < f32::EPSILON);
+        assert!((frequency.max - 20_000.0).abs() < f32::EPSILON);
         assert!((frequency.value - 440.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn sdk_sidecar_cache_invalidates_when_wavecraft_processors_manifest_is_newer() {
+        let temp = tempfile::tempdir().expect("temp dir should be created");
+        let repo_root = temp.path();
+
+        let engine_dir = repo_root.join("sdk-template").join("engine");
+        let src_dir = engine_dir.join("src");
+        let debug_dir = engine_dir.join("target").join("debug");
+
+        fs::create_dir_all(&src_dir).expect("src dir should be created");
+        fs::create_dir_all(&debug_dir).expect("debug dir should be created");
+
+        let processors_crate = repo_root
+            .join("engine")
+            .join("crates")
+            .join("wavecraft-processors");
+        fs::create_dir_all(processors_crate.join("src")).expect("processors src dir");
+        let processors_manifest = processors_crate.join("Cargo.toml");
+        fs::write(
+            &processors_manifest,
+            "[package]\nname = \"wavecraft-processors\"\n",
+        )
+        .expect("processors manifest should be written");
+
+        fs::write(
+            engine_dir.join("Cargo.toml"),
+            "[package]\nname = \"wavecraft-dev-template\"\n[lib]\nname = \"wavecraft_dev_template\"\n",
+        )
+        .expect("Cargo.toml should be written");
+
+        fs::write(src_dir.join("lib.rs"), "// test source").expect("source file should be written");
+
+        #[cfg(target_os = "macos")]
+        let dylib_name = "libwavecraft_dev_template.dylib";
+        #[cfg(target_os = "linux")]
+        let dylib_name = "libwavecraft_dev_template.so";
+        #[cfg(target_os = "windows")]
+        let dylib_name = "wavecraft_dev_template.dll";
+
+        fs::write(debug_dir.join(dylib_name), b"test dylib")
+            .expect("dylib placeholder should be written");
+
+        let params = vec![ParameterInfo {
+            id: "test_tone_enabled".to_string(),
+            name: "Enabled".to_string(),
+            param_type: ParameterType::Bool,
+            value: 0.0,
+            default: 0.0,
+            min: 0.0,
+            max: 1.0,
+            unit: None,
+            group: Some("Test Tone".to_string()),
+            variants: None,
+        }];
+
+        write_sidecar_cache(&engine_dir, &params).expect("sidecar cache should be written");
+        let cached_before = try_read_cached_params(&engine_dir);
+        assert!(
+            cached_before.is_some(),
+            "cache should be valid before processors manifest changes"
+        );
+
+        thread::sleep(Duration::from_millis(20));
+        fs::write(
+            &processors_manifest,
+            "[package]\nname = \"wavecraft-processors\"\nversion = \"0.0.1\"\n",
+        )
+        .expect("processors manifest should be updated");
+
+        let cached_after = try_read_cached_params(&engine_dir);
+        assert!(
+            cached_after.is_none(),
+            "cache should be invalidated when wavecraft-processors/Cargo.toml is newer"
+        );
+    }
+
+    #[test]
+    fn soft_clip_schema_guard_rejects_legacy_output_trim_id() {
+        let params = vec![
+            soft_clip_param("soft_clip_bypass"),
+            soft_clip_param("soft_clip_drive_db"),
+            soft_clip_param("soft_clip_output_trim_db"),
+        ];
+
+        let reason = legacy_soft_clip_schema_reason(&params);
+        assert_eq!(reason, Some("legacy soft_clip_output_trim_db parameter id"));
+    }
+
+    #[test]
+    fn soft_clip_schema_guard_accepts_expanded_schema() {
+        let params = vec![
+            soft_clip_param("soft_clip_bypass"),
+            soft_clip_param("soft_clip_drive_db"),
+            soft_clip_param("soft_clip_output_db"),
+            soft_clip_param("soft_clip_mix"),
+            soft_clip_param("soft_clip_tone"),
+        ];
+
+        assert_eq!(legacy_soft_clip_schema_reason(&params), None);
     }
 }

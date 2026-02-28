@@ -67,7 +67,7 @@ Establish a reproducible visual baseline and add static-analysis guardrails **be
 **Steps:**
 
 1. Run `cargo xtask dev` to start the dev servers.
-2. Using the `playwright-mcp-ui-testing` skill, capture full-viewport screenshots of all primary surfaces: plugin root, slider controls, toggle buttons, selectable rows, meter display, version badge, any overlay/modal flows.
+2. Using the `simple-browser-ui-testing` skill, capture full-viewport screenshots of all primary surfaces: plugin root, slider controls, toggle buttons, selectable rows, meter display, version badge, any overlay/modal flows.
 3. Save screenshots to `docs/feature-specs/ui-ux-refactor/visual-baseline/` (create directory).
 4. Document any pre-existing visual QA caveats (focus, interaction states) in a brief `baseline-notes.md` in the same directory.
 
@@ -135,10 +135,10 @@ Establish a reproducible visual baseline and add static-analysis guardrails **be
 
 ### Phase 0 Risk Controls
 
-| Risk                                | Control                                                                                 |
-| ----------------------------------- | --------------------------------------------------------------------------------------- |
-| Playwright screenshots unavailable  | Use browser-dev mode (`cargo xtask dev`); record any limitations in `baseline-notes.md` |
-| ESLint rule breaks existing imports | Add temporary `// eslint-disable-next-line` with `TODO(phase-4)` tracker comment        |
+| Risk                                   | Control                                                                                 |
+| -------------------------------------- | --------------------------------------------------------------------------------------- |
+| Simple Browser screenshots unavailable | Use browser-dev mode (`cargo xtask dev`); record any limitations in `baseline-notes.md` |
+| ESLint rule breaks existing imports    | Add temporary `// eslint-disable-next-line` with `TODO(phase-4)` tracker comment        |
 
 ### Phase 0 Rollback
 
@@ -214,7 +214,7 @@ export const interactionStateClass =
 - [ ] Focus ring is present in both light-mode and dark-mode (plugin-dark) contexts.
 - [ ] No `outline-none` without a `focus-visible` ring replacement.
 
-**Verification:** Manual keyboard pass (Tab through all controls) in browser-dev mode; before/after Playwright screenshots compared.
+**Verification:** Manual keyboard pass (Tab through all controls) in browser-dev mode; before/after Simple Browser screenshots compared.
 
 ---
 
@@ -235,7 +235,7 @@ export const interactionStateClass =
 - [ ] Compound states do not produce conflicting visual results.
 - [ ] No regressions in controls not included in this task.
 
-**Verification:** Playwright screenshots for each control; keyboard + mouse interaction spot-check.
+**Verification:** Simple Browser screenshots for each control; keyboard + mouse interaction spot-check.
 
 ---
 
@@ -353,7 +353,7 @@ Replace ad-hoc color/spacing/typography values with design tokens and improve vi
 **Acceptance criteria:**
 
 - [ ] Zero `bg-[#...]` or `border-[#...]` ad-hoc color values remain in touched files.
-- [ ] Visual output is equivalent (before/after Playwright comparison).
+- [ ] Visual output is equivalent (before/after Simple Browser comparison).
 
 **Verification:** Before/after screenshots; `cargo xtask ci-check` passes.
 
@@ -591,7 +591,7 @@ Lift hook subscriptions out of presentational components into smart containers. 
 - [ ] Smart container test: render the component in isolation (Vitest/React Testing Library) with mock props — works without IPC context.
 - [ ] No behavioral regression in plugin-host and browser-dev mode.
 
-**Verification:** ESLint pass; unit test passes; Playwright visual regression check.
+**Verification:** ESLint pass; unit test passes; Simple Browser visual regression check.
 
 ---
 
@@ -610,7 +610,7 @@ Lift hook subscriptions out of presentational components into smart containers. 
 - [ ] No `legacyProps` prop or internal hook call remains in the component.
 - [ ] `cargo xtask ci-check` passes with no TypeScript errors from removed prop.
 
-**Verification:** `cargo xtask ci-check`; Playwright before/after.
+**Verification:** `cargo xtask ci-check`; Simple Browser before/after.
 
 ---
 
@@ -687,7 +687,7 @@ Establish singular `ResizeObserver` authority per surface. Eliminate duplicate o
 - [ ] Resize behavior verified in browser-dev mode: no jitter; correct dimensions propagated.
 - [ ] `legacyResize` prop defaults to `false` and legacy path is documented.
 
-**Verification:** Manual resize test in browser-dev mode; Playwright screenshot stability check.
+**Verification:** Manual resize test in browser-dev mode; Simple Browser screenshot stability check.
 
 ---
 
@@ -708,7 +708,7 @@ Establish singular `ResizeObserver` authority per surface. Eliminate duplicate o
 - [ ] Resize ownership is singular and exclusively in smart containers.
 - [ ] Plugin host resize behavior validated in WKWebView context where feasible.
 
-**Verification:** `grep -rn "new ResizeObserver" ui/packages/components/` returns zero results; Playwright resize test.
+**Verification:** `grep -rn "new ResizeObserver" ui/packages/components/` returns zero results; Simple Browser resize test.
 
 ---
 
@@ -741,7 +741,7 @@ refactor(components): remove legacyResize gate from <Meter>                    �
 | Risk                                      | Phase | Control                                                                 |
 | ----------------------------------------- | ----- | ----------------------------------------------------------------------- |
 | Focus ring breaks WKWebView               | 1     | Post-merge plugin-host test; record in test plan                        |
-| Visual regression from token swap         | 2     | Before/after Playwright screenshots required per PR                     |
+| Visual regression from token swap         | 2     | Before/after Simple Browser screenshots required per PR                 |
 | IPC string typo in constants              | 3     | `as const` + unit test (`IpcMethods.GET_PARAMETER === 'getParameter'`)  |
 | Presentational re-import of hook          | 4     | ESLint `import/no-restricted-paths` (Phase 0 guardrail)                 |
 | Duplicate subscriber not lifted           | 4     | Smart container checklist; grep for duplicate `useParameter(id)`        |
@@ -789,7 +789,7 @@ Phase 5 PRs → merge after Phase 4 smart containers for relevant surfaces
 - [ ] `cargo xtask ci-check` passes (lint, type-check, tests).
 - [ ] No new TypeScript errors (`tsc --noEmit`).
 - [ ] No new ESLint violations (especially `import/no-restricted-paths` and `no-restricted-syntax`).
-- [ ] Before/after Playwright screenshots captured for any visual change.
+- [ ] Before/after Simple Browser screenshots captured for any visual change.
 - [ ] PR description includes: task reference, files changed, rollback method, and behavior notes.
 - [ ] No `@wavecraft/core` imports added to `ui/packages/components/` (Phase 4+).
 - [ ] No raw IPC method strings added outside `ui/packages/core/src/ipc/` (Phase 3+).
@@ -799,7 +799,7 @@ Phase 5 PRs → merge after Phase 4 smart containers for relevant surfaces
 ### Tester Verification (each Phase)
 
 - [ ] `cargo xtask ci-check` passes on the merged phase branch.
-- [ ] Playwright before/after screenshots compared; no unintended regressions in adjacent surfaces.
+- [ ] Simple Browser before/after screenshots compared; no unintended regressions in adjacent surfaces.
 - [ ] Keyboard-only navigation pass: Tab order, Enter/Space activation, no traps.
 - [ ] Focus ring visible for all interactive controls in primary surfaces.
 - [ ] `prefers-reduced-motion` devtools simulation: new transitions suppressed.

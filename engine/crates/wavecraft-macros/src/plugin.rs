@@ -89,7 +89,7 @@ mod tests {
 
     #[test]
     fn parses_signal_chain_processor_types() {
-        let signal: Expr = parse_quote!(SignalChain![Oscillator, InputGain, OutputGain]);
+        let signal: Expr = parse_quote!(SignalChain![TestToneProcessor, InputGain, OutputGain]);
 
         let processors = super::parse::parse_signal_chain_processors(&signal)
             .expect("signal chain should parse");
@@ -131,7 +131,7 @@ mod tests {
     fn generated_param_map_uses_prefixed_runtime_ids_instead_of_param_indexes() {
         let input_tokens = quote! {
             name: "Test Plugin",
-            signal: SignalChain![Oscillator],
+            signal: SignalChain![TestToneProcessor],
         };
 
         let plugin_def: super::parse::PluginDef =
@@ -148,7 +148,7 @@ mod tests {
             "generated code should not use indexed placeholder parameter IDs"
         );
         assert!(
-            normalized.contains("format!(\"{}_{}\",\"oscillator\",spec.id_suffix)"),
+            normalized.contains("format!(\"{}_{}\",\"test_tone_processor\",spec.id_suffix)"),
             "generated code should derive runtime IDs from processor prefix + param suffix"
         );
         assert!(
@@ -174,7 +174,7 @@ mod tests {
             "generated enum params should expose display labels through value_to_string"
         );
         assert!(
-            normalized.contains("Bypassed<Oscillator>"),
+            normalized.contains("Bypassed<TestToneProcessor>"),
             "generated runtime parameter discovery should include bypass wrapper params"
         );
         assert!(

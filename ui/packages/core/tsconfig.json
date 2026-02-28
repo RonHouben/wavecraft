@@ -15,8 +15,16 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "declaration": true,
-    "declarationDir": "./dist"
+    "declarationDir": "./dist",
+    "paths": {
+      "@wavecraft/core": ["./src/index.ts"],
+      "@wavecraft/core/*": ["./src/*"]
+    }
   },
-  "include": ["src", "../../../sdk-template/ui/src/generated/processors.ts"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
+  "include": [
+    "src",
+    "../../../sdk-template/ui/src/generated/parameters.ts",
+    "../../../sdk-template/ui/src/generated/processors.types.d.ts"
+  ],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/*.typecheck.ts"]
 }

@@ -7,11 +7,11 @@ describe('ParameterSlider reconnect recovery', () => {
     const onChange = vi.fn();
     const { rerender } = render(
       <ParameterSlider
-        id="oscillator_frequency"
-        name="Oscillator Frequency"
+        id="test_tone_frequency"
+        name="Test Tone Frequency"
         value={440}
         min={20}
-        max={5000}
+        max={20000}
         unit="Hz"
         onChange={onChange}
       />
@@ -19,17 +19,17 @@ describe('ParameterSlider reconnect recovery', () => {
 
     rerender(
       <ParameterSlider
-        id="oscillator_frequency"
-        name="Oscillator Frequency"
+        id="test_tone_frequency"
+        name="Test Tone Frequency"
         value={880}
         min={20}
-        max={5000}
+        max={20000}
         unit="Hz"
         onChange={onChange}
       />
     );
 
-    expect(screen.getByText('Oscillator Frequency')).toBeInTheDocument();
+    expect(screen.getByText('Test Tone Frequency')).toBeInTheDocument();
     expect(screen.getByText('880.0 Hz')).toBeInTheDocument();
     expect(screen.getByRole('slider')).toBeInTheDocument();
   });

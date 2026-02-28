@@ -2,27 +2,17 @@
 name: ux-designer
 description: UX design system owner and UI implementation specialist for Wavecraft frontend
 model:
+  - Claude Sonnet 4.6 (copilot)
   - GPT-5.3-Codex (copilot)
   - GPT-5.2-Codex (copilot)
   - Claude Opus 4.6 (copilot)
-tools:
-  [
-    'read',
-    'search',
-    'edit',
-    'execute',
-    'todo',
-    'agent',
-    'web',
-    'playwright/*',
-    'vscode'
-  ]
+tools: ['read', 'search', 'edit', 'execute', 'todo', 'agent', 'web', 'vscode']
 agents: [orchestrator, search, tester, docwriter]
 user-invokable: true
 handoffs:
   - label: Test UI Changes
     agent: tester
-    prompt: Please validate the implemented UI/UX changes, including accessibility, keyboard navigation, visual consistency, and regression behavior.
+    prompt: Please validate the implemented UI/UX changes, including accessibility, keyboard navigation, visual consistency, and regression behavior. For any UI/visual changes, run required VS Code integrated browser (Simple Browser) screenshot-based in-app checks and record evidence.
     send: true
   - label: Return to Orchestrator
     agent: orchestrator
@@ -110,12 +100,14 @@ Design consistency rules:
    - Prefer small, reusable components and typed props.
 
 4. **Test & verify**
-   - Run relevant checks (lint/typecheck/tests, plus visual/manual checks when needed).
-   - Validate keyboard navigation and focus behavior for changed UI.
+
+- Run relevant checks (lint/typecheck/tests, plus required VS Code integrated browser (Simple Browser) screenshot-based in-app checks for UI/visual changes).
+- Validate keyboard navigation and focus behavior for changed UI.
 
 5. **Handoff**
-   - Hand off to **tester** for validation when implementation is ready.
-   - Hand off to **orchestrator** for workflow routing when requested.
+
+- Hand off to **tester** for validation when implementation is ready; for UI/visual changes, tester must run VS Code integrated browser (Simple Browser) screenshot-based in-app checks and record evidence.
+- Hand off to **orchestrator** for workflow routing when requested.
 
 ## Implementation Guidelines
 
@@ -133,3 +125,5 @@ For UI-facing changes, run the smallest relevant verification set, such as:
 - UI tests for affected areas
 
 If changes touch shared templates or broader UI contracts, run broader project checks before handoff.
+
+For UI/visual changes, testing is not complete until tester records VS Code integrated browser (Simple Browser) screenshot-based in-app results with evidence references.

@@ -234,7 +234,7 @@ mod tests {
                     440.0,
                     FloatRange::Skewed {
                         min: 20.0,
-                        max: 5_000.0,
+                        max: 20_000.0,
                         factor: 2.5,
                     },
                 )
@@ -316,7 +316,7 @@ mod tests {
         assert_eq!(frequency.id, "freq");
         assert_eq!(frequency.name, "Frequency");
         assert!((frequency.min - 20.0).abs() < 1e-5);
-        assert!((frequency.max - 5_000.0).abs() < 1e-3);
+        assert!((frequency.max - 20_000.0).abs() < 1e-3);
         assert!((frequency.default - 440.0).abs() < 1e-4);
         assert!((frequency.value - 440.0).abs() < 1e-4);
     }

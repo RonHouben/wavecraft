@@ -36,6 +36,7 @@ impl FileWatcher {
     /// * `tx` - Channel to send watch events to
     pub fn new(
         engine_dir: &Path,
+        additional_watch_paths: &[PathBuf],
         tx: mpsc::UnboundedSender<WatchEvent>,
         shutdown_rx: watch::Receiver<bool>,
     ) -> Result<Self> {
@@ -64,6 +65,14 @@ impl FileWatcher {
         let cargo_toml = engine_dir_path.join("Cargo.toml");
         if cargo_toml.exists() {
             debouncer.watch(&cargo_toml, RecursiveMode::NonRecursive)?;
+        }
+
+        for path in additional_watch_paths {
+            if path.is_dir() {
+                debouncer.watch(path, RecursiveMode::Recursive)?;
+            } else if path.is_file() {
+                debouncer.watch(path, RecursiveMode::NonRecursive)?;
+            }
         }
 
         Ok(Self {
@@ -142,7 +151,7 @@ impl FileWatcher {
             return false;
         }
 
-        // Accept .rs files and Cargo.toml
+        // Accept Rust sources and Cargo manifests
         file_name.ends_with(".rs") || file_name == "Cargo.toml"
     }
 
@@ -168,7 +177,7 @@ mod tests {
             &engine_dir
         ));
         assert!(FileWatcher::is_relevant_file(
-            &engine_dir.join("src/dsp/oscillator.rs"),
+            &engine_dir.join("src/dsp/test_tone.rs"),
             &engine_dir
         ));
 

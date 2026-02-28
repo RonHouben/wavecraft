@@ -24,6 +24,7 @@
 mod device_setup;
 mod input_pipeline;
 mod metering;
+mod output_modifiers;
 mod output_routing;
 mod startup_wiring;
 
