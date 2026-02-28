@@ -17,7 +17,8 @@ pub mod util;
 // Re-export key types for convenience
 pub use wavecraft_core::prelude as core_prelude;
 pub use wavecraft_dsp::{
-    Bypassed, ParamRange, ParamSpec, Processor, ProcessorParams, SignalChain, Transport,
+    Bypassed, ParamRange, ParamSpec, Processor, ProcessorParams, SignalChain, TapProcessor,
+    Transport,
 };
 pub use wavecraft_metering::{MeterConsumer, MeterFrame, MeterProducer, create_meter_channel};
 pub use wavecraft_processors::{
@@ -85,7 +86,7 @@ pub mod __nih {
     pub use super::editor;
 
     // Re-export bridge types needed by proc-macro generated code
-    pub use wavecraft_bridge::{BridgeError, ProcessorOrderAccess};
+    pub use wavecraft_bridge::{BridgeError, SignalChainOrderAccess, SignalChainSlot, SlotType};
 }
 
 /// Internal types used by generated code (not part of public API).

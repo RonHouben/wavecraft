@@ -1,26 +1,26 @@
 import {
-  ConnectionStatus,
-  GainProcessor,
-  LatencyMonitor,
-  Meter,
-  OscilloscopeProcessor,
-  PassthroughProcessor,
-  ResizeHandle,
-  SaturatorProcessor,
-  SignalChain,
-  TestToneProcessor,
-  ToneFilterProcessor,
-  VersionBadge,
-  type SignalChainProcessorEntry,
+    ConnectionStatus,
+    GainProcessor,
+    LatencyMonitor,
+    Meter,
+    OscilloscopeProcessor,
+    PassthroughProcessor,
+    ResizeHandle,
+    SaturatorProcessor,
+    SignalChain,
+    TestToneProcessor,
+    ToneFilterProcessor,
+    VersionBadge,
+    type SignalChainEntry,
 } from '@wavecraft/components';
 import {
-  useAudioStatus,
-  useConnectionStatus,
-  useLatencyMonitor,
-  useMeterFrame,
-  useRequestResize,
-  useWindowResizeSync,
-  WavecraftProvider,
+    useAudioStatus,
+    useConnectionStatus,
+    useLatencyMonitor,
+    useMeterFrame,
+    useRequestResize,
+    useWindowResizeSync,
+    WavecraftProvider,
 } from '@wavecraft/core';
 import { useMemo, type JSX } from 'react';
 
@@ -32,40 +32,38 @@ export function App(): JSX.Element {
   const frame = useMeterFrame(50);
   const requestResize = useRequestResize();
 
-  // Processor entries in Rust registration slot order.
-  // Each entry's array index IS its slot index in the engine (must match
-  // the `processors: [...]` list in engine/src/lib.rs).
-  const processorEntries = useMemo<SignalChainProcessorEntry[]>(
+  // Unified signal chain entries — processors and taps in their declared DSL order.
+  // Each processor entry's id must match the snake_case name from `processors: [...]`.
+  // Each tap entry's id must match the snake_case name from `taps: [...]`.
+  const slotEntries = useMemo<SignalChainEntry[]>(
     () => [
-      // slot 0 — test_tone
-      { id: 'test_tone', component: <TestToneProcessor /> },
-      // slot 1 — input_trim
+      // processors
+      { id: 'test_tone', type: 'processor', component: <TestToneProcessor /> },
       {
         id: 'input_trim',
+        type: 'processor',
         component: (
           <GainProcessor processorId="input_trim" title="Input Trim" subtitle="My Input Trim" />
         ),
       },
-      // slot 2 — passthrough
       {
         id: 'passthrough',
+        type: 'processor',
         component: <PassthroughProcessor processorId="passthrough" title="Passthrough" />,
       },
-      // slot 3 — example_processor (replace null with your custom processor component)
-      // { id: 'example_processor', component: null },
-      // slot 4 — tone_filter
-      { id: 'tone_filter', component: <ToneFilterProcessor /> },
-      // slot 5 — soft_clip
-      { id: 'soft_clip', component: <SaturatorProcessor /> },
-      // slot 6 — output_gain
+      // slot — example_processor (replace null with your custom processor component)
+      // { id: 'example_processor', type: 'processor', component: null },
+      { id: 'tone_filter', type: 'processor', component: <ToneFilterProcessor /> },
+      { id: 'soft_clip', type: 'processor', component: <SaturatorProcessor /> },
       {
         id: 'output_gain',
+        type: 'processor',
         component: (
           <GainProcessor processorId="output_gain" title="Output Gain" subtitle="My Output Gain" />
         ),
       },
-      // slot 7 — oscilloscope_tap
-      { id: 'oscilloscope_tap', component: <OscilloscopeProcessor /> },
+      // taps
+      { id: 'oscilloscope_tap', type: 'tap', component: <OscilloscopeProcessor /> },
     ],
     []
   );
@@ -89,7 +87,7 @@ export function App(): JSX.Element {
       </div>
 
       {/* Signal chain — drag-and-drop reorderable */}
-      <SignalChain processors={processorEntries} />
+      <SignalChain entries={slotEntries} />
 
       {/* Monitoring */}
       <div className="flex flex-col gap-2">

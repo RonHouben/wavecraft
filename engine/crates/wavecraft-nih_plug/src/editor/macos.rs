@@ -20,7 +20,7 @@ use objc2_web_kit::{
     WKWebViewConfiguration,
 };
 
-use wavecraft_bridge::{IpcHandler, ProcessorOrderAccess};
+use wavecraft_bridge::{IpcHandler, SignalChainOrderAccess};
 
 use super::assets;
 use super::bridge::PluginEditorBridge;
@@ -55,16 +55,16 @@ impl<H: wavecraft_bridge::ParameterHost> JsonIpcHandler for IpcHandler<H> {
 /// Holds the WKWebView and associated resources.
 ///
 /// Generic over `P` which must implement nih-plug's `Params` trait.
-pub struct MacOSWebView<P: Params + ProcessorOrderAccess> {
+pub struct MacOSWebView<P: Params + SignalChainOrderAccess> {
     webview: Rc<Mutex<Option<Retained<WKWebView>>>>,
     _handler: Arc<Mutex<IpcHandler<PluginEditorBridge<P>>>>,
 }
 
 // SAFETY: The webview will only be accessed from the main thread
 // The host ensures this by calling spawn() and other methods on the main thread
-unsafe impl<P: Params + ProcessorOrderAccess> Send for MacOSWebView<P> {}
+unsafe impl<P: Params + SignalChainOrderAccess> Send for MacOSWebView<P> {}
 
-impl<P: Params + ProcessorOrderAccess> WebViewHandle for MacOSWebView<P> {
+impl<P: Params + SignalChainOrderAccess> WebViewHandle for MacOSWebView<P> {
     fn evaluate_script(&self, script: &str) -> Result<(), String> {
         let webview_lock = self.webview.lock().unwrap();
         if let Some(webview) = webview_lock.as_ref() {
@@ -106,7 +106,7 @@ impl<P: Params + ProcessorOrderAccess> WebViewHandle for MacOSWebView<P> {
 }
 
 /// Create a macOS WebView editor.
-pub fn create_macos_webview<P: Params + ProcessorOrderAccess + 'static>(
+pub fn create_macos_webview<P: Params + SignalChainOrderAccess + 'static>(
     config: WebViewConfig<P>,
 ) -> Result<Box<dyn WebViewHandle>, String> {
     let mtm = MainThreadMarker::new()
@@ -189,7 +189,7 @@ fn create_webview_config(
 }
 
 /// Configure the WKWebView with IPC handler and scripts.
-fn configure_webview<P: Params + ProcessorOrderAccess + 'static>(
+fn configure_webview<P: Params + SignalChainOrderAccess + 'static>(
     webview: &Retained<WKWebView>,
     handler: Arc<Mutex<IpcHandler<PluginEditorBridge<P>>>>,
     mtm: MainThreadMarker,
@@ -379,7 +379,7 @@ declare_class!(
 );
 
 impl IpcMessageHandler {
-    fn new<P: Params + ProcessorOrderAccess + 'static>(
+    fn new<P: Params + SignalChainOrderAccess + 'static>(
         handler: Arc<Mutex<IpcHandler<PluginEditorBridge<P>>>>,
         webview: &Retained<WKWebView>,
         mtm: MainThreadMarker,

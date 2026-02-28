@@ -26,6 +26,7 @@ wavecraft_processor!(OutputGain => Gain);
 // Plugin definition
 // ---------------------------------------------------------------------------
 // `processors: [...]` defines the signal chain — processors run in order.
+// `taps: [...]` declares observer taps that can be placed anywhere in the chain.
 wavecraft_plugin! {
     name: "My First Plugin",
     processors: [
@@ -36,6 +37,6 @@ wavecraft_plugin! {
         ToneFilter,
         SoftClip,
         OutputGain,
-        // OscilloscopeTap,
     ],
+    taps: [OscilloscopeTap],
 }

@@ -468,15 +468,15 @@ function MyKnob({ id }: { id: ParameterId }) {
 
 All hooks are exported from `@wavecraft/core`:
 
-| Hook                         | Purpose                                                                     |
-| ---------------------------- | --------------------------------------------------------------------------- |
-| `useParameter(id)`           | Read/write a single parameter (type-safe `ParameterId` with autocompletion) |
-| `useAllParameters()`         | Fetch all plugin parameters (automatic discovery)                           |
-| `useParameterGroups(params)` | Group parameters by their `group` attribute                                 |
-| `useMeterFrame()`            | Access real-time meter data                                                 |
-| `useConnectionStatus()`      | WebSocket connection status (dev mode)                                      |
-| `useAudioStatus()`           | Audio runtime phase + diagnostics (`running`, `failed`, etc.)               |
-| `useProcessorOrder()`        | Read/write processor chain order and subscribe to reorder updates.          |
+| Hook                         | Purpose                                                                                     |
+| ---------------------------- | ------------------------------------------------------------------------------------------- |
+| `useParameter(id)`           | Read/write a single parameter (type-safe `ParameterId` with autocompletion)                 |
+| `useAllParameters()`         | Fetch all plugin parameters (automatic discovery)                                           |
+| `useParameterGroups(params)` | Group parameters by their `group` attribute                                                 |
+| `useMeterFrame()`            | Access real-time meter data                                                                 |
+| `useConnectionStatus()`      | WebSocket connection status (dev mode)                                                      |
+| `useAudioStatus()`           | Audio runtime phase + diagnostics (`running`, `failed`, etc.)                               |
+| `useSignalChainOrder()`      | Read/write unified signal chain order (processors + taps) and subscribe to reorder updates. |
 
 ---
 

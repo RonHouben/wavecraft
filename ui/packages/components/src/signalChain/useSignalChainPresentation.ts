@@ -1,43 +1,42 @@
 /**
  * useSignalChainPresentation - Visual state hook for the SignalChain component
  *
- * Derives the sorted display order from the current IPC order.
+ * Derives the sorted display order from the current IPC signal chain order.
  */
 
+import type { SignalChainOrder } from '@wavecraft/core';
 import { useMemo } from 'react';
-import type { SignalChainProcessorEntry } from './types';
+import type { SignalChainEntry } from './types';
 
 /**
- * Given the processors prop and the current slot-index order, returns an array
- * of processor entries sorted according to `order`.
+ * Given the entries prop and the current unified slot order, returns an array
+ * of entries sorted according to `order`.
  *
- * Only entries whose slot index appears in `order` are included. If `order` is
- * empty (still loading), all processors are returned in their natural order as
- * a loading state fallback.
+ * Unknown slot ids are skipped gracefully. If `order` is empty (still loading),
+ * all entries are returned in their natural order as a loading state fallback.
  */
-export function useSortedProcessors(
-  processors: SignalChainProcessorEntry[],
-  order: string[]
-): SignalChainProcessorEntry[] {
+export function useSortedEntries(
+  entries: SignalChainEntry[],
+  order: SignalChainOrder[]
+): SignalChainEntry[] {
   return useMemo(() => {
-    // Loading fallback: show all processors in natural order
+    // Loading fallback: show all entries in natural order
     if (order.length === 0) {
-      return [...processors];
+      return [...entries];
     }
 
-    const slotToEntry = new Map<string, SignalChainProcessorEntry>(
-      processors.map((p, i) => [String(i), p])
-    );
+    const idToEntry = new Map<string, SignalChainEntry>(entries.map((e) => [e.id, e]));
 
-    const sorted: SignalChainProcessorEntry[] = [];
+    const sorted: SignalChainEntry[] = [];
 
-    for (const slotIdx of order) {
-      const entry = slotToEntry.get(slotIdx);
+    for (const slot of order) {
+      const entry = idToEntry.get(slot.id);
       if (entry) {
         sorted.push(entry);
       }
+      // Unknown slot ids are silently skipped (tap/processor not registered in UI)
     }
 
     return sorted;
-  }, [processors, order]);
+  }, [entries, order]);
 }

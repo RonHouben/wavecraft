@@ -228,8 +228,8 @@ Key: the audio path never blocks on UI; the UI never directly runs audio code.
     	- `NativeTransport`: postMessage-based communication in WKWebView (production)
     	- `WebSocketTransport`: WebSocket-based communication in browser (development)
     •	**npm Package** (`@wavecraft/core`):
-        - IPC: `IpcBridge`, `ParameterClient`, `MeterClient`, `ProcessorOrderClient`
-        - Hooks: `useParameter`, `useAllParameters`, `useConnectionStatus`, `useMeterFrame`, `useHasProcessor`, `useAvailableProcessors`, `useProcessorOrder`
+        - IPC: `IpcBridge`, `ParameterClient`, `MeterClient`, `SignalChainOrderClient`
+        - Hooks: `useParameter`, `useAllParameters`, `useConnectionStatus`, `useMeterFrame`, `useHasProcessor`, `useAvailableProcessors`, `useSignalChainOrder`, `useOscilloscopeFrame`
     	- Logging: `logger`, `Logger`, `LogLevel` — structured logging with severity levels
     	- Types: `ParameterInfo`, `ParameterId`, `ParameterIdMap`, `ProcessorId`, `ProcessorIdMap`, `MeterFrame`, `IpcError`
     	- Subpath `/meters`: Pure audio math utilities (`linearToDb`, `dbToLinear`)
@@ -238,10 +238,10 @@ Key: the audio path never blocks on UI; the UI never directly runs audio code.
     	- `getParameter(id)`
     	- `getMeterFrame()`
     -	`getAudioStatus()`
-        - `getProcessorOrder()`
-        - `setProcessorOrder(order)`
+        - `getSignalChainOrder()`
+        - `setSignalChainOrder(slots)`
     	- `ping()`
-        - Notification: `processorOrderChanged`
+        - Notification: `signalChainOrderChanged`
     •	Processor presence is codegen-first in v1 (`ui/src/generated/processors.ts`) and intentionally has no runtime JSON-RPC method/endpoint.
     •	Audio runtime status uses a dedicated contract (`getAudioStatus` + `audioStatusChanged`) and is intentionally separate from transport connection status.
     •	In browser-dev mode, audio startup is deterministic and decoupled from parameter sidecar cache hit/miss paths.
@@ -392,8 +392,14 @@ Define JSON messages exchanged over the webview bridge. Keep it small and versio
 {
   "jsonrpc": "2.0",
   "id": 8,
-  "method": "setProcessorOrder",
-  "params": { "order": ["1", "0", "2"] }
+  "method": "setSignalChainOrder",
+  "params": {
+    "slots": [
+      { "id": "TestTone", "type": "processor" },
+      { "id": "OscilloscopeTap", "type": "tap" },
+      { "id": "SoftClip", "type": "processor" }
+    ]
+  }
 }
 ```
 
@@ -420,8 +426,14 @@ Define JSON messages exchanged over the webview bridge. Keep it small and versio
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "processorOrderChanged",
-  "params": { "order": ["1", "0", "2"] }
+  "method": "signalChainOrderChanged",
+  "params": {
+    "slots": [
+      { "id": "TestTone", "type": "processor" },
+      { "id": "OscilloscopeTap", "type": "tap" },
+      { "id": "SoftClip", "type": "processor" }
+    ]
+  }
 }
 ```
 

@@ -8,7 +8,7 @@ pub mod gain;
 pub mod traits;
 
 // Core DSP contracts.
-pub use traits::{ParamRange, ParamSpec, Processor, ProcessorParams, Transport};
+pub use traits::{ParamRange, ParamSpec, Processor, ProcessorParams, TapProcessor, Transport};
 
 // Combinators and helpers.
 pub use combinators::{Bypassed, Chain};

@@ -137,12 +137,12 @@ pub const NOTIFICATION_PARAMETER_CHANGED: &str = "parameterChanged";
 pub const NOTIFICATION_METER_UPDATE: &str = "meterUpdate";
 /// Notification: Audio runtime status changed
 pub const NOTIFICATION_AUDIO_STATUS_CHANGED: &str = "audioStatusChanged";
-/// Method: Get current processor order
-pub const METHOD_GET_PROCESSOR_ORDER: &str = "getProcessorOrder";
-/// Method: Set processor order
-pub const METHOD_SET_PROCESSOR_ORDER: &str = "setProcessorOrder";
-/// Notification: Processor order changed (push from Rust to UI)
-pub const NOTIFICATION_PROCESSOR_ORDER_CHANGED: &str = "processorOrderChanged";
+/// Method: Get current signal chain order (processors + taps)
+pub const METHOD_GET_SIGNAL_CHAIN_ORDER: &str = "getSignalChainOrder";
+/// Method: Set signal chain order
+pub const METHOD_SET_SIGNAL_CHAIN_ORDER: &str = "setSignalChainOrder";
+/// Notification: Signal chain order changed (push from Rust to UI)
+pub const NOTIFICATION_SIGNAL_CHAIN_ORDER_CHANGED: &str = "signalChainOrderChanged";
 
 // ============================================================================
 // Metering Types
@@ -326,36 +326,57 @@ pub struct RegisterAudioResult {
 }
 
 // ----------------------------------------------------------------------------
-// getProcessorOrder / setProcessorOrder
+// getSignalChainOrder / setSignalChainOrder
 // ----------------------------------------------------------------------------
 
-/// Result of getProcessorOrder request.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GetProcessorOrderResult {
-    /// Ordered list of processor slot indices (as strings for JSON compatibility).
-    pub order: Vec<String>,
+/// Type discriminator for a signal chain slot.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SlotType {
+    Processor,
+    Tap,
 }
 
-/// Parameters for setProcessorOrder request.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SetProcessorOrderParams {
-    /// Desired processor order — slot indices as strings (e.g. ["1", "0", "2"]).
-    pub order: Vec<String>,
+/// A single slot in the signal chain order.
+///
+/// Each slot carries an explicit `slot_type` and an `id` matching the
+/// processor or tap type name.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SignalChainSlot {
+    /// Processor or tap type identifier (e.g., "TestToneProcessor", "OscilloscopeTap").
+    pub id: String,
+    /// Whether this slot is a processor or a tap.
+    #[serde(rename = "type")]
+    pub slot_type: SlotType,
 }
 
-/// Result of a successful setProcessorOrder request (empty body).
+/// Result of getSignalChainOrder request.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SetProcessorOrderResult {}
+pub struct GetSignalChainOrderResult {
+    /// Ordered list of signal chain slots (processors + taps).
+    pub slots: Vec<SignalChainSlot>,
+}
+
+/// Parameters for setSignalChainOrder request.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SetSignalChainOrderParams {
+    /// Desired signal chain slot order.
+    pub slots: Vec<SignalChainSlot>,
+}
+
+/// Result of a successful setSignalChainOrder request (empty body).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SetSignalChainOrderResult {}
 
 // ----------------------------------------------------------------------------
-// Notification: processorOrderChanged
+// Notification: signalChainOrderChanged
 // ----------------------------------------------------------------------------
 
-/// Notification sent when the active processor order changes (server → client).
+/// Notification sent when the active signal chain order changes (server → client).
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcessorOrderChangedNotification {
-    /// New active processor order.
-    pub order: Vec<String>,
+pub struct SignalChainOrderChangedNotification {
+    /// New active signal chain slot order.
+    pub slots: Vec<SignalChainSlot>,
 }
 
 // ----------------------------------------------------------------------------

@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use nih_plug::prelude::*;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-use wavecraft_bridge::{IpcHandler, ProcessorOrderAccess};
+use wavecraft_bridge::{IpcHandler, SignalChainOrderAccess};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use wavecraft_metering::MeterConsumer;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -50,7 +50,7 @@ pub trait WebViewHandle: Any + Send {
 ///
 /// Only used on macOS/Windows where WebView is available.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub struct WebViewConfig<P: Params + ProcessorOrderAccess> {
+pub struct WebViewConfig<P: Params + SignalChainOrderAccess> {
     pub params: Arc<P>,
     pub context: Arc<dyn GuiContext>,
     pub parent: ParentWindowHandle,
@@ -69,7 +69,7 @@ pub struct WebViewConfig<P: Params + ProcessorOrderAccess> {
 /// This function dispatches to the appropriate platform implementation
 /// based on compile-time target OS.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub fn create_webview<P: Params + ProcessorOrderAccess>(
+pub fn create_webview<P: Params + SignalChainOrderAccess>(
     _config: WebViewConfig<P>,
 ) -> Result<Box<dyn WebViewHandle>, String> {
     #[cfg(target_os = "macos")]
@@ -97,7 +97,7 @@ pub fn create_webview<P: Params + ProcessorOrderAccess>(
 ///
 /// Only used on macOS/Windows where WebView is available.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub fn create_ipc_handler<P: Params + ProcessorOrderAccess>(
+pub fn create_ipc_handler<P: Params + SignalChainOrderAccess>(
     params: Arc<P>,
     context: Arc<dyn GuiContext>,
     meter_consumer: Option<MeterConsumer>,

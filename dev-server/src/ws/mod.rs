@@ -332,7 +332,7 @@ async fn handle_connection<H: ParameterHost>(
                     .await;
                 }
 
-                // Broadcast any additional push notifications (e.g., processorOrderChanged)
+                // Broadcast any additional push notifications (e.g., signalChainOrderChanged)
                 for notification_json in messages.iter().skip(1) {
                     debug!("Broadcasting push notification: {}", notification_json);
                     broadcast_to_browser_clients(

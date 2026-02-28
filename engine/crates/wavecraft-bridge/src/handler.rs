@@ -6,13 +6,13 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use wavecraft_protocol::{
     GetAllParametersResult, GetAudioStatusResult, GetMeterFrameResult, GetOscilloscopeFrameResult,
-    GetParameterParams, GetParameterResult, GetProcessorOrderResult, IpcNotification, IpcRequest,
+    GetParameterParams, GetParameterResult, GetSignalChainOrderResult, IpcNotification, IpcRequest,
     IpcResponse, METHOD_GET_ALL_PARAMETERS, METHOD_GET_AUDIO_STATUS, METHOD_GET_METER_FRAME,
-    METHOD_GET_OSCILLOSCOPE_FRAME, METHOD_GET_PARAMETER, METHOD_GET_PROCESSOR_ORDER,
-    METHOD_REQUEST_RESIZE, METHOD_SET_PARAMETER, METHOD_SET_PROCESSOR_ORDER,
-    NOTIFICATION_PROCESSOR_ORDER_CHANGED, ProcessorOrderChangedNotification, RequestId,
-    RequestResizeParams, RequestResizeResult, SetParameterParams, SetParameterResult,
-    SetProcessorOrderParams, SetProcessorOrderResult,
+    METHOD_GET_OSCILLOSCOPE_FRAME, METHOD_GET_PARAMETER, METHOD_GET_SIGNAL_CHAIN_ORDER,
+    METHOD_REQUEST_RESIZE, METHOD_SET_PARAMETER, METHOD_SET_SIGNAL_CHAIN_ORDER,
+    NOTIFICATION_SIGNAL_CHAIN_ORDER_CHANGED, RequestId, RequestResizeParams, RequestResizeResult,
+    SetParameterParams, SetParameterResult, SetSignalChainOrderParams, SetSignalChainOrderResult,
+    SignalChainOrderChangedNotification,
 };
 
 /// IPC message handler that dispatches requests to a ParameterHost
@@ -39,8 +39,8 @@ impl<H: ParameterHost> IpcHandler<H> {
             METHOD_GET_OSCILLOSCOPE_FRAME => self.handle_get_oscilloscope_frame(&request),
             METHOD_GET_AUDIO_STATUS => self.handle_get_audio_status(&request),
             METHOD_REQUEST_RESIZE => self.handle_request_resize(&request),
-            METHOD_GET_PROCESSOR_ORDER => self.handle_get_processor_order(&request),
-            METHOD_SET_PROCESSOR_ORDER => self.handle_set_processor_order(&request),
+            METHOD_GET_SIGNAL_CHAIN_ORDER => self.handle_get_signal_chain_order(&request),
+            METHOD_SET_SIGNAL_CHAIN_ORDER => self.handle_set_signal_chain_order(&request),
             "ping" => self.handle_ping(&request),
             _ => Err(BridgeError::UnknownMethod(request.method.clone())),
         };
@@ -193,31 +193,37 @@ impl<H: ParameterHost> IpcHandler<H> {
         ))
     }
 
-    fn handle_get_processor_order(&self, request: &IpcRequest) -> Result<IpcResponse, BridgeError> {
-        // NOTE: `processorOrderChanged` is intentionally *not* emitted here.
+    fn handle_get_signal_chain_order(
+        &self,
+        request: &IpcRequest,
+    ) -> Result<IpcResponse, BridgeError> {
+        // NOTE: `signalChainOrderChanged` is intentionally *not* emitted here.
         // The JSON-RPC response already carries the current order state, so a push notification
         // after GET would be redundant and could cause client subscription loops.
-        // Notification is only emitted after a successful `setProcessorOrder` (see
-        // `handle_json_multi`). Design ref: low-level-design-ui-signal-chain-reorder.md.
-        let order = self.host.get_processor_order();
-        let result = GetProcessorOrderResult { order };
+        // Notification is only emitted after a successful `setSignalChainOrder` (see
+        // `handle_json_multi`).
+        let slots = self.host.get_signal_chain_order();
+        let result = GetSignalChainOrderResult { slots };
         Ok(IpcResponse::success(request.id.clone(), result))
     }
 
-    fn handle_set_processor_order(&self, request: &IpcRequest) -> Result<IpcResponse, BridgeError> {
-        let params: SetProcessorOrderParams =
-            self.parse_required_params(request, METHOD_SET_PROCESSOR_ORDER)?;
-        self.host.set_processor_order(&params.order)?;
+    fn handle_set_signal_chain_order(
+        &self,
+        request: &IpcRequest,
+    ) -> Result<IpcResponse, BridgeError> {
+        let params: SetSignalChainOrderParams =
+            self.parse_required_params(request, METHOD_SET_SIGNAL_CHAIN_ORDER)?;
+        self.host.set_signal_chain_order(params.slots)?;
         Ok(IpcResponse::success(
             request.id.clone(),
-            SetProcessorOrderResult {},
+            SetSignalChainOrderResult {},
         ))
     }
 
     /// Handle a raw JSON string request, returning all messages to send.
     ///
     /// For most methods this returns a single-element vec (the JSON-RPC response).
-    /// For `setProcessorOrder` on success, a `processorOrderChanged` push notification
+    /// For `setSignalChainOrder` on success, a `signalChainOrderChanged` push notification
     /// is appended as a second element so the WebView can update without polling.
     pub fn handle_json_multi(&self, json: &str) -> Vec<String> {
         // Parse request
@@ -243,12 +249,12 @@ impl<H: ParameterHost> IpcHandler<H> {
             serde_json::to_string(&response).expect("IpcResponse serialization is infallible");
         let mut messages = vec![response_json];
 
-        // Emit processorOrderChanged notification on successful setProcessorOrder
-        if method == METHOD_SET_PROCESSOR_ORDER && is_success {
-            let order = self.host.get_processor_order();
+        // Emit signalChainOrderChanged notification on successful setSignalChainOrder
+        if method == METHOD_SET_SIGNAL_CHAIN_ORDER && is_success {
+            let slots = self.host.get_signal_chain_order();
             let notification = IpcNotification::new(
-                NOTIFICATION_PROCESSOR_ORDER_CHANGED,
-                ProcessorOrderChangedNotification { order },
+                NOTIFICATION_SIGNAL_CHAIN_ORDER_CHANGED,
+                SignalChainOrderChangedNotification { slots },
             );
             if let Ok(notif_json) = serde_json::to_string(&notification) {
                 messages.push(notif_json);

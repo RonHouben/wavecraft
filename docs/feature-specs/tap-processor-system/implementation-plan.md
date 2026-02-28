@@ -204,42 +204,42 @@ This implementation introduces first-class tap processors in the plugin DSL and 
 
 ### Phase 4: UI core API
 
-#### Step 19 — Introduce TS signal-chain slot types
+#### Step 19 ✅ — Introduce TS signal-chain slot types
 
 - **Files**: `ui/packages/core/src/types/signal-chain.ts` (new), `ui/packages/core/src/index.ts`
 - **Change**: Add `SlotType` and `SignalChainOrder = { id: ProcessorId | AudioSignalTapId; type: 'processor' | 'tap' }` and export publicly.
 - **Dependency**: Step 4
 - **Risk**: Low
 
-#### Step 20 — Replace IPC constants
+#### Step 20 ✅ — Replace IPC constants
 
 - **File**: `ui/packages/core/src/ipc/constants.ts`
 - **Change**: Add `GET_SIGNAL_CHAIN_ORDER`, `SET_SIGNAL_CHAIN_ORDER`, `SIGNAL_CHAIN_ORDER_CHANGED`. Remove processor-order constants.
 - **Dependency**: Step 4
 - **Risk**: Low
 
-#### Step 21 — Replace `ProcessorOrderClient` with `SignalChainOrderClient`
+#### Step 21 ✅ — Replace `ProcessorOrderClient` with `SignalChainOrderClient`
 
 - **Files**: `ui/packages/core/src/ipc/SignalChainOrderClient.ts` (new), `ui/packages/core/src/ipc/ProcessorOrderClient.ts` (remove)
 - **Change**: Implement `getSignalChainOrder(): Promise<SignalChainOrder[]>`, `setSignalChainOrder(slots: SignalChainOrder[]): Promise<void>`, and subscription to `signalChainOrderChanged`.
 - **Dependency**: Steps 19, 20
 - **Risk**: Medium (public API break)
 
-#### Step 22 — Replace `useProcessorOrder` with `useSignalChainOrder`
+#### Step 22 ✅ — Replace `useProcessorOrder` with `useSignalChainOrder`
 
 - **Files**: `ui/packages/core/src/hooks/useSignalChainOrder.ts` (new), `ui/packages/core/src/hooks/useProcessorOrder.ts` (remove)
 - **Change**: Preserve optimistic update + rollback behavior and drag-guard semantics. Return `SignalChainOrder[]` instead of index strings.
 - **Dependency**: Step 21
 - **Risk**: Medium
 
-#### Step 23 — Align `useOscilloscopeFrame` contract
+#### Step 23 ✅ — Align `useOscilloscopeFrame` contract
 
 - **Files**: `ui/packages/core/src/hooks/useOscilloscopeFrame.ts`, `ui/packages/core/src/types/oscilloscope.ts`
 - **Change**: Ensure hook uses canonical method constant and expected contract fields after Step 3 schema alignment.
 - **Dependency**: Step 3
 - **Risk**: Low
 
-#### Step 24 — Update package barrel + remove legacy exports
+#### Step 24 ✅ — Update package barrel + remove legacy exports
 
 - **File**: `ui/packages/core/src/index.ts`
 - **Change**: Remove all `ProcessorOrder*` exports. Export `SignalChainOrderClient`, `useSignalChainOrder`, slot types.
@@ -250,35 +250,35 @@ This implementation introduces first-class tap processors in the plugin DSL and 
 
 ### Phase 5: UI SignalChain component and template wiring
 
-#### Step 25 — Expand component-level signal chain types
+#### Step 25 ✅ — Expand component-level signal chain types
 
 - **File**: `ui/packages/components/src/signalChain/types.ts`
 - **Change**: Replace processor-only entry model with slot-aware entry model carrying `id`, `type`, render component, and stable DnD id strategy.
 - **Dependency**: Steps 19, 22
 - **Risk**: Medium
 
-#### Step 26 — Update sorting/presentation logic
+#### Step 26 ✅ — Update sorting/presentation logic
 
 - **File**: `ui/packages/components/src/signalChain/useSignalChainPresentation.ts`
 - **Change**: Sort by `SignalChainOrder[]` order. Handle unknown slots robustly.
 - **Dependency**: Step 25
 - **Risk**: Low
 
-#### Step 27 — Refactor `SignalChain` DnD mutation path
+#### Step 27 ✅ — Refactor `SignalChain` DnD mutation path
 
 - **File**: `ui/packages/components/src/signalChain/SignalChain.tsx`
 - **Change**: Replace `useProcessorOrder` with `useSignalChainOrder`. On drop, reorder slot objects and call `setSignalChainOrder(slots)`. Maintain drag-guard suppression.
 - **Dependency**: Steps 22, 26
 - **Risk**: Medium
 
-#### Step 28 — Template app integration
+#### Step 28 ✅ — Template app integration
 
 - **Files**: `sdk-template/ui/src/App.tsx`, `ui/packages/components/src/TemplateApp.test.tsx`
 - **Change**: Provide unified slot entries (processors + taps) to `SignalChain`. Update test mocks for renamed hook/client.
 - **Dependency**: Step 27
 - **Risk**: Medium
 
-#### Step 29 — Template engine DSL migration
+#### Step 29 ✅ — Template engine DSL migration
 
 - **File**: `sdk-template/engine/src/lib.rs`
 - **Change**: Move `OscilloscopeTap` from `processors` list to `taps: [OscilloscopeTap]`.
@@ -289,21 +289,21 @@ This implementation introduces first-class tap processors in the plugin DSL and 
 
 ### Phase 6: Cleanup
 
-#### Step 30 — Remove all legacy processor-order APIs
+#### Step 30 ✅ — Remove all legacy processor-order APIs
 
 - **Files**: all legacy references in `engine/crates/wavecraft-bridge/**`, `engine/crates/wavecraft-protocol/**`, `engine/crates/wavecraft-nih_plug/**`, `ui/packages/core/**`, `ui/packages/components/**`, `dev-server/**`
 - **Change**: Delete old constants, methods, DTOs, events, traits, and tests. No compatibility alias.
 - **Dependency**: Phases 2–5
 - **Risk**: Medium (grep-driven pass required)
 
-#### Step 31 — Update protocol/bridge re-export surfaces
+#### Step 31 ✅ — Update protocol/bridge re-export surfaces
 
 - **Files**: `engine/crates/wavecraft-protocol/src/ipc.rs`, `engine/crates/wavecraft-protocol/src/lib.rs`, `engine/crates/wavecraft-bridge/src/lib.rs`
 - **Change**: Remove old exports, expose only new signal-chain contract.
 - **Dependency**: Step 30
 - **Risk**: Low
 
-#### Step 32 — Final naming + persisted field key review
+#### Step 32 ✅ — Final naming + persisted field key review
 
 - **File**: `engine/crates/wavecraft-macros/src/plugin/codegen.rs`
 - **Change**: Replace persisted state key `"processorOrder"` with `"signalChainOrder"`. Remove stale log strings referencing old names.
@@ -367,3 +367,11 @@ This implementation introduces first-class tap processors in the plugin DSL and 
 - [High-Level Design](../../architecture/high-level-design.md) — system overview
 - [Coding Standards](../../architecture/coding-standards.md) — conventions
 - [Declarative Plugin DSL](../../architecture/declarative-plugin-dsl.md) — macro system context
+
+---
+
+## Implementation Complete
+
+**Date:** 2026-02-28
+
+All 32 steps across 6 phases are complete. 218 tests pass (`cargo xtask ci-check`). The tap processor system is fully implemented: `TapProcessor` trait, `OscilloscopeTap` as a tap, unified `SignalChainOrder` IPC contract, DSL `taps: [...]` support, codegen for `__tap_N` fields and scratch buffers, tap insertion-point derivation from runtime slot order, and full UI wiring through `useSignalChainOrder` / `SignalChainOrderClient`. All legacy processor-order APIs are removed with no backward compatibility path.

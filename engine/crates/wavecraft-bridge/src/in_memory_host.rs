@@ -4,7 +4,9 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use crate::{BridgeError, ParameterHost};
-use wavecraft_protocol::{AudioRuntimeStatus, MeterFrame, OscilloscopeFrame, ParameterInfo};
+use wavecraft_protocol::{
+    AudioRuntimeStatus, MeterFrame, OscilloscopeFrame, ParameterInfo, SignalChainSlot,
+};
 
 /// Provides metering data for an in-memory host.
 pub trait MeterProvider: Send + Sync {
@@ -26,8 +28,8 @@ pub struct InMemoryParameterHost {
     values: RwLock<HashMap<String, f32>>,
     meter_provider: Option<Arc<dyn MeterProvider>>,
     oscilloscope_provider: Option<Arc<dyn OscilloscopeProvider>>,
-    /// Active processor order as slot indices (as strings, e.g. ["0", "1", "2"]).
-    processor_order: RwLock<Vec<String>>,
+    /// Active signal chain order as a list of slots.
+    signal_chain_order: RwLock<Vec<SignalChainSlot>>,
 }
 
 impl InMemoryParameterHost {
@@ -43,7 +45,7 @@ impl InMemoryParameterHost {
             values: RwLock::new(values),
             meter_provider: None,
             oscilloscope_provider: None,
-            processor_order: RwLock::new(Vec::new()),
+            signal_chain_order: RwLock::new(Vec::new()),
         }
     }
 
@@ -224,43 +226,29 @@ impl ParameterHost for InMemoryParameterHost {
         None
     }
 
-    fn get_processor_order(&self) -> Vec<String> {
-        self.processor_order
+    fn get_signal_chain_order(&self) -> Vec<SignalChainSlot> {
+        self.signal_chain_order
             .read()
             .map(|guard| guard.clone())
             .unwrap_or_default()
     }
 
-    fn set_processor_order(&self, order: &[String]) -> Result<(), BridgeError> {
-        if order.is_empty() {
-            return Err(BridgeError::InvalidProcessorOrder {
-                reason: "order must be non-empty".to_string(),
-            });
-        }
-        let n = order.len();
-        // Parse each slot as a non-negative integer index.
-        let slots: Vec<usize> = order
-            .iter()
-            .map(|s| s.parse::<usize>())
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|_| BridgeError::InvalidProcessorOrder {
-                reason: "all slot indices must be non-negative integers".to_string(),
-            })?;
-        // Validate that the indices form a valid permutation (in-range, no duplicates).
-        let mut seen = vec![false; n];
-        for &slot in &slots {
-            if slot >= n || seen[slot] {
-                return Err(BridgeError::InvalidProcessorOrder {
-                    reason: format!(
-                        "invalid permutation: slot {} out of range or duplicated",
-                        slot
-                    ),
+    fn set_signal_chain_order(&self, order: Vec<SignalChainSlot>) -> Result<(), BridgeError> {
+        // Validate: no empty IDs, no duplicate IDs.
+        let mut seen = std::collections::HashSet::new();
+        for slot in &order {
+            if slot.id.is_empty() {
+                return Err(BridgeError::InvalidSignalChainOrder {
+                    reason: "slot ID must not be empty".to_string(),
                 });
             }
-            seen[slot] = true;
+            if !seen.insert(slot.id.as_str()) {
+                return Err(BridgeError::InvalidSignalChainOrder {
+                    reason: format!("duplicate slot ID: {}", slot.id),
+                });
+            }
         }
-        // Store as string vec (matching existing storage type).
-        *self.processor_order.write().unwrap() = order.to_vec();
+        *self.signal_chain_order.write().unwrap() = order;
         Ok(())
     }
 }
@@ -268,7 +256,7 @@ impl ParameterHost for InMemoryParameterHost {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use wavecraft_protocol::ParameterType;
+    use wavecraft_protocol::{ParameterType, SlotType};
 
     struct StaticMeterProvider {
         frame: MeterFrame,
@@ -519,61 +507,91 @@ mod tests {
         assert!(too_high.is_err(), "value above max should be rejected");
     }
 
-    // ── set_processor_order validation ────────────────────────────────────────
+    // ── set_signal_chain_order validation ────────────────────────────────────────
 
     #[test]
-    fn test_set_processor_order_empty_is_rejected() {
+    fn test_set_signal_chain_order_empty_vec_is_accepted() {
         let host = InMemoryParameterHost::new(vec![]);
-        let result = host.set_processor_order(&[]);
-        assert!(result.is_err(), "empty order should be rejected");
-        let msg = result.unwrap_err().to_string();
-        assert!(msg.contains("non-empty"), "error should mention non-empty");
-    }
-
-    #[test]
-    fn test_set_processor_order_valid_permutation() {
-        let host = InMemoryParameterHost::new(vec![]);
-        let order: Vec<String> = vec!["1".to_string(), "0".to_string()];
         assert!(
-            host.set_processor_order(&order).is_ok(),
-            "valid permutation should succeed"
+            host.set_signal_chain_order(vec![]).is_ok(),
+            "empty order should be accepted"
         );
-        assert_eq!(host.get_processor_order(), order);
+        assert!(host.get_signal_chain_order().is_empty());
     }
 
     #[test]
-    fn test_set_processor_order_out_of_range_index_rejected() {
+    fn test_set_signal_chain_order_valid_slots() {
         let host = InMemoryParameterHost::new(vec![]);
-        // [0, 2] for a 2-element order: index 2 is out of range
-        let order: Vec<String> = vec!["0".to_string(), "2".to_string()];
-        let result = host.set_processor_order(&order);
-        assert!(result.is_err(), "out-of-range index should be rejected");
+        let order = vec![
+            SignalChainSlot {
+                id: "proc_0".to_string(),
+                slot_type: SlotType::Processor,
+            },
+            SignalChainSlot {
+                id: "tap_0".to_string(),
+                slot_type: SlotType::Tap,
+            },
+        ];
+        assert!(
+            host.set_signal_chain_order(order.clone()).is_ok(),
+            "valid slots should succeed"
+        );
+        assert_eq!(host.get_signal_chain_order(), order);
+    }
+
+    #[test]
+    fn test_set_signal_chain_order_empty_id_rejected() {
+        let host = InMemoryParameterHost::new(vec![]);
+        let order = vec![SignalChainSlot {
+            id: "".to_string(),
+            slot_type: SlotType::Processor,
+        }];
+        let result = host.set_signal_chain_order(order);
+        assert!(result.is_err(), "empty ID should be rejected");
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("empty"), "error should mention empty: {msg}");
+    }
+
+    #[test]
+    fn test_set_signal_chain_order_duplicate_id_rejected() {
+        let host = InMemoryParameterHost::new(vec![]);
+        let order = vec![
+            SignalChainSlot {
+                id: "slot_a".to_string(),
+                slot_type: SlotType::Processor,
+            },
+            SignalChainSlot {
+                id: "slot_a".to_string(),
+                slot_type: SlotType::Tap,
+            },
+        ];
+        let result = host.set_signal_chain_order(order);
+        assert!(result.is_err(), "duplicate ID should be rejected");
         let msg = result.unwrap_err().to_string();
         assert!(
-            msg.contains("out of range") || msg.contains("duplicated"),
-            "error should describe the permutation failure"
+            msg.contains("duplicate") || msg.contains("Duplicate"),
+            "error should describe duplicate: {msg}"
         );
     }
 
     #[test]
-    fn test_set_processor_order_duplicate_index_rejected() {
+    fn test_set_signal_chain_order_mixed_slot_types() {
         let host = InMemoryParameterHost::new(vec![]);
-        // [0, 0] for a 2-element order: 0 is duplicated
-        let order: Vec<String> = vec!["0".to_string(), "0".to_string()];
-        let result = host.set_processor_order(&order);
-        assert!(result.is_err(), "duplicate index should be rejected");
-    }
-
-    #[test]
-    fn test_set_processor_order_non_integer_rejected() {
-        let host = InMemoryParameterHost::new(vec![]);
-        let order: Vec<String> = vec!["osc".to_string(), "filter".to_string()];
-        let result = host.set_processor_order(&order);
-        assert!(result.is_err(), "non-integer order should be rejected");
-        let msg = result.unwrap_err().to_string();
-        assert!(
-            msg.contains("non-negative integers"),
-            "error should indicate integer requirement"
-        );
+        let order = vec![
+            SignalChainSlot {
+                id: "p0".to_string(),
+                slot_type: SlotType::Processor,
+            },
+            SignalChainSlot {
+                id: "t0".to_string(),
+                slot_type: SlotType::Tap,
+            },
+            SignalChainSlot {
+                id: "p1".to_string(),
+                slot_type: SlotType::Processor,
+            },
+        ];
+        assert!(host.set_signal_chain_order(order.clone()).is_ok());
+        assert_eq!(host.get_signal_chain_order(), order);
     }
 }

@@ -1,69 +1,67 @@
 /**
- * SignalChain - Drag-and-drop ordered list of processor cards
+ * SignalChain - Drag-and-drop ordered list of processor and tap cards
  *
- * Renders processor cards in the server-authoritative order and allows the
- * user to reorder them via drag-and-drop or keyboard navigation.
+ * Renders slot cards in the server-authoritative unified order (processors +
+ * taps) and allows the user to reorder them via drag-and-drop or keyboard.
  *
  * Uses @dnd-kit for accessible DnD with full keyboard support.
  */
 
 import {
-  closestCenter,
-  DndContext,
-  DragOverlay,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  type DragStartEvent,
+    closestCenter,
+    DndContext,
+    DragOverlay,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    type DragEndEvent,
+    type DragStartEvent,
 } from '@dnd-kit/core';
 import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { useProcessorOrder } from '@wavecraft/core';
+import type { SignalChainOrder, SlotType } from '@wavecraft/core';
+import { useSignalChainOrder } from '@wavecraft/core';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 
 import { mergeClassNames } from '../utils/classNames';
 import { SignalChainItem } from './SignalChainItem';
-import type { SignalChainProcessorEntry } from './types';
-import { useSortedProcessors } from './useSignalChainPresentation';
+import type { SignalChainEntry } from './types';
+import { useSortedEntries } from './useSignalChainPresentation';
 
 export interface SignalChainProps {
-  /** Ordered list of processor entries; each entry has an `id` and a `component` to render */
-  processors: SignalChainProcessorEntry[];
+  /** Ordered list of signal chain entries; each entry has an `id`, `type`, and a `component` */
+  entries: SignalChainEntry[];
   className?: string;
 }
 
-export function SignalChain({
-  processors,
-  className,
-}: Readonly<SignalChainProps>): React.JSX.Element {
+export function SignalChain({ entries, className }: Readonly<SignalChainProps>): React.JSX.Element {
   // Track drag state — used to suppress incoming IPC notifications during drag
   const isDraggingRef = useRef(false);
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  const { order, setOrder } = useProcessorOrder(isDraggingRef);
+  const { order, setOrder } = useSignalChainOrder(isDraggingRef);
 
-  // Compute the display-sorted processors from the IPC order
-  const sortedProcessors = useSortedProcessors(processors, order);
+  // Compute the display-sorted entries from the IPC order
+  const sortedEntries = useSortedEntries(entries, order);
 
-  // Build a stable id→slotIndex map for translating DnD result back to IPC order
-  const idToSlotIndex = useMemo(
-    () => new Map<string, string>(processors.map((p, i) => [p.id, String(i)])),
-    [processors]
+  // Build a stable id → SlotType map for translating DnD result back to IPC slots
+  const idToType = useMemo(
+    () => new Map<string, SlotType>(entries.map((e) => [e.id, e.type])),
+    [entries]
   );
 
-  // DnD item IDs in current display order (processor `id` strings)
-  const items = useMemo(() => sortedProcessors.map((p) => p.id), [sortedProcessors]);
+  // DnD item IDs in current display order (entry `id` strings)
+  const items = useMemo(() => sortedEntries.map((e) => e.id), [sortedEntries]);
 
   // Build a map for O(1) child lookup
-  const processorMap = useMemo(
-    () => new Map<string, React.ReactNode>(processors.map((p) => [p.id, p.component])),
-    [processors]
+  const entryMap = useMemo(
+    () => new Map<string, React.ReactNode>(entries.map((e) => [e.id, e.component])),
+    [entries]
   );
 
   const sensors = useSensors(
@@ -92,14 +90,17 @@ export function SignalChain({
 
       const reorderedIds = arrayMove(items, oldIndex, newIndex);
 
-      // Translate processor IDs back to slot indices for the IPC call
-      const newOrder = reorderedIds
-        .map((id) => idToSlotIndex.get(id))
-        .filter((slot): slot is string => slot !== undefined);
+      // Translate entry IDs back to SignalChainOrder slot objects for the IPC call
+      const newSlots: SignalChainOrder[] = reorderedIds
+        .map((id) => {
+          const type = idToType.get(id);
+          return type ? { id, type } : null;
+        })
+        .filter((s): s is SignalChainOrder => s !== null);
 
-      void setOrder(newOrder);
+      void setOrder(newSlots);
     },
-    [items, idToSlotIndex, setOrder]
+    [items, idToType, setOrder]
   );
 
   const handleDragCancel = useCallback(() => {
@@ -121,10 +122,10 @@ export function SignalChain({
           role="list"
           aria-label="Signal chain processor order"
         >
-          {sortedProcessors.map((entry) => (
+          {sortedEntries.map((entry) => (
             <div key={entry.id} role="listitem">
               <SignalChainItem id={entry.id} isDragging={activeId === entry.id}>
-                {processorMap.get(entry.id)}
+                {entryMap.get(entry.id)}
               </SignalChainItem>
             </div>
           ))}
@@ -133,9 +134,7 @@ export function SignalChain({
 
       {/* Drag overlay — renders a ghost of the dragged item */}
       <DragOverlay>
-        {activeId ? (
-          <div className="opacity-90 shadow-panel">{processorMap.get(activeId)}</div>
-        ) : null}
+        {activeId ? <div className="opacity-90 shadow-panel">{entryMap.get(activeId)}</div> : null}
       </DragOverlay>
     </DndContext>
   );

@@ -1,9 +1,26 @@
 use quote::quote;
 use syn::Type;
 
+/// Returns the last path segment identifier of a type as a PascalCase string.
+///
+/// Used as slot ID (e.g., "TestTone", "OscilloscopeTap") in runtime order.
+fn type_last_segment_name(ty: &Type) -> String {
+    match ty {
+        Type::Path(type_path) => type_path
+            .path
+            .segments
+            .last()
+            .map(|s| s.ident.to_string())
+            .unwrap_or_else(|| quote!(#ty).to_string()),
+        _ => quote!(#ty).to_string(),
+    }
+}
+
 pub(super) struct CodegenInput<'a> {
     pub(super) name: &'a syn::LitStr,
     pub(super) processors: &'a [Type],
+    /// Tap processor types declared in `taps: [...]`. Empty when none declared.
+    pub(super) taps: &'a [Type],
     pub(super) krate: &'a syn::Path,
     pub(super) runtime_param_blocks: &'a [proc_macro2::TokenStream],
     pub(super) processor_param_mappings: &'a [proc_macro2::TokenStream],
@@ -14,10 +31,13 @@ pub(super) struct CodegenInput<'a> {
     pub(super) clap_id: &'a str,
 }
 
-pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::TokenStream {
+pub(super) fn generate_plugin_code(
+    input: CodegenInput<'_>,
+) -> syn::Result<proc_macro2::TokenStream> {
     let CodegenInput {
         name,
         processors,
+        taps,
         krate,
         runtime_param_blocks,
         processor_param_mappings,
@@ -29,33 +49,44 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
     } = input;
 
     let n = processors.len();
+    let t = taps.len();
+    let total_slots = n + t;
 
-    // Detect if OscilloscopeTap is in the processors list by type name.
-    // This is used to enable position-aware capture (scratch buffer approach).
-    // NOTE: OscilloscopeTap must be used directly — aliasing via wavecraft_processor!
-    // disables position-aware capture (falls back to final-output capture).
-    let osc_tap_slot: Option<usize> = processors.iter().position(|ty| {
-        if let syn::Type::Path(tp) = ty {
-            tp.path
-                .segments
-                .last()
-                .map(|s| s.ident == "OscilloscopeTap")
-                .unwrap_or(false)
-        } else {
-            false
+    // ── Step 14: Compile-time overlap check (type appears in both processors and taps) ──
+    //
+    // A type cannot implement both Processor and TapProcessor. Detect this at macro
+    // expansion time (before code generation) for a clear, actionable error message.
+    {
+        let proc_names: Vec<String> = processors.iter().map(type_last_segment_name).collect();
+        for tap_ty in taps.iter() {
+            let tap_name = type_last_segment_name(tap_ty);
+            if proc_names.contains(&tap_name) {
+                return Err(syn::Error::new_spanned(
+                    tap_ty,
+                    format!(
+                        "type `{}` appears in both `processors` and `taps`\n\
+                         \n\
+                         A type cannot be both a `Processor` and a `TapProcessor`. Move \
+                         `{}` to only one of the two lists.",
+                        tap_name, tap_name
+                    ),
+                ));
+            }
         }
-    });
-    let has_osc_in_chain = osc_tap_slot.is_some();
+    }
 
     let n_lit = syn::LitInt::new(&n.to_string(), proc_macro2::Span::call_site());
+    let t_lit = syn::LitInt::new(&t.to_string(), proc_macro2::Span::call_site());
+    let total_slots_lit =
+        syn::LitInt::new(&total_slots.to_string(), proc_macro2::Span::call_site());
     let np1_lit = syn::LitInt::new(&(n + 1).to_string(), proc_macro2::Span::call_site());
 
-    // Generate per-processor field names: __proc_0, __proc_1, ...
+    // ── Processor field names: __proc_0, __proc_1, ... ───────────────────────
     let proc_field_names: Vec<syn::Ident> = (0..n)
         .map(|i| syn::Ident::new(&format!("__proc_{}", i), proc_macro2::Span::call_site()))
         .collect();
 
-    // Generate u8 index literals: 0u8, 1u8, ...
+    // ── u8 / usize index literals ─────────────────────────────────────────────
     let proc_idx_u8: Vec<proc_macro2::TokenStream> = (0..n)
         .map(|i| {
             let lit = syn::LitInt::new(&format!("{}u8", i), proc_macro2::Span::call_site());
@@ -63,15 +94,88 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
         })
         .collect();
 
-    // Generate usize index literals: 0usize, 1usize, ...
-    let _proc_idx_usize: Vec<proc_macro2::TokenStream> = (0..n)
+    let proc_idx_usize: Vec<proc_macro2::TokenStream> = (0..n)
         .map(|i| {
             let lit = syn::LitInt::new(&format!("{}usize", i), proc_macro2::Span::call_site());
             quote! { #lit }
         })
         .collect();
 
-    // Per-processor struct field declarations
+    // ── Processor type names (PascalCase strings for slot IDs) ───────────────
+    let proc_type_names: Vec<String> = processors.iter().map(type_last_segment_name).collect();
+    let proc_name_str_lits: Vec<syn::LitStr> = proc_type_names
+        .iter()
+        .map(|s| syn::LitStr::new(s, proc_macro2::Span::call_site()))
+        .collect();
+
+    // ── Tap field names and type names ────────────────────────────────────────
+    let tap_field_names: Vec<syn::Ident> = (0..t)
+        .map(|i| syn::Ident::new(&format!("__tap_{}", i), proc_macro2::Span::call_site()))
+        .collect();
+    let tap_scratch_l_names: Vec<syn::Ident> = (0..t)
+        .map(|i| {
+            syn::Ident::new(
+                &format!("__tap_{}_scratch_l", i),
+                proc_macro2::Span::call_site(),
+            )
+        })
+        .collect();
+    let tap_scratch_r_names: Vec<syn::Ident> = (0..t)
+        .map(|i| {
+            syn::Ident::new(
+                &format!("__tap_{}_scratch_r", i),
+                proc_macro2::Span::call_site(),
+            )
+        })
+        .collect();
+    let tap_idx_usize: Vec<proc_macro2::TokenStream> = (0..t)
+        .map(|i| {
+            let lit = syn::LitInt::new(&format!("{}usize", i), proc_macro2::Span::call_site());
+            quote! { #lit }
+        })
+        .collect();
+    // Per-tap local capture variable names: __tap_0_capt_l, __tap_0_capt_r, ...
+    // Used to defer writes to self.__tap_*_scratch_* to a single flush point per outer
+    // for-loop iteration, avoiding cross-iteration E0499 borrow checker errors.
+    let tap_capt_l_names: Vec<syn::Ident> = (0..t)
+        .map(|i| {
+            syn::Ident::new(
+                &format!("__tap_{}_capt_l", i),
+                proc_macro2::Span::call_site(),
+            )
+        })
+        .collect();
+    let tap_capt_r_names: Vec<syn::Ident> = (0..t)
+        .map(|i| {
+            syn::Ident::new(
+                &format!("__tap_{}_capt_r", i),
+                proc_macro2::Span::call_site(),
+            )
+        })
+        .collect();
+    let tap_type_names: Vec<String> = taps.iter().map(type_last_segment_name).collect();
+    let tap_name_str_lits: Vec<syn::LitStr> = tap_type_names
+        .iter()
+        .map(|s| syn::LitStr::new(s, proc_macro2::Span::call_site()))
+        .collect();
+
+    // Default boundary = N (all taps start after all processors = final output)
+    let default_tap_boundary_u8: Vec<proc_macro2::TokenStream> = (0..t)
+        .map(|_| {
+            let lit = syn::LitInt::new(&format!("{}u8", n), proc_macro2::Span::call_site());
+            quote! { #lit }
+        })
+        .collect();
+    // Indices for pending_slots[N + tap_idx]
+    let tap_boundary_slot_idx: Vec<proc_macro2::TokenStream> = (0..t)
+        .map(|i| {
+            let idx = n + i;
+            let lit = syn::LitInt::new(&format!("{}usize", idx), proc_macro2::Span::call_site());
+            quote! { #lit }
+        })
+        .collect();
+
+    // ── Per-processor struct fields ───────────────────────────────────────────
     let proc_struct_fields: Vec<proc_macro2::TokenStream> = processors
         .iter()
         .zip(proc_field_names.iter())
@@ -80,7 +184,7 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
         })
         .collect();
 
-    // Per-processor default initialisers in Default impl
+    // ── Per-processor defaults ────────────────────────────────────────────────
     let proc_defaults: Vec<proc_macro2::TokenStream> = processors
         .iter()
         .zip(proc_field_names.iter())
@@ -91,7 +195,7 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
         })
         .collect();
 
-    // compile-time trait validation calls
+    // ── Compile-time trait validations (processors) ───────────────────────────
     let proc_validations: Vec<proc_macro2::TokenStream> = processors
         .iter()
         .map(|ty| {
@@ -99,7 +203,15 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
         })
         .collect();
 
-    // set_sample_rate calls in initialize()
+    // ── Compile-time trait validations (taps) ────────────────────────────────
+    let tap_validations: Vec<proc_macro2::TokenStream> = taps
+        .iter()
+        .map(|ty| {
+            quote! { assert_tap_traits::<#ty>(); }
+        })
+        .collect();
+
+    // ── set_sample_rate calls in initialize() ─────────────────────────────────
     let set_sample_rate_calls: Vec<proc_macro2::TokenStream> = proc_field_names
         .iter()
         .map(|fname| {
@@ -109,7 +221,7 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
         })
         .collect();
 
-    // reset() calls
+    // ── reset() calls (processors) ───────────────────────────────────────────
     let reset_calls: Vec<proc_macro2::TokenStream> = proc_field_names
         .iter()
         .map(|fname| {
@@ -117,7 +229,11 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
         })
         .collect();
 
-    // Static dispatch arms for process() loop
+    // ── Static dispatch arms for process() loop ───────────────────────────────
+    //
+    // NOTE: After Step 14, OscilloscopeTap is no longer in the processors list
+    // (the compile-time guard prevents it). All processors use the normal dispatch arm.
+    // Tap observation now happens via the new `__tap_N` system.
     let dispatch_arms: Vec<proc_macro2::TokenStream> = processors
         .iter()
         .zip(proc_field_names.iter())
@@ -125,26 +241,6 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
         .map(|(i, (ty, fname))| {
             let i_lit = syn::LitInt::new(&i.to_string(), proc_macro2::Span::call_site());
             let i_lit_usize = syn::LitInt::new(&format!("{}", i), proc_macro2::Span::call_site());
-
-            // For OscilloscopeTap: capture sample to scratch instead of calling process().
-            // process() is not called because:
-            //   1. OscilloscopeTap is audio-passthrough (no effect on samples).
-            //   2. capture_stereo() is designed for block-level use; calling it per-sample
-            //      with 1-sample slices produces malformed 1024-point frames.
-            //   3. The actual block-level capture happens after the per-sample loop.
-            if osc_tap_slot == Some(i) {
-                return quote! {
-                    #i_lit => {
-                        // OscilloscopeTap: observation-only. Capture sample to pre-allocated
-                        // scratch for block-level oscilloscope publish after the loop.
-                        // SAFETY: __sample_idx < __num_samples (outer loop bound).
-                        self.__osc_scratch_l[__sample_idx] = __stereo[0];
-                        self.__osc_scratch_r[__sample_idx] = __stereo[1];
-                        // Audio samples are NOT modified (OscilloscopeTap is pass-through).
-                    }
-                };
-            }
-
             quote! {
                 #i_lit => {
                     let __start = self.__param_offsets[#i_lit_usize];
@@ -155,25 +251,24 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                     <<#krate::Bypassed<#ty> as #krate::Processor>::Params
                         as #krate::ProcessorParams>::apply_plain_values(
                         &mut __pp,
-                        &__all_values[__start..__end],
+                        // Use a temporary slice from self.__param_scratch rather than a
+                        // long-lived &[f32] binding to avoid E0499 cross-iteration borrow.
+                        &self.__param_scratch[__start..__end],
                     );
                     use #krate::Processor as _;
-                    self.#fname.process(&mut __channel_slices[..__active_ch], &__transport, &__pp);
+                    // SAFETY: __self_ptr is a *mut Self created outside the for loop from
+                    // the exclusive &mut self receiver.  All processor fields are distinct
+                    // (each arm touches a different one), no aliasing occurs, and the call
+                    // is entirely single-threaded.  Routing through *__self_ptr prevents NLL
+                    // from tracking the mutable access as a loan of `self`, eliminating the
+                    // cross-iteration E0499 false-positive that arises with `self.field`.
+                    unsafe { (*__self_ptr).#fname.process(&mut __channel_slices[..__active_ch], &__transport, &__pp); }
                 }
             }
         })
         .collect();
 
-    // Build index literals for proc_idx_usize used in quote! (needed after removing the
-    // zip-based approach; regenerate from 0..n with usize suffix)
-    let proc_idx_usize: Vec<proc_macro2::TokenStream> = (0..n)
-        .map(|i| {
-            let lit = syn::LitInt::new(&format!("{}usize", i), proc_macro2::Span::call_site());
-            quote! { #lit }
-        })
-        .collect();
-
-    // param_count expressions for __param_offsets initialisation
+    // ── param_count exprs ─────────────────────────────────────────────────────
     let param_count_exprs: Vec<proc_macro2::TokenStream> = processors
         .iter()
         .map(|ty| {
@@ -184,66 +279,286 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
         })
         .collect();
 
-    // Oscilloscope scratch buffer fields (only emitted when OscilloscopeTap is in chain)
-    let osc_scratch_fields = if has_osc_in_chain {
-        quote! {
-            __osc_scratch_l: ::std::vec::Vec<f32>,
-            __osc_scratch_r: ::std::vec::Vec<f32>,
-        }
-    } else {
+    // ── Step 15: Tap struct fields + scratch buffers ──────────────────────────
+    let tap_struct_fields: proc_macro2::TokenStream = if taps.is_empty() {
         quote! {}
+    } else {
+        let fields: Vec<proc_macro2::TokenStream> = taps
+            .iter()
+            .zip(tap_field_names.iter())
+            .zip(tap_scratch_l_names.iter())
+            .zip(tap_scratch_r_names.iter())
+            .map(|(((ty, fname), sl), sr)| {
+                quote! {
+                    #fname: #ty,
+                    #sl: ::std::vec::Vec<f32>,
+                    #sr: ::std::vec::Vec<f32>,
+                }
+            })
+            .collect();
+        let boundary_field = quote! {
+            /// Per-tap insertion boundary (count of processors before tap in runtime slot order).
+            /// Loaded from __pending_slots[N..N+T] at crossfade handoff; no allocation on RT path.
+            __tap_boundaries: [u8; #t_lit],
+        };
+        quote! {
+            #(#fields)*
+            #boundary_field
+        }
     };
 
-    // Oscilloscope scratch buffer default initialisers
-    let osc_scratch_defaults = if has_osc_in_chain {
-        quote! {
-            __osc_scratch_l: ::std::vec::Vec::new(),
-            __osc_scratch_r: ::std::vec::Vec::new(),
-        }
-    } else {
+    // ── Tap defaults ──────────────────────────────────────────────────────────
+    let tap_defaults: proc_macro2::TokenStream = if taps.is_empty() {
         quote! {}
+    } else {
+        let defaults: Vec<proc_macro2::TokenStream> = taps
+            .iter()
+            .zip(tap_field_names.iter())
+            .zip(tap_scratch_l_names.iter())
+            .zip(tap_scratch_r_names.iter())
+            .map(|(((ty, fname), sl), sr)| {
+                quote! {
+                    #fname: <#ty as ::std::default::Default>::default(),
+                    #sl: ::std::vec::Vec::new(),
+                    #sr: ::std::vec::Vec::new(),
+                }
+            })
+            .collect();
+        // All taps start with boundary = N (after all processors = final output)
+        quote! {
+            #(#defaults)*
+            __tap_boundaries: [#(#default_tap_boundary_u8),*],
+        }
     };
 
-    // Oscilloscope scratch resize in initialize()
-    let osc_scratch_init = if has_osc_in_chain {
-        quote! {
-            let __max_buf = _buffer_config.max_buffer_size as usize;
-            self.__osc_scratch_l.resize(__max_buf, 0.0_f32);
-            self.__osc_scratch_r.resize(__max_buf, 0.0_f32);
-        }
-    } else {
+    // ── Tap initialize() body (set_sample_rate + scratch resize) ─────────────
+    let tap_initialize: proc_macro2::TokenStream = if taps.is_empty() {
         quote! {}
-    };
-
-    // Block-end oscilloscope capture: position-aware when tap is in chain, final-output fallback otherwise
-    let osc_block_capture = if has_osc_in_chain {
-        quote! {
-            self.oscilloscope_tap
-                .capture_stereo(
-                    &self.__osc_scratch_l[..__num_samples],
-                    &self.__osc_scratch_r[..__num_samples],
-                );
-        }
     } else {
+        let calls: Vec<proc_macro2::TokenStream> = taps
+            .iter()
+            .zip(tap_field_names.iter())
+            .zip(tap_scratch_l_names.iter())
+            .zip(tap_scratch_r_names.iter())
+            .map(|(((_, fname), sl), sr)| {
+                quote! {
+                    #krate::TapProcessor::set_sample_rate(
+                        &mut self.#fname,
+                        _buffer_config.sample_rate,
+                    );
+                    let __max_buf = _buffer_config.max_buffer_size as usize;
+                    self.#sl.resize(__max_buf, 0.0_f32);
+                    self.#sr.resize(__max_buf, 0.0_f32);
+                }
+            })
+            .collect();
+        quote! { #(#calls)* }
+    };
+
+    // ── Tap reset() body ──────────────────────────────────────────────────────
+    let tap_reset: proc_macro2::TokenStream = if taps.is_empty() {
+        quote! {}
+    } else {
+        let calls: Vec<proc_macro2::TokenStream> = tap_field_names
+            .iter()
+            .map(|fname| {
+                quote! { #krate::TapProcessor::reset(&mut self.#fname); }
+            })
+            .collect();
+        quote! { #(#calls)* }
+    };
+
+    // ── Step 16: Crossfade handoff — also load tap boundaries ────────────────
+    let tap_boundary_handoff: proc_macro2::TokenStream = if taps.is_empty() {
+        quote! {}
+    } else {
+        let loads: Vec<proc_macro2::TokenStream> = tap_idx_usize
+            .iter()
+            .zip(tap_boundary_slot_idx.iter())
+            .map(|(ti, si)| {
+                quote! {
+                    self.__tap_boundaries[#ti] = self
+                        .params
+                        .__pending_slots[#si]
+                        .load(::std::sync::atomic::Ordering::Acquire);
+                }
+            })
+            .collect();
+        quote! { #(#loads)* }
+    };
+
+    // ── Step 17: Per-sample tap capture (boundary = 0) before dispatch loop ──
+    //
+    // DESIGN: To avoid E0499 (cross-iteration mutable borrow of self.__tap_*_scratch_*),
+    // we do NOT write to self.*scratch* here. Instead we write to local capture variables
+    // (__tap_N_capt_l / __tap_N_capt_r) that are declared at the start of each outer
+    // for-loop iteration. A single flush (tap_capture_flush) after the { } block then
+    // writes those locals to self.*scratch* exactly once per iteration.
+    let tap_capture_boundary_zero: proc_macro2::TokenStream = if taps.is_empty() {
+        quote! {}
+    } else {
+        let captures: Vec<proc_macro2::TokenStream> = tap_idx_usize
+            .iter()
+            .zip(tap_capt_l_names.iter())
+            .zip(tap_capt_r_names.iter())
+            .map(|((ti, cl), cr)| {
+                quote! {
+                    if self.__tap_boundaries[#ti] == 0u8 {
+                        #cl = __stereo[0];
+                        #cr = __stereo[1];
+                    }
+                }
+            })
+            .collect();
+        quote! { #(#captures)* }
+    };
+
+    // ── Per-sample tap capture after each dispatch position ───────────────────
+    //
+    // DESIGN: Writes go to local capture variables (not self.*scratch*) to avoid
+    // the cross-iteration E0499 borrow. The { } block (split_at_mut scope) holds
+    // &mut [f32] refs via __channel_slices; writing to self.*scratch* while those
+    // refs are alive across multiple while-loop iterations caused the conflict.
+    // Instead we capture into __tap_N_capt_l / __tap_N_capt_r (plain f32 locals),
+    // then flush to self.*scratch* in tap_capture_flush after the { } block ends.
+    let tap_capture_after_dispatch: proc_macro2::TokenStream = if taps.is_empty() {
+        quote! {}
+    } else {
+        let captures: Vec<proc_macro2::TokenStream> = tap_idx_usize
+            .iter()
+            .zip(tap_capt_l_names.iter())
+            .zip(tap_capt_r_names.iter())
+            .map(|((ti, cl), cr)| {
+                quote! {
+                    if self.__tap_boundaries[#ti] == __exec_count {
+                        // Read through __channel_slices (not __stereo which is mutably
+                        // borrowed via split_at_mut for the duration of this block).
+                        // __channel_slices[0][0] / [1][0] are plain f32 copies — no
+                        // persistent borrow of self or __channel_slices after these lines.
+                        #cl = __channel_slices[0][0];
+                        #cr = __channel_slices[1][0];
+                    }
+                }
+            })
+            .collect();
+        // __exec_count is emitted in the dispatch loop; we add it conditionally
         quote! {
-            if __channels >= 1 {
-                let __left_snap: ::std::vec::Vec<f32> = buffer.as_slice()[0].to_vec();
-                let __right_snap: ::std::vec::Vec<f32> = if __channels >= 2 {
-                    buffer.as_slice()[1].to_vec()
-                } else {
-                    __left_snap.clone()
-                };
-                self.oscilloscope_tap
-                    .capture_stereo(&__left_snap, &__right_snap);
-            }
+            let __exec_count = (__pos + 1) as u8;
+            #(#captures)*
         }
     };
 
-    quote! {
+    // ── Flush per-iteration capture locals to self.*scratch* (after { } block) ─
+    //
+    // This is the single write point to self.__tap_*_scratch_*[__sample_idx] per
+    // outer for-loop iteration. Consolidating all writes here avoids the E0499
+    // borrow checker error that arose from writing to self.*scratch* in two places
+    // (tap_capture_boundary_zero before the { } block AND tap_capture_after_dispatch
+    // inside the while loop within the { } block).
+    let tap_capture_flush: proc_macro2::TokenStream = if taps.is_empty() {
+        quote! {}
+    } else {
+        let flushes: Vec<proc_macro2::TokenStream> = tap_capt_l_names
+            .iter()
+            .zip(tap_capt_r_names.iter())
+            .zip(tap_scratch_l_names.iter())
+            .zip(tap_scratch_r_names.iter())
+            .map(|(((cl, cr), sl), sr)| {
+                quote! {
+                    self.#sl[__sample_idx] = #cl;
+                    self.#sr[__sample_idx] = #cr;
+                }
+            })
+            .collect();
+        quote! { #(#flushes)* }
+    };
+
+    // ── Declare per-tap capture locals at the top of each for-loop iteration ──
+    //
+    // Default to 0.0. Will be overwritten by tap_capture_boundary_zero (boundary=0)
+    // or tap_capture_after_dispatch (boundary=1..N). tap_capture_flush then writes
+    // the final values to self.*scratch* once per outer loop iteration.
+    let tap_capture_vars: proc_macro2::TokenStream = if taps.is_empty() {
+        quote! {}
+    } else {
+        let vars: Vec<proc_macro2::TokenStream> = tap_capt_l_names
+            .iter()
+            .zip(tap_capt_r_names.iter())
+            .map(|(cl, cr)| {
+                quote! {
+                    let mut #cl: f32 = 0.0_f32;
+                    let mut #cr: f32 = 0.0_f32;
+                }
+            })
+            .collect();
+        quote! { #(#vars)* }
+    };
+
+    // ── Block-end observe_stereo calls (one per tap, after per-sample loop) ───
+    let tap_observe_calls: proc_macro2::TokenStream = if taps.is_empty() {
+        quote! {}
+    } else {
+        let calls: Vec<proc_macro2::TokenStream> = tap_field_names
+            .iter()
+            .zip(tap_scratch_l_names.iter())
+            .zip(tap_scratch_r_names.iter())
+            .map(|((fname, sl), sr)| {
+                quote! {
+                    #krate::TapProcessor::observe_stereo(
+                        &mut self.#fname,
+                        &self.#sl[..__num_samples],
+                        &self.#sr[..__num_samples],
+                    );
+                }
+            })
+            .collect();
+        quote! { #(#calls)* }
+    };
+
+    // ── Step 16 (updated): osc_block_capture — always final-output, no heap alloc ──
+    //
+    // The OscilloscopeTap position-detection (osc_tap_slot / has_osc_in_chain) is
+    // removed. The hardcoded `oscilloscope_tap` field always captures final output.
+    // Use get() + map() chaining to avoid creating long-lived slice references that
+    // confuse the borrow checker in older NLL (stable rustc 1.93+).
+    let osc_block_capture = quote! {
+        self.oscilloscope_tap.capture_stereo(
+            buffer.as_slice().get(0).map(|c| &c[..__num_samples]).unwrap_or(&[]),
+            buffer.as_slice().get(1).map(|c| &c[..__num_samples]).unwrap_or(&[]),
+        );
+    };
+
+    // ── Step 16: Default SignalChainOrder (identity: processors first, taps at end) ──
+    //
+    // Initial __order_state: all processors in declaration order, then all taps.
+    // Initial __pending_slots: first N = processor identity order, next T = boundary N (after all procs).
+    let initial_order_state_slots: Vec<proc_macro2::TokenStream> = {
+        let mut slots = Vec::with_capacity(total_slots);
+        for pname in proc_name_str_lits.iter() {
+            slots.push(quote! {
+                #krate::__nih::SignalChainSlot {
+                    id: #pname.to_string(),
+                    slot_type: #krate::__nih::SlotType::Processor,
+                }
+            });
+        }
+        for tname in tap_name_str_lits.iter() {
+            slots.push(quote! {
+                #krate::__nih::SignalChainSlot {
+                    id: #tname.to_string(),
+                    slot_type: #krate::__nih::SlotType::Tap,
+                }
+            });
+        }
+        slots
+    };
+
+    let expanded = quote! {
         // Keep SignalChain type alias for dev-FFI vtable (uses static dispatch in registration order)
         type __ProcessorType = #krate::SignalChain![#(#processors),*];
 
-        // Compile-time validation: every processor type must satisfy required trait bounds
+        // Compile-time validation: every processor type must satisfy required trait bounds,
+        // and every tap type must satisfy TapProcessor trait bounds.
         const _: () = {
             fn assert_processor_traits<T>()
             where
@@ -255,8 +570,14 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                     + 'static,
             {
             }
+            fn assert_tap_traits<T>()
+            where
+                T: #krate::TapProcessor + ::std::default::Default + ::std::marker::Send + 'static,
+            {
+            }
             fn validate() {
                 #(#proc_validations)*
+                #(#tap_validations)*
             }
         };
 
@@ -280,10 +601,10 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
             __cf_dir: i8, // -1 = fade-down, 0 = normal, 1 = fade-up
             // Pre-allocated parameter scratch buffer (reused each block, zero allocation after init)
             __param_scratch: ::std::vec::Vec<f32>,
-            // Oscilloscope scratch buffers (only when OscilloscopeTap is in chain).
-            // Pre-allocated in initialize(); exactly one sample per block written per
-            // position in the chain. Zero RT allocation after init.
-            #osc_scratch_fields
+            // --- Tap processors (Step 15: __tap_N fields + scratch buffers + boundaries) ---
+            // Generated for each declared taps entry. Scratch buffers are pre-allocated in
+            // initialize() and reused each block — zero RT allocation after init.
+            #tap_struct_fields
             // --- Metering ---
             oscilloscope_tap: #krate::OscilloscopeTap,
             meter_producer: #krate::MeterProducer,
@@ -325,11 +646,14 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
             ids: ::std::vec::Vec<::std::string::String>,
             // Optional parameter group names (empty string when none)
             groups: ::std::vec::Vec<::std::string::String>,
-            // --- Phase 2: Lock-free SPSC order handoff (shared between UI and audio threads) ---
+            // --- Lock-free SPSC order handoff (shared between UI and audio threads) ---
+            // First N slots: processor execution order (u8 index into proc fields).
+            // Next T slots: tap boundary values (count of procs before each tap).
             __has_pending_order: ::std::sync::atomic::AtomicBool,
             __pending_slots: ::std::vec::Vec<::std::sync::atomic::AtomicU8>,
-            // --- Phase 3: Order state for IPC reads and persistence ---
-            __order_state: ::std::sync::Mutex<::std::vec::Vec<u8>>,
+            // --- Order state for IPC reads and persistence ---
+            // Full unified SignalChainOrder (processors + taps in slot order).
+            __order_state: ::std::sync::Mutex<::std::vec::Vec<#krate::__nih::SignalChainSlot>>,
         }
 
         impl __WavecraftParams {
@@ -342,12 +666,22 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
 
                 #(#runtime_param_blocks)*
 
-                // Initialise pending-order slots (identity permutation)
+                // Initialise pending-order slots:
+                //   slots[0..N]   = identity processor order (0u8, 1u8, ...)
+                //   slots[N..N+T] = default tap boundaries = N (taps after all procs)
                 let mut __pending: ::std::vec::Vec<::std::sync::atomic::AtomicU8> =
-                    ::std::vec::Vec::with_capacity(#n_lit);
+                    ::std::vec::Vec::with_capacity(#total_slots_lit);
                 #(
                     __pending.push(::std::sync::atomic::AtomicU8::new(#proc_idx_u8));
                 )*
+                // Tap boundary defaults: N = after all processors
+                #(
+                    __pending.push(::std::sync::atomic::AtomicU8::new(#default_tap_boundary_u8));
+                )*
+
+                // Initial order: all processors in declaration order, then all taps.
+                let __initial_order: ::std::vec::Vec<#krate::__nih::SignalChainSlot> =
+                    ::std::vec![#(#initial_order_state_slots),*];
 
                 Self {
                     params,
@@ -355,7 +689,7 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                     groups,
                     __has_pending_order: ::std::sync::atomic::AtomicBool::new(false),
                     __pending_slots: __pending,
-                    __order_state: ::std::sync::Mutex::new(vec![#(#proc_idx_u8),*]),
+                    __order_state: ::std::sync::Mutex::new(__initial_order),
                 }
             }
         }
@@ -385,20 +719,20 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                 &self,
             ) -> ::std::collections::BTreeMap<::std::string::String, ::std::string::String>
             {
-                let __order: ::std::vec::Vec<::std::string::String> = self
+                // Serialize the unified SignalChainOrder as JSON.
+                // Key: "signalChainOrder".
+                let __order_guard = self
                     .__order_state
                     .lock()
-                    .unwrap_or_else(|__e| __e.into_inner())
-                    .iter()
-                    .map(|&__i| __i.to_string())
-                    .collect();
+                    .unwrap_or_else(|__e| __e.into_inner());
 
-                let __json = #krate::__internal::serde_json::to_string(&__order)
+                // Serialize as [{"id":"TestTone","type":"processor"}, ...]
+                let __json = #krate::__internal::serde_json::to_string(&*__order_guard)
                     .unwrap_or_default();
 
                 let mut __map =
                     ::std::collections::BTreeMap::<::std::string::String, ::std::string::String>::new();
-                __map.insert("processorOrder".to_string(), __json);
+                __map.insert("signalChainOrder".to_string(), __json);
                 __map
             }
 
@@ -406,120 +740,168 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                 &self,
                 fields: &::std::collections::BTreeMap<::std::string::String, ::std::string::String>,
             ) {
-                if let Some(__json) = fields.get("processorOrder") {
-                    if let Ok(__order_strs) =
-                        #krate::__internal::serde_json::from_str::<::std::vec::Vec<::std::string::String>>(
-                            __json,
-                        )
+                if let Some(__json) = fields.get("signalChainOrder") {
+                    if let Ok(__slots) =
+                        #krate::__internal::serde_json::from_str::<
+                            ::std::vec::Vec<#krate::__nih::SignalChainSlot>,
+                        >(__json)
                     {
-                        let __order: ::std::vec::Vec<u8> = __order_strs
-                            .iter()
-                            .filter_map(|__s| __s.parse::<u8>().ok())
-                            .collect();
-
-                        if __order.len() == __PROC_COUNT {
-                            // Validate: must be a permutation of 0..N
-                            let mut __seen = [false; #n_lit];
-                            let mut __valid = true;
-                            for &__slot in __order.iter() {
-                                let __idx = __slot as usize;
-                                if __idx >= __PROC_COUNT || __seen[__idx] {
-                                    __valid = false;
-                                    break;
-                                }
-                                __seen[__idx] = true;
-                            }
-                            if __valid {
-                                for (__i, &__slot) in __order.iter().enumerate() {
-                                    self.__pending_slots[__i].store(
-                                        __slot,
-                                        ::std::sync::atomic::Ordering::Release,
-                                    );
-                                }
-                                self.__has_pending_order.store(
-                                    true,
-                                    ::std::sync::atomic::Ordering::Release,
-                                );
-                                *self
-                                    .__order_state
-                                    .lock()
-                                    .unwrap_or_else(|__e| __e.into_inner()) = __order;
-                            } else {
-                                eprintln!(
-                                    "[wavecraft] processorOrderRestoreFailed: persisted order \
-                                     has wrong length or is not a valid permutation of slot \
-                                     indices. Falling back to default registration order."
-                                );
-                            }
+                        // Re-use set_order for validation + apply.
+                        if let ::std::result::Result::Ok(()) =
+                        <Self as #krate::__nih::SignalChainOrderAccess>::set_order(self, __slots) {
+                            // Already applied by set_order.
+                        } else {
+                            eprintln!(
+                                "[wavecraft] signalChainOrder restore failed: persisted order \
+                                 is invalid. Falling back to default declaration order."
+                            );
                         }
                     }
                 }
             }
         }
 
-        impl #krate::__nih::ProcessorOrderAccess for __WavecraftParams {
-            fn get_order(&self) -> ::std::vec::Vec<::std::string::String> {
+        impl #krate::__nih::SignalChainOrderAccess for __WavecraftParams {
+            fn get_order(&self) -> ::std::vec::Vec<#krate::__nih::SignalChainSlot> {
+                // Return a clone of the current unified order (processors + taps by type name).
                 self.__order_state
                     .lock()
                     .unwrap_or_else(|__e| __e.into_inner())
-                    .iter()
-                    .map(|__b| __b.to_string())
-                    .collect()
+                    .clone()
             }
 
             fn set_order(
                 &self,
-                order: &[::std::string::String],
+                order: ::std::vec::Vec<#krate::__nih::SignalChainSlot>,
             ) -> ::std::result::Result<(), #krate::__nih::BridgeError> {
-                let __n: usize = #n_lit;
-                if order.len() != __n {
+                // ── Validation ──────────────────────────────────────────────────────
+                // Known processor names (in declaration order)
+                let __proc_names: [&str; #n_lit] = [#(#proc_name_str_lits),*];
+                // Known tap names (in declaration order)
+                let __tap_names: [&str; #t_lit] = [#(#tap_name_str_lits),*];
+                let __total: usize = #n_lit + #t_lit;
+
+                if order.len() != __total {
                     return ::std::result::Result::Err(
-                        #krate::__nih::BridgeError::InvalidProcessorOrder {
+                        #krate::__nih::BridgeError::InvalidSignalChainOrder {
                             reason: ::std::format!(
-                                "expected {} slots, got {}",
-                                __n,
-                                order.len()
+                                "expected {} total slots ({} processor(s) + {} tap(s)), got {}",
+                                __total, #n_lit, #t_lit, order.len()
                             ),
                         },
                     );
                 }
-                let mut __parsed = ::std::vec::Vec::with_capacity(__n);
-                for __s in order.iter() {
-                    match __s.parse::<u8>() {
-                        ::std::result::Result::Ok(__b) => __parsed.push(__b),
-                        ::std::result::Result::Err(_) => {
-                            return ::std::result::Result::Err(
-                                #krate::__nih::BridgeError::InvalidProcessorOrder {
-                                    reason: ::std::format!(
-                                        "slot index '{}' is not a valid u8",
-                                        __s
-                                    ),
-                                },
-                            );
+
+                // Check each slot: id must match a known name, type must match declaration.
+                let mut __proc_seen = [false; #n_lit];
+                let mut __tap_seen = [false; #t_lit];
+                for __slot in order.iter() {
+                    match __slot.slot_type {
+                        #krate::__nih::SlotType::Processor => {
+                            match __proc_names.iter().position(|&__n| __n == __slot.id) {
+                                Some(__idx) => {
+                                    if __proc_seen[__idx] {
+                                        return ::std::result::Result::Err(
+                                            #krate::__nih::BridgeError::InvalidSignalChainOrder {
+                                                reason: ::std::format!(
+                                                    "duplicate processor slot '{}'",
+                                                    __slot.id
+                                                ),
+                                            },
+                                        );
+                                    }
+                                    __proc_seen[__idx] = true;
+                                }
+                                None => {
+                                    return ::std::result::Result::Err(
+                                        #krate::__nih::BridgeError::InvalidSignalChainOrder {
+                                            reason: ::std::format!(
+                                                "unknown processor slot '{}'",
+                                                __slot.id
+                                            ),
+                                        },
+                                    );
+                                }
+                            }
+                        }
+                        #krate::__nih::SlotType::Tap => {
+                            match __tap_names.iter().position(|&__n| __n == __slot.id) {
+                                Some(__idx) => {
+                                    if __tap_seen[__idx] {
+                                        return ::std::result::Result::Err(
+                                            #krate::__nih::BridgeError::InvalidSignalChainOrder {
+                                                reason: ::std::format!(
+                                                    "duplicate tap slot '{}'",
+                                                    __slot.id
+                                                ),
+                                            },
+                                        );
+                                    }
+                                    __tap_seen[__idx] = true;
+                                }
+                                None => {
+                                    return ::std::result::Result::Err(
+                                        #krate::__nih::BridgeError::InvalidSignalChainOrder {
+                                            reason: ::std::format!(
+                                                "unknown tap slot '{}'",
+                                                __slot.id
+                                            ),
+                                        },
+                                    );
+                                }
+                            }
                         }
                     }
                 }
-                let mut __seen = ::std::vec![false; __n];
-                for &__b in __parsed.iter() {
-                    let __idx = __b as usize;
-                    if __idx >= __n || __seen[__idx] {
-                        return ::std::result::Result::Err(
-                            #krate::__nih::BridgeError::InvalidProcessorOrder {
-                                reason: ::std::format!(
-                                    "invalid permutation: slot {} is out of range or duplicate",
-                                    __b
-                                ),
-                            },
-                        );
-                    }
-                    __seen[__idx] = true;
+                // All slots must be present (no omissions)
+                if __proc_seen.iter().any(|&__s| !__s)
+                    || __tap_seen.iter().any(|&__s| !__s)
+                {
+                    return ::std::result::Result::Err(
+                        #krate::__nih::BridgeError::InvalidSignalChainOrder {
+                            reason: "order is missing one or more declared slots".to_string(),
+                        },
+                    );
                 }
+
+                // ── Resolve ────────────────────────────────────────────────────────
+                // Processor execution order: u8 index in declaration order for each proc slot.
+                // Tap boundaries: count of Processor slots appearing before each tap in the order.
+                let mut __proc_exec: [u8; #n_lit] = [0u8; #n_lit];
+                let mut __tap_boundaries: [u8; #t_lit] = [0u8; #t_lit];
+                let mut __proc_exec_pos: usize = 0;
+                let mut __proc_count_so_far: u8 = 0;
+                for __slot in order.iter() {
+                    match __slot.slot_type {
+                        #krate::__nih::SlotType::Processor => {
+                            let __idx = __proc_names
+                                .iter()
+                                .position(|&__n| __n == __slot.id)
+                                .unwrap() as u8;
+                            __proc_exec[__proc_exec_pos] = __idx;
+                            __proc_exec_pos += 1;
+                            __proc_count_so_far += 1;
+                        }
+                        #krate::__nih::SlotType::Tap => {
+                            let __tap_idx = __tap_names
+                                .iter()
+                                .position(|&__n| __n == __slot.id)
+                                .unwrap();
+                            __tap_boundaries[__tap_idx] = __proc_count_so_far;
+                        }
+                    }
+                }
+
+                // ── Atomic store ────────────────────────────────────────────────────
                 use ::std::sync::atomic::Ordering;
-                for (__i, &__b) in __parsed.iter().enumerate() {
+                for (__i, &__b) in __proc_exec.iter().enumerate() {
                     self.__pending_slots[__i].store(__b, Ordering::Release);
                 }
+                for (__i, &__b) in __tap_boundaries.iter().enumerate() {
+                    self.__pending_slots[#n_lit + __i].store(__b, Ordering::Release);
+                }
                 self.__has_pending_order.store(true, Ordering::Release);
-                *self.__order_state.lock().unwrap_or_else(|__e| __e.into_inner()) = __parsed;
+                *self.__order_state.lock().unwrap_or_else(|__e| __e.into_inner()) = order;
                 ::std::result::Result::Ok(())
             }
         }
@@ -553,7 +935,8 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                     __cf_dir: 0i8,
                     // Pre-grow to total param count so process() never reallocates.
                     __param_scratch: ::std::vec::Vec::with_capacity(__param_offsets[#n_lit]),
-                    #osc_scratch_defaults
+                    // Tap processors (Step 15: constructed via Default, scratch buffers grown in initialize())
+                    #tap_defaults
                     oscilloscope_tap: #krate::OscilloscopeTap::with_output(oscilloscope_producer),
                     meter_producer,
                     #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -632,13 +1015,17 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                 #(#set_sample_rate_calls)*
                 self.oscilloscope_tap
                     .set_sample_rate_hz(_buffer_config.sample_rate);
-                #osc_scratch_init
+                // Step 15: initialize tap processors + resize scratch buffers
+                #tap_initialize
                 true
             }
 
             fn reset(&mut self) {
                 #(#reset_calls)*
-                #krate::Processor::reset(&mut self.oscilloscope_tap);
+                // oscilloscope_tap is a TapProcessor (not Processor); call the correct reset.
+                #krate::TapProcessor::reset(&mut self.oscilloscope_tap);
+                // Step 15: reset tap processors
+                #tap_reset
             }
 
             fn process(
@@ -654,12 +1041,15 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                 if self.__cf_dir == -1i8 && self.__cf_pos == 0 {
                     self.params.__has_pending_order
                         .store(false, ::std::sync::atomic::Ordering::Release);
+                    // Load processor execution order from pending_slots[0..N]
                     #(
                         self.__current_order[#proc_idx_usize] = self
                             .params
                             .__pending_slots[#proc_idx_usize]
                             .load(::std::sync::atomic::Ordering::Acquire);
                     )*
+                    // Step 16: load tap boundaries from pending_slots[N..N+T]
+                    #tap_boundary_handoff
                     self.__cf_dir = 1i8; // start fade-up from silence
                 }
                 // 2. If idle and a new pending order has arrived, start a fade-down.
@@ -681,7 +1071,18 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                 for __p in self.params.params.iter() {
                     self.__param_scratch.push(__p.modulated_plain_value());
                 }
-                let __all_values: &[f32] = &self.__param_scratch;
+                // Note: __param_scratch is accessed directly in each dispatch arm below.
+                // Avoiding a long-lived `&self.__param_scratch` binding here prevents a
+                // cross-iteration borrow conflict (E0499) with the mutable borrows on
+                // `self.__proc_N` and `self.__tap_N_scratch_*` inside the per-sample loop.
+
+                // SAFETY: Convert self to a raw pointer BEFORE the per-sample loop so that
+                // all processor dispatch calls use `(*__self_ptr).field.process(...)` rather
+                // than `self.field.process(...)`.  NLL does not track loans through raw
+                // pointers, so cross-iteration E0499 false-positives are avoided. The
+                // pointer is valid for the entire loop duration (process_audio is
+                // single-threaded and &mut self cannot alias anything else).
+                let __self_ptr: *mut Self = self;
 
                 for __sample_idx in 0..__num_samples {
                     let __transport = #krate::Transport::default();
@@ -696,6 +1097,16 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                         },
                     ];
                     let __active_ch = __channels.min(2);
+
+                    // Per-tap capture locals: initialized to 0.0 each iteration.
+                    // tap_capture_boundary_zero and tap_capture_after_dispatch write
+                    // into these locals (not self.*scratch*) to keep all mutable borrows
+                    // of self.__tap_*_scratch_* at a single flush point (tap_capture_flush).
+                    #tap_capture_vars
+
+                    // Step 17: capture for taps with boundary = 0 (raw input, before any processor)
+                    #tap_capture_boundary_zero
+
                     {
                         // Create mutable slice refs over the stack array — both are stack-allocated.
                         let (__sl0, __sl1) = __stereo.split_at_mut(1);
@@ -708,9 +1119,16 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                                 #(#dispatch_arms)*
                                 _ => {}
                             }
+                            // Step 17: capture for taps whose boundary = __pos + 1
+                            #tap_capture_after_dispatch
                             __pos += 1;
                         }
                     } // __channel_slices (and mutable borrow of __stereo) released here
+
+                    // Flush per-iteration tap capture locals to self.*scratch*.
+                    // This is the ONLY write to self.__tap_*_scratch_* per outer loop
+                    // iteration — consolidating here avoids cross-iteration E0499 borrows.
+                    #tap_capture_flush
 
                     // ── Phase 4: Per-sample crossfade gain ────────────────────────────
                     let __gain: f32 = if self.__cf_dir != 0i8 {
@@ -765,8 +1183,12 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                         .fold(0.0_f32, f32::max);
                 }
 
-                // Block-end snapshot: position-aware when OscilloscopeTap is in chain,
-                // fallback to final-output capture otherwise.
+                // Step 17: block-end observe_stereo call for each declared tap processor.
+                // Each tap receives the captured slice from its scratch buffers (pre-filled per-sample above).
+                #tap_observe_calls
+
+                // Block-end oscilloscope capture: always final output (no allocation).
+                // The hardcoded oscilloscope_tap field captures from buffer slices directly.
                 #osc_block_capture
 
                 let _ = self.meter_producer.push(#krate::MeterFrame {
@@ -1044,5 +1466,6 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                 drop: drop_fn,
             }
         }
-    }
+    };
+    Ok(expanded)
 }

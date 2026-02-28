@@ -12,7 +12,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use wavecraft_bridge::{BridgeError, InMemoryParameterHost, ParameterHost};
 use wavecraft_protocol::{
     AudioRuntimePhase, AudioRuntimeStatus, MeterFrame, MeterUpdateNotification, OscilloscopeFrame,
-    ParameterInfo,
+    ParameterInfo, SignalChainSlot,
 };
 
 #[cfg(feature = "audio")]
@@ -260,12 +260,12 @@ impl ParameterHost for DevServerHost {
         )
     }
 
-    fn get_processor_order(&self) -> Vec<String> {
-        self.inner.get_processor_order()
+    fn get_signal_chain_order(&self) -> Vec<SignalChainSlot> {
+        self.inner.get_signal_chain_order()
     }
 
-    fn set_processor_order(&self, order: &[String]) -> Result<(), BridgeError> {
-        self.inner.set_processor_order(order)
+    fn set_signal_chain_order(&self, order: Vec<SignalChainSlot>) -> Result<(), BridgeError> {
+        self.inner.set_signal_chain_order(order)
     }
 }
 

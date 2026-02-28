@@ -11,6 +11,42 @@
  * @packageDocumentation
  */
 // Core plugin UI components
+/**
+ * @wavecraft/components - Pre-built React UI components for Wavecraft audio plugins.
+ *
+ * @packageDocumentation
+ */
+// Core plugin UI components
+/**
+ * @wavecraft/components - Pre-built React UI components for Wavecraft audio plugins.
+ *
+ * @packageDocumentation
+ */
+// Core plugin UI components
+/**
+ * @wavecraft/components - Pre-built React UI components for Wavecraft audio plugins.
+ *
+ * @packageDocumentation
+ */
+// Core plugin UI components
+/**
+ * @wavecraft/components - Pre-built React UI components for Wavecraft audio plugins.
+ *
+ * @packageDocumentation
+ */
+// Core plugin UI components
+/**
+ * @wavecraft/components - Pre-built React UI components for Wavecraft audio plugins.
+ *
+ * @packageDocumentation
+ */
+// Core plugin UI components
+/**
+ * @wavecraft/components - Pre-built React UI components for Wavecraft audio plugins.
+ *
+ * @packageDocumentation
+ */
+// Core plugin UI components
 export { Button } from './Button';
 export type { ButtonProps } from './Button';
 export { Card } from './Card';
@@ -27,6 +63,42 @@ export { IconButton } from './IconButton';
 export type { IconButtonProps } from './IconButton';
 export { Knob } from './Knob';
 export type { KnobProps } from './Knob';
+/**
+ * @wavecraft/components - Pre-built React UI components for Wavecraft audio plugins.
+ *
+ * @packageDocumentation
+ */
+// Core plugin UI components
+/**
+ * @wavecraft/components - Pre-built React UI components for Wavecraft audio plugins.
+ *
+ * @packageDocumentation
+ */
+// Core plugin UI components
+/**
+ * @wavecraft/components - Pre-built React UI components for Wavecraft audio plugins.
+ *
+ * @packageDocumentation
+ */
+// Core plugin UI components
+/**
+ * @wavecraft/components - Pre-built React UI components for Wavecraft audio plugins.
+ *
+ * @packageDocumentation
+ */
+// Core plugin UI components
+/**
+ * @wavecraft/components - Pre-built React UI components for Wavecraft audio plugins.
+ *
+ * @packageDocumentation
+ */
+// Core plugin UI components
+/**
+ * @wavecraft/components - Pre-built React UI components for Wavecraft audio plugins.
+ *
+ * @packageDocumentation
+ */
+// Core plugin UI components
 /**
  * @wavecraft/components - Pre-built React UI components for Wavecraft audio plugins.
  *
@@ -62,6 +134,18 @@ export { VersionBadge } from './VersionBadge';
 // Connection and status components
 // Connection and status components
 // Connection and status components
+// Connection and status components
+// Connection and status components
+// Connection and status components
+// Connection and status components
+// Connection and status components
+// Connection and status components
+// Connection and status components
+// Connection and status components
+// Connection and status components
+// Connection and status components
+// Connection and status components
+// Connection and status components
 export { ConnectionStatus } from './ConnectionStatus';
 export type { ConnectionStatusProps } from './ConnectionStatus';
 export { LatencyMonitor } from './LatencyMonitor';
@@ -69,27 +153,51 @@ export type { LatencyMonitorProps } from './LatencyMonitor';
 
 // Resize components
 // Resize components
+// Resize components
+// Resize components
+// Resize components
+// Resize components
+// Resize components
+// Resize components
 export { ResizeControls } from './ResizeControls';
 export type { ResizeControlsProps } from './ResizeControls';
+// Resize components
+// Resize components
+// Resize components
+// Resize components
+// Resize components
+// Resize components
 // Resize components
 // Resize components
 export { ResizeHandle } from './ResizeHandle';
 export type { ResizeHandleProps } from './ResizeHandle';
 
 export type {
-  AudioDiagnostic,
-  AudioRuntimePhase,
-  ControlVisualState,
-  MeterFrame,
-  OscilloscopeChannelView,
-  OscilloscopeFrame,
-  OscilloscopeTriggerMode,
-  ParameterInfo,
-  ParameterType,
-  ParameterValue,
-  PluginVisualState,
+    AudioDiagnostic,
+    AudioRuntimePhase,
+    ControlVisualState,
+    MeterFrame,
+    OscilloscopeChannelView,
+    OscilloscopeFrame,
+    OscilloscopeTriggerMode,
+    ParameterInfo,
+    ParameterType,
+    ParameterValue,
+    PluginVisualState
 } from './types';
 
+// Audio Processors
+// Audio Processors
+// Audio Processors
+// Audio Processors
+// Audio Processors
+// Audio Processors
+// Audio Processors
+// Audio Processors
+// Audio Processors
+// Audio Processors
+// Audio Processors
+// Audio Processors
 // Audio Processors
 // Audio Processors
 // Audio Processors
@@ -116,5 +224,17 @@ export type { SaturatorProcessorProps } from './processors/SaturatorProcessor';
 // Signal Chain
 // Signal Chain
 // Signal Chain
+// Signal Chain
+// Signal Chain
+// Signal Chain
+// Signal Chain
+// Signal Chain
+// Signal Chain
+// Signal Chain
+// Signal Chain
+// Signal Chain
+// Signal Chain
+// Signal Chain
+// Signal Chain
 export { SignalChain } from './signalChain';
-export type { SignalChainProcessorEntry, SignalChainProps } from './signalChain';
+export type { SignalChainEntry, SignalChainProps } from './signalChain';

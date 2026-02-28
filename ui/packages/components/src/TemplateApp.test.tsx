@@ -11,7 +11,7 @@ const mockUseRequestResize = vi.hoisted(() => vi.fn());
 const mockUseParameter = vi.hoisted(() => vi.fn());
 const mockUseHasProcessorInSignalChain = vi.hoisted(() => vi.fn());
 const mockUseOscilloscopeFrame = vi.hoisted(() => vi.fn());
-const mockUseProcessorOrder = vi.hoisted(() => vi.fn());
+const mockUseSignalChainOrder = vi.hoisted(() => vi.fn());
 
 vi.mock('@wavecraft/core', () => ({
   WavecraftProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -24,7 +24,7 @@ vi.mock('@wavecraft/core', () => ({
   useParameter: mockUseParameter,
   useHasProcessorInSignalChain: mockUseHasProcessorInSignalChain,
   useOscilloscopeFrame: mockUseOscilloscopeFrame,
-  useProcessorOrder: mockUseProcessorOrder,
+  useSignalChainOrder: mockUseSignalChainOrder,
 }));
 
 vi.mock('@wavecraft/components', async () => {
@@ -43,12 +43,12 @@ vi.mock('@wavecraft/components', async () => {
     OscilloscopeProcessor: () => <div data-testid="oscilloscope" />,
     // Mock SignalChain to avoid @dnd-kit dual-React instance issues in tests.
     // DnD functionality is tested separately in SignalChain.test.tsx.
-    SignalChain: ({ processors }: { processors: Array<{ id: string; component: ReactNode }> }) => (
+    SignalChain: ({ entries }: { entries: Array<{ id: string; component: ReactNode }> }) => (
       <ul role="list" aria-label="Signal chain processor order">
-        {processors.map((p) =>
-          p.component != null ? (
-            <li key={p.id} role="listitem">
-              {p.component}
+        {entries.map((e) =>
+          e.component != null ? (
+            <li key={e.id} role="listitem">
+              {e.component}
             </li>
           ) : null
         )}
@@ -62,7 +62,7 @@ import { App } from '../../../../sdk-template/ui/src/App';
 describe('sdk-template App layout', () => {
   it('renders test tone panel and resize handle', () => {
     mockUseHasProcessorInSignalChain.mockReturnValue(true);
-    mockUseProcessorOrder.mockReturnValue({
+    mockUseSignalChainOrder.mockReturnValue({
       order: [],
       setOrder: vi.fn(),
       isLoading: false,

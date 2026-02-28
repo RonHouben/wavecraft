@@ -31,6 +31,7 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
 fn expand_wavecraft_plugin(plugin_def: PluginDef) -> Result<proc_macro2::TokenStream> {
     let name = &plugin_def.name;
     let signal_processors = &plugin_def.processors;
+    let signal_taps = &plugin_def.taps;
 
     // Default krate to ::wavecraft if not specified (should already be set by Parse)
     let krate = plugin_def
@@ -51,6 +52,7 @@ fn expand_wavecraft_plugin(plugin_def: PluginDef) -> Result<proc_macro2::TokenSt
     let expanded = codegen::generate_plugin_code(codegen::CodegenInput {
         name,
         processors: signal_processors,
+        taps: signal_taps,
         krate: &krate,
         runtime_param_blocks: &runtime_param_blocks,
         processor_param_mappings: &processor_param_mappings,
@@ -59,7 +61,7 @@ fn expand_wavecraft_plugin(plugin_def: PluginDef) -> Result<proc_macro2::TokenSt
         url,
         vst3_id: &vst3_id,
         clap_id: &clap_id,
-    });
+    })?;
 
     Ok(expanded)
 }

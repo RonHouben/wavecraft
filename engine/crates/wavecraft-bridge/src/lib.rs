@@ -73,7 +73,7 @@ pub mod plugin_loader;
 // Core bridge entrypoints and host abstraction.
 pub use error::BridgeError;
 pub use handler::IpcHandler;
-pub use host::{ParameterHost, ProcessorOrderAccess};
+pub use host::{ParameterHost, SignalChainOrderAccess};
 
 // Test/dev host implementations and plugin loader support.
 pub use in_memory_host::{InMemoryParameterHost, MeterProvider, OscilloscopeProvider};
@@ -81,10 +81,11 @@ pub use plugin_loader::{PluginLoaderError, PluginParamLoader};
 
 // Protocol contracts surfaced by the bridge API.
 pub use wavecraft_protocol::{
-    GetAllParametersResult, GetParameterParams, GetParameterResult, GetProcessorOrderResult,
-    IpcError, IpcNotification, IpcRequest, IpcResponse, METHOD_GET_PROCESSOR_ORDER,
-    METHOD_SET_PROCESSOR_ORDER, MeterUpdateNotification, NOTIFICATION_PROCESSOR_ORDER_CHANGED,
-    ParameterChangedNotification, ParameterInfo, ParameterType, ProcessorInfo,
-    ProcessorOrderChangedNotification, RegisterAudioParams, RegisterAudioResult, RequestId,
-    SetParameterParams, SetParameterResult, SetProcessorOrderParams,
+    GetAllParametersResult, GetParameterParams, GetParameterResult, GetSignalChainOrderResult,
+    IpcError, IpcNotification, IpcRequest, IpcResponse, METHOD_GET_SIGNAL_CHAIN_ORDER,
+    METHOD_SET_SIGNAL_CHAIN_ORDER, MeterUpdateNotification,
+    NOTIFICATION_SIGNAL_CHAIN_ORDER_CHANGED, ParameterChangedNotification, ParameterInfo,
+    ParameterType, ProcessorInfo, RegisterAudioParams, RegisterAudioResult, RequestId,
+    SetParameterParams, SetParameterResult, SetSignalChainOrderParams,
+    SignalChainOrderChangedNotification, SignalChainSlot, SlotType,
 };

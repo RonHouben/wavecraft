@@ -25,23 +25,24 @@ mod methods;
 
 pub use envelope::{IpcNotification, IpcRequest, IpcResponse, RequestId};
 pub use errors::{
-    ERROR_INTERNAL, ERROR_INVALID_PARAMS, ERROR_INVALID_PROCESSOR_ORDER, ERROR_INVALID_REQUEST,
+    ERROR_INTERNAL, ERROR_INVALID_PARAMS, ERROR_INVALID_REQUEST, ERROR_INVALID_SIGNAL_CHAIN_ORDER,
     ERROR_METHOD_NOT_FOUND, ERROR_PARAM_NOT_FOUND, ERROR_PARAM_OUT_OF_RANGE, ERROR_PARSE,
-    ERROR_PROCESSOR_ORDER_RESTORE_FAILED, IpcError,
+    ERROR_SIGNAL_CHAIN_ORDER_RESTORE_FAILED, IpcError,
 };
 pub use methods::{
     AudioDiagnostic, AudioDiagnosticCode, AudioRuntimePhase, AudioRuntimeStatus,
     GetAllParametersResult, GetAudioStatusResult, GetMeterFrameResult, GetOscilloscopeFrameResult,
-    GetParameterParams, GetParameterResult, GetProcessorOrderResult, METHOD_GET_ALL_PARAMETERS,
+    GetParameterParams, GetParameterResult, GetSignalChainOrderResult, METHOD_GET_ALL_PARAMETERS,
     METHOD_GET_AUDIO_STATUS, METHOD_GET_METER_FRAME, METHOD_GET_OSCILLOSCOPE_FRAME,
-    METHOD_GET_PARAMETER, METHOD_GET_PROCESSOR_ORDER, METHOD_REGISTER_AUDIO, METHOD_REQUEST_RESIZE,
-    METHOD_SET_PARAMETER, METHOD_SET_PROCESSOR_ORDER, MeterFrame, MeterUpdateNotification,
-    NOTIFICATION_AUDIO_STATUS_CHANGED, NOTIFICATION_METER_UPDATE, NOTIFICATION_PARAMETER_CHANGED,
-    NOTIFICATION_PROCESSOR_ORDER_CHANGED, OscilloscopeChannelView, OscilloscopeFrame,
-    OscilloscopeTriggerMode, ParameterChangedNotification, ParameterInfo, ParameterType,
-    ProcessorInfo, ProcessorOrderChangedNotification, RegisterAudioParams, RegisterAudioResult,
-    RequestResizeParams, RequestResizeResult, SetParameterParams, SetParameterResult,
-    SetProcessorOrderParams, SetProcessorOrderResult,
+    METHOD_GET_PARAMETER, METHOD_GET_SIGNAL_CHAIN_ORDER, METHOD_REGISTER_AUDIO,
+    METHOD_REQUEST_RESIZE, METHOD_SET_PARAMETER, METHOD_SET_SIGNAL_CHAIN_ORDER, MeterFrame,
+    MeterUpdateNotification, NOTIFICATION_AUDIO_STATUS_CHANGED, NOTIFICATION_METER_UPDATE,
+    NOTIFICATION_PARAMETER_CHANGED, NOTIFICATION_SIGNAL_CHAIN_ORDER_CHANGED,
+    OscilloscopeChannelView, OscilloscopeFrame, OscilloscopeTriggerMode,
+    ParameterChangedNotification, ParameterInfo, ParameterType, ProcessorInfo, RegisterAudioParams,
+    RegisterAudioResult, RequestResizeParams, RequestResizeResult, SetParameterParams,
+    SetParameterResult, SetSignalChainOrderParams, SetSignalChainOrderResult,
+    SignalChainOrderChangedNotification, SignalChainSlot, SlotType,
 };
 
 #[cfg(test)]

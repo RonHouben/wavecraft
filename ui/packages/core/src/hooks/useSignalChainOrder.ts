@@ -1,41 +1,43 @@
 /**
- * useProcessorOrder - Hook for managing the runtime processor signal-chain order
+ * useSignalChainOrder - Hook for managing the runtime signal chain slot order
  *
- * Fetches the current processor order on mount, subscribes to notifications,
- * and provides an optimistic setOrder with automatic rollback on error.
+ * Fetches the current unified signal chain order (processors + taps) on mount,
+ * subscribes to notifications, and provides an optimistic setOrder with
+ * automatic rollback on error.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { ProcessorOrderClient } from '../ipc/ProcessorOrderClient';
+import { SignalChainOrderClient } from '../ipc/SignalChainOrderClient';
 import type { IpcError } from '../types/ipc';
+import type { SignalChainOrder } from '../types/signal-chain';
 
-export interface UseProcessorOrderResult {
-  /** Current processor order (slot indices as strings, e.g. ["0", "1", "2"]) */
-  order: string[];
+export interface UseSignalChainOrderResult {
+  /** Current unified signal chain slot order (processors + taps) */
+  order: SignalChainOrder[];
   /** Optimistically update the order; rolls back on IPC error */
-  setOrder: (order: string[]) => Promise<void>;
+  setOrder: (slots: SignalChainOrder[]) => Promise<void>;
   isLoading: boolean;
   error: IpcError | null;
 }
 
 /**
- * @param isDraggingRef - When provided, incoming `processorOrderChanged`
+ * @param isDraggingRef - When provided, incoming `signalChainOrderChanged`
  *   notifications are discarded while a drag is active. The optimistic order
  *   is treated as authoritative during the drag gesture.
  */
-export function useProcessorOrder(
+export function useSignalChainOrder(
   isDraggingRef?: React.RefObject<boolean>
-): UseProcessorOrderResult {
-  const [order, setOrderState] = useState<string[]>([]);
+): UseSignalChainOrderResult {
+  const [order, setOrderState] = useState<SignalChainOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<IpcError | null>(null);
 
   // Keep a stable ref to the latest order for use inside callbacks
-  const orderRef = useRef<string[]>([]);
+  const orderRef = useRef<SignalChainOrder[]>([]);
   orderRef.current = order;
 
-  const client = ProcessorOrderClient.getInstance();
+  const client = SignalChainOrderClient.getInstance();
 
   // Fetch initial order on mount
   useEffect(() => {
@@ -45,10 +47,10 @@ export function useProcessorOrder(
     setError(null);
 
     client
-      .getProcessorOrder()
-      .then((fetchedOrder) => {
+      .getSignalChainOrder()
+      .then((fetchedSlots) => {
         if (!cancelled) {
-          setOrderState(fetchedOrder);
+          setOrderState(fetchedSlots);
           setIsLoading(false);
         }
       })
@@ -66,14 +68,14 @@ export function useProcessorOrder(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Subscribe to processorOrderChanged notifications
+  // Subscribe to signalChainOrderChanged notifications
   useEffect(() => {
-    const unsubscribe = client.onProcessorOrderChanged((newOrder) => {
+    const unsubscribe = client.onSignalChainOrderChanged((newSlots) => {
       // Discard incoming notifications while a drag is in progress
       if (isDraggingRef?.current) {
         return;
       }
-      setOrderState(newOrder);
+      setOrderState(newSlots);
       setError(null);
     });
 
@@ -83,15 +85,15 @@ export function useProcessorOrder(
   }, []);
 
   const setOrder = useCallback(
-    async (newOrder: string[]) => {
+    async (newSlots: SignalChainOrder[]) => {
       const previousOrder = orderRef.current;
 
       // Optimistic update
-      setOrderState(newOrder);
+      setOrderState(newSlots);
       setError(null);
 
       try {
-        await client.setProcessorOrder(newOrder);
+        await client.setSignalChainOrder(newSlots);
       } catch (err: unknown) {
         // Rollback on error
         setOrderState(previousOrder);

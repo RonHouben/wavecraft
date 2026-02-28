@@ -7,8 +7,8 @@ export const IpcMethods = {
   GET_OSCILLOSCOPE_FRAME: 'getOscilloscopeFrame',
   REQUEST_RESIZE: 'requestResize',
   PING: 'ping',
-  GET_PROCESSOR_ORDER: 'getProcessorOrder',
-  SET_PROCESSOR_ORDER: 'setProcessorOrder',
+  GET_SIGNAL_CHAIN_ORDER: 'getSignalChainOrder',
+  SET_SIGNAL_CHAIN_ORDER: 'setSignalChainOrder',
 } as const;
 
 export type IpcMethod = (typeof IpcMethods)[keyof typeof IpcMethods];
@@ -19,7 +19,7 @@ export const IpcEvents = {
   METER_FRAME: 'meterFrame',
   PARAMETER_CHANGED: 'parameterChanged',
   PARAMETERS_CHANGED: 'parametersChanged',
-  PROCESSOR_ORDER_CHANGED: 'processorOrderChanged',
+  SIGNAL_CHAIN_ORDER_CHANGED: 'signalChainOrderChanged',
 } as const;
 
 export type IpcEvent = (typeof IpcEvents)[keyof typeof IpcEvents];

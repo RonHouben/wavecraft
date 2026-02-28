@@ -9,13 +9,13 @@ use std::sync::{Arc, Mutex};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use nih_plug::prelude::*;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-use wavecraft_bridge::{BridgeError, ParameterHost, ProcessorOrderAccess};
+use wavecraft_bridge::{BridgeError, ParameterHost, SignalChainOrderAccess};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use wavecraft_metering::MeterConsumer;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use wavecraft_processors::OscilloscopeFrameConsumer;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-use wavecraft_protocol::{AudioRuntimeStatus, ParameterInfo, ParameterType};
+use wavecraft_protocol::{AudioRuntimeStatus, ParameterInfo, ParameterType, SignalChainSlot};
 
 /// Bridge between nih-plug and the IPC handler.
 ///
@@ -26,7 +26,7 @@ use wavecraft_protocol::{AudioRuntimeStatus, ParameterInfo, ParameterType};
 ///
 /// Only used on macOS/Windows where WebView is available.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub struct PluginEditorBridge<P: Params + ProcessorOrderAccess> {
+pub struct PluginEditorBridge<P: Params + SignalChainOrderAccess> {
     params: Arc<P>,
     context: Arc<dyn GuiContext>,
     /// Optional meter consumer - may be None if metering is disabled
@@ -38,7 +38,7 @@ pub struct PluginEditorBridge<P: Params + ProcessorOrderAccess> {
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-impl<P: Params + ProcessorOrderAccess> PluginEditorBridge<P> {
+impl<P: Params + SignalChainOrderAccess> PluginEditorBridge<P> {
     /// Create a new bridge with the given parameters and context.
     pub fn new(
         params: Arc<P>,
@@ -120,7 +120,7 @@ impl<P: Params + ProcessorOrderAccess> PluginEditorBridge<P> {
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-impl<P: Params + ProcessorOrderAccess> ParameterHost for PluginEditorBridge<P> {
+impl<P: Params + SignalChainOrderAccess> ParameterHost for PluginEditorBridge<P> {
     fn get_parameter(&self, id: &str) -> Option<ParameterInfo> {
         // Use nih-plug's param_map to find the parameter
         let param_map = self.params.param_map();
@@ -204,11 +204,11 @@ impl<P: Params + ProcessorOrderAccess> ParameterHost for PluginEditorBridge<P> {
         None
     }
 
-    fn get_processor_order(&self) -> Vec<String> {
+    fn get_signal_chain_order(&self) -> Vec<SignalChainSlot> {
         self.params.get_order()
     }
 
-    fn set_processor_order(&self, order: &[String]) -> Result<(), BridgeError> {
+    fn set_signal_chain_order(&self, order: Vec<SignalChainSlot>) -> Result<(), BridgeError> {
         self.params.set_order(order)
     }
 }
@@ -260,12 +260,12 @@ mod tests {
         }
     }
 
-    impl ProcessorOrderAccess for TestParams {
-        fn get_order(&self) -> Vec<String> {
+    impl SignalChainOrderAccess for TestParams {
+        fn get_order(&self) -> Vec<SignalChainSlot> {
             vec![]
         }
 
-        fn set_order(&self, _order: &[String]) -> Result<(), BridgeError> {
+        fn set_order(&self, _order: Vec<SignalChainSlot>) -> Result<(), BridgeError> {
             Ok(())
         }
     }

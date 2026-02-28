@@ -23,7 +23,7 @@ use nih_plug::prelude::*;
     any(target_os = "macos", target_os = "windows"),
     not(feature = "_param-discovery")
 ))]
-use wavecraft_bridge::ProcessorOrderAccess;
+use wavecraft_bridge::SignalChainOrderAccess;
 #[cfg(all(
     any(target_os = "macos", target_os = "windows"),
     not(feature = "_param-discovery")
@@ -76,7 +76,7 @@ pub use webview::{WebViewConfig, WebViewHandle, create_webview};
     any(target_os = "macos", target_os = "windows"),
     not(feature = "_param-discovery")
 ))]
-pub struct WavecraftEditor<P: Params + ProcessorOrderAccess> {
+pub struct WavecraftEditor<P: Params + SignalChainOrderAccess> {
     params: Arc<P>,
     /// Meter consumer for audio metering - taken on first editor spawn
     meter_consumer: Mutex<Option<MeterConsumer>>,
@@ -91,7 +91,7 @@ pub struct WavecraftEditor<P: Params + ProcessorOrderAccess> {
     any(target_os = "macos", target_os = "windows"),
     not(feature = "_param-discovery")
 ))]
-impl<P: Params + ProcessorOrderAccess> WavecraftEditor<P> {
+impl<P: Params + SignalChainOrderAccess> WavecraftEditor<P> {
     /// Create a new WebView editor with specified dimensions.
     ///
     /// # Arguments
@@ -121,7 +121,7 @@ impl<P: Params + ProcessorOrderAccess> WavecraftEditor<P> {
     any(target_os = "macos", target_os = "windows"),
     not(feature = "_param-discovery")
 ))]
-impl<P: Params + ProcessorOrderAccess> Editor for WavecraftEditor<P> {
+impl<P: Params + SignalChainOrderAccess> Editor for WavecraftEditor<P> {
     fn spawn(
         &self,
         parent: ParentWindowHandle,
@@ -251,7 +251,7 @@ impl<P: Params + ProcessorOrderAccess> Editor for WavecraftEditor<P> {
     any(target_os = "macos", target_os = "windows"),
     not(feature = "_param-discovery")
 ))]
-pub fn create_webview_editor<P: Params + ProcessorOrderAccess + 'static>(
+pub fn create_webview_editor<P: Params + SignalChainOrderAccess + 'static>(
     params: Arc<P>,
     meter_consumer: Option<MeterConsumer>,
     oscilloscope_consumer: Option<OscilloscopeFrameConsumer>,
