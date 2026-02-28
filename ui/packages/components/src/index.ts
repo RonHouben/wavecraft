@@ -84,3 +84,7 @@ export type { ToneFilterProcessorProps } from './processors/ToneFilterProcessor'
 
 export { SaturatorProcessor } from './processors/SaturatorProcessor';
 export type { SaturatorProcessorProps } from './processors/SaturatorProcessor';
+
+// Signal Chain
+export { SignalChain } from './signalChain';
+export type { SignalChainProps, SignalChainProcessorEntry } from './signalChain';

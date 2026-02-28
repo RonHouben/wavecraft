@@ -26,10 +26,10 @@ wavecraft_processor!(OutputGain => Gain);
 // ---------------------------------------------------------------------------
 // Plugin definition
 // ---------------------------------------------------------------------------
-// `SignalChain![]` processes audio through each processor in order.
+// `processors: [...]` defines the signal chain — processors run in order.
 wavecraft_plugin! {
     name: "My First Plugin",
-    signal: SignalChain![
+    processors: [
         TestTone,
         InputTrim,
         Passthrough,

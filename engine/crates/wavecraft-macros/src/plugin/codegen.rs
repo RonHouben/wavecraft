@@ -1,8 +1,9 @@
 use quote::quote;
+use syn::Type;
 
 pub(super) struct CodegenInput<'a> {
     pub(super) name: &'a syn::LitStr,
-    pub(super) signal_type: &'a syn::Expr,
+    pub(super) processors: &'a [Type],
     pub(super) krate: &'a syn::Path,
     pub(super) runtime_param_blocks: &'a [proc_macro2::TokenStream],
     pub(super) processor_param_mappings: &'a [proc_macro2::TokenStream],
@@ -16,7 +17,7 @@ pub(super) struct CodegenInput<'a> {
 pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::TokenStream {
     let CodegenInput {
         name,
-        signal_type,
+        processors,
         krate,
         runtime_param_blocks,
         processor_param_mappings,
@@ -27,40 +28,178 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
         clap_id,
     } = input;
 
-    quote! {
-        // Use the signal expression as the processor type
-        type __ProcessorType = #signal_type;
+    let n = processors.len();
+    let n_lit = syn::LitInt::new(&n.to_string(), proc_macro2::Span::call_site());
+    let np1_lit = syn::LitInt::new(&(n + 1).to_string(), proc_macro2::Span::call_site());
 
-        // Compile-time validation: ensure the processor type implements required traits
+    // Generate per-processor field names: __proc_0, __proc_1, ...
+    let proc_field_names: Vec<syn::Ident> = (0..n)
+        .map(|i| syn::Ident::new(&format!("__proc_{}", i), proc_macro2::Span::call_site()))
+        .collect();
+
+    // Generate u8 index literals: 0u8, 1u8, ...
+    let proc_idx_u8: Vec<proc_macro2::TokenStream> = (0..n)
+        .map(|i| {
+            let lit = syn::LitInt::new(&format!("{}u8", i), proc_macro2::Span::call_site());
+            quote! { #lit }
+        })
+        .collect();
+
+    // Generate usize index literals: 0usize, 1usize, ...
+    let _proc_idx_usize: Vec<proc_macro2::TokenStream> = (0..n)
+        .map(|i| {
+            let lit = syn::LitInt::new(&format!("{}usize", i), proc_macro2::Span::call_site());
+            quote! { #lit }
+        })
+        .collect();
+
+    // Per-processor struct field declarations
+    let proc_struct_fields: Vec<proc_macro2::TokenStream> = processors
+        .iter()
+        .zip(proc_field_names.iter())
+        .map(|(ty, fname)| {
+            quote! { #fname: #krate::Bypassed<#ty>, }
+        })
+        .collect();
+
+    // Per-processor default initialisers in Default impl
+    let proc_defaults: Vec<proc_macro2::TokenStream> = processors
+        .iter()
+        .zip(proc_field_names.iter())
+        .map(|(ty, fname)| {
+            quote! {
+                #fname: <#krate::Bypassed<#ty> as ::std::default::Default>::default(),
+            }
+        })
+        .collect();
+
+    // compile-time trait validation calls
+    let proc_validations: Vec<proc_macro2::TokenStream> = processors
+        .iter()
+        .map(|ty| {
+            quote! { assert_processor_traits::<#krate::Bypassed<#ty>>(); }
+        })
+        .collect();
+
+    // set_sample_rate calls in initialize()
+    let set_sample_rate_calls: Vec<proc_macro2::TokenStream> = proc_field_names
+        .iter()
+        .map(|fname| {
+            quote! {
+                #krate::Processor::set_sample_rate(&mut self.#fname, _buffer_config.sample_rate);
+            }
+        })
+        .collect();
+
+    // reset() calls
+    let reset_calls: Vec<proc_macro2::TokenStream> = proc_field_names
+        .iter()
+        .map(|fname| {
+            quote! { #krate::Processor::reset(&mut self.#fname); }
+        })
+        .collect();
+
+    // Static dispatch arms for process() loop
+    let dispatch_arms: Vec<proc_macro2::TokenStream> = processors
+        .iter()
+        .zip(proc_field_names.iter())
+        .enumerate()
+        .map(|(i, (ty, fname))| {
+            let i_lit = syn::LitInt::new(&i.to_string(), proc_macro2::Span::call_site());
+            let i_lit_usize =
+                syn::LitInt::new(&format!("{}", i), proc_macro2::Span::call_site());
+            quote! {
+                #i_lit => {
+                    let __start = self.__param_offsets[#i_lit_usize];
+                    let __end   = self.__param_offsets[#i_lit_usize + 1];
+                    let mut __pp =
+                        <<#krate::Bypassed<#ty> as #krate::Processor>::Params
+                            as #krate::ProcessorParams>::from_param_defaults();
+                    <<#krate::Bypassed<#ty> as #krate::Processor>::Params
+                        as #krate::ProcessorParams>::apply_plain_values(
+                        &mut __pp,
+                        &__all_values[__start..__end],
+                    );
+                    use #krate::Processor as _;
+                    self.#fname.process(&mut __sample_ptrs, &__transport, &__pp);
+                }
+            }
+        })
+        .collect();
+
+    // Build index literals for proc_idx_usize used in quote! (needed after removing the
+    // zip-based approach; regenerate from 0..n with usize suffix)
+    let proc_idx_usize: Vec<proc_macro2::TokenStream> = (0..n)
+        .map(|i| {
+            let lit =
+                syn::LitInt::new(&format!("{}usize", i), proc_macro2::Span::call_site());
+            quote! { #lit }
+        })
+        .collect();
+
+    // param_count expressions for __param_offsets initialisation
+    let param_count_exprs: Vec<proc_macro2::TokenStream> = processors
+        .iter()
+        .map(|ty| {
+            quote! {
+                <<#krate::Bypassed<#ty> as #krate::Processor>::Params
+                    as #krate::ProcessorParams>::plain_value_count()
+            }
+        })
+        .collect();
+
+    quote! {
+        // Keep SignalChain type alias for dev-FFI vtable (uses static dispatch in registration order)
+        type __ProcessorType = #krate::SignalChain![#(#processors),*];
+
+        // Compile-time validation: every processor type must satisfy required trait bounds
         const _: () = {
             fn assert_processor_traits<T>()
             where
                 T: #krate::Processor + ::std::default::Default + ::std::marker::Send + 'static,
-                T::Params: #krate::ProcessorParams + ::std::default::Default + ::std::marker::Send + ::std::marker::Sync + 'static,
+                T::Params: #krate::ProcessorParams
+                    + ::std::default::Default
+                    + ::std::marker::Send
+                    + ::std::marker::Sync
+                    + 'static,
             {
             }
-
             fn validate() {
-                assert_processor_traits::<__ProcessorType>();
+                #(#proc_validations)*
             }
         };
+
+        /// Number of processors in the signal chain (compile-time constant).
+        const __PROC_COUNT: usize = #n_lit;
+
+        /// Number of samples to crossfade over when reordering processors.
+        const __CROSSFADE_SAMPLES: usize = 256;
 
         /// Generated plugin struct.
         pub struct __WavecraftPlugin {
             params: ::std::sync::Arc<__WavecraftParams>,
-            processor: __ProcessorType,
+            // --- Per-processor fields (Phase 2: runtime reordering) ---
+            #(#proc_struct_fields)*
+            // Audio-thread-local processing order (index array into per-proc fields)
+            __current_order: [u8; #n_lit],
+            // Cached cumulative parameter offsets for each processor
+            __param_offsets: [usize; #np1_lit],
+            // --- Crossfade state (Phase 4) ---
+            __cf_pos: usize,
+            __cf_dir: i8, // -1 = fade-down, 0 = normal, 1 = fade-up
+            // --- Metering ---
             oscilloscope_tap: #krate::OscilloscopeTap,
             meter_producer: #krate::MeterProducer,
             #[cfg(any(target_os = "macos", target_os = "windows"))]
             meter_consumer: ::std::sync::Mutex<::std::option::Option<#krate::MeterConsumer>>,
             #[cfg(any(target_os = "macos", target_os = "windows"))]
-            oscilloscope_consumer: ::std::sync::Mutex<::std::option::Option<#krate::OscilloscopeFrameConsumer>>,
+            oscilloscope_consumer:
+                ::std::sync::Mutex<::std::option::Option<#krate::OscilloscopeFrameConsumer>>,
         }
 
         /// Generated params struct.
         ///
-        /// This struct bridges wavecraft-dsp ProcessorParams to nih-plug's Params trait.
-        /// Parameters are discovered at runtime from the processor's param_specs().
+        /// Parameters are discovered at runtime from processor param_specs().
         enum __WavecraftRuntimeParam {
             Float(#krate::__nih::FloatParam),
             Int(#krate::__nih::IntParam),
@@ -69,7 +208,6 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
         impl __WavecraftRuntimeParam {
             fn as_ptr(&self) -> #krate::__nih::ParamPtr {
                 use #krate::__nih::Param;
-
                 match self {
                     Self::Float(param) => param.as_ptr(),
                     Self::Int(param) => param.as_ptr(),
@@ -84,19 +222,21 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
         }
 
         pub struct __WavecraftParams {
-            // Store parameters as a vector for dynamic discovery
+            // Runtime parameter values (flat, all processors in chain order)
             params: ::std::vec::Vec<__WavecraftRuntimeParam>,
             // Runtime IDs aligned with FFI-generated contract IDs (e.g. test_tone_frequency)
             ids: ::std::vec::Vec<::std::string::String>,
             // Optional parameter group names (empty string when none)
             groups: ::std::vec::Vec<::std::string::String>,
+            // --- Phase 2: Lock-free SPSC order handoff (shared between UI and audio threads) ---
+            __has_pending_order: ::std::sync::atomic::AtomicBool,
+            __pending_slots: ::std::vec::Vec<::std::sync::atomic::AtomicU8>,
+            // --- Phase 3: Order state for IPC reads and persistence ---
+            __order_state: ::std::sync::Mutex<::std::vec::Vec<u8>>,
         }
 
         impl __WavecraftParams {
-            fn from_processor_specs() -> Self
-            where
-                <__ProcessorType as #krate::Processor>::Params: #krate::ProcessorParams,
-            {
+            fn from_processor_specs() -> Self {
                 use #krate::ParamRange;
 
                 let mut params = ::std::vec::Vec::new();
@@ -105,7 +245,21 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
 
                 #(#runtime_param_blocks)*
 
-                Self { params, ids, groups }
+                // Initialise pending-order slots (identity permutation)
+                let mut __pending: ::std::vec::Vec<::std::sync::atomic::AtomicU8> =
+                    ::std::vec::Vec::with_capacity(#n_lit);
+                #(
+                    __pending.push(::std::sync::atomic::AtomicU8::new(#proc_idx_u8));
+                )*
+
+                Self {
+                    params,
+                    ids,
+                    groups,
+                    __has_pending_order: ::std::sync::atomic::AtomicBool::new(false),
+                    __pending_slots: __pending,
+                    __order_state: ::std::sync::Mutex::new(vec![#(#proc_idx_u8),*]),
+                }
             }
         }
 
@@ -126,28 +280,115 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                     .iter()
                     .zip(self.ids.iter())
                     .zip(self.groups.iter())
-                    .map(|((param, id), group)| {
-                        (id.clone(), param.as_ptr(), group.clone())
-                    })
+                    .map(|((param, id), group)| (id.clone(), param.as_ptr(), group.clone()))
                     .collect()
+            }
+        }
+
+        impl #krate::__nih::ProcessorOrderAccess for __WavecraftParams {
+            fn get_order(&self) -> ::std::vec::Vec<::std::string::String> {
+                self.__order_state
+                    .lock()
+                    .unwrap_or_else(|__e| __e.into_inner())
+                    .iter()
+                    .map(|__b| __b.to_string())
+                    .collect()
+            }
+
+            fn set_order(
+                &self,
+                order: &[::std::string::String],
+            ) -> ::std::result::Result<(), #krate::__nih::BridgeError> {
+                let __n: usize = #n_lit;
+                if order.len() != __n {
+                    return ::std::result::Result::Err(
+                        #krate::__nih::BridgeError::InvalidProcessorOrder {
+                            reason: ::std::format!(
+                                "expected {} slots, got {}",
+                                __n,
+                                order.len()
+                            ),
+                        },
+                    );
+                }
+                let mut __parsed = ::std::vec::Vec::with_capacity(__n);
+                for __s in order.iter() {
+                    match __s.parse::<u8>() {
+                        ::std::result::Result::Ok(__b) => __parsed.push(__b),
+                        ::std::result::Result::Err(_) => {
+                            return ::std::result::Result::Err(
+                                #krate::__nih::BridgeError::InvalidProcessorOrder {
+                                    reason: ::std::format!(
+                                        "slot index '{}' is not a valid u8",
+                                        __s
+                                    ),
+                                },
+                            );
+                        }
+                    }
+                }
+                let mut __seen = ::std::vec![false; __n];
+                for &__b in __parsed.iter() {
+                    let __idx = __b as usize;
+                    if __idx >= __n || __seen[__idx] {
+                        return ::std::result::Result::Err(
+                            #krate::__nih::BridgeError::InvalidProcessorOrder {
+                                reason: ::std::format!(
+                                    "invalid permutation: slot {} is out of range or duplicate",
+                                    __b
+                                ),
+                            },
+                        );
+                    }
+                    __seen[__idx] = true;
+                }
+                use ::std::sync::atomic::Ordering;
+                for (__i, &__b) in __parsed.iter().enumerate() {
+                    self.__pending_slots[__i].store(__b, Ordering::Release);
+                }
+                self.__has_pending_order.store(true, Ordering::Release);
+                *self.__order_state.lock().unwrap_or_else(|__e| __e.into_inner()) = __parsed;
+                ::std::result::Result::Ok(())
             }
         }
 
         impl ::std::default::Default for __WavecraftPlugin {
             fn default() -> Self {
-                let (meter_producer, _meter_consumer) =
-                    #krate::create_meter_channel(64);
+                let (meter_producer, _meter_consumer) = #krate::create_meter_channel(64);
                 let (oscilloscope_producer, _oscilloscope_consumer) =
                     #krate::create_oscilloscope_channel(8);
+
+                // Compute cumulative param offsets at construction time (not audio-thread)
+                let __param_offsets: [usize; #np1_lit] = {
+                    let __counts: [usize; #n_lit] = [#(#param_count_exprs),*];
+                    let mut __offs = [0usize; #np1_lit];
+                    let mut __acc = 0usize;
+                    let mut __i = 0usize;
+                    while __i < #n_lit {
+                        __acc += __counts[__i];
+                        __offs[__i + 1] = __acc;
+                        __i += 1;
+                    }
+                    __offs
+                };
+
                 Self {
                     params: ::std::sync::Arc::new(__WavecraftParams::default()),
-                    processor: <__ProcessorType as ::std::default::Default>::default(),
+                    #(#proc_defaults)*
+                    __current_order: [#(#proc_idx_u8),*],
+                    __param_offsets,
+                    __cf_pos: 0,
+                    __cf_dir: 0i8,
                     oscilloscope_tap: #krate::OscilloscopeTap::with_output(oscilloscope_producer),
                     meter_producer,
                     #[cfg(any(target_os = "macos", target_os = "windows"))]
-                    meter_consumer: ::std::sync::Mutex::new(::std::option::Option::Some(_meter_consumer)),
+                    meter_consumer: ::std::sync::Mutex::new(
+                        ::std::option::Option::Some(_meter_consumer),
+                    ),
                     #[cfg(any(target_os = "macos", target_os = "windows"))]
-                    oscilloscope_consumer: ::std::sync::Mutex::new(::std::option::Option::Some(_oscilloscope_consumer)),
+                    oscilloscope_consumer: ::std::sync::Mutex::new(
+                        ::std::option::Option::Some(_oscilloscope_consumer),
+                    ),
                 }
             }
         }
@@ -164,13 +405,11 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                     main_input_channels: ::std::num::NonZeroU32::new(2),
                     main_output_channels: ::std::num::NonZeroU32::new(2),
                     ..#krate::__nih::AudioIOLayout::const_default()
-                }
+                },
             ];
 
-            const MIDI_INPUT: #krate::__nih::MidiConfig =
-                #krate::__nih::MidiConfig::None;
-            const MIDI_OUTPUT: #krate::__nih::MidiConfig =
-                #krate::__nih::MidiConfig::None;
+            const MIDI_INPUT: #krate::__nih::MidiConfig = #krate::__nih::MidiConfig::None;
+            const MIDI_OUTPUT: #krate::__nih::MidiConfig = #krate::__nih::MidiConfig::None;
 
             type SysExMessage = ();
             type BackgroundTask = ();
@@ -188,12 +427,12 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                     let meter_consumer = self
                         .meter_consumer
                         .lock()
-                        .expect("meter_consumer mutex poisoned - previous panic in editor thread")
+                        .expect("meter_consumer mutex poisoned")
                         .take();
                     let oscilloscope_consumer = self
                         .oscilloscope_consumer
                         .lock()
-                        .expect("oscilloscope_consumer mutex poisoned - previous panic in editor thread")
+                        .expect("oscilloscope_consumer mutex poisoned")
                         .take();
                     #krate::editor::create_webview_editor(
                         self.params.clone(),
@@ -203,7 +442,6 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                         600,
                     )
                 }
-
                 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
                 {
                     None
@@ -216,17 +454,14 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                 _buffer_config: &#krate::__nih::BufferConfig,
                 _context: &mut impl #krate::__nih::InitContext<Self>,
             ) -> bool {
-                #krate::Processor::set_sample_rate(
-                    &mut self.processor,
-                    _buffer_config.sample_rate,
-                );
+                #(#set_sample_rate_calls)*
                 self.oscilloscope_tap
                     .set_sample_rate_hz(_buffer_config.sample_rate);
                 true
             }
 
             fn reset(&mut self) {
-                #krate::Processor::reset(&mut self.processor);
+                #(#reset_calls)*
                 #krate::Processor::reset(&mut self.oscilloscope_tap);
             }
 
@@ -236,135 +471,215 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                 _aux: &mut #krate::__nih::AuxiliaryBuffers,
                 _context: &mut impl #krate::__nih::ProcessContext<Self>,
             ) -> #krate::__nih::ProcessStatus {
-                let num_samples = buffer.samples();
-                let channels = buffer.channels();
+                // ── Phase 2/4: Block-start order handoff ─────────────────────────────
+                //
+                // 1. If fade-down complete (cf_dir == -1, cf_pos == 0), apply the
+                //    pending order and switch to fade-up.
+                if self.__cf_dir == -1i8 && self.__cf_pos == 0 {
+                    self.params.__has_pending_order
+                        .store(false, ::std::sync::atomic::Ordering::Release);
+                    #(
+                        self.__current_order[#proc_idx_usize] = self
+                            .params
+                            .__pending_slots[#proc_idx_usize]
+                            .load(::std::sync::atomic::Ordering::Acquire);
+                    )*
+                    self.__cf_dir = 1i8; // start fade-up from silence
+                }
+                // 2. If idle and a new pending order has arrived, start a fade-down.
+                if self.__cf_dir == 0i8
+                    && self.params.__has_pending_order
+                        .load(::std::sync::atomic::Ordering::Acquire)
+                {
+                    self.__cf_pos = __CROSSFADE_SAMPLES;
+                    self.__cf_dir = -1i8;
+                }
 
-                // Build processor params from current parameter values
-                let processor_params = self.build_processor_params();
+                let __num_samples = buffer.samples();
+                let __channels = buffer.channels();
 
-                // Convert nih-plug buffer to wavecraft-dsp format
-                // We process sample-by-sample to properly handle the buffer format
-                for sample_idx in 0..num_samples {
-                    // Create a temporary buffer for this sample
-                    let mut sample_buffers: ::std::vec::Vec<::std::vec::Vec<f32>> =
-                        (0..channels).map(|ch| {
-                            vec![buffer.as_slice()[ch][sample_idx]]
-                        }).collect();
+                // Pre-collect all current parameter plain-values (one Arc deref per block)
+                let __all_values: ::std::vec::Vec<f32> = self
+                    .params
+                    .params
+                    .iter()
+                    .map(|p| p.modulated_plain_value())
+                    .collect();
 
-                    let mut sample_ptrs: ::std::vec::Vec<&mut [f32]> =
-                        sample_buffers.iter_mut().map(|v| &mut v[..]).collect();
+                for __sample_idx in 0..__num_samples {
+                    // Build per-sample channel slices
+                    let mut __sample_buffers: ::std::vec::Vec<::std::vec::Vec<f32>> = (0..__channels)
+                        .map(|__ch| vec![buffer.as_slice()[__ch][__sample_idx]])
+                        .collect();
+                    let mut __sample_ptrs: ::std::vec::Vec<&mut [f32]> =
+                        __sample_buffers.iter_mut().map(|v| &mut v[..]).collect();
+                    let __transport = #krate::Transport::default();
 
-                    let transport = #krate::Transport::default();
+                    // ── Phase 2: Runtime-ordered static dispatch ──────────────────────
+                    let mut __pos: usize = 0;
+                    while __pos < __PROC_COUNT {
+                        let __slot = self.__current_order[__pos] as usize;
+                        match __slot {
+                            #(#dispatch_arms)*
+                            _ => {}
+                        }
+                        __pos += 1;
+                    }
 
-                    // Import Processor trait for process() method
-                    use #krate::Processor as _;
-                    self.processor.process(&mut sample_ptrs, &transport, &processor_params);
+                    // ── Phase 4: Per-sample crossfade gain ────────────────────────────
+                    let __gain: f32 = if self.__cf_dir != 0i8 {
+                        let __g = self.__cf_pos as f32 / __CROSSFADE_SAMPLES as f32;
+                        if self.__cf_dir > 0i8 {
+                            self.__cf_pos += 1;
+                            if self.__cf_pos >= __CROSSFADE_SAMPLES {
+                                self.__cf_pos = __CROSSFADE_SAMPLES;
+                                self.__cf_dir = 0i8;
+                            }
+                        } else {
+                            // fading down
+                            if self.__cf_pos > 0 {
+                                self.__cf_pos -= 1;
+                            }
+                        }
+                        __g
+                    } else {
+                        1.0_f32
+                    };
 
-                    // Write processed samples back
-                    for (ch, sample_buf) in sample_buffers.iter().enumerate() {
-                        if let Some(channel) = buffer.as_slice().get(ch) {
-                            if sample_idx < channel.len() {
-                                // SAFETY JUSTIFICATION:
-                                //
-                                // 1. Exclusive Access: nih-plug's process() callback guarantees exclusive
-                                //    buffer access (no concurrent reads/writes from other threads).
-                                //
-                                // 2. Bounds Check: The `if` guards above ensure:
-                                //    - `ch` is a valid channel index (within buffer.channels())
-                                //    - `sample_idx < channel.len()` (within channel sample count)
-                                //
-                                // 3. Pointer Validity:
-                                //    - `channel.as_ptr()` is from nih-plug's Buffer allocation (valid)
-                                //    - `.add(sample_idx)` offset is within bounds (checked above)
-                                //    - Pointer is properly aligned (f32 alignment guaranteed by host)
-                                //
-                                // 4. Write Safety:
-                                //    - f32 is Copy (atomic write, no drop required)
-                                //    - No aliasing: Buffer<'a> lifetime ensures no other refs exist
-                                //    - Host expects in-place modification (plugin contract)
-                                //
-                                // 5. Why unsafe is necessary:
-                                //    nih-plug's Buffer API only provides immutable refs (as_slice()).
-                                //    However, the plugin contract allows (and expects) in-place writes.
-                                //    Casting *const → *mut is sound because we have exclusive access
-                                //    during process() callback (guaranteed by DAW host).
+                    // Write processed (and gain-adjusted) samples back to the buffer
+                    for (__ch, __sbuf) in __sample_buffers.iter().enumerate() {
+                        if let Some(__channel) = buffer.as_slice().get(__ch) {
+                            if __sample_idx < __channel.len() {
+                                // SAFETY: nih-plug process() guarantees exclusive buffer
+                                // access. Bounds are checked above. The f32 pointer is
+                                // properly aligned and valid for the duration of process().
                                 unsafe {
-                                    let channel_ptr = channel.as_ptr() as *mut f32;
-                                    *channel_ptr.add(sample_idx) = sample_buf[0];
+                                    let __ptr = __channel.as_ptr() as *mut f32;
+                                    *__ptr.add(__sample_idx) = __sbuf[0] * __gain;
                                 }
                             }
                         }
                     }
                 }
 
-                // Update meters (simplified - just measure output peaks)
-                let mut peak_left = 0.0_f32;
-                let mut peak_right = 0.0_f32;
-
-                if channels >= 1 {
-                    peak_left = buffer.as_slice()[0].iter().map(|&s| s.abs()).fold(0.0, f32::max);
+                // ── Metering ─────────────────────────────────────────────────────────
+                let mut __peak_l = 0.0_f32;
+                let mut __peak_r = 0.0_f32;
+                if __channels >= 1 {
+                    __peak_l = buffer.as_slice()[0]
+                        .iter()
+                        .map(|&s| s.abs())
+                        .fold(0.0_f32, f32::max);
                 }
-                if channels >= 2 {
-                    peak_right = buffer.as_slice()[1].iter().map(|&s| s.abs()).fold(0.0, f32::max);
+                if __channels >= 2 {
+                    __peak_r = buffer.as_slice()[1]
+                        .iter()
+                        .map(|&s| s.abs())
+                        .fold(0.0_f32, f32::max);
                 }
 
-                if channels >= 1 {
-                    let left_snapshot: ::std::vec::Vec<f32> = buffer.as_slice()[0].to_vec();
-                    let right_snapshot: ::std::vec::Vec<f32> = if channels >= 2 {
+                if __channels >= 1 {
+                    let __left_snap: ::std::vec::Vec<f32> = buffer.as_slice()[0].to_vec();
+                    let __right_snap: ::std::vec::Vec<f32> = if __channels >= 2 {
                         buffer.as_slice()[1].to_vec()
                     } else {
-                        left_snapshot.clone()
+                        __left_snap.clone()
                     };
-
                     self.oscilloscope_tap
-                        .capture_stereo(&left_snapshot, &right_snapshot);
+                        .capture_stereo(&__left_snap, &__right_snap);
                 }
 
-                let frame = #krate::MeterFrame {
-                    peak_l: peak_left,
-                    peak_r: peak_right,
-                    // Simplified RMS estimation: peak * 1/√2 (0.707)
-                    // This is exact for sine waves but approximate for other signals.
-                    // Acceptable for basic metering; for accurate RMS, use sliding window average.
-                    rms_l: peak_left * 0.707,
-                    rms_r: peak_right * 0.707,
-                    // Note: Timestamp not implemented for DSL plugins.
-                    // Basic metering doesn't require sample-accurate timing.
-                    // For advanced metering with sample position tracking,
-                    // implement Plugin trait directly and use context.transport().
+                let _ = self.meter_producer.push(#krate::MeterFrame {
+                    peak_l: __peak_l,
+                    peak_r: __peak_r,
+                    rms_l: __peak_l * 0.707,
+                    rms_r: __peak_r * 0.707,
                     timestamp: 0,
-                };
-
-                let _ = self.meter_producer.push(frame);
+                });
 
                 #krate::__nih::ProcessStatus::Normal
             }
-        }
 
-        impl __WavecraftPlugin {
-            /// Build processor parameters from current nih-plug parameter values.
-            ///
-            /// # Known Limitation
-            ///
-            /// Full bidirectional parameter sync between nih-plug and processor
-            /// params is implemented by applying plain host values in the same
-            /// order as `ProcessorParams::param_specs()`.
-            fn build_processor_params(&self) -> <__ProcessorType as #krate::Processor>::Params {
-                let mut params =
-                    <<__ProcessorType as #krate::Processor>::Params as #krate::ProcessorParams>::from_param_defaults();
-                let values: ::std::vec::Vec<f32> = self
+            // ── Phase 3: Persistence (serialize / deserialize processor order) ─────
+
+            fn serialize_fields(
+                &self,
+            ) -> ::std::collections::HashMap<::std::string::String, ::std::string::String>
+            {
+                let __order: ::std::vec::Vec<::std::string::String> = self
                     .params
-                    .params
+                    .__order_state
+                    .lock()
+                    .unwrap_or_else(|__e| __e.into_inner())
                     .iter()
-                    .map(|param| param.modulated_plain_value())
+                    .map(|&__i| __i.to_string())
                     .collect();
 
-                <<__ProcessorType as #krate::Processor>::Params as #krate::ProcessorParams>::apply_plain_values(
-                    &mut params,
-                    &values,
-                );
+                let __json = #krate::__internal::serde_json::to_string(&__order)
+                    .unwrap_or_default();
 
-                params
+                let mut __map =
+                    ::std::collections::HashMap::<::std::string::String, ::std::string::String>::new();
+                __map.insert("processorOrder".to_string(), __json);
+                __map
+            }
+
+            fn deserialize_fields(
+                &mut self,
+                fields: &::std::collections::HashMap<::std::string::String, ::std::string::String>,
+            ) {
+                if let Some(__json) = fields.get("processorOrder") {
+                    if let Ok(__order_strs) =
+                        #krate::__internal::serde_json::from_str::<::std::vec::Vec<::std::string::String>>(
+                            __json,
+                        )
+                    {
+                        let __order: ::std::vec::Vec<u8> = __order_strs
+                            .iter()
+                            .filter_map(|__s| __s.parse::<u8>().ok())
+                            .collect();
+
+                        if __order.len() == __PROC_COUNT {
+                            // Validate: must be a permutation of 0..N
+                            let mut __seen = [false; #n_lit];
+                            let mut __valid = true;
+                            for &__slot in __order.iter() {
+                                let __idx = __slot as usize;
+                                if __idx >= __PROC_COUNT || __seen[__idx] {
+                                    __valid = false;
+                                    break;
+                                }
+                                __seen[__idx] = true;
+                            }
+                            if __valid {
+                                for (__i, &__slot) in __order.iter().enumerate() {
+                                    self.params.__pending_slots[__i].store(
+                                        __slot,
+                                        ::std::sync::atomic::Ordering::Release,
+                                    );
+                                }
+                                self.params.__has_pending_order.store(
+                                    true,
+                                    ::std::sync::atomic::Ordering::Release,
+                                );
+                                *self
+                                    .params
+                                    .__order_state
+                                    .lock()
+                                    .unwrap_or_else(|__e| __e.into_inner()) = __order;
+                            } else {
+                                ::tracing::warn!(
+                                    diagnostic.code = "processorOrderRestoreFailed",
+                                    "Processor order restore failed: persisted order has wrong \
+                                     length or is not a valid permutation of slot indices. \
+                                     Falling back to default registration order. \
+                                     TODO: emit processorOrderRestoreFailed bridge notification \
+                                     on next UI connect."
+                                );
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -381,9 +696,8 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
 
         impl #krate::__nih::Vst3Plugin for __WavecraftPlugin {
             const VST3_CLASS_ID: [u8; 16] = #vst3_id;
-            const VST3_SUBCATEGORIES: &'static [#krate::__nih::Vst3SubCategory] = &[
-                #krate::__nih::Vst3SubCategory::Fx,
-            ];
+            const VST3_SUBCATEGORIES: &'static [#krate::__nih::Vst3SubCategory] =
+                &[#krate::__nih::Vst3SubCategory::Fx];
         }
 
         // When building with `_param-discovery` feature, skip nih-plug's
@@ -400,33 +714,21 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
 
         /// Returns JSON-serialized parameter specifications.
         ///
-        /// This function is called by the `wavecraft start` command to discover
-        /// the plugin's parameters without loading it into a DAW.
-        ///
         /// # Safety
         /// The returned pointer must be freed with `wavecraft_free_string`.
         #[unsafe(no_mangle)]
         pub extern "C" fn wavecraft_get_params_json() -> *mut ::std::ffi::c_char {
-            let mut params: ::std::vec::Vec<#krate::__internal::ParameterInfo> = ::std::vec::Vec::new();
+            let mut params: ::std::vec::Vec<#krate::__internal::ParameterInfo> =
+                ::std::vec::Vec::new();
             #(#processor_param_mappings)*
-
-            // Serialize parameter list to JSON for FFI export
-            // Fallback to "[]" on serialization error (should never happen for ParameterInfo)
             let json = #krate::__internal::serde_json::to_string(&params)
                 .unwrap_or_else(|_| "[]".to_string());
-
-            // Convert to C string for FFI
-            // Returns null pointer if JSON contains embedded null bytes (invalid UTF-8)
-            // Caller (JS bridge) must check for null before dereferencing
             ::std::ffi::CString::new(json)
                 .map(|s| s.into_raw())
                 .unwrap_or(::std::ptr::null_mut())
         }
 
         /// Returns JSON-serialized processor metadata.
-        ///
-        /// This function is called by `wavecraft start` to discover processor IDs
-        /// from the plugin signal chain at dev/build time.
         ///
         /// # Safety
         /// The returned pointer must be freed with `wavecraft_free_string`.
@@ -435,10 +737,8 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
             let processors: ::std::vec::Vec<#krate::__internal::ProcessorInfo> = vec![
                 #(#processor_info_entries),*
             ];
-
             let json = #krate::__internal::serde_json::to_string(&processors)
                 .unwrap_or_else(|_| "[]".to_string());
-
             ::std::ffi::CString::new(json)
                 .map(|s| s.into_raw())
                 .unwrap_or(::std::ptr::null_mut())
@@ -496,25 +796,28 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                 num_samples: u32,
             ) {
                 let _ = ::std::panic::catch_unwind(::std::panic::AssertUnwindSafe(|| {
-                    if instance.is_null() || channels.is_null() || num_channels == 0 || num_samples == 0 {
+                    if instance.is_null()
+                        || channels.is_null()
+                        || num_channels == 0
+                        || num_samples == 0
+                    {
                         return;
                     }
-                    let instance = unsafe { &mut *(instance as *mut __DevProcessorInstance) };
+                    let instance =
+                        unsafe { &mut *(instance as *mut __DevProcessorInstance) };
                     let num_ch = num_channels as usize;
                     let num_samp = num_samples as usize;
-
                     let transport = #krate::Transport::default();
 
-                    // Build stack-local channel slices for the current block.
-                    // Wavecraft dev audio currently targets mono/stereo.
                     match num_ch {
                         1 => {
                             let ch0_ptr = unsafe { *channels.add(0) };
                             if ch0_ptr.is_null() {
                                 return;
                             }
-
-                            let ch0 = unsafe { ::std::slice::from_raw_parts_mut(ch0_ptr, num_samp) };
+                            let ch0 = unsafe {
+                                ::std::slice::from_raw_parts_mut(ch0_ptr, num_samp)
+                            };
                             let mut channel_slices: [&mut [f32]; 1] = [ch0];
                             #krate::Processor::process(
                                 &mut instance.processor,
@@ -529,9 +832,12 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                             if ch0_ptr.is_null() || ch1_ptr.is_null() {
                                 return;
                             }
-
-                            let ch0 = unsafe { ::std::slice::from_raw_parts_mut(ch0_ptr, num_samp) };
-                            let ch1 = unsafe { ::std::slice::from_raw_parts_mut(ch1_ptr, num_samp) };
+                            let ch0 = unsafe {
+                                ::std::slice::from_raw_parts_mut(ch0_ptr, num_samp)
+                            };
+                            let ch1 = unsafe {
+                                ::std::slice::from_raw_parts_mut(ch1_ptr, num_samp)
+                            };
                             let mut channel_slices: [&mut [f32]; 2] = [ch0, ch1];
                             #krate::Processor::process(
                                 &mut instance.processor,
@@ -540,12 +846,9 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                                 &instance.params,
                             );
                         }
-                        _ => {
-                            // Unsupported channel topology in dev-FFI path.
-                        }
+                        _ => {} // Unsupported channel topology in dev-FFI path
                     }
                 }));
-                // If panic occurred, audio buffer is left unmodified (pass-through)
             }
 
             unsafe extern "C" fn apply_plain_values(
@@ -557,18 +860,16 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                     if instance.is_null() {
                         return;
                     }
-
                     if values_ptr.is_null() && len != 0 {
                         return;
                     }
-
-                    let instance = unsafe { &mut *(instance as *mut __DevProcessorInstance) };
+                    let instance =
+                        unsafe { &mut *(instance as *mut __DevProcessorInstance) };
                     let values: &[f32] = if len == 0 {
                         &[]
                     } else {
                         unsafe { ::std::slice::from_raw_parts(values_ptr, len) }
                     };
-
                     <__Params as #krate::ProcessorParams>::apply_plain_values(
                         &mut instance.params,
                         values,
@@ -581,7 +882,8 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                     if instance.is_null() {
                         return;
                     }
-                    let instance = unsafe { &mut *(instance as *mut __DevProcessorInstance) };
+                    let instance =
+                        unsafe { &mut *(instance as *mut __DevProcessorInstance) };
                     #krate::Processor::set_sample_rate(&mut instance.processor, sample_rate);
                 }));
             }
@@ -591,7 +893,8 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                     if instance.is_null() {
                         return;
                     }
-                    let instance = unsafe { &mut *(instance as *mut __DevProcessorInstance) };
+                    let instance =
+                        unsafe { &mut *(instance as *mut __DevProcessorInstance) };
                     #krate::Processor::reset(&mut instance.processor);
                 }));
             }
@@ -600,7 +903,9 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                 let _ = ::std::panic::catch_unwind(::std::panic::AssertUnwindSafe(|| {
                     if !instance.is_null() {
                         let _ = unsafe {
-                            ::std::boxed::Box::from_raw(instance as *mut __DevProcessorInstance)
+                            ::std::boxed::Box::from_raw(
+                                instance as *mut __DevProcessorInstance,
+                            )
                         };
                     }
                 }));

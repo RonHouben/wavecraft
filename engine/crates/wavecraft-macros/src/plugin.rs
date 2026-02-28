@@ -1,6 +1,6 @@
 //! Procedural macro for generating complete plugin implementations from DSL.
 //!
-//! Simplified API (0.9.0): Only requires `name` and `signal` properties.
+//! Simplified API: Only requires `name` and `processors` properties.
 //! Vendor and URL metadata are automatically derived from Cargo.toml.
 //! Plugin email is not exposed in the DSL and defaults to an empty string.
 
@@ -30,44 +30,27 @@ pub fn wavecraft_plugin_impl(input: TokenStream) -> TokenStream {
 
 fn expand_wavecraft_plugin(plugin_def: PluginDef) -> Result<proc_macro2::TokenStream> {
     let name = &plugin_def.name;
-    let signal_type = &plugin_def.signal;
-
-    let signal_processors = parse::parse_signal_chain_processors(signal_type)?;
+    let signal_processors = &plugin_def.processors;
 
     // Default krate to ::wavecraft if not specified (should already be set by Parse)
     let krate = plugin_def
         .krate
         .unwrap_or_else(|| syn::parse_quote!(::wavecraft));
 
-    let processor_param_mappings = metadata::processor_param_mappings(&signal_processors, &krate);
+    let processor_param_mappings = metadata::processor_param_mappings(signal_processors, &krate);
 
-    let processor_info_entries = metadata::processor_info_entries(&signal_processors, &krate);
+    let processor_info_entries = metadata::processor_info_entries(signal_processors, &krate);
 
-    let runtime_param_blocks = runtime_params::runtime_param_blocks(&signal_processors, &krate);
+    let runtime_param_blocks = runtime_params::runtime_param_blocks(signal_processors, &krate);
 
     let vendor = metadata::derive_vendor();
     let url = metadata::derive_url();
     let vst3_id = metadata::generate_vst3_id(&name.value());
     let clap_id = metadata::derive_clap_id();
 
-    // Phase 6 Steps 6.1-6.6 Complete:
-    // - Input parsing ✓
-    // - Plugin struct generation ✓
-    // - Params struct with runtime parameter discovery ✓
-    // - Plugin trait impl with audio processing ✓
-    // - Format impls & exports ✓
-    // - Error messages (compile-time validation) ✓
-    //
-    // 0.9.0 Updates:
-    // - Simplified API (name + signal only) ✓
-    // - Vendor/URL derived from Cargo.toml ✓
-    // - Email is internal default (not exposed in DSL) ✓
-    // - VST3/CLAP IDs use package name ✓
-    // - Signal validation (requires SignalChain!) ✓
-
     let expanded = codegen::generate_plugin_code(codegen::CodegenInput {
         name,
-        signal_type,
+        processors: signal_processors,
         krate: &krate,
         runtime_param_blocks: &runtime_param_blocks,
         processor_param_mappings: &processor_param_mappings,
@@ -85,16 +68,19 @@ fn expand_wavecraft_plugin(plugin_def: PluginDef) -> Result<proc_macro2::TokenSt
 mod tests {
     use super::{expand_wavecraft_plugin, naming};
     use quote::quote;
-    use syn::{Expr, Type, parse_quote};
+    use syn::{Type, parse_quote};
 
     #[test]
-    fn parses_signal_chain_processor_types() {
-        let signal: Expr = parse_quote!(SignalChain![TestToneProcessor, InputGain, OutputGain]);
+    fn parses_processor_types_from_bracketed_list() {
+        let input_tokens = quote! {
+            name: "Test Plugin",
+            processors: [TestToneProcessor, InputGain, OutputGain],
+        };
 
-        let processors = super::parse::parse_signal_chain_processors(&signal)
-            .expect("signal chain should parse");
+        let plugin_def: super::parse::PluginDef =
+            syn::parse2(input_tokens).expect("plugin definition should parse");
 
-        assert_eq!(processors.len(), 3);
+        assert_eq!(plugin_def.processors.len(), 3);
     }
 
     #[test]
@@ -131,7 +117,7 @@ mod tests {
     fn generated_param_map_uses_prefixed_runtime_ids_instead_of_param_indexes() {
         let input_tokens = quote! {
             name: "Test Plugin",
-            signal: SignalChain![TestToneProcessor],
+            processors: [TestToneProcessor],
         };
 
         let plugin_def: super::parse::PluginDef =
@@ -187,7 +173,7 @@ mod tests {
     fn generated_param_map_uses_unique_runtime_ids_for_repeated_processor_types() {
         let input_tokens = quote! {
             name: "Test Plugin",
-            signal: SignalChain![Gain, Gain],
+            processors: [Gain, Gain],
         };
 
         let plugin_def: super::parse::PluginDef =

@@ -7,21 +7,21 @@ import {
   WavecraftProvider,
   useWindowResizeSync,
 } from '@wavecraft/core';
-import { type JSX } from 'react';
+import { useMemo, type JSX } from 'react';
 import {
-  Meter,
-  VersionBadge,
   ConnectionStatus,
-  LatencyMonitor,
-  ResizeHandle,
-  TestToneProcessor,
-  OscilloscopeProcessor,
-  Row,
-  Col,
   GainProcessor,
+  LatencyMonitor,
+  Meter,
+  OscilloscopeProcessor,
   PassthroughProcessor,
+  ResizeHandle,
   SaturatorProcessor,
+  SignalChain,
+  TestToneProcessor,
   ToneFilterProcessor,
+  VersionBadge,
+  type SignalChainProcessorEntry,
 } from '@wavecraft/components';
 
 export function App(): JSX.Element {
@@ -31,6 +31,44 @@ export function App(): JSX.Element {
   const latency = useLatencyMonitor(1000);
   const frame = useMeterFrame(50);
   const requestResize = useRequestResize();
+
+  // Processor entries in Rust registration slot order.
+  // Each entry's array index IS its slot index in the engine (must match
+  // the `processors: [...]` list in engine/src/lib.rs).
+  const processorEntries = useMemo<SignalChainProcessorEntry[]>(
+    () => [
+      // slot 0 — test_tone
+      { id: 'test_tone', component: <TestToneProcessor /> },
+      // slot 1 — input_trim
+      {
+        id: 'input_trim',
+        component: (
+          <GainProcessor processorId="input_trim" title="Input Trim" subtitle="My Input Trim" />
+        ),
+      },
+      // slot 2 — passthrough
+      {
+        id: 'passthrough',
+        component: <PassthroughProcessor processorId="passthrough" title="Passthrough" />,
+      },
+      // slot 3 — example_processor (replace null with your custom processor component)
+      { id: 'example_processor', component: null },
+      // slot 4 — tone_filter
+      { id: 'tone_filter', component: <ToneFilterProcessor /> },
+      // slot 5 — soft_clip
+      { id: 'soft_clip', component: <SaturatorProcessor /> },
+      // slot 6 — output_gain
+      {
+        id: 'output_gain',
+        component: (
+          <GainProcessor processorId="output_gain" title="Output Gain" subtitle="My Output Gain" />
+        ),
+      },
+      // slot 7 — oscilloscope_tap
+      { id: 'oscilloscope_tap', component: <OscilloscopeProcessor /> },
+    ],
+    []
+  );
 
   return (
     <WavecraftProvider>
@@ -50,58 +88,20 @@ export function App(): JSX.Element {
         </div>
       </div>
 
-      {/* Main Content */}
-      <Col className="gap-2 bg-purple-500 px-4 sm:bg-red-500 md:bg-amber-500 lg:bg-green-500">
-        <Row className="gap-2">
-          <TestToneProcessor
-            className="col-span-full sm:col-span-8 md:col-span-4"
-            hideWhenNotInSignalChain
-          />
-          <Col className="col-span-8 gap-2 sm:col-span-4 md:col-span-4">
-            <GainProcessor
-              className="col-span-full"
-              processorId="input_trim"
-              title="Input Trim"
-              subtitle="My Input Trim"
-              hideWhenNotInSignalChain
-            />
-            <GainProcessor
-              className="col-span-full"
-              processorId="output_gain"
-              title="Output Gain"
-              subtitle="My Output Gain"
-              hideWhenNotInSignalChain
-            />
-          </Col>
-          <PassthroughProcessor
-            processorId="passthrough"
-            className="col-span-4 sm:col-span-12 md:col-span-4"
-            hideWhenNotInSignalChain
-            title="Passthrough"
-          />
-          <SaturatorProcessor
-            className="col-span-full sm:col-span-full md:col-span-6"
-            hideWhenNotInSignalChain
-          />
-          <ToneFilterProcessor
-            className="col-span-full sm:col-span-full md:col-span-6"
-            hideWhenNotInSignalChain
-          />
-        </Row>
-        <Row className="col-span-full gap-2">
-          <OscilloscopeProcessor className="col-span-full md:col-span-6" hideWhenNotInSignalChain />
-          <Col className="col-span-full gap-2 md:col-span-6">
-            <Meter className="col-span-full justify-center" connected={connected} frame={frame} />
-            <LatencyMonitor
-              className="col-span-full justify-center"
-              latency={latency.latency}
-              avg={latency.avg}
-              max={latency.max}
-              count={latency.count}
-            />
-          </Col>
-        </Row>
-      </Col>
+      {/* Signal chain — drag-and-drop reorderable */}
+      <SignalChain processors={processorEntries} />
+
+      {/* Monitoring */}
+      <div className="flex flex-col gap-2">
+        <Meter className="justify-center" connected={connected} frame={frame} />
+        <LatencyMonitor
+          className="justify-center"
+          latency={latency.latency}
+          avg={latency.avg}
+          max={latency.max}
+          count={latency.count}
+        />
+      </div>
 
       <ResizeHandle onRequestResize={requestResize} />
     </WavecraftProvider>

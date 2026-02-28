@@ -125,6 +125,12 @@ export type { IpcMethod, IpcEvent } from './ipc/constants';
 // =============================================================================
 export { IpcBridge } from './ipc/IpcBridge';
 export { ParameterClient } from './ipc/ParameterClient';
+export { ProcessorOrderClient } from './ipc/ProcessorOrderClient';
+export type {
+  GetProcessorOrderResult,
+  SetProcessorOrderParams,
+  ProcessorOrderChangedNotification,
+} from './ipc/ProcessorOrderClient';
 
 // =============================================================================
 // React Hooks (primary API)
@@ -170,6 +176,9 @@ export { useHasProcessorInSignalChain } from './hooks/useHasProcessor';
 export { useAvailableProcessors } from './hooks/useAvailableProcessors';
 export { useProcessorBypass } from './hooks/useProcessorBypass';
 export type { UseProcessorBypassResult } from './hooks/useProcessorBypass';
+
+export { useProcessorOrder } from './hooks/useProcessorOrder';
+export type { UseProcessorOrderResult } from './hooks/useProcessorOrder';
 
 export { requestResize, useWindowResizeSync } from './hooks/useWindowResizeSync';
 export type { RequestResizeParams, RequestResizeResult } from './hooks/useWindowResizeSync';

@@ -20,7 +20,7 @@ use objc2_web_kit::{
     WKWebViewConfiguration,
 };
 
-use wavecraft_bridge::IpcHandler;
+use wavecraft_bridge::{IpcHandler, ProcessorOrderAccess};
 
 use super::assets;
 use super::bridge::PluginEditorBridge;
@@ -29,12 +29,24 @@ use super::webview::{WebViewConfig, WebViewHandle};
 /// Trait for handling IPC JSON messages (type-erased interface).
 trait JsonIpcHandler: Send + Sync {
     fn handle_json(&self, json: &str) -> String;
+
+    /// Handle a JSON message and return one or more response messages.
+    ///
+    /// The default implementation wraps `handle_json` in a single-element vec.
+    /// Override to return additional messages (e.g., push notifications).
+    fn handle_json_multi(&self, json: &str) -> Vec<String> {
+        vec![self.handle_json(json)]
+    }
 }
 
 // Implement for IpcHandler with any ParameterHost
 impl<H: wavecraft_bridge::ParameterHost> JsonIpcHandler for IpcHandler<H> {
     fn handle_json(&self, json: &str) -> String {
         IpcHandler::handle_json(self, json)
+    }
+
+    fn handle_json_multi(&self, json: &str) -> Vec<String> {
+        IpcHandler::handle_json_multi(self, json)
     }
 }
 
@@ -43,16 +55,16 @@ impl<H: wavecraft_bridge::ParameterHost> JsonIpcHandler for IpcHandler<H> {
 /// Holds the WKWebView and associated resources.
 ///
 /// Generic over `P` which must implement nih-plug's `Params` trait.
-pub struct MacOSWebView<P: Params> {
+pub struct MacOSWebView<P: Params + ProcessorOrderAccess> {
     webview: Rc<Mutex<Option<Retained<WKWebView>>>>,
     _handler: Arc<Mutex<IpcHandler<PluginEditorBridge<P>>>>,
 }
 
 // SAFETY: The webview will only be accessed from the main thread
 // The host ensures this by calling spawn() and other methods on the main thread
-unsafe impl<P: Params> Send for MacOSWebView<P> {}
+unsafe impl<P: Params + ProcessorOrderAccess> Send for MacOSWebView<P> {}
 
-impl<P: Params> WebViewHandle for MacOSWebView<P> {
+impl<P: Params + ProcessorOrderAccess> WebViewHandle for MacOSWebView<P> {
     fn evaluate_script(&self, script: &str) -> Result<(), String> {
         let webview_lock = self.webview.lock().unwrap();
         if let Some(webview) = webview_lock.as_ref() {
@@ -94,7 +106,7 @@ impl<P: Params> WebViewHandle for MacOSWebView<P> {
 }
 
 /// Create a macOS WebView editor.
-pub fn create_macos_webview<P: Params + 'static>(
+pub fn create_macos_webview<P: Params + ProcessorOrderAccess + 'static>(
     config: WebViewConfig<P>,
 ) -> Result<Box<dyn WebViewHandle>, String> {
     let mtm = MainThreadMarker::new()
@@ -177,7 +189,7 @@ fn create_webview_config(
 }
 
 /// Configure the WKWebView with IPC handler and scripts.
-fn configure_webview<P: Params + 'static>(
+fn configure_webview<P: Params + ProcessorOrderAccess + 'static>(
     webview: &Retained<WKWebView>,
     handler: Arc<Mutex<IpcHandler<PluginEditorBridge<P>>>>,
     mtm: MainThreadMarker,
@@ -337,28 +349,29 @@ declare_class!(
 
             nih_trace!("[IPC] Received message: {}", body_str);
 
-            // Handle the IPC message
-            let response = {
+            // Handle the IPC message — may return multiple messages (e.g., response + notification)
+            let messages = {
                 let handler = vars.handler.lock().unwrap();
-                handler.handle_json(&body_str)
+                handler.handle_json_multi(&body_str)
             };
 
-            nih_trace!("[IPC] Response: {}", response);
+            // Send each response message back to the WebView
+            for message in messages {
+                nih_trace!("[IPC] Sending message: {}", message);
 
-            // Send response back to WebView
-            let escaped_response = response
-                .replace('\\', "\\\\")
-                .replace('\'', "\\'")
-                .replace('\n', "\\n")
-                .replace('\r', "\\r");
+                let escaped = message
+                    .replace('\\', "\\\\")
+                    .replace('\'', "\\'")
+                    .replace('\n', "\\n")
+                    .replace('\r', "\\r");
 
-            let js_code = format!("globalThis.__WAVECRAFT_IPC__._receive('{}');", escaped_response);
-            let js_string = NSString::from_str(&js_code);
+                let js_code = format!("globalThis.__WAVECRAFT_IPC__._receive('{}');", escaped);
+                let js_string = NSString::from_str(&js_code);
 
-            // Get webview from weak reference
-            if let Some(wv) = vars.webview.load() {
-                unsafe {
-                    let _: () = msg_send![&*wv, evaluateJavaScript:&*js_string completionHandler:std::ptr::null_mut::<AnyObject>()];
+                if let Some(wv) = vars.webview.load() {
+                    unsafe {
+                        let _: () = msg_send![&*wv, evaluateJavaScript:&*js_string completionHandler:std::ptr::null_mut::<AnyObject>()];
+                    }
                 }
             }
         }
@@ -366,7 +379,7 @@ declare_class!(
 );
 
 impl IpcMessageHandler {
-    fn new<P: Params + 'static>(
+    fn new<P: Params + ProcessorOrderAccess + 'static>(
         handler: Arc<Mutex<IpcHandler<PluginEditorBridge<P>>>>,
         webview: &Retained<WKWebView>,
         mtm: MainThreadMarker,

@@ -137,6 +137,12 @@ pub const NOTIFICATION_PARAMETER_CHANGED: &str = "parameterChanged";
 pub const NOTIFICATION_METER_UPDATE: &str = "meterUpdate";
 /// Notification: Audio runtime status changed
 pub const NOTIFICATION_AUDIO_STATUS_CHANGED: &str = "audioStatusChanged";
+/// Method: Get current processor order
+pub const METHOD_GET_PROCESSOR_ORDER: &str = "getProcessorOrder";
+/// Method: Set processor order
+pub const METHOD_SET_PROCESSOR_ORDER: &str = "setProcessorOrder";
+/// Notification: Processor order changed (push from Rust to UI)
+pub const NOTIFICATION_PROCESSOR_ORDER_CHANGED: &str = "processorOrderChanged";
 
 // ============================================================================
 // Metering Types
@@ -317,6 +323,39 @@ pub struct RegisterAudioParams {
 pub struct RegisterAudioResult {
     /// Acknowledgment message
     pub status: String,
+}
+
+// ----------------------------------------------------------------------------
+// getProcessorOrder / setProcessorOrder
+// ----------------------------------------------------------------------------
+
+/// Result of getProcessorOrder request.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetProcessorOrderResult {
+    /// Ordered list of processor slot indices (as strings for JSON compatibility).
+    pub order: Vec<String>,
+}
+
+/// Parameters for setProcessorOrder request.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SetProcessorOrderParams {
+    /// Desired processor order — slot indices as strings (e.g. ["1", "0", "2"]).
+    pub order: Vec<String>,
+}
+
+/// Result of a successful setProcessorOrder request (empty body).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SetProcessorOrderResult {}
+
+// ----------------------------------------------------------------------------
+// Notification: processorOrderChanged
+// ----------------------------------------------------------------------------
+
+/// Notification sent when the active processor order changes (server → client).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcessorOrderChangedNotification {
+    /// New active processor order.
+    pub order: Vec<String>,
 }
 
 // ----------------------------------------------------------------------------

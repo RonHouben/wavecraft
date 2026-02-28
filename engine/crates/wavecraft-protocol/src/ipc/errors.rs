@@ -32,6 +32,10 @@ pub const ERROR_INTERNAL: i32 = -32603;
 pub const ERROR_PARAM_NOT_FOUND: i32 = -32000;
 /// Parameter value out of valid range
 pub const ERROR_PARAM_OUT_OF_RANGE: i32 = -32001;
+/// Processor order is invalid (wrong length or duplicate indices)
+pub const ERROR_INVALID_PROCESSOR_ORDER: i32 = -32002;
+/// Processor order state restore failed (loaded from invalid saved state)
+pub const ERROR_PROCESSOR_ORDER_RESTORE_FAILED: i32 = -32003;
 
 impl IpcError {
     /// Create a new error

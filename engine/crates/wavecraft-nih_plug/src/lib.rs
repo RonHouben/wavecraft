@@ -81,6 +81,9 @@ pub mod __nih {
 
     // Re-export the editor module for WavecraftEditor
     pub use super::editor;
+
+    // Re-export bridge types needed by proc-macro generated code
+    pub use wavecraft_bridge::{BridgeError, ProcessorOrderAccess};
 }
 
 /// Internal types used by generated code (not part of public API).

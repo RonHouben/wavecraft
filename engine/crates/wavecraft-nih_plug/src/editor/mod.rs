@@ -29,6 +29,11 @@ use wavecraft_metering::MeterConsumer;
     not(feature = "_param-discovery")
 ))]
 use wavecraft_processors::OscilloscopeFrameConsumer;
+#[cfg(all(
+    any(target_os = "macos", target_os = "windows"),
+    not(feature = "_param-discovery")
+))]
+use wavecraft_bridge::ProcessorOrderAccess;
 
 #[cfg(all(
     any(target_os = "macos", target_os = "windows"),
@@ -71,7 +76,7 @@ pub use webview::{WebViewConfig, WebViewHandle, create_webview};
     any(target_os = "macos", target_os = "windows"),
     not(feature = "_param-discovery")
 ))]
-pub struct WavecraftEditor<P: Params> {
+pub struct WavecraftEditor<P: Params + ProcessorOrderAccess> {
     params: Arc<P>,
     /// Meter consumer for audio metering - taken on first editor spawn
     meter_consumer: Mutex<Option<MeterConsumer>>,
@@ -86,7 +91,7 @@ pub struct WavecraftEditor<P: Params> {
     any(target_os = "macos", target_os = "windows"),
     not(feature = "_param-discovery")
 ))]
-impl<P: Params> WavecraftEditor<P> {
+impl<P: Params + ProcessorOrderAccess> WavecraftEditor<P> {
     /// Create a new WebView editor with specified dimensions.
     ///
     /// # Arguments
@@ -116,7 +121,7 @@ impl<P: Params> WavecraftEditor<P> {
     any(target_os = "macos", target_os = "windows"),
     not(feature = "_param-discovery")
 ))]
-impl<P: Params> Editor for WavecraftEditor<P> {
+impl<P: Params + ProcessorOrderAccess> Editor for WavecraftEditor<P> {
     fn spawn(
         &self,
         parent: ParentWindowHandle,
@@ -246,7 +251,7 @@ impl<P: Params> Editor for WavecraftEditor<P> {
     any(target_os = "macos", target_os = "windows"),
     not(feature = "_param-discovery")
 ))]
-pub fn create_webview_editor<P: Params + 'static>(
+pub fn create_webview_editor<P: Params + ProcessorOrderAccess + 'static>(
     params: Arc<P>,
     meter_consumer: Option<MeterConsumer>,
     oscilloscope_consumer: Option<OscilloscopeFrameConsumer>,

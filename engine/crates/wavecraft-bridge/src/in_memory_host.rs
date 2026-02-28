@@ -26,6 +26,8 @@ pub struct InMemoryParameterHost {
     values: RwLock<HashMap<String, f32>>,
     meter_provider: Option<Arc<dyn MeterProvider>>,
     oscilloscope_provider: Option<Arc<dyn OscilloscopeProvider>>,
+    /// Active processor order as slot indices (as strings, e.g. ["0", "1", "2"]).
+    processor_order: RwLock<Vec<String>>,
 }
 
 impl InMemoryParameterHost {
@@ -41,6 +43,7 @@ impl InMemoryParameterHost {
             values: RwLock::new(values),
             meter_provider: None,
             oscilloscope_provider: None,
+            processor_order: RwLock::new(Vec::new()),
         }
     }
 
@@ -219,6 +222,25 @@ impl ParameterHost for InMemoryParameterHost {
 
     fn get_audio_status(&self) -> Option<AudioRuntimeStatus> {
         None
+    }
+
+    fn get_processor_order(&self) -> Vec<String> {
+        self.processor_order
+            .read()
+            .map(|guard| guard.clone())
+            .unwrap_or_default()
+    }
+
+    fn set_processor_order(&self, order: &[String]) -> Result<(), BridgeError> {
+        if order.is_empty() {
+            return Err(BridgeError::InvalidProcessorOrder {
+                reason: "processor order must not be empty".to_string(),
+            });
+        }
+        if let Ok(mut guard) = self.processor_order.write() {
+            *guard = order.to_vec();
+        }
+        Ok(())
     }
 }
 

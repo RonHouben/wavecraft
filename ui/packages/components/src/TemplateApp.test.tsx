@@ -11,6 +11,7 @@ const mockUseRequestResize = vi.hoisted(() => vi.fn());
 const mockUseParameter = vi.hoisted(() => vi.fn());
 const mockUseHasProcessorInSignalChain = vi.hoisted(() => vi.fn());
 const mockUseOscilloscopeFrame = vi.hoisted(() => vi.fn());
+const mockUseProcessorOrder = vi.hoisted(() => vi.fn());
 
 vi.mock('@wavecraft/core', () => ({
   WavecraftProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -23,6 +24,7 @@ vi.mock('@wavecraft/core', () => ({
   useParameter: mockUseParameter,
   useHasProcessorInSignalChain: mockUseHasProcessorInSignalChain,
   useOscilloscopeFrame: mockUseOscilloscopeFrame,
+  useProcessorOrder: mockUseProcessorOrder,
 }));
 
 vi.mock('@wavecraft/components', async () => {
@@ -39,6 +41,19 @@ vi.mock('@wavecraft/components', async () => {
     ToneFilterProcessor: () => <div data-testid="processor-tone_filter" />,
     PassthroughProcessor: () => <div data-testid="processor-example" />,
     OscilloscopeProcessor: () => <div data-testid="oscilloscope" />,
+    // Mock SignalChain to avoid @dnd-kit dual-React instance issues in tests.
+    // DnD functionality is tested separately in SignalChain.test.tsx.
+    SignalChain: ({ processors }: { processors: Array<{ id: string; component: ReactNode }> }) => (
+      <ul role="list" aria-label="Signal chain processor order">
+        {processors.map((p) =>
+          p.component != null ? (
+            <li key={p.id} role="listitem">
+              {p.component}
+            </li>
+          ) : null
+        )}
+      </ul>
+    ),
   };
 });
 
@@ -47,6 +62,12 @@ import { App } from '../../../../sdk-template/ui/src/App';
 describe('sdk-template App layout', () => {
   it('renders test tone panel and resize handle', () => {
     mockUseHasProcessorInSignalChain.mockReturnValue(true);
+    mockUseProcessorOrder.mockReturnValue({
+      order: [],
+      setOrder: vi.fn(),
+      isLoading: false,
+      error: null,
+    });
     mockUseParameter.mockReturnValue({
       param: {
         id: 'test_parameter',
@@ -87,7 +108,7 @@ describe('sdk-template App layout', () => {
     expect(screen.getByTestId('processor-soft_clip')).toBeInTheDocument();
     expect(screen.getByTestId('processor-example')).toBeInTheDocument();
     expect(screen.getByTestId('processor-output_gain')).toBeInTheDocument();
-    expect(document.querySelector('.grid.grid-cols-12.gap-2.bg-purple-500')).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Signal chain processor order' })).toBeInTheDocument();
     expect(screen.getByLabelText('Resize window')).toBeInTheDocument();
   });
 });

@@ -9,6 +9,7 @@
 /ui/dist
 /ui/coverage
 /ui/packages/components/dist
+/ui/packages/components/node_modules
 /ui/packages/core/dist
 /dev-server/target
 /target/tmp

@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use nih_plug::prelude::*;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-use wavecraft_bridge::{BridgeError, ParameterHost};
+use wavecraft_bridge::{BridgeError, ParameterHost, ProcessorOrderAccess};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use wavecraft_metering::MeterConsumer;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -26,7 +26,7 @@ use wavecraft_protocol::{AudioRuntimeStatus, ParameterInfo, ParameterType};
 ///
 /// Only used on macOS/Windows where WebView is available.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub struct PluginEditorBridge<P: Params> {
+pub struct PluginEditorBridge<P: Params + ProcessorOrderAccess> {
     params: Arc<P>,
     context: Arc<dyn GuiContext>,
     /// Optional meter consumer - may be None if metering is disabled
@@ -38,7 +38,7 @@ pub struct PluginEditorBridge<P: Params> {
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-impl<P: Params> PluginEditorBridge<P> {
+impl<P: Params + ProcessorOrderAccess> PluginEditorBridge<P> {
     /// Create a new bridge with the given parameters and context.
     pub fn new(
         params: Arc<P>,
@@ -120,7 +120,7 @@ impl<P: Params> PluginEditorBridge<P> {
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-impl<P: Params> ParameterHost for PluginEditorBridge<P> {
+impl<P: Params + ProcessorOrderAccess> ParameterHost for PluginEditorBridge<P> {
     fn get_parameter(&self, id: &str) -> Option<ParameterInfo> {
         // Use nih-plug's param_map to find the parameter
         let param_map = self.params.param_map();
@@ -203,6 +203,14 @@ impl<P: Params> ParameterHost for PluginEditorBridge<P> {
     fn get_audio_status(&self) -> Option<AudioRuntimeStatus> {
         None
     }
+
+    fn get_processor_order(&self) -> Vec<String> {
+        self.params.get_order()
+    }
+
+    fn set_processor_order(&self, order: &[String]) -> Result<(), BridgeError> {
+        self.params.set_order(order)
+    }
 }
 
 #[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
@@ -249,6 +257,16 @@ mod tests {
                         _ => "Unknown".to_string(),
                     })),
             }
+        }
+    }
+
+    impl ProcessorOrderAccess for TestParams {
+        fn get_order(&self) -> Vec<String> {
+            vec![]
+        }
+
+        fn set_order(&self, _order: &[String]) -> Result<(), BridgeError> {
+            Ok(())
         }
     }
 

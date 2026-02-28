@@ -1,7 +1,7 @@
 //! Error types for the IPC bridge layer
 
 use thiserror::Error;
-use wavecraft_protocol::IpcError;
+use wavecraft_protocol::{ERROR_INVALID_PROCESSOR_ORDER, IpcError};
 
 /// Bridge-specific errors that occur during IPC handling
 #[derive(Debug, Error)]
@@ -29,6 +29,10 @@ pub enum BridgeError {
     /// Internal error in bridge logic
     #[error("Internal bridge error: {0}")]
     Internal(String),
+
+    /// Processor order is invalid (wrong length or not a valid permutation of slot indices)
+    #[error("Invalid processor order: {reason}")]
+    InvalidProcessorOrder { reason: String },
 }
 
 impl BridgeError {
@@ -41,6 +45,10 @@ impl BridgeError {
             Self::UnknownMethod(method) => IpcError::method_not_found(method),
             Self::InvalidParams { reason, .. } => IpcError::invalid_params(reason),
             Self::Internal(reason) => IpcError::internal_error(reason),
+            Self::InvalidProcessorOrder { reason } => IpcError::new(
+                ERROR_INVALID_PROCESSOR_ORDER,
+                format!("Invalid processor order: {reason}"),
+            ),
         }
     }
 }
