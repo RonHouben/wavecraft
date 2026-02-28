@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use console::style;
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::SystemTime;
@@ -16,6 +17,29 @@ const PROCESSOR_SIDECAR_FILENAME: &str = "wavecraft-processors.json";
 pub(super) struct PluginMetadata {
     pub(super) params: Vec<ParameterInfo>,
     pub(super) processors: Vec<ProcessorInfo>,
+}
+
+fn legacy_soft_clip_schema_reason(params: &[ParameterInfo]) -> Option<&'static str> {
+    let ids: HashSet<&str> = params.iter().map(|param| param.id.as_str()).collect();
+
+    if !ids.iter().any(|id| id.starts_with("soft_clip_")) {
+        return None;
+    }
+
+    if ids.contains("soft_clip_output_trim_db") {
+        return Some("legacy soft_clip_output_trim_db parameter id");
+    }
+
+    let has_drive = ids.contains("soft_clip_drive_db");
+    let has_output = ids.contains("soft_clip_output_db");
+    let has_mix = ids.contains("soft_clip_mix");
+    let has_tone = ids.contains("soft_clip_tone");
+
+    if has_drive && (!has_output || !has_mix || !has_tone) {
+        return Some("incomplete soft_clip parameter schema");
+    }
+
+    None
 }
 
 fn sidecar_json_path(engine_dir: &Path, file_name: &str) -> Result<PathBuf> {
@@ -204,13 +228,17 @@ pub(super) async fn load_plugin_metadata(engine_dir: &Path) -> Result<PluginMeta
         try_read_cached_params(engine_dir),
         try_read_cached_processors(engine_dir),
     ) {
-        println!(
-            "{} Loaded {} parameters and {} processors (cached)",
-            style("✓").green(),
-            params.len(),
-            processors.len()
-        );
-        return Ok(PluginMetadata { params, processors });
+        if let Some(reason) = legacy_soft_clip_schema_reason(&params) {
+            println!("  Sidecar cache stale ({reason}), rebuilding...");
+        } else {
+            println!(
+                "{} Loaded {} parameters and {} processors (cached)",
+                style("✓").green(),
+                params.len(),
+                processors.len()
+            );
+            return Ok(PluginMetadata { params, processors });
+        }
     }
 
     // 2. Build with _param-discovery feature (skip nih-plug exports)
@@ -288,8 +316,23 @@ mod tests {
     use std::thread;
     use std::time::Duration;
 
-    use super::{try_read_cached_params, write_sidecar_cache};
+    use super::{legacy_soft_clip_schema_reason, try_read_cached_params, write_sidecar_cache};
     use wavecraft_protocol::{ParameterInfo, ParameterType};
+
+    fn soft_clip_param(id: &str) -> ParameterInfo {
+        ParameterInfo {
+            id: id.to_string(),
+            name: id.to_string(),
+            param_type: ParameterType::Float,
+            value: 0.0,
+            default: 0.0,
+            min: 0.0,
+            max: 1.0,
+            unit: None,
+            group: Some("Saturator".to_string()),
+            variants: None,
+        }
+    }
 
     #[test]
     fn cached_sidecar_path_preserves_full_frequency_range_for_browser_dev_mode() {
@@ -443,5 +486,30 @@ mod tests {
             cached_after.is_none(),
             "cache should be invalidated when wavecraft-processors/Cargo.toml is newer"
         );
+    }
+
+    #[test]
+    fn soft_clip_schema_guard_rejects_legacy_output_trim_id() {
+        let params = vec![
+            soft_clip_param("soft_clip_bypass"),
+            soft_clip_param("soft_clip_drive_db"),
+            soft_clip_param("soft_clip_output_trim_db"),
+        ];
+
+        let reason = legacy_soft_clip_schema_reason(&params);
+        assert_eq!(reason, Some("legacy soft_clip_output_trim_db parameter id"));
+    }
+
+    #[test]
+    fn soft_clip_schema_guard_accepts_expanded_schema() {
+        let params = vec![
+            soft_clip_param("soft_clip_bypass"),
+            soft_clip_param("soft_clip_drive_db"),
+            soft_clip_param("soft_clip_output_db"),
+            soft_clip_param("soft_clip_mix"),
+            soft_clip_param("soft_clip_tone"),
+        ];
+
+        assert_eq!(legacy_soft_clip_schema_reason(&params), None);
     }
 }

@@ -54,6 +54,7 @@ pub(super) fn start_audio_io(
             processor: context.processor,
             buffer_size: context.buffer_size,
             input_channels: context.input_channels,
+            sample_rate_hz: context.actual_sample_rate,
             param_bridge: context.param_bridge,
             ring_producer,
             meter_producer,

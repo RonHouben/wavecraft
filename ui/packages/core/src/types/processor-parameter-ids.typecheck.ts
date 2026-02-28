@@ -6,9 +6,11 @@ import type {
   PassthroughProcessorId,
   SoftClipBypassParameterId,
   SoftClipDriveDbParameterId,
-  SoftClipOutputTrimDbParameterId,
+  SoftClipMixParameterId,
+  SoftClipOutputDbParameterId,
   SoftClipParameterIds,
   SoftClipProcessorId,
+  SoftClipToneParameterId,
   TestToneBypassParameterId,
   TestToneEnabledParameterId,
   TestToneFrequencyParameterId,
@@ -31,9 +33,11 @@ import type {
   PassthroughProcessorId as ExportedPassthroughProcessorId,
   SoftClipBypassParameterId as ExportedSoftClipBypassParameterId,
   SoftClipDriveDbParameterId as ExportedSoftClipDriveDbParameterId,
-  SoftClipOutputTrimDbParameterId as ExportedSoftClipOutputTrimDbParameterId,
+  SoftClipMixParameterId as ExportedSoftClipMixParameterId,
+  SoftClipOutputDbParameterId as ExportedSoftClipOutputDbParameterId,
   SoftClipParameterIds as ExportedSoftClipParameterIds,
   SoftClipProcessorId as ExportedSoftClipProcessorId,
+  SoftClipToneParameterId as ExportedSoftClipToneParameterId,
   TestToneBypassParameterId as ExportedTestToneBypassParameterId,
   TestToneEnabledParameterId as ExportedTestToneEnabledParameterId,
   TestToneFrequencyParameterId as ExportedTestToneFrequencyParameterId,
@@ -82,7 +86,9 @@ export type _ToneFilterCutoffParameterIdIsNotNever = Assert<
 export type _ToneFilterResonanceParameterIdIsNotNever = Assert<
   NotNever<ToneFilterResonanceQParameterId>
 >;
-export type _ExportedToneFilterProcessorIdIsNotNever = Assert<NotNever<ExportedToneFilterProcessorId>>;
+export type _ExportedToneFilterProcessorIdIsNotNever = Assert<
+  NotNever<ExportedToneFilterProcessorId>
+>;
 export type _ExportedToneFilterBypassParameterIdIsNotNever = Assert<
   NotNever<ExportedToneFilterBypassParameterId>
 >;
@@ -98,9 +104,9 @@ export type _ExportedToneFilterResonanceParameterIdIsNotNever = Assert<
 export type _SoftClipProcessorIdIsNotNever = Assert<NotNever<SoftClipProcessorId>>;
 export type _SoftClipBypassParameterIdIsNotNever = Assert<NotNever<SoftClipBypassParameterId>>;
 export type _SoftClipDriveDbParameterIdIsNotNever = Assert<NotNever<SoftClipDriveDbParameterId>>;
-export type _SoftClipOutputTrimDbParameterIdIsNotNever = Assert<
-  NotNever<SoftClipOutputTrimDbParameterId>
->;
+export type _SoftClipOutputDbParameterIdIsNotNever = Assert<NotNever<SoftClipOutputDbParameterId>>;
+export type _SoftClipMixParameterIdIsNotNever = Assert<NotNever<SoftClipMixParameterId>>;
+export type _SoftClipToneParameterIdIsNotNever = Assert<NotNever<SoftClipToneParameterId>>;
 export type _ExportedSoftClipProcessorIdIsNotNever = Assert<NotNever<ExportedSoftClipProcessorId>>;
 export type _ExportedSoftClipBypassParameterIdIsNotNever = Assert<
   NotNever<ExportedSoftClipBypassParameterId>
@@ -108,13 +114,21 @@ export type _ExportedSoftClipBypassParameterIdIsNotNever = Assert<
 export type _ExportedSoftClipDriveDbParameterIdIsNotNever = Assert<
   NotNever<ExportedSoftClipDriveDbParameterId>
 >;
-export type _ExportedSoftClipOutputTrimDbParameterIdIsNotNever = Assert<
-  NotNever<ExportedSoftClipOutputTrimDbParameterId>
+export type _ExportedSoftClipOutputDbParameterIdIsNotNever = Assert<
+  NotNever<ExportedSoftClipOutputDbParameterId>
+>;
+export type _ExportedSoftClipMixParameterIdIsNotNever = Assert<
+  NotNever<ExportedSoftClipMixParameterId>
+>;
+export type _ExportedSoftClipToneParameterIdIsNotNever = Assert<
+  NotNever<ExportedSoftClipToneParameterId>
 >;
 export type _TestToneProcessorIdIsNotNever = Assert<NotNever<TestToneProcessorId>>;
 export type _TestToneBypassParameterIdIsNotNever = Assert<NotNever<TestToneBypassParameterId>>;
 export type _TestToneEnabledParameterIdIsNotNever = Assert<NotNever<TestToneEnabledParameterId>>;
-export type _TestToneFrequencyParameterIdIsNotNever = Assert<NotNever<TestToneFrequencyParameterId>>;
+export type _TestToneFrequencyParameterIdIsNotNever = Assert<
+  NotNever<TestToneFrequencyParameterId>
+>;
 export type _TestToneLevelParameterIdIsNotNever = Assert<NotNever<TestToneLevelParameterId>>;
 export type _ExportedTestToneProcessorIdIsNotNever = Assert<NotNever<ExportedTestToneProcessorId>>;
 export type _ExportedTestToneBypassParameterIdIsNotNever = Assert<
@@ -182,8 +196,16 @@ export type _ExportedSoftClipDriveDbMatchesInternal = Assert<
   Equal<ExportedSoftClipDriveDbParameterId, SoftClipDriveDbParameterId>
 >;
 
-export type _ExportedSoftClipOutputTrimDbMatchesInternal = Assert<
-  Equal<ExportedSoftClipOutputTrimDbParameterId, SoftClipOutputTrimDbParameterId>
+export type _ExportedSoftClipOutputDbMatchesInternal = Assert<
+  Equal<ExportedSoftClipOutputDbParameterId, SoftClipOutputDbParameterId>
+>;
+
+export type _ExportedSoftClipMixMatchesInternal = Assert<
+  Equal<ExportedSoftClipMixParameterId, SoftClipMixParameterId>
+>;
+
+export type _ExportedSoftClipToneMatchesInternal = Assert<
+  Equal<ExportedSoftClipToneParameterId, SoftClipToneParameterId>
 >;
 
 export type _ExportedSoftClipParameterIdsMatchInternal = Assert<
@@ -278,8 +300,16 @@ export type _SoftClipDriveDbSuffixIsAccepted = Assert<
   'soft_clip_drive_db' extends SoftClipDriveDbParameterId ? true : false
 >;
 
-export type _SoftClipOutputTrimDbSuffixIsAccepted = Assert<
-  'soft_clip_output_trim_db' extends SoftClipOutputTrimDbParameterId ? true : false
+export type _SoftClipOutputDbSuffixIsAccepted = Assert<
+  'soft_clip_output_db' extends SoftClipOutputDbParameterId ? true : false
+>;
+
+export type _SoftClipMixSuffixIsAccepted = Assert<
+  'soft_clip_mix' extends SoftClipMixParameterId ? true : false
+>;
+
+export type _SoftClipToneSuffixIsAccepted = Assert<
+  'soft_clip_tone' extends SoftClipToneParameterId ? true : false
 >;
 
 export type _SoftClipInvalidSuffixIsRejected = Assert<
@@ -316,7 +346,9 @@ export type _SoftClipParameterIdsContract = Assert<
     {
       readonly bypass: SoftClipBypassParameterId;
       readonly driveDb: SoftClipDriveDbParameterId;
-      readonly outputTrimDb: SoftClipOutputTrimDbParameterId;
+      readonly outputDb: SoftClipOutputDbParameterId;
+      readonly mix: SoftClipMixParameterId;
+      readonly tone: SoftClipToneParameterId;
     }
   >
 >;

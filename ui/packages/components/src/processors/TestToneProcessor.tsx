@@ -41,40 +41,40 @@ export function TestToneProcessor({
       title="Test Tone"
       className={mergeClassNames('h-full w-full', className)}
     >
-      <Row className="flex-nowrap items-start gap-1.5">
-        <Col className="h-auto items-center justify-start self-start">
-          <div className="mb-2 flex w-full items-center justify-between gap-2">
-            <span className="text-type-xs text-plugin-text-secondary">
-              {enabledParameter?.name ?? 'Enabled'}
-            </span>
-            <Switch
-              id={`param-${enabledParameter?.id}-switch`}
-              checked={Boolean(enabledParameter?.value)}
-              size="sm"
-              onChange={setEnabledValue}
-            />
-          </div>
-          <Knob
-            id={`param-${frequencyParameter?.id}`}
-            label={frequencyParameter?.name ?? ''}
-            value={frequencyParameter?.value ?? 0}
-            min={frequencyParameter?.min ?? 0}
-            max={frequencyParameter?.max ?? 0}
-            unit={frequencyParameter?.unit ?? ''}
-            size="sm"
-            onChange={setFrequencyValue}
-          />
-          <Knob
-            id={`param-${levelParameter?.id}`}
-            label={levelParameter?.name ?? ''}
-            value={levelParameter?.value ?? 0}
-            min={levelParameter?.min ?? 0}
-            max={levelParameter?.max ?? 0}
-            unit={levelParameter?.unit ?? ''}
-            size="sm"
-            onChange={setLevelValue}
-          />
-        </Col>
+      <Row className="flex flex-row gap-2">
+        <span className="text-type-xs text-plugin-text-secondary">
+          {enabledParameter?.name ?? 'Enabled'}
+        </span>
+        <Switch
+          id={`param-${enabledParameter?.id}-switch`}
+          checked={Boolean(enabledParameter?.value)}
+          size="sm"
+          onChange={setEnabledValue}
+        />
+      </Row>
+      <Row className="flex flex-wrap gap-2">
+        <Knob
+          id={`param-${frequencyParameter?.id}`}
+          label={frequencyParameter?.name ?? ''}
+          value={frequencyParameter?.value ?? 0}
+          defaultValue={frequencyParameter?.default ?? frequencyParameter?.min ?? 0}
+          min={frequencyParameter?.min ?? 0}
+          max={frequencyParameter?.max ?? 0}
+          unit={frequencyParameter?.unit ?? ''}
+          size="sm"
+          onChange={setFrequencyValue}
+        />
+        <Knob
+          id={`param-${levelParameter?.id}`}
+          label={levelParameter?.name ?? ''}
+          value={levelParameter?.value ?? 0}
+          defaultValue={levelParameter?.default ?? levelParameter?.min ?? 0}
+          min={levelParameter?.min ?? 0}
+          max={levelParameter?.max ?? 0}
+          unit={levelParameter?.unit ?? ''}
+          size="sm"
+          onChange={setLevelValue}
+        />
       </Row>
     </ProcessorCard>
   );

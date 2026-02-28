@@ -20,6 +20,8 @@ import {
   Col,
   GainProcessor,
   PassthroughProcessor,
+  SaturatorProcessor,
+  ToneFilterProcessor,
 } from '@wavecraft/components';
 
 export function App(): JSX.Element {
@@ -49,47 +51,55 @@ export function App(): JSX.Element {
       </div>
 
       {/* Main Content */}
-      <Col className="grid grid-cols-12 gap-4 px-4">
-        <Row className="col-span-12 grid grid-cols-12 justify-center gap-4">
-          <TestToneProcessor className="col-span-3" hideWhenNotInSignalChain />
-          <GainProcessor
-            className="col-span-3"
-            processorId="input_trim"
-            title="Input Trim"
-            subtitle="My Input Trim"
+      <Col className="gap-2 bg-purple-500 px-4 sm:bg-red-500 md:bg-amber-500 lg:bg-green-500">
+        <Row className="gap-2">
+          <TestToneProcessor
+            className="col-span-full sm:col-span-8 md:col-span-4"
             hideWhenNotInSignalChain
           />
+          <Col className="col-span-8 gap-2 sm:col-span-4 md:col-span-4">
+            <GainProcessor
+              className="col-span-full"
+              processorId="input_trim"
+              title="Input Trim"
+              subtitle="My Input Trim"
+              hideWhenNotInSignalChain
+            />
+            <GainProcessor
+              className="col-span-full"
+              processorId="output_gain"
+              title="Output Gain"
+              subtitle="My Output Gain"
+              hideWhenNotInSignalChain
+            />
+          </Col>
           <PassthroughProcessor
             processorId="passthrough"
-            className="col-span-3"
+            className="col-span-4 sm:col-span-12 md:col-span-4"
             hideWhenNotInSignalChain
             title="Passthrough"
           />
-          <GainProcessor
-            className="col-span-3"
-            processorId="output_gain"
-            title="Output Gain"
-            subtitle="My Output Gain"
+          <SaturatorProcessor
+            className="col-span-full sm:col-span-full md:col-span-6"
+            hideWhenNotInSignalChain
+          />
+          <ToneFilterProcessor
+            className="col-span-full sm:col-span-full md:col-span-6"
             hideWhenNotInSignalChain
           />
         </Row>
-        <Row className="col-span-12 grid grid-cols-12">
-          <OscilloscopeProcessor className="col-span-12" hideWhenNotInSignalChain />
-          {/* <ExampleProcessor hideWhenNotInSignalChain /> */}
-          {/* <SmartProcessor id="output_gain" title="Output Gain" hideWhenNotInSignalChain /> */}
-          {/* <OscilloscopeProcessor hideWhenNotInSignalChain /> */}
-        </Row>
-        <Row className="col-span-12 grid grid-cols-12 justify-center gap-4">
-          {/* Metering Section */}
-          <Meter className="col-span-6 h-full justify-center" connected={connected} frame={frame} />
-
-          <LatencyMonitor
-            className="col-span-6"
-            latency={latency.latency}
-            avg={latency.avg}
-            max={latency.max}
-            count={latency.count}
-          />
+        <Row className="col-span-full gap-2">
+          <OscilloscopeProcessor className="col-span-full md:col-span-6" hideWhenNotInSignalChain />
+          <Col className="col-span-full gap-2 md:col-span-6">
+            <Meter className="col-span-full justify-center" connected={connected} frame={frame} />
+            <LatencyMonitor
+              className="col-span-full justify-center"
+              latency={latency.latency}
+              avg={latency.avg}
+              max={latency.max}
+              count={latency.count}
+            />
+          </Col>
         </Row>
       </Col>
 

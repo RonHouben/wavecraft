@@ -18,7 +18,17 @@ function fireDragChangeWithoutShiftMetadata(input: HTMLElement, value: string): 
 
 describe('Knob', () => {
   it('toggles precision visual-state metadata while Shift precision is active', () => {
-    render(<Knob id="hint-knob" label="Hint" value={0.5} min={0} max={1} onChange={vi.fn()} />);
+    render(
+      <Knob
+        id="hint-knob"
+        label="Hint"
+        value={0.5}
+        defaultValue={0.5}
+        min={0}
+        max={1}
+        onChange={vi.fn()}
+      />
+    );
 
     const input = screen.getByLabelText('Hint');
     expect(input).toHaveAttribute('data-precision-active', 'false');
@@ -32,7 +42,16 @@ describe('Knob', () => {
 
   it('renders with accessible label and formatted value', () => {
     render(
-      <Knob id="gain-knob" label="Gain" value={0.5} min={0} max={1} unit="%" onChange={vi.fn()} />
+      <Knob
+        id="gain-knob"
+        label="Gain"
+        value={0.5}
+        defaultValue={0.5}
+        min={0}
+        max={1}
+        unit="%"
+        onChange={vi.fn()}
+      />
     );
 
     expect(screen.getByLabelText('Gain')).toBeInTheDocument();
@@ -43,7 +62,15 @@ describe('Knob', () => {
     const onChange = vi.fn();
 
     render(
-      <Knob id="freq-knob" label="Freq" value={440} min={20} max={20000} onChange={onChange} />
+      <Knob
+        id="freq-knob"
+        label="Freq"
+        value={440}
+        defaultValue={440}
+        min={20}
+        max={20000}
+        onChange={onChange}
+      />
     );
 
     const input = screen.getByLabelText('Freq');
@@ -55,7 +82,17 @@ describe('Knob', () => {
   it('keeps normal pointer drag behavior unchanged when Shift is not held', () => {
     const onChange = vi.fn();
 
-    render(<Knob id="drag-knob" label="Drag" value={0.5} min={0} max={1} onChange={onChange} />);
+    render(
+      <Knob
+        id="drag-knob"
+        label="Drag"
+        value={0.5}
+        defaultValue={0.5}
+        min={0}
+        max={1}
+        onChange={onChange}
+      />
+    );
 
     const input = screen.getByLabelText('Drag');
 
@@ -75,6 +112,7 @@ describe('Knob', () => {
         id="shift-drag-knob"
         label="Shift Drag"
         value={0.5}
+        defaultValue={0.5}
         min={0}
         max={1}
         onChange={onChange}
@@ -100,6 +138,7 @@ describe('Knob', () => {
         id="shift-metadata-omitted-knob"
         label="Shift Metadata Omitted"
         value={0.5}
+        defaultValue={0.5}
         min={0}
         max={1}
         onChange={onChange}
@@ -125,6 +164,7 @@ describe('Knob', () => {
         id="shift-keyup-exits-knob"
         label="Shift Keyup Exits"
         value={0.5}
+        defaultValue={0.5}
         min={0}
         max={1}
         onChange={onChange}
@@ -153,6 +193,7 @@ describe('Knob', () => {
         id="shift-toggle-drag-knob"
         label="Shift Toggle Drag"
         value={0.5}
+        defaultValue={0.5}
         min={0}
         max={1}
         onChange={onChange}
@@ -182,6 +223,7 @@ describe('Knob', () => {
         id="drag-shift-press-knob"
         label="Drag Shift Press"
         value={0.5}
+        defaultValue={0.5}
         min={0}
         max={1}
         onChange={vi.fn()}
@@ -205,6 +247,7 @@ describe('Knob', () => {
         id="drag-shift-release-knob"
         label="Drag Shift Release"
         value={0.5}
+        defaultValue={0.5}
         min={0}
         max={1}
         onChange={vi.fn()}
@@ -228,6 +271,7 @@ describe('Knob', () => {
         id="gain-knob"
         label="Gain"
         value={0.5}
+        defaultValue={0.5}
         min={0}
         max={1}
         state="loading"
@@ -246,6 +290,7 @@ describe('Knob', () => {
         id="mix-knob"
         label="Mix"
         value={0.5}
+        defaultValue={0.5}
         min={0}
         max={1}
         state="disabled"
@@ -264,6 +309,7 @@ describe('Knob', () => {
         id="keyboard-knob"
         label="Keyboard"
         value={0.5}
+        defaultValue={0.5}
         min={0}
         max={1}
         step={0.1}
@@ -296,6 +342,7 @@ describe('Knob', () => {
         id="precision-knob"
         label="Precision"
         value={0.5}
+        defaultValue={0.5}
         min={0}
         max={1}
         step={0.1}
@@ -327,6 +374,7 @@ describe('Knob', () => {
         id="precision-modifier-fallback-knob"
         label="Precision Modifier Fallback"
         value={0.5}
+        defaultValue={0.5}
         min={0}
         max={1}
         step={0.1}
@@ -355,6 +403,7 @@ describe('Knob', () => {
         id="wide-range-knob"
         label="Wide"
         value={1000}
+        defaultValue={1000}
         min={20}
         max={20000}
         step={0.001}
@@ -391,6 +440,7 @@ describe('Knob', () => {
         id="wide-precision-knob"
         label="Wide Precision"
         value={1000}
+        defaultValue={1000}
         min={20}
         max={20000}
         step={0.001}
@@ -425,6 +475,7 @@ describe('Knob', () => {
         id="freq-knob"
         label="Frequency"
         value={9756.43}
+        defaultValue={9756.43}
         min={20}
         max={20000}
         unit="Hz"
@@ -444,6 +495,7 @@ describe('Knob', () => {
         id="freq-layout-knob"
         label="Frequency Layout"
         value={20}
+        defaultValue={20}
         min={20}
         max={20000}
         unit="Hz"
@@ -461,6 +513,7 @@ describe('Knob', () => {
         id="freq-layout-small-knob"
         label="Frequency Layout Small"
         value={20}
+        defaultValue={20}
         min={20}
         max={20000}
         unit="Hz"
@@ -480,5 +533,131 @@ describe('Knob', () => {
     expect(valueLabel).toHaveStyle({ width: '11ch' });
     expect(valueRow).not.toBeNull();
     expect(valueRow).not.toHaveClass('overflow-hidden');
+  });
+
+  it('resets to default value on knob control double-click', () => {
+    const onChange = vi.fn();
+
+    render(
+      <Knob
+        id="reset-knob"
+        label="Reset"
+        value={0.8}
+        defaultValue={0.25}
+        min={0}
+        max={1}
+        onChange={onChange}
+      />
+    );
+
+    fireEvent.doubleClick(screen.getByRole('slider', { name: 'Reset' }));
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith(0.25);
+  });
+
+  it('clamps double-click reset value to min/max before emitting onChange', () => {
+    const onChange = vi.fn();
+
+    render(
+      <Knob
+        id="reset-clamp-knob"
+        label="Reset Clamp"
+        value={0.4}
+        defaultValue={2}
+        min={0}
+        max={1}
+        onChange={onChange}
+      />
+    );
+
+    fireEvent.doubleClick(screen.getByRole('slider', { name: 'Reset Clamp' }));
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith(1);
+  });
+
+  it('does not reset on double-click when state is loading', () => {
+    const onChange = vi.fn();
+
+    render(
+      <Knob
+        id="reset-loading-knob"
+        label="Reset Loading"
+        value={0.8}
+        defaultValue={0.2}
+        min={0}
+        max={1}
+        state="loading"
+        onChange={onChange}
+      />
+    );
+
+    fireEvent.doubleClick(screen.getByRole('slider', { name: 'Reset Loading' }));
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('does not reset on double-click when state is disabled', () => {
+    const onChange = vi.fn();
+
+    render(
+      <Knob
+        id="reset-state-disabled-knob"
+        label="Reset State Disabled"
+        value={0.8}
+        defaultValue={0.2}
+        min={0}
+        max={1}
+        state="disabled"
+        onChange={onChange}
+      />
+    );
+
+    fireEvent.doubleClick(screen.getByRole('slider', { name: 'Reset State Disabled' }));
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('does not reset on double-click when value is already at default', () => {
+    const onChange = vi.fn();
+
+    render(
+      <Knob
+        id="reset-noop-knob"
+        label="Reset No-op"
+        value={0.25}
+        defaultValue={0.25}
+        min={0}
+        max={1}
+        onChange={onChange}
+      />
+    );
+
+    fireEvent.doubleClick(screen.getByRole('slider', { name: 'Reset No-op' }));
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('does not reset on double-click when disabled or when label is double-clicked', () => {
+    const onChange = vi.fn();
+
+    render(
+      <Knob
+        id="reset-disabled-knob"
+        label="Reset Disabled"
+        value={0.8}
+        defaultValue={0.2}
+        min={0}
+        max={1}
+        disabled
+        onChange={onChange}
+      />
+    );
+
+    fireEvent.doubleClick(screen.getByRole('slider', { name: 'Reset Disabled' }));
+    fireEvent.doubleClick(screen.getByText('Reset Disabled'));
+
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

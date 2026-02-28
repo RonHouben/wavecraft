@@ -11,6 +11,7 @@ export interface KnobProps {
   readonly id: string;
   readonly label: string;
   readonly value: number;
+  readonly defaultValue: number;
   readonly min: number;
   readonly max: number;
   readonly onChange: (value: number) => void;
@@ -111,6 +112,7 @@ function getReservedValueWidthCh(min: number, max: number, unit?: string): numbe
 }
 
 export function Knob({
+  defaultValue,
   disabled = false,
   id,
   label,
@@ -135,6 +137,7 @@ export function Knob({
   const isError = state === 'error';
   const isDisabled = disabled || isLoading || state === 'disabled';
   const clampedValue = clamp(value, min, max);
+  const clampedDefaultValue = clamp(defaultValue, min, max);
   const normalized = (clampedValue - min) / (max - min || 1);
   const angle = KNOB_SWEEP_START_DEG + normalized * KNOB_SWEEP_RANGE_DEG;
   const badgeLabel = getStateBadgeLabel(pluginState);
@@ -303,6 +306,21 @@ export function Knob({
           }}
           onBlur={(): void => {
             setIsPrecisionVisualActive(false);
+          }}
+          onDoubleClick={(): void => {
+            if (isDisabled) {
+              return;
+            }
+
+            setIsPrecisionVisualActive(false);
+            resetShiftDragAnchors();
+            isPointerDragActiveRef.current = false;
+            isShiftPressedDuringDragRef.current = false;
+
+            if (clampedDefaultValue !== clampedValue) {
+              latestOutputValueRef.current = clampedDefaultValue;
+              onChange(clampedDefaultValue);
+            }
           }}
           onChange={(event): void => {
             const rawValue = Number.parseFloat(event.currentTarget.value);

@@ -42,6 +42,7 @@ export function GainProcessor({
             id={`param-${levelParameter?.id}`}
             label={levelParameter?.name ?? ''}
             value={levelParameter?.value ?? 0}
+            defaultValue={levelParameter?.default ?? levelParameter?.min ?? 0}
             min={levelParameter?.min ?? 0}
             max={levelParameter?.max ?? 0}
             unit={levelParameter?.unit ?? ''}

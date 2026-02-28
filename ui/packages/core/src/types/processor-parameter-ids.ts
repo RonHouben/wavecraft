@@ -60,7 +60,9 @@ export type ToneFilterResonanceQParameterId = ParameterIdForProcessorSuffix<
 
 type SoftClipProcessorIdDerived = ProcessorIdsWithParameterSuffix<'_bypass'> &
   ProcessorIdsWithParameterSuffix<'_drive_db'> &
-  ProcessorIdsWithParameterSuffix<'_output_trim_db'>;
+  ProcessorIdsWithParameterSuffix<'_output_db'> &
+  ProcessorIdsWithParameterSuffix<'_mix'> &
+  ProcessorIdsWithParameterSuffix<'_tone'>;
 
 export type SoftClipProcessorId = Extract<SoftClipProcessorIdDerived, string>;
 
@@ -74,10 +76,14 @@ export type SoftClipDriveDbParameterId = ParameterIdForProcessorSuffix<
   '_drive_db'
 >;
 
-export type SoftClipOutputTrimDbParameterId = ParameterIdForProcessorSuffix<
+export type SoftClipOutputDbParameterId = ParameterIdForProcessorSuffix<
   SoftClipProcessorId,
-  '_output_trim_db'
+  '_output_db'
 >;
+
+export type SoftClipMixParameterId = ParameterIdForProcessorSuffix<SoftClipProcessorId, '_mix'>;
+
+export type SoftClipToneParameterId = ParameterIdForProcessorSuffix<SoftClipProcessorId, '_tone'>;
 
 type TestToneProcessorIdDerived = ProcessorIdsWithParameterSuffix<'_bypass'> &
   ProcessorIdsWithParameterSuffix<'_enabled'> &
@@ -113,7 +119,9 @@ export interface ToneFilterParameterIds {
 export interface SoftClipParameterIds {
   readonly bypass: SoftClipBypassParameterId;
   readonly driveDb: SoftClipDriveDbParameterId;
-  readonly outputTrimDb: SoftClipOutputTrimDbParameterId;
+  readonly outputDb: SoftClipOutputDbParameterId;
+  readonly mix: SoftClipMixParameterId;
+  readonly tone: SoftClipToneParameterId;
 }
 
 export interface PassthroughParameterIds {

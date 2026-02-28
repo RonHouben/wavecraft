@@ -81,3 +81,6 @@ export type { PassthroughProcessorProps } from './processors/PassthroughProcesso
 
 export { ToneFilterProcessor } from './processors/ToneFilterProcessor';
 export type { ToneFilterProcessorProps } from './processors/ToneFilterProcessor';
+
+export { SaturatorProcessor } from './processors/SaturatorProcessor';
+export type { SaturatorProcessorProps } from './processors/SaturatorProcessor';

@@ -20,6 +20,7 @@ describe('OscilloscopeProcessor', () => {
       moveTo: vi.fn(),
       lineTo: vi.fn(),
       stroke: vi.fn(),
+      setTransform: vi.fn(),
       fillStyle: '#000',
       strokeStyle: '#000',
       lineWidth: 1,

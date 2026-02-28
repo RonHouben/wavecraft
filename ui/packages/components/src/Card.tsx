@@ -35,7 +35,10 @@ function CardHeader({
   ...props
 }: Readonly<CardHeaderProps>): React.JSX.Element {
   return (
-    <div className={mergeClassNames('flex flex-row justify-between gap-1.5', className)} {...props}>
+    <div
+      className={mergeClassNames('flex flex-row flex-wrap justify-between gap-1.5', className)}
+      {...props}
+    >
       {children}
     </div>
   );

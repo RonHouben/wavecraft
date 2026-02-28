@@ -23,6 +23,7 @@ pub(super) struct InputStreamBuildContext {
     pub(super) processor: Box<dyn DevAudioProcessor>,
     pub(super) buffer_size: usize,
     pub(super) input_channels: usize,
+    pub(super) sample_rate_hz: f32,
     pub(super) param_bridge: Arc<AtomicParameterBridge>,
     pub(super) ring_producer: rtrb::Producer<f32>,
     pub(super) meter_producer: rtrb::Producer<MeterUpdateNotification>,

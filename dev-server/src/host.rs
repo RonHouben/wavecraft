@@ -68,6 +68,18 @@ impl DevServerHost {
         }
     }
 
+    #[cfg(feature = "audio")]
+    fn bridge_missing_parameter_ids(
+        bridge: &AtomicParameterBridge,
+        parameters: &[ParameterInfo],
+    ) -> Vec<String> {
+        parameters
+            .iter()
+            .filter(|parameter| bridge.read(&parameter.id).is_none())
+            .map(|parameter| parameter.id.clone())
+            .collect()
+    }
+
     /// Create a new dev server host with parameter metadata.
     ///
     /// # Arguments
@@ -123,6 +135,17 @@ impl DevServerHost {
     /// Returns an error if parameter replacement fails (e.g., unrecoverable
     /// lock poisoning).
     pub fn replace_parameters(&self, new_params: Vec<ParameterInfo>) -> Result<(), String> {
+        #[cfg(feature = "audio")]
+        if let Some(ref bridge) = self.param_bridge {
+            let missing_param_ids = Self::bridge_missing_parameter_ids(bridge, &new_params);
+            if !missing_param_ids.is_empty() {
+                return Err(format!(
+                    "Parameter schema changed during hot-reload, but audio bridge cannot map new IDs yet. Missing IDs in bridge: {}. Restart `wavecraft start` to apply the new parameter schema.",
+                    missing_param_ids.join(", ")
+                ));
+            }
+        }
+
         self.inner.replace_parameters(new_params)?;
 
         #[cfg(feature = "audio")]
@@ -414,5 +437,137 @@ mod tests {
             .expect("audio status should always be present in dev host");
         assert_eq!(stored.phase, AudioRuntimePhase::Initializing);
         assert_eq!(stored.buffer_size, Some(256));
+    }
+    #[cfg(feature = "audio")]
+    fn soft_clip_bridge_seed_params() -> Vec<ParameterInfo> {
+        vec![
+            ParameterInfo {
+                id: "soft_clip_bypass".to_string(),
+                name: "Bypass".to_string(),
+                param_type: ParameterType::Bool,
+                value: 0.0,
+                default: 0.0,
+                min: 0.0,
+                max: 1.0,
+                unit: None,
+                group: Some("Saturator".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "soft_clip_drive_db".to_string(),
+                name: "Drive".to_string(),
+                param_type: ParameterType::Float,
+                value: 12.0,
+                default: 12.0,
+                min: 0.0,
+                max: 30.0,
+                unit: Some("dB".to_string()),
+                group: Some("Saturator".to_string()),
+                variants: None,
+            },
+        ]
+    }
+
+    #[cfg(feature = "audio")]
+    fn soft_clip_expanded_params() -> Vec<ParameterInfo> {
+        vec![
+            ParameterInfo {
+                id: "soft_clip_bypass".to_string(),
+                name: "Bypass".to_string(),
+                param_type: ParameterType::Bool,
+                value: 0.0,
+                default: 0.0,
+                min: 0.0,
+                max: 1.0,
+                unit: None,
+                group: Some("Saturator".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "soft_clip_drive_db".to_string(),
+                name: "Drive".to_string(),
+                param_type: ParameterType::Float,
+                value: 12.0,
+                default: 12.0,
+                min: 0.0,
+                max: 30.0,
+                unit: Some("dB".to_string()),
+                group: Some("Saturator".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "soft_clip_output_db".to_string(),
+                name: "Output".to_string(),
+                param_type: ParameterType::Float,
+                value: 0.0,
+                default: 0.0,
+                min: -24.0,
+                max: 24.0,
+                unit: Some("dB".to_string()),
+                group: Some("Saturator".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "soft_clip_mix".to_string(),
+                name: "Mix".to_string(),
+                param_type: ParameterType::Float,
+                value: 1.0,
+                default: 1.0,
+                min: 0.0,
+                max: 1.0,
+                unit: Some("%".to_string()),
+                group: Some("Saturator".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "soft_clip_tone".to_string(),
+                name: "Tone".to_string(),
+                param_type: ParameterType::Float,
+                value: 0.55,
+                default: 0.55,
+                min: 0.0,
+                max: 1.0,
+                unit: Some("%".to_string()),
+                group: Some("Saturator".to_string()),
+                variants: None,
+            },
+        ]
+    }
+
+    #[cfg(feature = "audio")]
+    #[test]
+    fn replace_parameters_rejects_bridge_schema_drift_for_new_soft_clip_controls() {
+        let bridge = Arc::new(AtomicParameterBridge::new(&soft_clip_bridge_seed_params()));
+        let host = DevServerHost::with_param_bridge(soft_clip_bridge_seed_params(), bridge);
+
+        let result = host.replace_parameters(soft_clip_expanded_params());
+        assert!(result.is_err(), "expected schema drift to be rejected");
+
+        let error = result.expect_err("schema drift should return an error");
+        assert!(error.contains("soft_clip_output_db"));
+        assert!(error.contains("soft_clip_mix"));
+        assert!(error.contains("soft_clip_tone"));
+
+        // Existing bridge-backed controls remain available.
+        assert!(host.get_parameter("soft_clip_drive_db").is_some());
+        // New controls should not appear after rejected replacement.
+        assert!(host.get_parameter("soft_clip_output_db").is_none());
+        assert!(host.get_parameter("soft_clip_mix").is_none());
+        assert!(host.get_parameter("soft_clip_tone").is_none());
+    }
+
+    #[cfg(feature = "audio")]
+    #[test]
+    fn replace_parameters_accepts_when_bridge_schema_matches() {
+        let params = soft_clip_expanded_params();
+        let bridge = Arc::new(AtomicParameterBridge::new(&params));
+        let host = DevServerHost::with_param_bridge(params.clone(), bridge);
+
+        host.replace_parameters(params)
+            .expect("matching schema should replace parameters");
+
+        assert!(host.get_parameter("soft_clip_output_db").is_some());
+        assert!(host.get_parameter("soft_clip_mix").is_some());
+        assert!(host.get_parameter("soft_clip_tone").is_some());
     }
 }

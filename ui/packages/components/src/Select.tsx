@@ -68,7 +68,7 @@ export function Select<T extends SelectValue = string>({
   const selectedOptionIndex = getSelectedOptionIndex(options, value);
 
   return (
-    <div className="inline-flex w-full flex-col gap-1.5">
+    <div className="inline-flex gap-1.5">
       {label || badgeLabel ? (
         <div
           className={mergeClassNames(
@@ -118,7 +118,7 @@ export function Select<T extends SelectValue = string>({
         data-state={state}
         data-plugin-state={pluginState}
         className={mergeClassNames(
-          'w-full appearance-none rounded-md border border-plugin-border bg-plugin-surface text-plugin-text-primary shadow-control',
+          'appearance-none rounded-md border border-plugin-border bg-plugin-surface text-plugin-text-primary shadow-control',
           selectSizeClassMap[size],
           focusRingClass,
           getControlStateClass({ disabled: isDisabled, pluginState, state }),

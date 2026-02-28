@@ -3,7 +3,7 @@ members = ["crates/*", "xtask"]
 resolver = "2"
 
 [workspace.package]
-version = "0.12.8"
+version = "0.12.9"
 edition = "2024"
 license = "MIT"
 authors = ["Wavecraft Team"]

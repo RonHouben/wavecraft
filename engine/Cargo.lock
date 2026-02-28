@@ -3380,7 +3380,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-core"
-version = "0.12.8"
+version = "0.12.9"
 dependencies = [
  "paste",
  "wavecraft-bridge",
@@ -3420,7 +3420,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-nih_plug"
-version = "0.12.8"
+version = "0.12.9"
 dependencies = [
  "block2 0.5.1",
  "include_dir",
@@ -3448,7 +3448,7 @@ dependencies = [
 
 [[package]]
 name = "wavecraft-processors"
-version = "0.12.8"
+version = "0.12.9"
 dependencies = [
  "rtrb",
  "wavecraft-dsp",

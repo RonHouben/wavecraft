@@ -19,9 +19,17 @@ const TONE_FILTER_DEFAULT_Q: f32 = 0.707;
 
 const SOFT_CLIP_BYPASS_PARAM_ID: &str = "soft_clip_bypass";
 const SOFT_CLIP_DRIVE_PARAM_ID: &str = "soft_clip_drive_db";
-const SOFT_CLIP_OUTPUT_TRIM_PARAM_ID: &str = "soft_clip_output_trim_db";
-const SOFT_CLIP_MIN_GAIN_DB: f32 = -24.0;
-const SOFT_CLIP_MAX_GAIN_DB: f32 = 24.0;
+const SOFT_CLIP_OUTPUT_PARAM_ID: &str = "soft_clip_output_db";
+const SOFT_CLIP_MIX_PARAM_ID: &str = "soft_clip_mix";
+const SOFT_CLIP_TONE_PARAM_ID: &str = "soft_clip_tone";
+const SOFT_CLIP_MIN_DRIVE_DB: f32 = 0.0;
+const SOFT_CLIP_MAX_DRIVE_DB: f32 = 30.0;
+const SOFT_CLIP_MIN_OUTPUT_DB: f32 = -24.0;
+const SOFT_CLIP_MAX_OUTPUT_DB: f32 = 24.0;
+const SOFT_CLIP_MIN_UNIT: f32 = 0.0;
+const SOFT_CLIP_MAX_UNIT: f32 = 1.0;
+const SOFT_CLIP_DEFAULT_MIX: f32 = 1.0;
+const SOFT_CLIP_DEFAULT_TONE: f32 = 0.55;
 
 // Canonical IDs for gain controls; input trim keeps a temporary legacy fallback
 // during the InputGain -> InputTrim migration for hot-reload compatibility.
@@ -97,6 +105,7 @@ pub(super) struct StereoToneFilterState {
     right: BiquadState,
 }
 
+#[cfg(test)]
 pub(super) fn apply_output_modifiers(
     left: &mut [f32],
     right: &mut [f32],
@@ -268,32 +277,45 @@ fn apply_soft_clip(left: &mut [f32], right: &mut [f32], param_bridge: &AtomicPar
         param_bridge,
         SOFT_CLIP_DRIVE_PARAM_ID,
         0.0,
-        SOFT_CLIP_MIN_GAIN_DB,
-        SOFT_CLIP_MAX_GAIN_DB,
+        SOFT_CLIP_MIN_DRIVE_DB,
+        SOFT_CLIP_MAX_DRIVE_DB,
     );
-    let output_trim_db = read_soft_clip_db(
+    let output_db = read_soft_clip_db(
         param_bridge,
-        SOFT_CLIP_OUTPUT_TRIM_PARAM_ID,
+        SOFT_CLIP_OUTPUT_PARAM_ID,
         0.0,
-        SOFT_CLIP_MIN_GAIN_DB,
-        SOFT_CLIP_MAX_GAIN_DB,
+        SOFT_CLIP_MIN_OUTPUT_DB,
+        SOFT_CLIP_MAX_OUTPUT_DB,
+    );
+    let mix = read_soft_clip_unit(param_bridge, SOFT_CLIP_MIX_PARAM_ID, SOFT_CLIP_DEFAULT_MIX);
+    let tone = read_soft_clip_unit(
+        param_bridge,
+        SOFT_CLIP_TONE_PARAM_ID,
+        SOFT_CLIP_DEFAULT_TONE,
     );
 
     let drive = db_to_linear(drive_db);
-    let output_trim = db_to_linear(output_trim_db);
+    let output = db_to_linear(output_db);
 
     for (left_sample, right_sample) in left.iter_mut().zip(right.iter_mut()) {
-        let left_driven = *left_sample * drive;
-        let right_driven = *right_sample * drive;
-        *left_sample = soft_clip(left_driven) * output_trim;
-        *right_sample = soft_clip(right_driven) * output_trim;
+        let left_dry = *left_sample;
+        let right_dry = *right_sample;
+        let left_driven = left_dry * drive;
+        let right_driven = right_dry * drive;
+        let left_wet = soft_clip_tone(left_driven, tone) * output;
+        let right_wet = soft_clip_tone(right_driven, tone) * output;
+
+        *left_sample = left_dry + (left_wet - left_dry) * mix;
+        *right_sample = right_dry + (right_wet - right_dry) * mix;
     }
 }
 
 fn has_soft_clip_controls(param_bridge: &AtomicParameterBridge) -> bool {
     param_bridge.read(SOFT_CLIP_BYPASS_PARAM_ID).is_some()
         || param_bridge.read(SOFT_CLIP_DRIVE_PARAM_ID).is_some()
-        || param_bridge.read(SOFT_CLIP_OUTPUT_TRIM_PARAM_ID).is_some()
+        || param_bridge.read(SOFT_CLIP_OUTPUT_PARAM_ID).is_some()
+        || param_bridge.read(SOFT_CLIP_MIX_PARAM_ID).is_some()
+        || param_bridge.read(SOFT_CLIP_TONE_PARAM_ID).is_some()
 }
 
 fn read_soft_clip_db(
@@ -310,9 +332,36 @@ fn read_soft_clip_db(
         .unwrap_or(default)
 }
 
+fn read_soft_clip_unit(param_bridge: &AtomicParameterBridge, id: &str, default: f32) -> f32 {
+    param_bridge
+        .read(id)
+        .filter(|value| value.is_finite())
+        .map(|value| value.clamp(SOFT_CLIP_MIN_UNIT, SOFT_CLIP_MAX_UNIT))
+        .unwrap_or(default)
+}
+
 #[inline]
 fn soft_clip(input: f32) -> f32 {
     input / (1.0 + input.abs())
+}
+
+#[inline]
+fn soft_clip_tone(input: f32, tone: f32) -> f32 {
+    let clamped_tone = tone.clamp(SOFT_CLIP_MIN_UNIT, SOFT_CLIP_MAX_UNIT);
+
+    // Keep dev-server behavior aligned with Saturator v1 semantics without adding state.
+    let pre_emphasis = lerp(0.85, 1.2, clamped_tone);
+    let emphasized = input * pre_emphasis;
+    let clipped = soft_clip(emphasized);
+    let warmth_amount = 0.35 * (1.0 - clamped_tone);
+    let warmed = clipped - warmth_amount * clipped * clipped * clipped;
+
+    warmed / pre_emphasis
+}
+
+#[inline]
+fn lerp(start: f32, end: f32, t: f32) -> f32 {
+    start + (end - start) * t
 }
 
 fn has_tone_filter_controls(param_bridge: &AtomicParameterBridge) -> bool {
@@ -435,6 +484,77 @@ mod tests {
     use super::apply_output_modifiers;
     use crate::audio::atomic_params::AtomicParameterBridge;
     use wavecraft_protocol::{ParameterInfo, ParameterType};
+
+    fn soft_clip_bridge(
+        drive_db: f32,
+        output_db: f32,
+        mix: f32,
+        tone: f32,
+        bypass: f32,
+    ) -> AtomicParameterBridge {
+        AtomicParameterBridge::new(&[
+            ParameterInfo {
+                id: "soft_clip_drive_db".to_string(),
+                name: "Drive".to_string(),
+                param_type: ParameterType::Float,
+                value: drive_db,
+                default: drive_db,
+                min: 0.0,
+                max: 30.0,
+                unit: Some("dB".to_string()),
+                group: Some("Saturator".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "soft_clip_output_db".to_string(),
+                name: "Output".to_string(),
+                param_type: ParameterType::Float,
+                value: output_db,
+                default: output_db,
+                min: -24.0,
+                max: 24.0,
+                unit: Some("dB".to_string()),
+                group: Some("Saturator".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "soft_clip_mix".to_string(),
+                name: "Mix".to_string(),
+                param_type: ParameterType::Float,
+                value: mix,
+                default: mix,
+                min: 0.0,
+                max: 1.0,
+                unit: Some("%".to_string()),
+                group: Some("Saturator".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "soft_clip_tone".to_string(),
+                name: "Tone".to_string(),
+                param_type: ParameterType::Float,
+                value: tone,
+                default: tone,
+                min: 0.0,
+                max: 1.0,
+                unit: Some("%".to_string()),
+                group: Some("Saturator".to_string()),
+                variants: None,
+            },
+            ParameterInfo {
+                id: "soft_clip_bypass".to_string(),
+                name: "Bypass".to_string(),
+                param_type: ParameterType::Bool,
+                value: bypass,
+                default: bypass,
+                min: 0.0,
+                max: 1.0,
+                unit: None,
+                group: Some("Saturator".to_string()),
+                variants: None,
+            },
+        ])
+    }
 
     fn test_tone_bridge(
         enabled: f32,
@@ -650,5 +770,128 @@ mod tests {
                 0.6 * expected_gain
             ]
         );
+    }
+
+    #[test]
+    fn soft_clip_uses_new_output_db_id() {
+        let mut left_unity = [0.9_f32, -0.9, 0.7, -0.7];
+        let mut right_unity = left_unity;
+        let mut left_reduced = left_unity;
+        let mut right_reduced = right_unity;
+        let mut phase = 0.0;
+
+        let unity_bridge = soft_clip_bridge(12.0, 0.0, 1.0, 0.55, 0.0);
+        let reduced_bridge = soft_clip_bridge(12.0, -12.0, 1.0, 0.55, 0.0);
+
+        apply_output_modifiers(
+            &mut left_unity,
+            &mut right_unity,
+            &unity_bridge,
+            &mut phase,
+            48_000.0,
+        );
+        phase = 0.0;
+        apply_output_modifiers(
+            &mut left_reduced,
+            &mut right_reduced,
+            &reduced_bridge,
+            &mut phase,
+            48_000.0,
+        );
+
+        let unity_peak = left_unity
+            .iter()
+            .chain(right_unity.iter())
+            .fold(0.0_f32, |acc, sample| acc.max(sample.abs()));
+        let reduced_peak = left_reduced
+            .iter()
+            .chain(right_reduced.iter())
+            .fold(0.0_f32, |acc, sample| acc.max(sample.abs()));
+
+        assert!(
+            reduced_peak < unity_peak,
+            "expected soft_clip_output_db attenuation to reduce peak output"
+        );
+    }
+
+    #[test]
+    fn soft_clip_mix_blends_dry_and_wet() {
+        let input = [0.65_f32, -0.65, 0.35, -0.35];
+        let mut left_dry = input;
+        let mut right_dry = input;
+        let mut left_wet = input;
+        let mut right_wet = input;
+        let mut left_blended = input;
+        let mut right_blended = input;
+        let mut phase = 0.0;
+
+        let dry_bridge = soft_clip_bridge(18.0, 0.0, 0.0, 0.55, 0.0);
+        let wet_bridge = soft_clip_bridge(18.0, 0.0, 1.0, 0.55, 0.0);
+        let blend_bridge = soft_clip_bridge(18.0, 0.0, 0.5, 0.55, 0.0);
+
+        apply_output_modifiers(
+            &mut left_dry,
+            &mut right_dry,
+            &dry_bridge,
+            &mut phase,
+            48_000.0,
+        );
+        phase = 0.0;
+        apply_output_modifiers(
+            &mut left_wet,
+            &mut right_wet,
+            &wet_bridge,
+            &mut phase,
+            48_000.0,
+        );
+        phase = 0.0;
+        apply_output_modifiers(
+            &mut left_blended,
+            &mut right_blended,
+            &blend_bridge,
+            &mut phase,
+            48_000.0,
+        );
+
+        assert_eq!(left_dry, input);
+        assert_eq!(right_dry, input);
+        assert_ne!(left_wet, input);
+        assert_ne!(right_wet, input);
+        assert_ne!(left_blended, left_dry);
+        assert_ne!(right_blended, right_dry);
+        assert_ne!(left_blended, left_wet);
+        assert_ne!(right_blended, right_wet);
+    }
+
+    #[test]
+    fn soft_clip_tone_changes_shaping_curve() {
+        let input = [0.75_f32, -0.75, 0.5, -0.5];
+        let mut left_warm = input;
+        let mut right_warm = input;
+        let mut left_bright = input;
+        let mut right_bright = input;
+        let mut phase = 0.0;
+
+        let warm_bridge = soft_clip_bridge(14.0, 0.0, 1.0, 0.0, 0.0);
+        let bright_bridge = soft_clip_bridge(14.0, 0.0, 1.0, 1.0, 0.0);
+
+        apply_output_modifiers(
+            &mut left_warm,
+            &mut right_warm,
+            &warm_bridge,
+            &mut phase,
+            48_000.0,
+        );
+        phase = 0.0;
+        apply_output_modifiers(
+            &mut left_bright,
+            &mut right_bright,
+            &bright_bridge,
+            &mut phase,
+            48_000.0,
+        );
+
+        assert_ne!(left_warm, left_bright);
+        assert_ne!(right_warm, right_bright);
     }
 }

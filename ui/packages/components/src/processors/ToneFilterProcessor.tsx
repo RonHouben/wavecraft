@@ -1,7 +1,6 @@
 import type { ToneFilterParameterIds, ToneFilterProcessorId } from '@wavecraft/core';
 import { useParameter } from '@wavecraft/core';
 import { type JSX } from 'react';
-import { Col } from '../Col';
 import { Knob } from '../Knob';
 import { Row } from '../Row';
 import { Select, type SelectOption } from '../Select';
@@ -46,41 +45,37 @@ export function ToneFilterProcessor({
       title="Tone Filter"
       className={mergeClassNames('h-full w-full', className)}
     >
-      <Row className="flex-nowrap items-start gap-3">
-        <Col className="h-auto grow justify-start self-start">
-          <Select
-            id={`param-${modeParameter?.id ?? toneFilterParameterIds.mode}`}
-            label={modeParameter?.name ?? 'Mode'}
-            value={modeParameter?.value ?? 0}
-            options={modeOptions}
-            size="sm"
-            onChange={setModeValue}
-          />
-        </Col>
-        <Col className="h-auto items-center justify-start self-start">
-          <Row className="flex-nowrap items-start gap-1.5">
-            <Knob
-              id={`param-${cutoffParameter?.id ?? toneFilterParameterIds.cutoffHz}`}
-              label={cutoffParameter?.name ?? ''}
-              value={cutoffParameter?.value ?? 0}
-              min={cutoffParameter?.min ?? 0}
-              max={cutoffParameter?.max ?? 0}
-              unit={cutoffParameter?.unit ?? ''}
-              size="sm"
-              onChange={setCutoffValue}
-            />
-            <Knob
-              id={`param-${resonanceParameter?.id ?? toneFilterParameterIds.resonanceQ}`}
-              label={resonanceParameter?.name ?? ''}
-              value={resonanceParameter?.value ?? 0}
-              min={resonanceParameter?.min ?? 0}
-              max={resonanceParameter?.max ?? 0}
-              unit={resonanceParameter?.unit ?? ''}
-              size="sm"
-              onChange={setResonanceValue}
-            />
-          </Row>
-        </Col>
+      <Select
+        id={`param-${modeParameter?.id ?? toneFilterParameterIds.mode}`}
+        label={modeParameter?.name ?? 'Mode'}
+        value={modeParameter?.value ?? 0}
+        options={modeOptions}
+        size="sm"
+        onChange={setModeValue}
+      />
+      <Row className="flex flex-wrap gap-2">
+        <Knob
+          id={`param-${cutoffParameter?.id ?? toneFilterParameterIds.cutoffHz}`}
+          label={cutoffParameter?.name ?? ''}
+          value={cutoffParameter?.value ?? 0}
+          defaultValue={cutoffParameter?.default ?? cutoffParameter?.min ?? 0}
+          min={cutoffParameter?.min ?? 0}
+          max={cutoffParameter?.max ?? 0}
+          unit={cutoffParameter?.unit ?? ''}
+          size="sm"
+          onChange={setCutoffValue}
+        />
+        <Knob
+          id={`param-${resonanceParameter?.id ?? toneFilterParameterIds.resonanceQ}`}
+          label={resonanceParameter?.name ?? ''}
+          value={resonanceParameter?.value ?? 0}
+          defaultValue={resonanceParameter?.default ?? resonanceParameter?.min ?? 0}
+          min={resonanceParameter?.min ?? 0}
+          max={resonanceParameter?.max ?? 0}
+          unit={resonanceParameter?.unit ?? ''}
+          size="sm"
+          onChange={setResonanceValue}
+        />
       </Row>
     </ProcessorCard>
   );

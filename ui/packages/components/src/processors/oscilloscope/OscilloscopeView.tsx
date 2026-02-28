@@ -6,10 +6,7 @@ import type {
 } from '../../types';
 import { Select } from '../../Select';
 import { Row } from '../../Row';
-import { Col } from '../../Col';
 
-const WIDTH = 640;
-const HEIGHT = 220;
 const PADDING = 10;
 
 // Canvas drawing cannot consume Tailwind classes directly, so these values mirror
@@ -25,6 +22,22 @@ interface OscilloscopeProcessorProps {
   readonly frame: OscilloscopeFrame | null;
 }
 
+interface CanvasViewport {
+  readonly width: number;
+  readonly height: number;
+  readonly dpr: number;
+}
+
+function getDevicePixelRatio(): number {
+  if (typeof window === 'undefined') {
+    return 1;
+  }
+
+  return Number.isFinite(window.devicePixelRatio) && window.devicePixelRatio > 0
+    ? window.devicePixelRatio
+    : 1;
+}
+
 export function OscilloscopeView({
   connected,
   frame,
@@ -35,6 +48,8 @@ export function OscilloscopeView({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const frameRef = useRef<OscilloscopeFrame | null>(null);
   const rafRef = useRef<number | null>(null);
+  const viewportRef = useRef<CanvasViewport>({ width: 1, height: 1, dpr: 1 });
+  const needsResizeRef = useRef<boolean>(true);
 
   useEffect(() => {
     frameRef.current = frame;
@@ -64,10 +79,32 @@ export function OscilloscopeView({
       return;
     }
 
+    const syncCanvasViewport = (): void => {
+      const rect = canvas.getBoundingClientRect();
+      const width = Math.max(1, Math.round(rect.width));
+      const height = Math.max(1, Math.round(rect.height));
+      const dpr = getDevicePixelRatio();
+
+      viewportRef.current = { width, height, dpr };
+      needsResizeRef.current = false;
+
+      const backingWidth = Math.max(1, Math.round(width * dpr));
+      const backingHeight = Math.max(1, Math.round(height * dpr));
+
+      if (canvas.width !== backingWidth || canvas.height !== backingHeight) {
+        canvas.width = backingWidth;
+        canvas.height = backingHeight;
+      }
+
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
     const drawGrid = (): void => {
-      context.clearRect(0, 0, WIDTH, HEIGHT);
+      const { width, height } = viewportRef.current;
+
+      context.clearRect(0, 0, width, height);
       context.fillStyle = BACKGROUND_COLOR;
-      context.fillRect(0, 0, WIDTH, HEIGHT);
+      context.fillRect(0, 0, width, height);
 
       context.strokeStyle = GRID_COLOR;
       context.lineWidth = 1;
@@ -76,25 +113,25 @@ export function OscilloscopeView({
       const verticalSteps = 8;
 
       for (let i = 1; i < horizontalSteps; i += 1) {
-        const y = (HEIGHT * i) / horizontalSteps;
+        const y = (height * i) / horizontalSteps;
         context.beginPath();
         context.moveTo(0, y);
-        context.lineTo(WIDTH, y);
+        context.lineTo(width, y);
         context.stroke();
       }
 
       for (let i = 1; i < verticalSteps; i += 1) {
-        const x = (WIDTH * i) / verticalSteps;
+        const x = (width * i) / verticalSteps;
         context.beginPath();
         context.moveTo(x, 0);
-        context.lineTo(x, HEIGHT);
+        context.lineTo(x, height);
         context.stroke();
       }
 
       context.strokeStyle = AXIS_COLOR;
       context.beginPath();
-      context.moveTo(0, HEIGHT / 2);
-      context.lineTo(WIDTH, HEIGHT / 2);
+      context.moveTo(0, height / 2);
+      context.lineTo(width, height / 2);
       context.stroke();
     };
 
@@ -107,8 +144,9 @@ export function OscilloscopeView({
       context.lineWidth = 1.5;
       context.beginPath();
 
-      const drawableWidth = WIDTH - PADDING * 2;
-      const drawableHeight = HEIGHT - PADDING * 2;
+      const { width, height } = viewportRef.current;
+      const drawableWidth = Math.max(1, width - PADDING * 2);
+      const drawableHeight = Math.max(1, height - PADDING * 2);
 
       for (let index = 0; index < points.length; index += 1) {
         const x = PADDING + (index / (points.length - 1)) * drawableWidth;
@@ -126,15 +164,21 @@ export function OscilloscopeView({
     };
 
     const render = (): void => {
+      if (needsResizeRef.current || getDevicePixelRatio() !== viewportRef.current.dpr) {
+        syncCanvasViewport();
+      }
+
       drawGrid();
+
+      const { width, height } = viewportRef.current;
 
       const latest = frameRef.current;
       if (!connected || !latest || latest.no_signal) {
         context.strokeStyle = AXIS_COLOR;
         context.lineWidth = 2;
         context.beginPath();
-        context.moveTo(PADDING, HEIGHT / 2);
-        context.lineTo(WIDTH - PADDING, HEIGHT / 2);
+        context.moveTo(PADDING, height / 2);
+        context.lineTo(width - PADDING, height / 2);
         context.stroke();
       } else {
         if (channelView === 'overlay' || channelView === 'left') {
@@ -149,9 +193,27 @@ export function OscilloscopeView({
       rafRef.current = requestAnimationFrame(render);
     };
 
+    syncCanvasViewport();
+
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => {
+            needsResizeRef.current = true;
+          })
+        : null;
+    resizeObserver?.observe(canvas);
+
+    const handleWindowResize = (): void => {
+      needsResizeRef.current = true;
+    };
+    window.addEventListener('resize', handleWindowResize);
+
     rafRef.current = requestAnimationFrame(render);
 
     return (): void => {
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', handleWindowResize);
+
       if (rafRef.current !== null) {
         cancelAnimationFrame(rafRef.current);
       }
@@ -159,41 +221,34 @@ export function OscilloscopeView({
   }, [channelView, connected]);
 
   return (
-    <Col className="gap-5">
-      <Row className="justify-between">
-        <Col>
-          <Select
-            label="Channel view"
-            data-testid="osc-channel-view"
-            value={channelView}
-            size="sm"
-            options={[
-              { label: 'Overlay (L/R)', value: 'overlay' },
-              { label: 'Left', value: 'left' },
-              { label: 'Right', value: 'right' },
-            ]}
-            onChange={setChannelView}
-          />
-        </Col>
-        <Col>
-          <Select
-            label="Trigger mode"
-            data-testid="osc-trigger-mode"
-            value={triggerMode}
-            size="sm"
-            options={[{ label: 'Rising zero-crossing', value: 'risingZeroCrossing' }]}
-            onChange={setTriggerMode}
-          />
-        </Col>
+    <>
+      <Row className="flex flex-wrap gap-2">
+        <Select
+          label="Channel view"
+          data-testid="osc-channel-view"
+          value={channelView}
+          size="sm"
+          options={[
+            { label: 'Overlay (L/R)', value: 'overlay' },
+            { label: 'Left', value: 'left' },
+            { label: 'Right', value: 'right' },
+          ]}
+          onChange={setChannelView}
+        />
+        <Select
+          label="Trigger mode"
+          data-testid="osc-trigger-mode"
+          value={triggerMode}
+          size="sm"
+          options={[{ label: 'Rising zero-crossing', value: 'risingZeroCrossing' }]}
+          onChange={setTriggerMode}
+        />
       </Row>
-
-      <Row className="relative rounded border border-plugin-border bg-plugin-dark p-2">
+      <div className="relative h-full w-full">
         <canvas
           ref={canvasRef}
           data-testid="oscilloscope-canvas"
-          width={WIDTH}
-          height={HEIGHT}
-          className="h-auto w-full rounded"
+          className="h-full w-full rounded"
         />
         {noSignal ? (
           <div
@@ -203,7 +258,7 @@ export function OscilloscopeView({
             No signal
           </div>
         ) : null}
-      </Row>
-    </Col>
+      </div>
+    </>
   );
 }
