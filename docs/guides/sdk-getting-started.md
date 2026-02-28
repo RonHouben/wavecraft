@@ -353,8 +353,8 @@ impl Processor for Filter {
    ```rust
    use wavecraft::Oscillator;
    use processors::Filter;
-  // Custom processors are used directly in the processors list (no wavecraft_processor! wrapper needed)
-  // processors: [InputGain, Oscillator, Filter, OutputGain],
+   // Custom processors are used directly in the processors list (no wavecraft_processor! wrapper needed)
+   // processors: [InputGain, Oscillator, Filter, OutputGain],
    ```
 
 The UI automatically discovers new parameters — no React changes needed.
@@ -476,7 +476,7 @@ All hooks are exported from `@wavecraft/core`:
 | `useMeterFrame()`            | Access real-time meter data                                                 |
 | `useConnectionStatus()`      | WebSocket connection status (dev mode)                                      |
 | `useAudioStatus()`           | Audio runtime phase + diagnostics (`running`, `failed`, etc.)               |
-| `useProcessorOrder()`        | Read/write processor chain order and subscribe to reorder updates.           |
+| `useProcessorOrder()`        | Read/write processor chain order and subscribe to reorder updates.          |
 
 ---
 

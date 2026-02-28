@@ -36,6 +36,6 @@ wavecraft_plugin! {
         ToneFilter,
         SoftClip,
         OutputGain,
-        OscilloscopeTap,
+        // OscilloscopeTap,
     ],
 }

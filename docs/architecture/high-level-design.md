@@ -389,7 +389,12 @@ Define JSON messages exchanged over the webview bridge. Keep it small and versio
 ```
 
 ```json
-{ "jsonrpc": "2.0", "id": 8, "method": "setProcessorOrder", "params": { "order": ["1", "0", "2"] } }
+{
+  "jsonrpc": "2.0",
+  "id": 8,
+  "method": "setProcessorOrder",
+  "params": { "order": ["1", "0", "2"] }
+}
 ```
 
     •	From Host → UI
@@ -413,7 +418,11 @@ Define JSON messages exchanged over the webview bridge. Keep it small and versio
 ```
 
 ```json
-{ "jsonrpc": "2.0", "method": "processorOrderChanged", "params": { "order": ["1", "0", "2"] } }
+{
+  "jsonrpc": "2.0",
+  "method": "processorOrderChanged",
+  "params": { "order": ["1", "0", "2"] }
+}
 ```
 
     •	Meter frame (audio → UI, via ring buffer snapshot)

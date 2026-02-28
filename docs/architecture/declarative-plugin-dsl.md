@@ -48,7 +48,7 @@ The DSL uses a two-layer macro system:
    - Creates newtype wrappers around built-in processors (`Gain`, `Passthrough`)
    - Delegates `Processor` trait implementation
    - Maintains type distinction for compile-time safety (wrapper name becomes parameter-ID prefix)
-    - **Not for custom processors** — types implementing `Processor` directly go into the `processors: [...]` list
+   - **Not for custom processors** — types implementing `Processor` directly go into the `processors: [...]` list
 
 2. **`wavecraft_plugin!`** (proc-macro) — Generates complete plugin implementation:
 

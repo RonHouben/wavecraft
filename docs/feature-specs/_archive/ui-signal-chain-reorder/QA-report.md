@@ -17,7 +17,7 @@ All High findings have been resolved and Finding 3 has been assessed as Not Appl
   - Block-level `Vec` allocation for params (all parameter values collected into `Vec<f32>`)
   - Per-sample `Vec<Vec<f32>>` and `Vec<&mut [f32]>` allocations for channel slices
   - Oscilloscope snapshot `to_vec()`/`clone()` calls in `process()`
-  These violate real-time constraints from the architecture coding standards (no allocations on the audio thread).
+    These violate real-time constraints from the architecture coding standards (no allocations on the audio thread).
 - **Fix**:
   - Added `__param_scratch: Vec<f32>` field to `__WavecraftPlugin`, pre-grown at construction to total param count. Per-block: `clear()` + `push()` loop — zero allocation after init.
   - Replaced per-sample `Vec<Vec<f32>>` + `Vec<&mut [f32]>` with stack-allocated `[f32; 2]` + `[&mut [f32]; 2]` arrays. Uses `split_at_mut` + inner block for borrow discipline.

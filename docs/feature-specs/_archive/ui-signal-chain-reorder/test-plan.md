@@ -19,19 +19,20 @@ Lint + typecheck: passed
 
 ### Phase-level crate test results
 
-| Crate | Tests | Status |
-|-------|-------|--------|
-| wavecraft-macros | 14 | ✅ |
-| wavecraft-protocol | 27 | ✅ |
-| wavecraft-bridge | 29+2 (doctests) | ✅ |
-| wavecraft-nih_plug | 6 | ✅ |
-| UI (vitest) | 218 | ✅ |
+| Crate              | Tests           | Status |
+| ------------------ | --------------- | ------ |
+| wavecraft-macros   | 14              | ✅     |
+| wavecraft-protocol | 27              | ✅     |
+| wavecraft-bridge   | 29+2 (doctests) | ✅     |
+| wavecraft-nih_plug | 6               | ✅     |
+| UI (vitest)        | 218             | ✅     |
 
 ## Visual Verification
 
 Opened `http://localhost:5173` in VS Code Simple Browser during `cargo xtask dev`.
 
 Observed:
+
 - App loads and renders without startup errors.
 - Processor UI sections are visible: Test Tone, Input Trim, Passthrough, Tone Filter, Saturator, Output Gain, Oscilloscope.
 - Signal-chain content appears in single ordered flow (consistent with vertical stack design spec).

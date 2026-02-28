@@ -5,13 +5,12 @@
  * Regenerated automatically when Rust source files change.
  */
 
-declare module '@wavecraft/core' {
-  interface ParameterIdMap {
+declare global {
+  interface WavecraftParameterIdMap {
     __wavecraft_internal_augmented__: true;
     example_processor_bypass: boolean;
     input_trim_bypass: boolean;
     input_trim_level: number;
-    oscilloscope_tap_bypass: boolean;
     output_gain_bypass: boolean;
     output_gain_level: number;
     passthrough_bypass: boolean;
