@@ -10,6 +10,7 @@ export default defineConfig({
       include: ['src'],
       exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'src/**/*.typecheck.ts'],
       logLevel: 'silent',
+      skipDiagnostics: true,
       rollupTypes: true,
     }),
   ],
