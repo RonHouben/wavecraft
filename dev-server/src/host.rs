@@ -259,6 +259,14 @@ impl ParameterHost for DevServerHost {
                 .clone(),
         )
     }
+
+    fn get_processor_order(&self) -> Vec<String> {
+        self.inner.get_processor_order()
+    }
+
+    fn set_processor_order(&self, order: &[String]) -> Result<(), BridgeError> {
+        self.inner.set_processor_order(order)
+    }
 }
 
 fn now_millis() -> u64 {
