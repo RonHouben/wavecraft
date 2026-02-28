@@ -2,7 +2,7 @@
 
 ## Overview
 
-This feature spec defines a focused UI/UX refactor for Wavecraft's plugin UI layer to improve interaction clarity, visual consistency, accessibility, and maintainability without changing core audio behavior.
+This feature spec defines a focused UI/UX refactor for Wavecraft’s plugin UI layer to improve interaction clarity, visual consistency, accessibility, and maintainability without changing core audio behavior.
 
 The refactor is based on completed review findings:
 
@@ -14,7 +14,7 @@ The refactor is based on completed review findings:
 
 ## Problem Statement
 
-Wavecraft's current UI experience is functionally complete but exhibits inconsistency and architectural drift that now slows feature development and risks UX regressions:
+Wavecraft’s current UI experience is functionally complete but exhibits inconsistency and architectural drift that now slows feature development and risks UX regressions:
 
 - Users can lose keyboard context due to inconsistent or weak focus visibility.
 - Interaction states (hover/active/disabled/focus) are not consistently expressed across controls.
@@ -54,7 +54,7 @@ This creates friction for both plugin users (clarity and confidence) and plugin 
 
 ### Persona 2: Plugin Developer (Wavecraft SDK User)
 
-- Builds and extends plugin UIs with Wavecraft's React and core packages.
+- Builds and extends plugin UIs with Wavecraft’s React and core packages.
 - Values maintainable patterns, clear boundaries, predictable tokens, and stable contracts.
 - Needs confidence that new controls follow consistent states and accessibility baseline without ad-hoc fixes.
 

@@ -60,7 +60,7 @@ This test plan covers all six implementation phases of the `ui-ux-refactor` feat
 | Audio status          | running (full duplex) (ready) |
 | Version badge         | vdev                          |
 | Automated test runner | Vitest                        |
-| Visual testing tool   | Playwright MCP                |
+| Visual testing tool   | VS Code Simple Browser        |
 
 ---
 
@@ -141,7 +141,7 @@ A focused visual retest was conducted after QA blockers were resolved.
 
 ### 4.4 Accessibility Check Results
 
-Accessibility semantics verified via Playwright accessibility tree snapshots.
+Accessibility semantics verified via VS Code Simple Browser accessibility tree snapshots.
 
 | TC   | Check                                                             | Expected                                                    | Actual                                                                                        | Status  |
 | ---- | ----------------------------------------------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------- |
