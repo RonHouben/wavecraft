@@ -106,8 +106,7 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
         .enumerate()
         .map(|(i, (ty, fname))| {
             let i_lit = syn::LitInt::new(&i.to_string(), proc_macro2::Span::call_site());
-            let i_lit_usize =
-                syn::LitInt::new(&format!("{}", i), proc_macro2::Span::call_site());
+            let i_lit_usize = syn::LitInt::new(&format!("{}", i), proc_macro2::Span::call_site());
             quote! {
                 #i_lit => {
                     let __start = self.__param_offsets[#i_lit_usize];
@@ -131,8 +130,7 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
     // zip-based approach; regenerate from 0..n with usize suffix)
     let proc_idx_usize: Vec<proc_macro2::TokenStream> = (0..n)
         .map(|i| {
-            let lit =
-                syn::LitInt::new(&format!("{}usize", i), proc_macro2::Span::call_site());
+            let lit = syn::LitInt::new(&format!("{}usize", i), proc_macro2::Span::call_site());
             quote! { #lit }
         })
         .collect();
@@ -282,6 +280,81 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                     .zip(self.groups.iter())
                     .map(|((param, id), group)| (id.clone(), param.as_ptr(), group.clone()))
                     .collect()
+            }
+
+            fn serialize_fields(
+                &self,
+            ) -> ::std::collections::BTreeMap<::std::string::String, ::std::string::String>
+            {
+                let __order: ::std::vec::Vec<::std::string::String> = self
+                    .__order_state
+                    .lock()
+                    .unwrap_or_else(|__e| __e.into_inner())
+                    .iter()
+                    .map(|&__i| __i.to_string())
+                    .collect();
+
+                let __json = #krate::__internal::serde_json::to_string(&__order)
+                    .unwrap_or_default();
+
+                let mut __map =
+                    ::std::collections::BTreeMap::<::std::string::String, ::std::string::String>::new();
+                __map.insert("processorOrder".to_string(), __json);
+                __map
+            }
+
+            fn deserialize_fields(
+                &self,
+                fields: &::std::collections::BTreeMap<::std::string::String, ::std::string::String>,
+            ) {
+                if let Some(__json) = fields.get("processorOrder") {
+                    if let Ok(__order_strs) =
+                        #krate::__internal::serde_json::from_str::<::std::vec::Vec<::std::string::String>>(
+                            __json,
+                        )
+                    {
+                        let __order: ::std::vec::Vec<u8> = __order_strs
+                            .iter()
+                            .filter_map(|__s| __s.parse::<u8>().ok())
+                            .collect();
+
+                        if __order.len() == __PROC_COUNT {
+                            // Validate: must be a permutation of 0..N
+                            let mut __seen = [false; #n_lit];
+                            let mut __valid = true;
+                            for &__slot in __order.iter() {
+                                let __idx = __slot as usize;
+                                if __idx >= __PROC_COUNT || __seen[__idx] {
+                                    __valid = false;
+                                    break;
+                                }
+                                __seen[__idx] = true;
+                            }
+                            if __valid {
+                                for (__i, &__slot) in __order.iter().enumerate() {
+                                    self.__pending_slots[__i].store(
+                                        __slot,
+                                        ::std::sync::atomic::Ordering::Release,
+                                    );
+                                }
+                                self.__has_pending_order.store(
+                                    true,
+                                    ::std::sync::atomic::Ordering::Release,
+                                );
+                                *self
+                                    .__order_state
+                                    .lock()
+                                    .unwrap_or_else(|__e| __e.into_inner()) = __order;
+                            } else {
+                                eprintln!(
+                                    "[wavecraft] processorOrderRestoreFailed: persisted order \
+                                     has wrong length or is not a valid permutation of slot \
+                                     indices. Falling back to default registration order."
+                                );
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -600,87 +673,6 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                 #krate::__nih::ProcessStatus::Normal
             }
 
-            // ── Phase 3: Persistence (serialize / deserialize processor order) ─────
-
-            fn serialize_fields(
-                &self,
-            ) -> ::std::collections::HashMap<::std::string::String, ::std::string::String>
-            {
-                let __order: ::std::vec::Vec<::std::string::String> = self
-                    .params
-                    .__order_state
-                    .lock()
-                    .unwrap_or_else(|__e| __e.into_inner())
-                    .iter()
-                    .map(|&__i| __i.to_string())
-                    .collect();
-
-                let __json = #krate::__internal::serde_json::to_string(&__order)
-                    .unwrap_or_default();
-
-                let mut __map =
-                    ::std::collections::HashMap::<::std::string::String, ::std::string::String>::new();
-                __map.insert("processorOrder".to_string(), __json);
-                __map
-            }
-
-            fn deserialize_fields(
-                &mut self,
-                fields: &::std::collections::HashMap<::std::string::String, ::std::string::String>,
-            ) {
-                if let Some(__json) = fields.get("processorOrder") {
-                    if let Ok(__order_strs) =
-                        #krate::__internal::serde_json::from_str::<::std::vec::Vec<::std::string::String>>(
-                            __json,
-                        )
-                    {
-                        let __order: ::std::vec::Vec<u8> = __order_strs
-                            .iter()
-                            .filter_map(|__s| __s.parse::<u8>().ok())
-                            .collect();
-
-                        if __order.len() == __PROC_COUNT {
-                            // Validate: must be a permutation of 0..N
-                            let mut __seen = [false; #n_lit];
-                            let mut __valid = true;
-                            for &__slot in __order.iter() {
-                                let __idx = __slot as usize;
-                                if __idx >= __PROC_COUNT || __seen[__idx] {
-                                    __valid = false;
-                                    break;
-                                }
-                                __seen[__idx] = true;
-                            }
-                            if __valid {
-                                for (__i, &__slot) in __order.iter().enumerate() {
-                                    self.params.__pending_slots[__i].store(
-                                        __slot,
-                                        ::std::sync::atomic::Ordering::Release,
-                                    );
-                                }
-                                self.params.__has_pending_order.store(
-                                    true,
-                                    ::std::sync::atomic::Ordering::Release,
-                                );
-                                *self
-                                    .params
-                                    .__order_state
-                                    .lock()
-                                    .unwrap_or_else(|__e| __e.into_inner()) = __order;
-                            } else {
-                                ::tracing::warn!(
-                                    diagnostic.code = "processorOrderRestoreFailed",
-                                    "Processor order restore failed: persisted order has wrong \
-                                     length or is not a valid permutation of slot indices. \
-                                     Falling back to default registration order. \
-                                     TODO: emit processorOrderRestoreFailed bridge notification \
-                                     on next UI connect."
-                                );
-                            }
-                        }
-                    }
-                }
-            }
         }
 
         impl #krate::__nih::ClapPlugin for __WavecraftPlugin {

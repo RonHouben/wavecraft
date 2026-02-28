@@ -1,7 +1,6 @@
 use wavecraft::prelude::wavecraft_plugin;
 use wavecraft::prelude::wavecraft_processor;
 use wavecraft::prelude::PassthroughDsp;
-use wavecraft::prelude::SignalChain;
 use wavecraft::OscilloscopeTap;
 use wavecraft::TestToneProcessor;
 

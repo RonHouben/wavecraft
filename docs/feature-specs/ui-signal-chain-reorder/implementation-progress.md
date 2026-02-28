@@ -185,5 +185,5 @@ Files:
 - [x] Phases 1–10 implementation complete
 - [x] `npm run typecheck` passes (exit 0)
 - [x] `npm test` — 218/218 tests passed
-- [ ] `cargo xtask ci-check` passes (full pipeline)
+- [x] `cargo xtask ci-check` passes (full pipeline) — verified 28 Feb 2026 (Documentation ✓, Linting ✓, Tests ✓, 69.2s)
 - [ ] PR created
