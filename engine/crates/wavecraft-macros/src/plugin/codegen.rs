@@ -120,7 +120,7 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                         &__all_values[__start..__end],
                     );
                     use #krate::Processor as _;
-                    self.#fname.process(&mut __sample_ptrs, &__transport, &__pp);
+                    self.#fname.process(&mut __channel_slices[..__active_ch], &__transport, &__pp);
                 }
             }
         })
@@ -185,6 +185,8 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
             // --- Crossfade state (Phase 4) ---
             __cf_pos: usize,
             __cf_dir: i8, // -1 = fade-down, 0 = normal, 1 = fade-up
+            // Pre-allocated parameter scratch buffer (reused each block, zero allocation after init)
+            __param_scratch: ::std::vec::Vec<f32>,
             // --- Metering ---
             oscilloscope_tap: #krate::OscilloscopeTap,
             meter_producer: #krate::MeterProducer,
@@ -452,6 +454,8 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                     __param_offsets,
                     __cf_pos: 0,
                     __cf_dir: 0i8,
+                    // Pre-grow to total param count so process() never reallocates.
+                    __param_scratch: ::std::vec::Vec::with_capacity(__param_offsets[#n_lit]),
                     oscilloscope_tap: #krate::OscilloscopeTap::with_output(oscilloscope_producer),
                     meter_producer,
                     #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -571,33 +575,43 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                 let __num_samples = buffer.samples();
                 let __channels = buffer.channels();
 
-                // Pre-collect all current parameter plain-values (one Arc deref per block)
-                let __all_values: ::std::vec::Vec<f32> = self
-                    .params
-                    .params
-                    .iter()
-                    .map(|p| p.modulated_plain_value())
-                    .collect();
+                // Pre-collect all current parameter plain-values into pre-allocated scratch buffer.
+                // clear() sets len to 0 without freeing; push() never reallocates because capacity
+                // was pre-grown to the total param count at construction. Zero heap allocation per block.
+                self.__param_scratch.clear();
+                for __p in self.params.params.iter() {
+                    self.__param_scratch.push(__p.modulated_plain_value());
+                }
+                let __all_values: &[f32] = &self.__param_scratch;
 
                 for __sample_idx in 0..__num_samples {
-                    // Build per-sample channel slices
-                    let mut __sample_buffers: ::std::vec::Vec<::std::vec::Vec<f32>> = (0..__channels)
-                        .map(|__ch| vec![buffer.as_slice()[__ch][__sample_idx]])
-                        .collect();
-                    let mut __sample_ptrs: ::std::vec::Vec<&mut [f32]> =
-                        __sample_buffers.iter_mut().map(|v| &mut v[..]).collect();
                     let __transport = #krate::Transport::default();
-
-                    // ── Phase 2: Runtime-ordered static dispatch ──────────────────────
-                    let mut __pos: usize = 0;
-                    while __pos < __PROC_COUNT {
-                        let __slot = self.__current_order[__pos] as usize;
-                        match __slot {
-                            #(#dispatch_arms)*
-                            _ => {}
+                    // Load samples into a stack-allocated 2-channel buffer.
+                    // Plugin audio layout is fixed stereo (2-in/2-out); no heap involved.
+                    let mut __stereo: [f32; 2] = [
+                        buffer.as_slice()[0][__sample_idx],
+                        if __channels >= 2 {
+                            buffer.as_slice()[1][__sample_idx]
+                        } else {
+                            0.0_f32
+                        },
+                    ];
+                    let __active_ch = __channels.min(2);
+                    {
+                        // Create mutable slice refs over the stack array — both are stack-allocated.
+                        let (__sl0, __sl1) = __stereo.split_at_mut(1);
+                        let mut __channel_slices: [&mut [f32]; 2] = [__sl0, __sl1];
+                        // ── Phase 2: Runtime-ordered static dispatch ──────────────────────
+                        let mut __pos: usize = 0;
+                        while __pos < __PROC_COUNT {
+                            let __slot = self.__current_order[__pos] as usize;
+                            match __slot {
+                                #(#dispatch_arms)*
+                                _ => {}
+                            }
+                            __pos += 1;
                         }
-                        __pos += 1;
-                    }
+                    } // __channel_slices (and mutable borrow of __stereo) released here
 
                     // ── Phase 4: Per-sample crossfade gain ────────────────────────────
                     let __gain: f32 = if self.__cf_dir != 0i8 {
@@ -619,18 +633,19 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                         1.0_f32
                     };
 
-                    // Write processed (and gain-adjusted) samples back to the buffer
-                    for (__ch, __sbuf) in __sample_buffers.iter().enumerate() {
-                        if let Some(__channel) = buffer.as_slice().get(__ch) {
-                            if __sample_idx < __channel.len() {
-                                // SAFETY: nih-plug process() guarantees exclusive buffer
-                                // access. Bounds are checked above. The f32 pointer is
-                                // properly aligned and valid for the duration of process().
-                                unsafe {
-                                    let __ptr = __channel.as_ptr() as *mut f32;
-                                    *__ptr.add(__sample_idx) = __sbuf[0] * __gain;
-                                }
-                            }
+                    // Write processed (and gain-adjusted) samples back to the buffer.
+                    // SAFETY: nih-plug process() guarantees exclusive buffer access;
+                    // `__sample_idx` < `__num_samples` which came from `buffer.samples()`.
+                    unsafe {
+                        let __ptr = buffer.as_slice()[0].as_ptr() as *mut f32;
+                        *__ptr.add(__sample_idx) = __stereo[0] * __gain;
+                    }
+                    if __channels >= 2 {
+                        // SAFETY: channel 1 exists (__channels >= 2); same exclusive-access
+                        // and bounds guarantees as channel 0.
+                        unsafe {
+                            let __ptr = buffer.as_slice()[1].as_ptr() as *mut f32;
+                            *__ptr.add(__sample_idx) = __stereo[1] * __gain;
                         }
                     }
                 }
@@ -651,6 +666,7 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                         .fold(0.0_f32, f32::max);
                 }
 
+                // Block-end snapshot: acceptable once-per-block allocation.
                 if __channels >= 1 {
                     let __left_snap: ::std::vec::Vec<f32> = buffer.as_slice()[0].to_vec();
                     let __right_snap: ::std::vec::Vec<f32> = if __channels >= 2 {
@@ -795,6 +811,9 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                     {
                         return;
                     }
+                    // SAFETY: `instance` is non-null (checked above), was created by
+                    // `Box::into_raw` in the `create` function, and has not been freed.
+                    // The cast is sound because the pointer type matches `__DevProcessorInstance`.
                     let instance =
                         unsafe { &mut *(instance as *mut __DevProcessorInstance) };
                     let num_ch = num_channels as usize;
@@ -803,10 +822,14 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
 
                     match num_ch {
                         1 => {
+                            // SAFETY: `channels` is non-null (checked above) and points to
+                            // at least `num_channels` (== 1) valid f32 pointers; index 0 is valid.
                             let ch0_ptr = unsafe { *channels.add(0) };
                             if ch0_ptr.is_null() {
                                 return;
                             }
+                            // SAFETY: `ch0_ptr` is non-null (checked above), points to
+                            // `num_samp` f32 values owned by the caller, valid for this call.
                             let ch0 = unsafe {
                                 ::std::slice::from_raw_parts_mut(ch0_ptr, num_samp)
                             };
@@ -819,11 +842,17 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                             );
                         }
                         2 => {
+                            // SAFETY: `channels` is non-null (checked above) and points to
+                            // at least `num_channels` (== 2) valid f32 pointers; indices 0
+                            // and 1 are both valid.
                             let ch0_ptr = unsafe { *channels.add(0) };
                             let ch1_ptr = unsafe { *channels.add(1) };
                             if ch0_ptr.is_null() || ch1_ptr.is_null() {
                                 return;
                             }
+                            // SAFETY: `ch0_ptr` / `ch1_ptr` are non-null (checked above),
+                            // point to `num_samp` f32 values owned by the caller, valid for
+                            // this call. The two pointers are disjoint by caller contract.
                             let ch0 = unsafe {
                                 ::std::slice::from_raw_parts_mut(ch0_ptr, num_samp)
                             };
@@ -855,11 +884,15 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                     if values_ptr.is_null() && len != 0 {
                         return;
                     }
+                    // SAFETY: `instance` is non-null (checked above), was created by
+                    // `Box::into_raw` in `create`, and has not been freed.
                     let instance =
                         unsafe { &mut *(instance as *mut __DevProcessorInstance) };
                     let values: &[f32] = if len == 0 {
                         &[]
                     } else {
+                        // SAFETY: `values_ptr` is non-null (checked above), points to `len`
+                        // valid f32 values provided by the caller, valid for this call.
                         unsafe { ::std::slice::from_raw_parts(values_ptr, len) }
                     };
                     <__Params as #krate::ProcessorParams>::apply_plain_values(
@@ -874,6 +907,8 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                     if instance.is_null() {
                         return;
                     }
+                    // SAFETY: `instance` is non-null (checked above), was created by
+                    // `Box::into_raw` in `create`, and has not been freed.
                     let instance =
                         unsafe { &mut *(instance as *mut __DevProcessorInstance) };
                     #krate::Processor::set_sample_rate(&mut instance.processor, sample_rate);
@@ -885,6 +920,8 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
                     if instance.is_null() {
                         return;
                     }
+                    // SAFETY: `instance` is non-null (checked above), was created by
+                    // `Box::into_raw` in `create`, and has not been freed.
                     let instance =
                         unsafe { &mut *(instance as *mut __DevProcessorInstance) };
                     #krate::Processor::reset(&mut instance.processor);
@@ -894,6 +931,9 @@ pub(super) fn generate_plugin_code(input: CodegenInput<'_>) -> proc_macro2::Toke
             extern "C" fn drop_fn(instance: *mut c_void) {
                 let _ = ::std::panic::catch_unwind(::std::panic::AssertUnwindSafe(|| {
                     if !instance.is_null() {
+                        // SAFETY: `instance` was created by `Box::into_raw` in `create`,
+                        // is non-null (checked above), and `drop_fn` is called exactly once
+                        // per the vtable contract. Ownership is transferred back to Box.
                         let _ = unsafe {
                             ::std::boxed::Box::from_raw(
                                 instance as *mut __DevProcessorInstance,

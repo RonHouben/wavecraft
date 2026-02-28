@@ -254,11 +254,11 @@ wavecraft_processor!(OutputGain => Gain);
 // Email is set explicitly in the macro (optional).
 wavecraft_plugin! {
     name: "My Plugin",
-    signal: SignalChain![ExampleProcessor, InputGain, OutputGain],
+    processors: [ExampleProcessor, InputGain, OutputGain],
     email: "info@example.com",
     // Optional: use the reusable Oscillator exported by Wavecraft:
     // use wavecraft::Oscillator;
-    // signal: SignalChain![Oscillator, InputGain, OutputGain],
+    // processors: [Oscillator, InputGain, OutputGain],
 }
 ```
 
@@ -338,7 +338,7 @@ impl Processor for Filter {
    - `reset()` — Called when playback stops. Clear delay lines, etc.
 2. **`ProcessorParams` derive** — Generates parameter metadata for UI + host automation.
 3. **`Transport`** — Contains tempo, time signature, playhead position.
-4. **`SignalChain![]`** — Chains processors in order. Each processor gets its own namespaced parameters.
+4. **`processors: [...]` list** — Chains processors in order. Each processor gets its own namespaced parameters.
 
 ### Adding a Processor to Your Project
 
@@ -353,8 +353,8 @@ impl Processor for Filter {
    ```rust
    use wavecraft::Oscillator;
    use processors::Filter;
-   // Custom processors are used directly in SignalChain (no wavecraft_processor! wrapper needed)
-   // signal: SignalChain![InputGain, Oscillator, Filter, OutputGain],
+  // Custom processors are used directly in the processors list (no wavecraft_processor! wrapper needed)
+  // processors: [InputGain, Oscillator, Filter, OutputGain],
    ```
 
 The UI automatically discovers new parameters — no React changes needed.
@@ -476,6 +476,7 @@ All hooks are exported from `@wavecraft/core`:
 | `useMeterFrame()`            | Access real-time meter data                                                 |
 | `useConnectionStatus()`      | WebSocket connection status (dev mode)                                      |
 | `useAudioStatus()`           | Audio runtime phase + diagnostics (`running`, `failed`, etc.)               |
+| `useProcessorOrder()`        | Read/write processor chain order and subscribe to reorder updates.           |
 
 ---
 

@@ -23,17 +23,17 @@ use nih_plug::prelude::*;
     any(target_os = "macos", target_os = "windows"),
     not(feature = "_param-discovery")
 ))]
+use wavecraft_bridge::ProcessorOrderAccess;
+#[cfg(all(
+    any(target_os = "macos", target_os = "windows"),
+    not(feature = "_param-discovery")
+))]
 use wavecraft_metering::MeterConsumer;
 #[cfg(all(
     any(target_os = "macos", target_os = "windows"),
     not(feature = "_param-discovery")
 ))]
 use wavecraft_processors::OscilloscopeFrameConsumer;
-#[cfg(all(
-    any(target_os = "macos", target_os = "windows"),
-    not(feature = "_param-discovery")
-))]
-use wavecraft_bridge::ProcessorOrderAccess;
 
 #[cfg(all(
     any(target_os = "macos", target_os = "windows"),

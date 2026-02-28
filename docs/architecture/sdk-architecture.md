@@ -76,7 +76,7 @@ All SDK crates use the `wavecraft-*` naming convention for clear identification:
 | `wavecraft-core`       | Core SDK types, declarative macros, no nih_plug dependency                                                                                                                                                                                                                                    | ✅ crates.io                    | Re-exported via wavecraft-nih_plug                                                                       |
 | `wavecraft-macros`     | Procedural macros: `ProcessorParams` derive, `wavecraft_plugin!` proc-macro                                                                                                                                                                                                                   | ✅ crates.io                    | Used indirectly via wavecraft-nih_plug                                                                   |
 | `wavecraft-protocol`   | IPC contracts, parameter types, JSON-RPC definitions, FFI vtable contract (`DevProcessorVTable`)                                                                                                                                                                                              | ✅ crates.io                    | Implements `ParamSet` trait                                                                              |
-| `wavecraft-bridge`     | IPC handler, `ParameterHost` trait, `PluginParamLoader` (dlopen + parameter metadata + processor metadata + dev vtable loading)                                                                                                                                                               | ✅ crates.io                    | CLI uses for plugin loading                                                                              |
+| `wavecraft-bridge`     | IPC handler, `ParameterHost` and `ProcessorOrderAccess` traits, `PluginParamLoader` (dlopen + parameter metadata + processor metadata + dev vtable loading)                                                                                                                                      | ✅ crates.io                    | CLI uses for plugin loading                                                                              |
 | `wavecraft-metering`   | Real-time safe SPSC ring buffer for audio → UI metering                                                                                                                                                                                                                                       | ✅ crates.io                    | Uses `MeterProducer` in DSP                                                                              |
 | `wavecraft-dsp`        | DSP primitives, `Processor` trait, contracts, and combinators (no concrete built-in processors)                                                                                                                                                                                               | ✅ crates.io                    | Implements `Processor` trait                                                                             |
 | `wavecraft-processors` | Concrete built-in processors (`Gain`, `Passthrough`, `Oscillator`, etc.) with flat crate-root exports. Owns all concrete built-in implementations; complements `wavecraft-dsp` contracts                                                                                                      | ✅ crates.io                    | Imported by user plugins when they want SDK-provided processors; `wavecraft_processor!` aliases resolve here |
@@ -91,8 +91,8 @@ The UI SDK is distributed as npm packages, enabling standard JavaScript/TypeScri
 
 | Package                 | Purpose                                   | Exports                                                                                                                                                                                                                                                                          |
 | ----------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@wavecraft/core`       | IPC bridge, React hooks, utilities, types | `useParameter`, `useAllParameters`, `useMeterFrame`, `useAudioStatus`, `useHasProcessor`, `useAvailableProcessors`, `IpcBridge`, `Logger`, `ParameterId`, `ParameterIdMap`, `ProcessorId`, `ProcessorIdMap`, `AudioRuntimeStatus`, `AudioRuntimePhase`, `AudioDiagnostic`, types |
-| `@wavecraft/components` | Pre-built React components                | `Meter`, `ParameterSlider`, `ParameterGroup`, `ParameterToggle`, `VersionBadge`, `ConnectionStatus`, `LatencyMonitor`, `ResizeHandle`, `ResizeControls`                                                                                                                          |
+| `@wavecraft/core`       | IPC bridge, React hooks, utilities, types | `useParameter`, `useAllParameters`, `useMeterFrame`, `useAudioStatus`, `useHasProcessor`, `useAvailableProcessors`, `useProcessorOrder`, `IpcBridge`, `ProcessorOrderClient`, `Logger`, `ParameterId`, `ParameterIdMap`, `ProcessorId`, `ProcessorIdMap`, `AudioRuntimeStatus`, `AudioRuntimePhase`, `AudioDiagnostic`, types |
+| `@wavecraft/components` | Pre-built React components                | `Meter`, `ParameterSlider`, `ParameterGroup`, `ParameterToggle`, `SignalChain`, `VersionBadge`, `ConnectionStatus`, `LatencyMonitor`, `ResizeHandle`, `ResizeControls`                                                                                                              |
 
 **Subpath Exports:**
 
@@ -220,11 +220,11 @@ pub use wavecraft_core::{wavecraft_processor, wavecraft_plugin};
   wavecraft_plugin! {
       name: "My Plugin",
       vendor: "Wavecraft",
-      signal: SignalChain![InputGain, MyProcessor, OutputGain],
+      processors: [InputGain, MyProcessor, OutputGain],
   }
   ```
 
-  Custom processors go directly in `SignalChain![]` — no wrapper needed.
+    Custom processors go directly in the `processors: [...]` list — no wrapper needed.
 
 - **`#[derive(ProcessorParams)]`** — Auto-generates parameter metadata from struct definition:
 

@@ -26,7 +26,7 @@ Wavecraft provides a declarative domain-specific language (DSL) for defining plu
 │                                    → Params struct via ProcessorParams          │
 │   wavecraft_plugin! {              → process() with DSP routing                 │
 │       name: "My Plugin",           → VST3Plugin impl (class ID)                 │
-│       signal: SignalChain![        → ClapPlugin impl (CLAP ID)                  │
+│       processors: [                → ClapPlugin impl (CLAP ID)                  │
 │           InputGain],              → nih_export_vst3!() (#[cfg] gated)          │
 │   }                                → nih_export_clap!() (#[cfg] gated)          │
 │                                    → FFI vtable export (always available)       │
@@ -48,18 +48,20 @@ The DSL uses a two-layer macro system:
    - Creates newtype wrappers around built-in processors (`Gain`, `Passthrough`)
    - Delegates `Processor` trait implementation
    - Maintains type distinction for compile-time safety (wrapper name becomes parameter-ID prefix)
-   - **Not for custom processors** — types implementing `Processor` directly go straight into `SignalChain![]`
+    - **Not for custom processors** — types implementing `Processor` directly go into the `processors: [...]` list
 
 2. **`wavecraft_plugin!`** (proc-macro) — Generates complete plugin implementation:
 
    ```rust
    wavecraft_plugin! {
        name: "My Plugin",
-       signal: SignalChain![InputGain],
+       processors: [InputGain],
    }
    ```
 
-   > **Note:** `vendor` and `url` are derived from `Cargo.toml` metadata. `email` is not exposed as a macro property and defaults internally to an empty string. The `signal` field requires `SignalChain![]` wrapper — bare processor names are not accepted.
+   > **Note:** `vendor` and `url` are derived from `Cargo.toml` metadata. `email` is not exposed as a macro property and defaults internally to an empty string.
+
+   > **Note:** The `processors` field accepts an ordered list of processor types (no wrapper required).
 
    In addition to the nih-plug `Plugin` implementation, this macro also generates:
    - `nih_export_vst3!()` and `nih_export_clap!()` — Conditionally compiled with `#[cfg(not(feature = "_param-discovery"))]`. This allows `wavecraft start` to load the dylib for parameter discovery without triggering nih-plug's static initializers (which cause macOS `AudioComponentRegistrar` hangs during `dlopen`).
@@ -83,6 +85,19 @@ The DSL uses a two-layer macro system:
 
    > **Import note:** `use wavecraft::prelude::*` brings in the `ProcessorParams` _trait_.
    > The `#[derive(ProcessorParams)]` _derive macro_ requires `use wavecraft::ProcessorParams;` — trait and derive macro coexist in different namespaces.
+
+### Migration note — breaking DSL change
+
+The `signal: SignalChain![...]` syntax has been replaced with:
+
+```rust
+wavecraft_plugin! {
+    name: "My Plugin",
+    processors: [InputGain, MyProcessor, OutputGain],
+}
+```
+
+Update all existing plugin definitions to use `processors: [...]`.
 
 ## Parameter Runtime Discovery
 
@@ -123,7 +138,7 @@ Processor metadata discovery follows the same dev-time extraction pattern (`wave
 
 ## Parameter ID Prefix Generation
 
-When `SignalChain![]` contains multiple processors, each processor's parameters are namespaced with an ID prefix derived from the processor type name (lowercased):
+When the `processors: [...]` list contains multiple processors, each processor's parameters are namespaced with an ID prefix derived from the processor type name (lowercased):
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -135,7 +150,7 @@ When `SignalChain![]` contains multiple processors, each processor's parameters 
 │                                                                                 │
 │   wavecraft_plugin! {                                                           │
 │       name: "My Plugin",                                                        │
-│       signal: SignalChain![InputGain, OutputGain],                               │
+│       processors: [InputGain, OutputGain],                                       │
 │   }                                                                             │
 │                                                                                 │
 │   Both InputGain and OutputGain wrap the same Gain processor                    │
@@ -211,7 +226,7 @@ The `ParameterGroup` component renders parameters within a named section, improv
 
 2. **Deterministic VST3 IDs** — The macro generates VST3 class IDs by hashing the plugin name and vendor. This ensures consistent IDs without manual management.
 
-3. **Type-Safe Signal Routing** — The `signal` field accepts any type implementing `Processor`. This enables future composition via `Chain![]` or custom processor types.
+3. **Type-Safe Processor Routing** — The `processors` list accepts any type implementing `Processor`. This enables future composition via an ordered processor list and custom processor types.
 
 4. **Optional Group Field** — The `group` parameter attribute is optional, maintaining backward compatibility while enabling UI organization.
 

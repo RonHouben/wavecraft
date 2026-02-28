@@ -1,14 +1,4 @@
 import {
-  useAudioStatus,
-  useConnectionStatus,
-  useLatencyMonitor,
-  useMeterFrame,
-  useRequestResize,
-  WavecraftProvider,
-  useWindowResizeSync,
-} from '@wavecraft/core';
-import { useMemo, type JSX } from 'react';
-import {
   ConnectionStatus,
   GainProcessor,
   LatencyMonitor,
@@ -23,6 +13,16 @@ import {
   VersionBadge,
   type SignalChainProcessorEntry,
 } from '@wavecraft/components';
+import {
+  useAudioStatus,
+  useConnectionStatus,
+  useLatencyMonitor,
+  useMeterFrame,
+  useRequestResize,
+  useWindowResizeSync,
+  WavecraftProvider,
+} from '@wavecraft/core';
+import { useMemo, type JSX } from 'react';
 
 export function App(): JSX.Element {
   useWindowResizeSync();
@@ -52,7 +52,7 @@ export function App(): JSX.Element {
         component: <PassthroughProcessor processorId="passthrough" title="Passthrough" />,
       },
       // slot 3 — example_processor (replace null with your custom processor component)
-      { id: 'example_processor', component: null },
+      // { id: 'example_processor', component: null },
       // slot 4 — tone_filter
       { id: 'tone_filter', component: <ToneFilterProcessor /> },
       // slot 5 — soft_clip

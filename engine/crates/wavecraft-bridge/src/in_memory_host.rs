@@ -234,12 +234,33 @@ impl ParameterHost for InMemoryParameterHost {
     fn set_processor_order(&self, order: &[String]) -> Result<(), BridgeError> {
         if order.is_empty() {
             return Err(BridgeError::InvalidProcessorOrder {
-                reason: "processor order must not be empty".to_string(),
+                reason: "order must be non-empty".to_string(),
             });
         }
-        if let Ok(mut guard) = self.processor_order.write() {
-            *guard = order.to_vec();
+        let n = order.len();
+        // Parse each slot as a non-negative integer index.
+        let slots: Vec<usize> = order
+            .iter()
+            .map(|s| s.parse::<usize>())
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|_| BridgeError::InvalidProcessorOrder {
+                reason: "all slot indices must be non-negative integers".to_string(),
+            })?;
+        // Validate that the indices form a valid permutation (in-range, no duplicates).
+        let mut seen = vec![false; n];
+        for &slot in &slots {
+            if slot >= n || seen[slot] {
+                return Err(BridgeError::InvalidProcessorOrder {
+                    reason: format!(
+                        "invalid permutation: slot {} out of range or duplicated",
+                        slot
+                    ),
+                });
+            }
+            seen[slot] = true;
         }
+        // Store as string vec (matching existing storage type).
+        *self.processor_order.write().unwrap() = order.to_vec();
         Ok(())
     }
 }
@@ -496,5 +517,63 @@ mod tests {
 
         let too_high = host.set_parameter("test_tone_frequency", 30_000.0);
         assert!(too_high.is_err(), "value above max should be rejected");
+    }
+
+    // ── set_processor_order validation ────────────────────────────────────────
+
+    #[test]
+    fn test_set_processor_order_empty_is_rejected() {
+        let host = InMemoryParameterHost::new(vec![]);
+        let result = host.set_processor_order(&[]);
+        assert!(result.is_err(), "empty order should be rejected");
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("non-empty"), "error should mention non-empty");
+    }
+
+    #[test]
+    fn test_set_processor_order_valid_permutation() {
+        let host = InMemoryParameterHost::new(vec![]);
+        let order: Vec<String> = vec!["1".to_string(), "0".to_string()];
+        assert!(
+            host.set_processor_order(&order).is_ok(),
+            "valid permutation should succeed"
+        );
+        assert_eq!(host.get_processor_order(), order);
+    }
+
+    #[test]
+    fn test_set_processor_order_out_of_range_index_rejected() {
+        let host = InMemoryParameterHost::new(vec![]);
+        // [0, 2] for a 2-element order: index 2 is out of range
+        let order: Vec<String> = vec!["0".to_string(), "2".to_string()];
+        let result = host.set_processor_order(&order);
+        assert!(result.is_err(), "out-of-range index should be rejected");
+        let msg = result.unwrap_err().to_string();
+        assert!(
+            msg.contains("out of range") || msg.contains("duplicated"),
+            "error should describe the permutation failure"
+        );
+    }
+
+    #[test]
+    fn test_set_processor_order_duplicate_index_rejected() {
+        let host = InMemoryParameterHost::new(vec![]);
+        // [0, 0] for a 2-element order: 0 is duplicated
+        let order: Vec<String> = vec!["0".to_string(), "0".to_string()];
+        let result = host.set_processor_order(&order);
+        assert!(result.is_err(), "duplicate index should be rejected");
+    }
+
+    #[test]
+    fn test_set_processor_order_non_integer_rejected() {
+        let host = InMemoryParameterHost::new(vec![]);
+        let order: Vec<String> = vec!["osc".to_string(), "filter".to_string()];
+        let result = host.set_processor_order(&order);
+        assert!(result.is_err(), "non-integer order should be rejected");
+        let msg = result.unwrap_err().to_string();
+        assert!(
+            msg.contains("non-negative integers"),
+            "error should indicate integer requirement"
+        );
     }
 }

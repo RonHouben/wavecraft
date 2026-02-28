@@ -193,19 +193,18 @@ impl<H: ParameterHost> IpcHandler<H> {
         ))
     }
 
-    fn handle_get_processor_order(
-        &self,
-        request: &IpcRequest,
-    ) -> Result<IpcResponse, BridgeError> {
+    fn handle_get_processor_order(&self, request: &IpcRequest) -> Result<IpcResponse, BridgeError> {
+        // NOTE: `processorOrderChanged` is intentionally *not* emitted here.
+        // The JSON-RPC response already carries the current order state, so a push notification
+        // after GET would be redundant and could cause client subscription loops.
+        // Notification is only emitted after a successful `setProcessorOrder` (see
+        // `handle_json_multi`). Design ref: low-level-design-ui-signal-chain-reorder.md.
         let order = self.host.get_processor_order();
         let result = GetProcessorOrderResult { order };
         Ok(IpcResponse::success(request.id.clone(), result))
     }
 
-    fn handle_set_processor_order(
-        &self,
-        request: &IpcRequest,
-    ) -> Result<IpcResponse, BridgeError> {
+    fn handle_set_processor_order(&self, request: &IpcRequest) -> Result<IpcResponse, BridgeError> {
         let params: SetProcessorOrderParams =
             self.parse_required_params(request, METHOD_SET_PROCESSOR_ORDER)?;
         self.host.set_processor_order(&params.order)?;
@@ -229,8 +228,10 @@ impl<H: ParameterHost> IpcHandler<H> {
                     RequestId::Number(0),
                     wavecraft_protocol::IpcError::parse_error(),
                 );
-                return vec![serde_json::to_string(&response)
-                    .expect("IpcResponse serialization is infallible")];
+                return vec![
+                    serde_json::to_string(&response)
+                        .expect("IpcResponse serialization is infallible"),
+                ];
             }
         };
 
@@ -238,8 +239,8 @@ impl<H: ParameterHost> IpcHandler<H> {
         let response = self.handle_request(request);
         let is_success = response.error.is_none();
 
-        let response_json = serde_json::to_string(&response)
-            .expect("IpcResponse serialization is infallible");
+        let response_json =
+            serde_json::to_string(&response).expect("IpcResponse serialization is infallible");
         let mut messages = vec![response_json];
 
         // Emit processorOrderChanged notification on successful setProcessorOrder

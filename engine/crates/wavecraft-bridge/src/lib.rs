@@ -82,8 +82,8 @@ pub use plugin_loader::{PluginLoaderError, PluginParamLoader};
 // Protocol contracts surfaced by the bridge API.
 pub use wavecraft_protocol::{
     GetAllParametersResult, GetParameterParams, GetParameterResult, GetProcessorOrderResult,
-    IpcError, IpcNotification, IpcRequest, IpcResponse, MeterUpdateNotification,
-    METHOD_GET_PROCESSOR_ORDER, METHOD_SET_PROCESSOR_ORDER, NOTIFICATION_PROCESSOR_ORDER_CHANGED,
+    IpcError, IpcNotification, IpcRequest, IpcResponse, METHOD_GET_PROCESSOR_ORDER,
+    METHOD_SET_PROCESSOR_ORDER, MeterUpdateNotification, NOTIFICATION_PROCESSOR_ORDER_CHANGED,
     ParameterChangedNotification, ParameterInfo, ParameterType, ProcessorInfo,
     ProcessorOrderChangedNotification, RegisterAudioParams, RegisterAudioResult, RequestId,
     SetParameterParams, SetParameterResult, SetProcessorOrderParams,
