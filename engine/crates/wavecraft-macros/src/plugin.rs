@@ -5,7 +5,7 @@
 //! Plugin email is not exposed in the DSL and defaults to an empty string.
 
 use proc_macro::TokenStream;
-#[path = "plugin/codegen.rs"]
+#[path = "plugin/codegen/mod.rs"]
 mod codegen;
 #[path = "plugin/metadata.rs"]
 mod metadata;
