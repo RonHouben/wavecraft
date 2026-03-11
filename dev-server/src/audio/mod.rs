@@ -9,11 +9,13 @@
 
 pub mod atomic_params;
 pub mod ffi_processor;
+mod input_source;
 pub mod server;
 pub mod status;
 
 // Public re-exports
 pub use atomic_params::AtomicParameterBridge;
 pub use ffi_processor::{DevAudioProcessor, FfiProcessor};
+pub use input_source::SharedInputSourceSelection;
 pub use server::{AudioConfig, AudioHandle, AudioServer};
 pub use status::{status, status_with_diagnostic};

@@ -132,8 +132,14 @@ fn try_start_audio_in_process(
     };
     let target_sample_rate = config.sample_rate;
     let target_buffer_size = config.buffer_size;
+    let input_source_selection = host.input_source_selection();
 
-    let server = match AudioServer::new(Box::new(processor), config, param_bridge) {
+    let server = match AudioServer::new(
+        Box::new(processor),
+        config,
+        param_bridge,
+        input_source_selection,
+    ) {
         Ok(s) => s,
         Err(e) => {
             let error_text = e.to_string();

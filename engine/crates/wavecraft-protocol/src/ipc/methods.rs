@@ -89,6 +89,53 @@ pub struct ProcessorInfo {
     pub id: String,
 }
 
+/// Selectable input source for the dev/runtime audio path.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum InputSourceKind {
+    HardwareInput,
+    TestTone,
+}
+
+/// UI-facing description of an available input source.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InputSourceOption {
+    /// Stable source identifier.
+    pub id: InputSourceKind,
+    /// Human-readable label.
+    pub label: String,
+    /// Optional helper text for UI affordances.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+/// Result for getInputSource method.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetInputSourceResult {
+    /// Currently selected input source.
+    pub selected: InputSourceKind,
+    /// Available input sources for this runtime.
+    pub available: Vec<InputSourceOption>,
+}
+
+/// Parameters for setInputSource request.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SetInputSourceParams {
+    /// Newly selected input source.
+    pub selected: InputSourceKind,
+}
+
+/// Result of a successful setInputSource request (empty success).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SetInputSourceResult {}
+
+/// Notification sent when the active input source changes.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InputSourceChangedNotification {
+    /// Newly selected input source.
+    pub selected: InputSourceKind,
+}
+
 /// Parameter type discriminator
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -127,6 +174,10 @@ pub const METHOD_GET_METER_FRAME: &str = "getMeterFrame";
 pub const METHOD_GET_OSCILLOSCOPE_FRAME: &str = "getOscilloscopeFrame";
 /// Method: Get current audio runtime status
 pub const METHOD_GET_AUDIO_STATUS: &str = "getAudioStatus";
+/// Method: Get current selected input source and options
+pub const METHOD_GET_INPUT_SOURCE: &str = "getInputSource";
+/// Method: Set current input source
+pub const METHOD_SET_INPUT_SOURCE: &str = "setInputSource";
 /// Method: Request resize of editor window
 pub const METHOD_REQUEST_RESIZE: &str = "requestResize";
 /// Method: Register audio client with dev server
@@ -137,6 +188,8 @@ pub const NOTIFICATION_PARAMETER_CHANGED: &str = "parameterChanged";
 pub const NOTIFICATION_METER_UPDATE: &str = "meterUpdate";
 /// Notification: Audio runtime status changed
 pub const NOTIFICATION_AUDIO_STATUS_CHANGED: &str = "audioStatusChanged";
+/// Notification: Input source changed
+pub const NOTIFICATION_INPUT_SOURCE_CHANGED: &str = "inputSourceChanged";
 /// Method: Get current signal chain order (processors + taps)
 pub const METHOD_GET_SIGNAL_CHAIN_ORDER: &str = "getSignalChainOrder";
 /// Method: Set signal chain order

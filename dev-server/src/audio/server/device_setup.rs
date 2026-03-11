@@ -6,6 +6,7 @@ use cpal::{Device, Stream, StreamConfig};
 use wavecraft_processors::OscilloscopeTap;
 use wavecraft_protocol::MeterUpdateNotification;
 
+use super::super::SharedInputSourceSelection;
 use super::super::atomic_params::AtomicParameterBridge;
 use super::super::ffi_processor::DevAudioProcessor;
 
@@ -25,6 +26,7 @@ pub(super) struct InputStreamBuildContext {
     pub(super) input_channels: usize,
     pub(super) sample_rate_hz: f32,
     pub(super) param_bridge: Arc<AtomicParameterBridge>,
+    pub(super) input_source_selection: SharedInputSourceSelection,
     pub(super) ring_producer: rtrb::Producer<f32>,
     pub(super) meter_producer: rtrb::Producer<MeterUpdateNotification>,
     pub(super) oscilloscope_tap: OscilloscopeTap,

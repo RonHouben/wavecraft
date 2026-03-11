@@ -35,6 +35,7 @@ use cpal::{Device, Stream, StreamConfig};
 use wavecraft_processors::OscilloscopeFrameConsumer;
 use wavecraft_protocol::MeterUpdateNotification;
 
+use super::SharedInputSourceSelection;
 use super::atomic_params::AtomicParameterBridge;
 use super::ffi_processor::DevAudioProcessor;
 
@@ -64,6 +65,7 @@ pub struct AudioServer {
     input_config: StreamConfig,
     output_config: StreamConfig,
     param_bridge: Arc<AtomicParameterBridge>,
+    input_source_selection: SharedInputSourceSelection,
 }
 
 impl AudioServer {
@@ -73,6 +75,7 @@ impl AudioServer {
         processor: Box<dyn DevAudioProcessor>,
         config: AudioConfig,
         param_bridge: Arc<AtomicParameterBridge>,
+        input_source_selection: SharedInputSourceSelection,
     ) -> Result<Self> {
         let negotiated = device_setup::negotiate_default_devices_and_configs()?;
 
@@ -84,6 +87,7 @@ impl AudioServer {
             input_config: negotiated.input_config,
             output_config: negotiated.output_config,
             param_bridge,
+            input_source_selection,
         })
     }
 
@@ -121,6 +125,7 @@ impl AudioServer {
             input_channels,
             output_channels,
             param_bridge,
+            input_source_selection: self.input_source_selection,
             actual_sample_rate,
         })
     }

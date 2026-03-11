@@ -1,26 +1,28 @@
 import {
-    ConnectionStatus,
-    GainProcessor,
-    LatencyMonitor,
-    Meter,
-    OscilloscopeProcessor,
-    PassthroughProcessor,
-    ResizeHandle,
-    SaturatorProcessor,
-    SignalChain,
-    TestToneProcessor,
-    ToneFilterProcessor,
-    VersionBadge,
-    type SignalChainEntry,
+  ConnectionStatus,
+  GainProcessor,
+  LatencyMonitor,
+  Meter,
+  OscilloscopeProcessor,
+  PassthroughProcessor,
+  ResizeHandle,
+  SaturatorProcessor,
+  Select,
+  SignalChain,
+  TestToneProcessor,
+  ToneFilterProcessor,
+  VersionBadge,
+  type SignalChainEntry,
 } from '@wavecraft/components';
 import {
-    useAudioStatus,
-    useConnectionStatus,
-    useLatencyMonitor,
-    useMeterFrame,
-    useRequestResize,
-    useWindowResizeSync,
-    WavecraftProvider,
+  useAudioStatus,
+  useConnectionStatus,
+  useInputSource,
+  useLatencyMonitor,
+  useMeterFrame,
+  useRequestResize,
+  useWindowResizeSync,
+  WavecraftProvider,
 } from '@wavecraft/core';
 import { useMemo, type JSX } from 'react';
 
@@ -28,6 +30,12 @@ export function App(): JSX.Element {
   useWindowResizeSync();
   const { connected, transport } = useConnectionStatus();
   const { phase, isReady, isDegraded, diagnostic } = useAudioStatus();
+  const {
+    selected: selectedInputSource,
+    available: availableInputSources,
+    setSelected: setSelectedInputSource,
+    isLoading: isInputSourceLoading,
+  } = useInputSource();
   const latency = useLatencyMonitor(1000);
   const frame = useMeterFrame(50);
   const requestResize = useRequestResize();
@@ -74,6 +82,22 @@ export function App(): JSX.Element {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-100">My Plugin</h1>
         <div className="flex items-center gap-2">
+          {selectedInputSource ? (
+            <Select
+              label="Input Source"
+              size="sm"
+              value={selectedInputSource}
+              options={availableInputSources.map((source) => ({
+                label: source.label,
+                value: source.id,
+              }))}
+              disabled={!connected || availableInputSources.length === 0}
+              state={isInputSourceLoading ? 'loading' : 'default'}
+              onChange={(nextValue) => {
+                void setSelectedInputSource(nextValue);
+              }}
+            />
+          ) : null}
           <ConnectionStatus
             connected={connected}
             transport={transport}

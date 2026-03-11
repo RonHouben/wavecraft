@@ -6,13 +6,15 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use wavecraft_protocol::{
     GetAllParametersResult, GetAudioStatusResult, GetMeterFrameResult, GetOscilloscopeFrameResult,
-    GetParameterParams, GetParameterResult, GetSignalChainOrderResult, IpcNotification, IpcRequest,
-    IpcResponse, METHOD_GET_ALL_PARAMETERS, METHOD_GET_AUDIO_STATUS, METHOD_GET_METER_FRAME,
-    METHOD_GET_OSCILLOSCOPE_FRAME, METHOD_GET_PARAMETER, METHOD_GET_SIGNAL_CHAIN_ORDER,
-    METHOD_REQUEST_RESIZE, METHOD_SET_PARAMETER, METHOD_SET_SIGNAL_CHAIN_ORDER,
+    GetParameterParams, GetParameterResult, GetSignalChainOrderResult,
+    InputSourceChangedNotification, IpcNotification, IpcRequest, IpcResponse,
+    METHOD_GET_ALL_PARAMETERS, METHOD_GET_AUDIO_STATUS, METHOD_GET_INPUT_SOURCE,
+    METHOD_GET_METER_FRAME, METHOD_GET_OSCILLOSCOPE_FRAME, METHOD_GET_PARAMETER,
+    METHOD_GET_SIGNAL_CHAIN_ORDER, METHOD_REQUEST_RESIZE, METHOD_SET_INPUT_SOURCE,
+    METHOD_SET_PARAMETER, METHOD_SET_SIGNAL_CHAIN_ORDER, NOTIFICATION_INPUT_SOURCE_CHANGED,
     NOTIFICATION_SIGNAL_CHAIN_ORDER_CHANGED, RequestId, RequestResizeParams, RequestResizeResult,
-    SetParameterParams, SetParameterResult, SetSignalChainOrderParams, SetSignalChainOrderResult,
-    SignalChainOrderChangedNotification,
+    SetInputSourceParams, SetInputSourceResult, SetParameterParams, SetParameterResult,
+    SetSignalChainOrderParams, SetSignalChainOrderResult, SignalChainOrderChangedNotification,
 };
 
 /// IPC message handler that dispatches requests to a ParameterHost
@@ -38,6 +40,8 @@ impl<H: ParameterHost> IpcHandler<H> {
             METHOD_GET_METER_FRAME => self.handle_get_meter_frame(&request),
             METHOD_GET_OSCILLOSCOPE_FRAME => self.handle_get_oscilloscope_frame(&request),
             METHOD_GET_AUDIO_STATUS => self.handle_get_audio_status(&request),
+            METHOD_GET_INPUT_SOURCE => self.handle_get_input_source(&request),
+            METHOD_SET_INPUT_SOURCE => self.handle_set_input_source(&request),
             METHOD_REQUEST_RESIZE => self.handle_request_resize(&request),
             METHOD_GET_SIGNAL_CHAIN_ORDER => self.handle_get_signal_chain_order(&request),
             METHOD_SET_SIGNAL_CHAIN_ORDER => self.handle_set_signal_chain_order(&request),
@@ -193,6 +197,25 @@ impl<H: ParameterHost> IpcHandler<H> {
         ))
     }
 
+    fn handle_get_input_source(&self, request: &IpcRequest) -> Result<IpcResponse, BridgeError> {
+        let result = self.host.get_input_source().ok_or_else(|| {
+            BridgeError::Internal("input source selection not supported by this host".to_string())
+        })?;
+
+        Ok(IpcResponse::success(request.id.clone(), result))
+    }
+
+    fn handle_set_input_source(&self, request: &IpcRequest) -> Result<IpcResponse, BridgeError> {
+        let params: SetInputSourceParams =
+            self.parse_required_params(request, METHOD_SET_INPUT_SOURCE)?;
+        self.host.set_input_source(params.selected)?;
+
+        Ok(IpcResponse::success(
+            request.id.clone(),
+            SetInputSourceResult {},
+        ))
+    }
+
     fn handle_get_signal_chain_order(
         &self,
         request: &IpcRequest,
@@ -249,12 +272,27 @@ impl<H: ParameterHost> IpcHandler<H> {
             serde_json::to_string(&response).expect("IpcResponse serialization is infallible");
         let mut messages = vec![response_json];
 
-        // Emit signalChainOrderChanged notification on successful setSignalChainOrder
+        // Emit push notifications after successful state-changing requests.
         if method == METHOD_SET_SIGNAL_CHAIN_ORDER && is_success {
             let slots = self.host.get_signal_chain_order();
             let notification = IpcNotification::new(
                 NOTIFICATION_SIGNAL_CHAIN_ORDER_CHANGED,
                 SignalChainOrderChangedNotification { slots },
+            );
+            if let Ok(notif_json) = serde_json::to_string(&notification) {
+                messages.push(notif_json);
+            }
+        }
+
+        if method == METHOD_SET_INPUT_SOURCE
+            && is_success
+            && let Some(result) = self.host.get_input_source()
+        {
+            let notification = IpcNotification::new(
+                NOTIFICATION_INPUT_SOURCE_CHANGED,
+                InputSourceChangedNotification {
+                    selected: result.selected,
+                },
             );
             if let Ok(notif_json) = serde_json::to_string(&notification) {
                 messages.push(notif_json);
@@ -273,8 +311,8 @@ impl<H: ParameterHost> IpcHandler<H> {
 mod tests {
     use super::*;
     use wavecraft_protocol::{
-        AudioRuntimePhase, AudioRuntimeStatus, MeterFrame, OscilloscopeFrame, ParameterInfo,
-        ParameterType, RequestId,
+        AudioRuntimePhase, AudioRuntimeStatus, GetInputSourceResult, InputSourceKind, MeterFrame,
+        OscilloscopeFrame, ParameterInfo, ParameterType, RequestId,
     };
 
     // Mock ParameterHost for testing
@@ -362,6 +400,38 @@ mod tests {
                 buffer_size: Some(512),
                 updated_at_ms: 123,
             })
+        }
+
+        fn get_input_source(&self) -> Option<GetInputSourceResult> {
+            Some(GetInputSourceResult {
+                selected: InputSourceKind::HardwareInput,
+                available: vec![
+                    wavecraft_protocol::InputSourceOption {
+                        id: InputSourceKind::HardwareInput,
+                        label: "Soundcard input".to_string(),
+                        description: None,
+                    },
+                    wavecraft_protocol::InputSourceOption {
+                        id: InputSourceKind::TestTone,
+                        label: "Test tone".to_string(),
+                        description: None,
+                    },
+                ],
+            })
+        }
+
+        fn set_input_source(&self, source: InputSourceKind) -> Result<(), BridgeError> {
+            if matches!(
+                source,
+                InputSourceKind::HardwareInput | InputSourceKind::TestTone
+            ) {
+                Ok(())
+            } else {
+                Err(BridgeError::InvalidParams {
+                    method: METHOD_SET_INPUT_SOURCE.to_string(),
+                    reason: "unsupported input source".to_string(),
+                })
+            }
         }
     }
 
@@ -529,5 +599,36 @@ mod tests {
             serde_json::from_value(response.result.expect("oscilloscope response should exist"))
                 .expect("oscilloscope result should deserialize");
         assert!(result.frame.is_none());
+    }
+
+    #[test]
+    fn test_get_input_source() {
+        let handler = IpcHandler::new(MockHost::new());
+
+        let request = IpcRequest::new(RequestId::Number(9), METHOD_GET_INPUT_SOURCE, None);
+
+        let response = handler.handle_request(request);
+        assert!(response.result.is_some());
+
+        let result: GetInputSourceResult =
+            serde_json::from_value(response.result.expect("input source response should exist"))
+                .expect("input source result should deserialize");
+        assert_eq!(result.selected, InputSourceKind::HardwareInput);
+        assert_eq!(result.available.len(), 2);
+    }
+
+    #[test]
+    fn test_set_input_source() {
+        let handler = IpcHandler::new(MockHost::new());
+
+        let request = IpcRequest::new(
+            RequestId::Number(10),
+            METHOD_SET_INPUT_SOURCE,
+            Some(serde_json::json!({"selected": "testTone"})),
+        );
+
+        let response = handler.handle_request(request);
+        assert!(response.result.is_some());
+        assert!(response.error.is_none());
     }
 }

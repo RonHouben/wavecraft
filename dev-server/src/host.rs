@@ -11,10 +11,12 @@ use std::sync::RwLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 use wavecraft_bridge::{BridgeError, InMemoryParameterHost, ParameterHost};
 use wavecraft_protocol::{
-    AudioRuntimePhase, AudioRuntimeStatus, MeterFrame, MeterUpdateNotification, OscilloscopeFrame,
-    ParameterInfo, SignalChainSlot,
+    AudioRuntimePhase, AudioRuntimeStatus, GetInputSourceResult, InputSourceKind, MeterFrame,
+    MeterUpdateNotification, OscilloscopeFrame, ParameterInfo, SignalChainSlot,
 };
 
+#[cfg(feature = "audio")]
+use crate::audio::SharedInputSourceSelection;
 #[cfg(feature = "audio")]
 use crate::audio::atomic_params::AtomicParameterBridge;
 
@@ -41,6 +43,8 @@ pub struct DevServerHost {
     audio_status: Arc<RwLock<AudioRuntimeStatus>>,
     #[cfg(feature = "audio")]
     param_bridge: Option<Arc<AtomicParameterBridge>>,
+    #[cfg(feature = "audio")]
+    input_source_selection: SharedInputSourceSelection,
 }
 
 struct SharedState {
@@ -100,6 +104,8 @@ impl DevServerHost {
             audio_status: shared_state.audio_status,
             #[cfg(feature = "audio")]
             param_bridge: None,
+            #[cfg(feature = "audio")]
+            input_source_selection: SharedInputSourceSelection::default(),
         }
     }
 
@@ -121,7 +127,13 @@ impl DevServerHost {
             latest_oscilloscope_frame: shared_state.latest_oscilloscope_frame,
             audio_status: shared_state.audio_status,
             param_bridge: Some(bridge),
+            input_source_selection: SharedInputSourceSelection::default(),
         }
+    }
+
+    #[cfg(feature = "audio")]
+    pub fn input_source_selection(&self) -> SharedInputSourceSelection {
+        self.input_source_selection.clone()
     }
 
     /// Replace all parameters with new metadata from a hot-reload.
@@ -258,6 +270,17 @@ impl ParameterHost for DevServerHost {
                 .expect("audio_status lock poisoned")
                 .clone(),
         )
+    }
+
+    fn get_input_source(&self) -> Option<GetInputSourceResult> {
+        self.inner.get_input_source()
+    }
+
+    fn set_input_source(&self, source: InputSourceKind) -> Result<(), BridgeError> {
+        self.inner.set_input_source(source)?;
+        #[cfg(feature = "audio")]
+        self.input_source_selection.store(source);
+        Ok(())
     }
 
     fn get_signal_chain_order(&self) -> Vec<SignalChainSlot> {
@@ -404,6 +427,17 @@ mod tests {
             .expect("audio status should always be present in dev host");
         assert_eq!(stored.phase, status.phase);
         assert_eq!(stored.buffer_size, status.buffer_size);
+    }
+
+    #[test]
+    fn test_input_source_roundtrip() {
+        let host = DevServerHost::new(test_params());
+
+        host.set_input_source(InputSourceKind::TestTone)
+            .expect("should set input source");
+
+        let selection = host.get_input_source().expect("selection should exist");
+        assert_eq!(selection.selected, InputSourceKind::TestTone);
     }
 
     #[test]

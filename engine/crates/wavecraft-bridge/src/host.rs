@@ -6,7 +6,8 @@
 use crate::error::BridgeError;
 use std::sync::Arc;
 use wavecraft_protocol::{
-    AudioRuntimeStatus, MeterFrame, OscilloscopeFrame, ParameterInfo, SignalChainSlot,
+    AudioRuntimeStatus, GetInputSourceResult, InputSourceKind, MeterFrame, OscilloscopeFrame,
+    ParameterInfo, SignalChainSlot,
 };
 
 /// Trait for objects that store and manage parameters.
@@ -157,6 +158,18 @@ pub trait ParameterHost: Send + Sync {
     /// Implementers that do not expose runtime audio state should return `None`.
     fn get_audio_status(&self) -> Option<AudioRuntimeStatus>;
 
+    /// Get the current input source selection and available source options.
+    fn get_input_source(&self) -> Option<GetInputSourceResult> {
+        None
+    }
+
+    /// Set the selected input source.
+    fn set_input_source(&self, _source: InputSourceKind) -> Result<(), BridgeError> {
+        Err(BridgeError::Internal(
+            "input source selection not supported by this host".to_string(),
+        ))
+    }
+
     /// Get the current signal chain order as a list of slots.
     ///
     /// Returns an empty vec for hosts that don't support signal chain ordering.
@@ -209,6 +222,14 @@ impl<T: ParameterHost> ParameterHost for std::sync::Arc<T> {
 
     fn get_audio_status(&self) -> Option<AudioRuntimeStatus> {
         forward_host(self).get_audio_status()
+    }
+
+    fn get_input_source(&self) -> Option<GetInputSourceResult> {
+        forward_host(self).get_input_source()
+    }
+
+    fn set_input_source(&self, source: InputSourceKind) -> Result<(), BridgeError> {
+        forward_host(self).set_input_source(source)
     }
 
     fn get_signal_chain_order(&self) -> Vec<SignalChainSlot> {

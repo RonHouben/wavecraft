@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 const mockUseWindowResizeSync = vi.hoisted(() => vi.fn());
 const mockUseConnectionStatus = vi.hoisted(() => vi.fn());
 const mockUseAudioStatus = vi.hoisted(() => vi.fn());
+const mockUseInputSource = vi.hoisted(() => vi.fn());
 const mockUseLatencyMonitor = vi.hoisted(() => vi.fn());
 const mockUseMeterFrame = vi.hoisted(() => vi.fn());
 const mockUseRequestResize = vi.hoisted(() => vi.fn());
@@ -18,6 +19,7 @@ vi.mock('@wavecraft/core', () => ({
   useWindowResizeSync: mockUseWindowResizeSync,
   useConnectionStatus: mockUseConnectionStatus,
   useAudioStatus: mockUseAudioStatus,
+  useInputSource: mockUseInputSource,
   useLatencyMonitor: mockUseLatencyMonitor,
   useMeterFrame: mockUseMeterFrame,
   useRequestResize: mockUseRequestResize,
@@ -95,6 +97,16 @@ describe('sdk-template App layout', () => {
       isReady: true,
       isDegraded: false,
       diagnostic: undefined,
+    });
+    mockUseInputSource.mockReturnValue({
+      selected: 'hardwareInput',
+      available: [
+        { id: 'hardwareInput', label: 'Soundcard input' },
+        { id: 'testTone', label: 'Test tone' },
+      ],
+      setSelected: vi.fn(),
+      isLoading: false,
+      error: null,
     });
     mockUseLatencyMonitor.mockReturnValue({ latency: 2, avg: 2, max: 4, count: 8 });
     mockUseMeterFrame.mockReturnValue({ peak_l: 0, peak_r: 0, rms_l: 0, rms_r: 0, timestamp: 0 });

@@ -5,13 +5,16 @@ use wavecraft_protocol::MeterUpdateNotification;
 
 use super::super::atomic_params::AtomicParameterBridge;
 use super::super::ffi_processor::DevAudioProcessor;
+use super::super::SharedInputSourceSelection;
+use wavecraft_protocol::InputSourceKind;
 
 use super::device_setup::InputStreamBuildContext;
+
+const TEST_TONE_ENABLED_PARAM_ID: &str = "test_tone_enabled";
 
 pub(super) struct InputCallbackPipeline {
     frame_counter: u64,
     sample_rate_hz: f32,
-    test_tone_phase: f32,
     left_buf: Vec<f32>,
     right_buf: Vec<f32>,
     interleave_buf: Vec<f32>,
@@ -20,6 +23,7 @@ pub(super) struct InputCallbackPipeline {
     processor: Box<dyn DevAudioProcessor>,
     input_channels: usize,
     param_bridge: Arc<AtomicParameterBridge>,
+    input_source_selection: SharedInputSourceSelection,
     ring_producer: rtrb::Producer<f32>,
     meter_producer: rtrb::Producer<MeterUpdateNotification>,
     oscilloscope_tap: OscilloscopeTap,
@@ -30,7 +34,6 @@ impl InputCallbackPipeline {
         Self {
             frame_counter: 0,
             sample_rate_hz: context.sample_rate_hz,
-            test_tone_phase: 0.0,
             left_buf: vec![0.0f32; context.buffer_size],
             right_buf: vec![0.0f32; context.buffer_size],
             interleave_buf: vec![0.0f32; context.buffer_size * 2],
@@ -39,6 +42,7 @@ impl InputCallbackPipeline {
             processor: context.processor,
             input_channels: context.input_channels,
             param_bridge: context.param_bridge,
+            input_source_selection: context.input_source_selection,
             ring_producer: context.ring_producer,
             meter_producer: context.meter_producer,
             oscilloscope_tap: context.oscilloscope_tap,
@@ -56,12 +60,25 @@ impl InputCallbackPipeline {
 
         let left = &mut self.left_buf[..actual_samples];
         let right = &mut self.right_buf[..actual_samples];
+        let selected_input_source = self.input_source_selection.load();
 
-        // Zero-fill and deinterleave
-        deinterleave_input(data, self.input_channels, left, right);
+        match selected_input_source {
+            InputSourceKind::HardwareInput => {
+                deinterleave_input(data, self.input_channels, left, right);
+            }
+            InputSourceKind::TestTone => {
+                left.fill(0.0);
+                right.fill(0.0);
+            }
+        }
 
         // Process through the user's DSP (stack-local channel array)
         let plain_values_len = self.param_bridge.copy_all_to(&mut self.plain_values_buf);
+        apply_input_source_overrides(
+            &mut self.plain_values_buf[..plain_values_len],
+            self.param_bridge.as_ref(),
+            selected_input_source,
+        );
         self.processor
             .apply_plain_values(&self.plain_values_buf[..plain_values_len]);
 
@@ -74,7 +91,6 @@ impl InputCallbackPipeline {
             left,
             right,
             self.param_bridge.as_ref(),
-            &mut self.test_tone_phase,
             self.sample_rate_hz,
             &mut self.tone_filter_state,
         );
@@ -145,5 +161,22 @@ fn push_samples_to_ring(ring_producer: &mut rtrb::Producer<f32>, samples: &[f32]
         if ring_producer.push(sample).is_err() {
             break;
         }
+    }
+}
+
+fn apply_input_source_overrides(
+    plain_values: &mut [f32],
+    param_bridge: &AtomicParameterBridge,
+    selected_input_source: InputSourceKind,
+) {
+    let Some(index) = param_bridge.parameter_index(TEST_TONE_ENABLED_PARAM_ID) else {
+        return;
+    };
+
+    if let Some(value) = plain_values.get_mut(index) {
+        *value = match selected_input_source {
+            InputSourceKind::HardwareInput => 0.0,
+            InputSourceKind::TestTone => 1.0,
+        };
     }
 }

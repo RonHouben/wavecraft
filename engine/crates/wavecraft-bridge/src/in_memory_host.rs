@@ -5,7 +5,8 @@ use std::sync::{Arc, RwLock};
 
 use crate::{BridgeError, ParameterHost};
 use wavecraft_protocol::{
-    AudioRuntimeStatus, MeterFrame, OscilloscopeFrame, ParameterInfo, SignalChainSlot,
+    AudioRuntimeStatus, GetInputSourceResult, InputSourceKind, InputSourceOption, MeterFrame,
+    OscilloscopeFrame, ParameterInfo, SignalChainSlot,
 };
 
 /// Provides metering data for an in-memory host.
@@ -30,6 +31,7 @@ pub struct InMemoryParameterHost {
     oscilloscope_provider: Option<Arc<dyn OscilloscopeProvider>>,
     /// Active signal chain order as a list of slots.
     signal_chain_order: RwLock<Vec<SignalChainSlot>>,
+    input_source: RwLock<InputSourceKind>,
 }
 
 impl InMemoryParameterHost {
@@ -46,6 +48,7 @@ impl InMemoryParameterHost {
             meter_provider: None,
             oscilloscope_provider: None,
             signal_chain_order: RwLock::new(Vec::new()),
+            input_source: RwLock::new(InputSourceKind::HardwareInput),
         }
     }
 
@@ -226,6 +229,24 @@ impl ParameterHost for InMemoryParameterHost {
         None
     }
 
+    fn get_input_source(&self) -> Option<GetInputSourceResult> {
+        let selected = self
+            .input_source
+            .read()
+            .map(|guard| *guard)
+            .unwrap_or(InputSourceKind::HardwareInput);
+
+        Some(GetInputSourceResult {
+            selected,
+            available: default_input_source_options(),
+        })
+    }
+
+    fn set_input_source(&self, source: InputSourceKind) -> Result<(), BridgeError> {
+        *self.input_source.write().unwrap() = source;
+        Ok(())
+    }
+
     fn get_signal_chain_order(&self) -> Vec<SignalChainSlot> {
         self.signal_chain_order
             .read()
@@ -251,6 +272,21 @@ impl ParameterHost for InMemoryParameterHost {
         *self.signal_chain_order.write().unwrap() = order;
         Ok(())
     }
+}
+
+fn default_input_source_options() -> Vec<InputSourceOption> {
+    vec![
+        InputSourceOption {
+            id: InputSourceKind::HardwareInput,
+            label: "Soundcard input".to_string(),
+            description: Some("Use the active hardware input routed into the dev server".to_string()),
+        },
+        InputSourceOption {
+            id: InputSourceKind::TestTone,
+            label: "Test tone".to_string(),
+            description: Some("Use the TestTone processor signal as the chain input".to_string()),
+        },
+    ]
 }
 
 #[cfg(test)]
@@ -593,5 +629,23 @@ mod tests {
         ];
         assert!(host.set_signal_chain_order(order.clone()).is_ok());
         assert_eq!(host.get_signal_chain_order(), order);
+    }
+
+    #[test]
+    fn test_input_source_defaults_to_hardware_input() {
+        let host = InMemoryParameterHost::new(vec![]);
+        let input_source = host.get_input_source().expect("input source should exist");
+        assert_eq!(input_source.selected, InputSourceKind::HardwareInput);
+        assert_eq!(input_source.available.len(), 2);
+    }
+
+    #[test]
+    fn test_set_input_source_updates_selection() {
+        let host = InMemoryParameterHost::new(vec![]);
+        host.set_input_source(InputSourceKind::TestTone)
+            .expect("should set input source");
+
+        let input_source = host.get_input_source().expect("input source should exist");
+        assert_eq!(input_source.selected, InputSourceKind::TestTone);
     }
 }
