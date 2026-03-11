@@ -5,8 +5,9 @@ use std::sync::{Arc, RwLock};
 
 use crate::{BridgeError, ParameterHost};
 use wavecraft_protocol::{
-    AudioRuntimeStatus, GetInputSourceResult, InputSourceKind, InputSourceOption, MeterFrame,
-    OscilloscopeFrame, ParameterInfo, SignalChainSlot,
+    AudioRuntimeStatus, GetHardwareInputSelectionResult, GetInputSourceResult,
+    HardwareInputChannelOption, HardwareInputDeviceOption, InputSourceKind, InputSourceOption,
+    MeterFrame, OscilloscopeFrame, ParameterInfo, SetHardwareInputSelectionParams, SignalChainSlot,
 };
 
 /// Provides metering data for an in-memory host.
@@ -32,6 +33,8 @@ pub struct InMemoryParameterHost {
     /// Active signal chain order as a list of slots.
     signal_chain_order: RwLock<Vec<SignalChainSlot>>,
     input_source: RwLock<InputSourceKind>,
+    selected_hardware_input_device_id: RwLock<Option<String>>,
+    selected_hardware_input_channel_id: RwLock<Option<String>>,
 }
 
 impl InMemoryParameterHost {
@@ -49,6 +52,12 @@ impl InMemoryParameterHost {
             oscilloscope_provider: None,
             signal_chain_order: RwLock::new(Vec::new()),
             input_source: RwLock::new(InputSourceKind::HardwareInput),
+            selected_hardware_input_device_id: RwLock::new(Some(
+                DEFAULT_HARDWARE_INPUT_DEVICE_ID.to_string(),
+            )),
+            selected_hardware_input_channel_id: RwLock::new(Some(
+                DEFAULT_HARDWARE_INPUT_CHANNEL_ID.to_string(),
+            )),
         }
     }
 
@@ -247,6 +256,78 @@ impl ParameterHost for InMemoryParameterHost {
         Ok(())
     }
 
+    fn get_hardware_input_selection(&self) -> Option<GetHardwareInputSelectionResult> {
+        let available_devices = default_hardware_input_device_options();
+        let available_channels = default_hardware_input_channel_options();
+        let selected_device_id = self
+            .selected_hardware_input_device_id
+            .read()
+            .ok()
+            .and_then(|guard| guard.clone())
+            .filter(|selected| {
+                available_devices
+                    .iter()
+                    .any(|device| &device.id == selected)
+            })
+            .or_else(|| Some(DEFAULT_HARDWARE_INPUT_DEVICE_ID.to_string()));
+        let selected_channel_id = self
+            .selected_hardware_input_channel_id
+            .read()
+            .ok()
+            .and_then(|guard| guard.clone())
+            .filter(|selected| {
+                available_channels
+                    .iter()
+                    .any(|channel| &channel.id == selected)
+            })
+            .or_else(|| Some(DEFAULT_HARDWARE_INPUT_CHANNEL_ID.to_string()));
+
+        Some(GetHardwareInputSelectionResult {
+            selected_device_id,
+            available_devices,
+            selected_channel_id,
+            available_channels,
+        })
+    }
+
+    fn set_hardware_input_selection(
+        &self,
+        selection: SetHardwareInputSelectionParams,
+    ) -> Result<(), BridgeError> {
+        let available_devices = default_hardware_input_device_options();
+        let available_channels = default_hardware_input_channel_options();
+
+        if let Some(selected_device_id) = selection.selected_device_id {
+            if !available_devices
+                .iter()
+                .any(|device| device.id == selected_device_id)
+            {
+                return Err(BridgeError::InvalidParams {
+                    method: "setHardwareInputSelection".to_string(),
+                    reason: format!("Unknown hardware input device: {}", selected_device_id),
+                });
+            }
+
+            *self.selected_hardware_input_device_id.write().unwrap() = Some(selected_device_id);
+        }
+
+        if let Some(selected_channel_id) = selection.selected_channel_id {
+            if !available_channels
+                .iter()
+                .any(|channel| channel.id == selected_channel_id)
+            {
+                return Err(BridgeError::InvalidParams {
+                    method: "setHardwareInputSelection".to_string(),
+                    reason: format!("Unknown hardware input routing: {}", selected_channel_id),
+                });
+            }
+
+            *self.selected_hardware_input_channel_id.write().unwrap() = Some(selected_channel_id);
+        }
+
+        Ok(())
+    }
+
     fn get_signal_chain_order(&self) -> Vec<SignalChainSlot> {
         self.signal_chain_order
             .read()
@@ -279,12 +360,46 @@ fn default_input_source_options() -> Vec<InputSourceOption> {
         InputSourceOption {
             id: InputSourceKind::HardwareInput,
             label: "Soundcard input".to_string(),
-            description: Some("Use the active hardware input routed into the dev server".to_string()),
+            description: Some(
+                "Use the active hardware input routed into the dev server".to_string(),
+            ),
         },
         InputSourceOption {
             id: InputSourceKind::TestTone,
             label: "Test tone".to_string(),
             description: Some("Use the TestTone processor signal as the chain input".to_string()),
+        },
+    ]
+}
+
+const DEFAULT_HARDWARE_INPUT_DEVICE_ID: &str = "default-hardware-input";
+const DEFAULT_HARDWARE_INPUT_CHANNEL_ID: &str = "stereo:0:1";
+
+fn default_hardware_input_device_options() -> Vec<HardwareInputDeviceOption> {
+    vec![HardwareInputDeviceOption {
+        id: DEFAULT_HARDWARE_INPUT_DEVICE_ID.to_string(),
+        label: "Default soundcard input".to_string(),
+        channel_count: 2,
+        description: Some("Fallback device used by bridge tests and non-audio hosts".to_string()),
+    }]
+}
+
+fn default_hardware_input_channel_options() -> Vec<HardwareInputChannelOption> {
+    vec![
+        HardwareInputChannelOption {
+            id: DEFAULT_HARDWARE_INPUT_CHANNEL_ID.to_string(),
+            label: "Inputs 1 + 2 (stereo)".to_string(),
+            description: Some("Route the first stereo pair into the signal chain".to_string()),
+        },
+        HardwareInputChannelOption {
+            id: "mono:0".to_string(),
+            label: "Input 1 (mono → dual mono)".to_string(),
+            description: None,
+        },
+        HardwareInputChannelOption {
+            id: "mono:1".to_string(),
+            label: "Input 2 (mono → dual mono)".to_string(),
+            description: None,
         },
     ]
 }

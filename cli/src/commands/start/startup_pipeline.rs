@@ -142,7 +142,7 @@ pub(super) fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u
     // the FfiProcessor inside the closure is dropped while the Library in
     // `runtime_loader` is still loaded — preserving vtable pointer validity.
     #[cfg(feature = "audio-dev")]
-    let (audio_handle, _runtime_loader) = super::audio_runtime::start_audio_runtime(
+    let audio_runtime = super::audio_runtime::start_audio_runtime(
         &runtime,
         &project.engine_dir,
         host.clone(),
@@ -151,7 +151,7 @@ pub(super) fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u
         allow_no_audio_runtime_fallback(),
     )?;
     #[cfg(feature = "audio-dev")]
-    let has_audio = audio_handle.is_some();
+    let has_audio = audio_runtime.has_audio();
     #[cfg(not(feature = "audio-dev"))]
     let has_audio = false;
 
@@ -186,7 +186,7 @@ pub(super) fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u
     let shutdown_reason = super::shutdown::wait_for_shutdown(ui_server, shutdown_tx)?;
 
     #[cfg(feature = "audio-dev")]
-    drop(audio_handle);
+    drop(audio_runtime);
     drop(dev_session);
     drop(runtime);
 

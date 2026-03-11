@@ -35,6 +35,7 @@ use cpal::{Device, Stream, StreamConfig};
 use wavecraft_processors::OscilloscopeFrameConsumer;
 use wavecraft_protocol::MeterUpdateNotification;
 
+use super::SharedHardwareInputRoutingSelection;
 use super::SharedInputSourceSelection;
 use super::atomic_params::AtomicParameterBridge;
 use super::ffi_processor::DevAudioProcessor;
@@ -60,12 +61,14 @@ pub struct AudioHandle {
 pub struct AudioServer {
     processor: Box<dyn DevAudioProcessor>,
     config: AudioConfig,
+    selected_input_device_id: String,
     input_device: Device,
     output_device: Device,
     input_config: StreamConfig,
     output_config: StreamConfig,
     param_bridge: Arc<AtomicParameterBridge>,
     input_source_selection: SharedInputSourceSelection,
+    hardware_input_routing_selection: SharedHardwareInputRoutingSelection,
 }
 
 impl AudioServer {
@@ -76,18 +79,22 @@ impl AudioServer {
         config: AudioConfig,
         param_bridge: Arc<AtomicParameterBridge>,
         input_source_selection: SharedInputSourceSelection,
+        hardware_input_routing_selection: SharedHardwareInputRoutingSelection,
+        selected_input_device_id: Option<&str>,
     ) -> Result<Self> {
-        let negotiated = device_setup::negotiate_default_devices_and_configs()?;
+        let negotiated = device_setup::negotiate_devices_and_configs(selected_input_device_id)?;
 
         Ok(Self {
             processor,
             config,
+            selected_input_device_id: negotiated.selected_input_device_id,
             input_device: negotiated.input_device,
             output_device: negotiated.output_device,
             input_config: negotiated.input_config,
             output_config: negotiated.output_config,
             param_bridge,
             input_source_selection,
+            hardware_input_routing_selection,
         })
     }
 
@@ -126,6 +133,7 @@ impl AudioServer {
             output_channels,
             param_bridge,
             input_source_selection: self.input_source_selection,
+            hardware_input_routing_selection: self.hardware_input_routing_selection,
             actual_sample_rate,
         })
     }
@@ -133,5 +141,9 @@ impl AudioServer {
     /// Returns true if an output device is available for audio playback.
     pub fn has_output(&self) -> bool {
         true
+    }
+
+    pub fn selected_input_device_id(&self) -> &str {
+        &self.selected_input_device_id
     }
 }

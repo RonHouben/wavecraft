@@ -6,8 +6,8 @@
 use crate::error::BridgeError;
 use std::sync::Arc;
 use wavecraft_protocol::{
-    AudioRuntimeStatus, GetInputSourceResult, InputSourceKind, MeterFrame, OscilloscopeFrame,
-    ParameterInfo, SignalChainSlot,
+    AudioRuntimeStatus, GetHardwareInputSelectionResult, GetInputSourceResult, InputSourceKind,
+    MeterFrame, OscilloscopeFrame, ParameterInfo, SetHardwareInputSelectionParams, SignalChainSlot,
 };
 
 /// Trait for objects that store and manage parameters.
@@ -170,6 +170,21 @@ pub trait ParameterHost: Send + Sync {
         ))
     }
 
+    /// Get the current hardware input device/routing selection and options.
+    fn get_hardware_input_selection(&self) -> Option<GetHardwareInputSelectionResult> {
+        None
+    }
+
+    /// Update the selected hardware input device/routing.
+    fn set_hardware_input_selection(
+        &self,
+        _selection: SetHardwareInputSelectionParams,
+    ) -> Result<(), BridgeError> {
+        Err(BridgeError::Internal(
+            "hardware input selection not supported by this host".to_string(),
+        ))
+    }
+
     /// Get the current signal chain order as a list of slots.
     ///
     /// Returns an empty vec for hosts that don't support signal chain ordering.
@@ -230,6 +245,17 @@ impl<T: ParameterHost> ParameterHost for std::sync::Arc<T> {
 
     fn set_input_source(&self, source: InputSourceKind) -> Result<(), BridgeError> {
         forward_host(self).set_input_source(source)
+    }
+
+    fn get_hardware_input_selection(&self) -> Option<GetHardwareInputSelectionResult> {
+        forward_host(self).get_hardware_input_selection()
+    }
+
+    fn set_hardware_input_selection(
+        &self,
+        selection: SetHardwareInputSelectionParams,
+    ) -> Result<(), BridgeError> {
+        forward_host(self).set_hardware_input_selection(selection)
     }
 
     fn get_signal_chain_order(&self) -> Vec<SignalChainSlot> {

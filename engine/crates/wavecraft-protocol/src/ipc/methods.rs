@@ -136,6 +136,77 @@ pub struct InputSourceChangedNotification {
     pub selected: InputSourceKind,
 }
 
+/// UI-facing description of an available hardware input device.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HardwareInputDeviceOption {
+    /// Stable device identifier for the current runtime session.
+    pub id: String,
+    /// Human-readable device label.
+    pub label: String,
+    /// Number of input channels available from the device's default config.
+    pub channel_count: u16,
+    /// Optional helper text for UI affordances.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+/// UI-facing description of an available hardware input channel routing.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HardwareInputChannelOption {
+    /// Stable routing identifier for the current device.
+    pub id: String,
+    /// Human-readable routing label.
+    pub label: String,
+    /// Optional helper text for UI affordances.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+/// Result for getHardwareInputSelection method.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetHardwareInputSelectionResult {
+    /// Currently selected device identifier, if any input device is available.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub selected_device_id: Option<String>,
+    /// Available hardware input devices.
+    pub available_devices: Vec<HardwareInputDeviceOption>,
+    /// Currently selected channel routing identifier, if any routing is available.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub selected_channel_id: Option<String>,
+    /// Available channel routings for the selected device.
+    pub available_channels: Vec<HardwareInputChannelOption>,
+}
+
+/// Parameters for setHardwareInputSelection request.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SetHardwareInputSelectionParams {
+    /// Newly selected device identifier, if changing the active hardware device.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub selected_device_id: Option<String>,
+    /// Newly selected channel routing identifier, if changing the active routing.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub selected_channel_id: Option<String>,
+}
+
+/// Result of a successful setHardwareInputSelection request (empty success).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SetHardwareInputSelectionResult {}
+
+/// Notification sent when the hardware input device/routing selection changes.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HardwareInputSelectionChangedNotification {
+    /// Currently selected device identifier, if available.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub selected_device_id: Option<String>,
+    /// Available hardware input devices.
+    pub available_devices: Vec<HardwareInputDeviceOption>,
+    /// Currently selected channel routing identifier, if available.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub selected_channel_id: Option<String>,
+    /// Available channel routings for the selected device.
+    pub available_channels: Vec<HardwareInputChannelOption>,
+}
+
 /// Parameter type discriminator
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -178,6 +249,10 @@ pub const METHOD_GET_AUDIO_STATUS: &str = "getAudioStatus";
 pub const METHOD_GET_INPUT_SOURCE: &str = "getInputSource";
 /// Method: Set current input source
 pub const METHOD_SET_INPUT_SOURCE: &str = "setInputSource";
+/// Method: Get current selected hardware input device/routing and options
+pub const METHOD_GET_HARDWARE_INPUT_SELECTION: &str = "getHardwareInputSelection";
+/// Method: Set current hardware input device/routing
+pub const METHOD_SET_HARDWARE_INPUT_SELECTION: &str = "setHardwareInputSelection";
 /// Method: Request resize of editor window
 pub const METHOD_REQUEST_RESIZE: &str = "requestResize";
 /// Method: Register audio client with dev server
@@ -190,6 +265,8 @@ pub const NOTIFICATION_METER_UPDATE: &str = "meterUpdate";
 pub const NOTIFICATION_AUDIO_STATUS_CHANGED: &str = "audioStatusChanged";
 /// Notification: Input source changed
 pub const NOTIFICATION_INPUT_SOURCE_CHANGED: &str = "inputSourceChanged";
+/// Notification: Hardware input selection changed
+pub const NOTIFICATION_HARDWARE_INPUT_SELECTION_CHANGED: &str = "hardwareInputSelectionChanged";
 /// Method: Get current signal chain order (processors + taps)
 pub const METHOD_GET_SIGNAL_CHAIN_ORDER: &str = "getSignalChainOrder";
 /// Method: Set signal chain order

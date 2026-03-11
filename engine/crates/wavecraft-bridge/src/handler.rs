@@ -7,12 +7,15 @@ use serde::de::DeserializeOwned;
 use wavecraft_protocol::{
     GetAllParametersResult, GetAudioStatusResult, GetMeterFrameResult, GetOscilloscopeFrameResult,
     GetParameterParams, GetParameterResult, GetSignalChainOrderResult,
-    InputSourceChangedNotification, IpcNotification, IpcRequest, IpcResponse,
-    METHOD_GET_ALL_PARAMETERS, METHOD_GET_AUDIO_STATUS, METHOD_GET_INPUT_SOURCE,
-    METHOD_GET_METER_FRAME, METHOD_GET_OSCILLOSCOPE_FRAME, METHOD_GET_PARAMETER,
-    METHOD_GET_SIGNAL_CHAIN_ORDER, METHOD_REQUEST_RESIZE, METHOD_SET_INPUT_SOURCE,
-    METHOD_SET_PARAMETER, METHOD_SET_SIGNAL_CHAIN_ORDER, NOTIFICATION_INPUT_SOURCE_CHANGED,
-    NOTIFICATION_SIGNAL_CHAIN_ORDER_CHANGED, RequestId, RequestResizeParams, RequestResizeResult,
+    HardwareInputSelectionChangedNotification, InputSourceChangedNotification, IpcNotification,
+    IpcRequest, IpcResponse, METHOD_GET_ALL_PARAMETERS, METHOD_GET_AUDIO_STATUS,
+    METHOD_GET_HARDWARE_INPUT_SELECTION, METHOD_GET_INPUT_SOURCE, METHOD_GET_METER_FRAME,
+    METHOD_GET_OSCILLOSCOPE_FRAME, METHOD_GET_PARAMETER, METHOD_GET_SIGNAL_CHAIN_ORDER,
+    METHOD_REQUEST_RESIZE, METHOD_SET_HARDWARE_INPUT_SELECTION, METHOD_SET_INPUT_SOURCE,
+    METHOD_SET_PARAMETER, METHOD_SET_SIGNAL_CHAIN_ORDER,
+    NOTIFICATION_HARDWARE_INPUT_SELECTION_CHANGED, NOTIFICATION_INPUT_SOURCE_CHANGED,
+    NOTIFICATION_SIGNAL_CHAIN_ORDER_CHANGED, RequestId, RequestResizeParams,
+    RequestResizeResult, SetHardwareInputSelectionParams, SetHardwareInputSelectionResult,
     SetInputSourceParams, SetInputSourceResult, SetParameterParams, SetParameterResult,
     SetSignalChainOrderParams, SetSignalChainOrderResult, SignalChainOrderChangedNotification,
 };
@@ -42,6 +45,8 @@ impl<H: ParameterHost> IpcHandler<H> {
             METHOD_GET_AUDIO_STATUS => self.handle_get_audio_status(&request),
             METHOD_GET_INPUT_SOURCE => self.handle_get_input_source(&request),
             METHOD_SET_INPUT_SOURCE => self.handle_set_input_source(&request),
+            METHOD_GET_HARDWARE_INPUT_SELECTION => self.handle_get_hardware_input_selection(&request),
+            METHOD_SET_HARDWARE_INPUT_SELECTION => self.handle_set_hardware_input_selection(&request),
             METHOD_REQUEST_RESIZE => self.handle_request_resize(&request),
             METHOD_GET_SIGNAL_CHAIN_ORDER => self.handle_get_signal_chain_order(&request),
             METHOD_SET_SIGNAL_CHAIN_ORDER => self.handle_set_signal_chain_order(&request),
@@ -216,6 +221,33 @@ impl<H: ParameterHost> IpcHandler<H> {
         ))
     }
 
+    fn handle_get_hardware_input_selection(
+        &self,
+        request: &IpcRequest,
+    ) -> Result<IpcResponse, BridgeError> {
+        let result = self.host.get_hardware_input_selection().ok_or_else(|| {
+            BridgeError::Internal(
+                "hardware input selection not supported by this host".to_string(),
+            )
+        })?;
+
+        Ok(IpcResponse::success(request.id.clone(), result))
+    }
+
+    fn handle_set_hardware_input_selection(
+        &self,
+        request: &IpcRequest,
+    ) -> Result<IpcResponse, BridgeError> {
+        let params: SetHardwareInputSelectionParams =
+            self.parse_required_params(request, METHOD_SET_HARDWARE_INPUT_SELECTION)?;
+        self.host.set_hardware_input_selection(params)?;
+
+        Ok(IpcResponse::success(
+            request.id.clone(),
+            SetHardwareInputSelectionResult {},
+        ))
+    }
+
     fn handle_get_signal_chain_order(
         &self,
         request: &IpcRequest,
@@ -292,6 +324,24 @@ impl<H: ParameterHost> IpcHandler<H> {
                 NOTIFICATION_INPUT_SOURCE_CHANGED,
                 InputSourceChangedNotification {
                     selected: result.selected,
+                },
+            );
+            if let Ok(notif_json) = serde_json::to_string(&notification) {
+                messages.push(notif_json);
+            }
+        }
+
+        if method == METHOD_SET_HARDWARE_INPUT_SELECTION
+            && is_success
+            && let Some(result) = self.host.get_hardware_input_selection()
+        {
+            let notification = IpcNotification::new(
+                NOTIFICATION_HARDWARE_INPUT_SELECTION_CHANGED,
+                HardwareInputSelectionChangedNotification {
+                    selected_device_id: result.selected_device_id,
+                    available_devices: result.available_devices,
+                    selected_channel_id: result.selected_channel_id,
+                    available_channels: result.available_channels,
                 },
             );
             if let Ok(notif_json) = serde_json::to_string(&notification) {

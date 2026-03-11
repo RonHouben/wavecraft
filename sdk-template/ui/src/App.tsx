@@ -17,6 +17,7 @@ import {
 import {
   useAudioStatus,
   useConnectionStatus,
+  useHardwareInputSelection,
   useInputSource,
   useLatencyMonitor,
   useMeterFrame,
@@ -36,6 +37,13 @@ export function App(): JSX.Element {
     setSelected: setSelectedInputSource,
     isLoading: isInputSourceLoading,
   } = useInputSource();
+  const {
+    selectedDevice,
+    selectedChannelId,
+    availableChannels,
+    setSelectedChannel,
+    isLoading: isHardwareInputSelectionLoading,
+  } = useHardwareInputSelection();
   const latency = useLatencyMonitor(1000);
   const frame = useMeterFrame(50);
   const requestResize = useRequestResize();
@@ -95,6 +103,32 @@ export function App(): JSX.Element {
               state={isInputSourceLoading ? 'loading' : 'default'}
               onChange={(nextValue) => {
                 void setSelectedInputSource(nextValue);
+              }}
+            />
+          ) : null}
+          {selectedDevice ? (
+            <div className="flex items-center gap-2 rounded-md border border-plugin-border bg-plugin-surface px-2.5 py-1.5 text-type-xs text-plugin-text-secondary shadow-control">
+              <span className="font-medium text-plugin-text-primary">Device</span>
+              <span>{selectedDevice.label}</span>
+            </div>
+          ) : null}
+          {selectedChannelId ? (
+            <Select
+              label="Input Channels"
+              size="sm"
+              value={selectedChannelId}
+              options={availableChannels.map((channel) => ({
+                label: channel.label,
+                value: channel.id,
+              }))}
+              disabled={
+                !connected ||
+                selectedInputSource !== 'hardwareInput' ||
+                availableChannels.length === 0
+              }
+              state={isHardwareInputSelectionLoading ? 'loading' : 'default'}
+              onChange={(nextValue) => {
+                void setSelectedChannel(nextValue);
               }}
             />
           ) : null}

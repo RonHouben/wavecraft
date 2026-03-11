@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 const mockUseWindowResizeSync = vi.hoisted(() => vi.fn());
 const mockUseConnectionStatus = vi.hoisted(() => vi.fn());
 const mockUseAudioStatus = vi.hoisted(() => vi.fn());
+const mockUseHardwareInputSelection = vi.hoisted(() => vi.fn());
 const mockUseInputSource = vi.hoisted(() => vi.fn());
 const mockUseLatencyMonitor = vi.hoisted(() => vi.fn());
 const mockUseMeterFrame = vi.hoisted(() => vi.fn());
@@ -19,6 +20,7 @@ vi.mock('@wavecraft/core', () => ({
   useWindowResizeSync: mockUseWindowResizeSync,
   useConnectionStatus: mockUseConnectionStatus,
   useAudioStatus: mockUseAudioStatus,
+  useHardwareInputSelection: mockUseHardwareInputSelection,
   useInputSource: mockUseInputSource,
   useLatencyMonitor: mockUseLatencyMonitor,
   useMeterFrame: mockUseMeterFrame,
@@ -46,14 +48,8 @@ vi.mock('@wavecraft/components', async () => {
     // Mock SignalChain to avoid @dnd-kit dual-React instance issues in tests.
     // DnD functionality is tested separately in SignalChain.test.tsx.
     SignalChain: ({ entries }: { entries: Array<{ id: string; component: ReactNode }> }) => (
-      <ul role="list" aria-label="Signal chain processor order">
-        {entries.map((e) =>
-          e.component != null ? (
-            <li key={e.id} role="listitem">
-              {e.component}
-            </li>
-          ) : null
-        )}
+      <ul aria-label="Signal chain processor order">
+        {entries.map((e) => (e.component == null ? null : <li key={e.id}>{e.component}</li>))}
       </ul>
     ),
   };
@@ -105,6 +101,16 @@ describe('sdk-template App layout', () => {
         { id: 'testTone', label: 'Test tone' },
       ],
       setSelected: vi.fn(),
+      isLoading: false,
+      error: null,
+    });
+    mockUseHardwareInputSelection.mockReturnValue({
+      selectedDeviceId: 'input-device:0',
+      selectedDevice: { id: 'input-device:0', label: 'Built-in Input', channel_count: 2 },
+      availableDevices: [{ id: 'input-device:0', label: 'Built-in Input', channel_count: 2 }],
+      selectedChannelId: 'stereo:0:1',
+      availableChannels: [{ id: 'stereo:0:1', label: 'Inputs 1 + 2 (stereo)' }],
+      setSelectedChannel: vi.fn(),
       isLoading: false,
       error: null,
     });

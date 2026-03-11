@@ -8,6 +8,7 @@ use wavecraft_processors::{
 };
 use wavecraft_protocol::MeterUpdateNotification;
 
+use super::super::SharedHardwareInputRoutingSelection;
 use super::super::SharedInputSourceSelection;
 use super::super::atomic_params::AtomicParameterBridge;
 use super::super::ffi_processor::DevAudioProcessor;
@@ -24,6 +25,7 @@ pub(super) struct StartAudioIoContext<'a> {
     pub(super) output_channels: usize,
     pub(super) param_bridge: Arc<AtomicParameterBridge>,
     pub(super) input_source_selection: SharedInputSourceSelection,
+    pub(super) hardware_input_routing_selection: SharedHardwareInputRoutingSelection,
     pub(super) actual_sample_rate: f32,
 }
 
@@ -59,6 +61,7 @@ pub(super) fn start_audio_io(
             sample_rate_hz: context.actual_sample_rate,
             param_bridge: context.param_bridge,
             input_source_selection: context.input_source_selection,
+            hardware_input_routing_selection: context.hardware_input_routing_selection,
             ring_producer,
             meter_producer,
             oscilloscope_tap,

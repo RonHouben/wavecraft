@@ -3,9 +3,11 @@ use std::sync::Arc;
 use wavecraft_processors::OscilloscopeTap;
 use wavecraft_protocol::MeterUpdateNotification;
 
+use super::super::HardwareInputRouting;
+use super::super::SharedHardwareInputRoutingSelection;
+use super::super::SharedInputSourceSelection;
 use super::super::atomic_params::AtomicParameterBridge;
 use super::super::ffi_processor::DevAudioProcessor;
-use super::super::SharedInputSourceSelection;
 use wavecraft_protocol::InputSourceKind;
 
 use super::device_setup::InputStreamBuildContext;
@@ -24,6 +26,7 @@ pub(super) struct InputCallbackPipeline {
     input_channels: usize,
     param_bridge: Arc<AtomicParameterBridge>,
     input_source_selection: SharedInputSourceSelection,
+    hardware_input_routing_selection: SharedHardwareInputRoutingSelection,
     ring_producer: rtrb::Producer<f32>,
     meter_producer: rtrb::Producer<MeterUpdateNotification>,
     oscilloscope_tap: OscilloscopeTap,
@@ -43,6 +46,7 @@ impl InputCallbackPipeline {
             input_channels: context.input_channels,
             param_bridge: context.param_bridge,
             input_source_selection: context.input_source_selection,
+            hardware_input_routing_selection: context.hardware_input_routing_selection,
             ring_producer: context.ring_producer,
             meter_producer: context.meter_producer,
             oscilloscope_tap: context.oscilloscope_tap,
@@ -64,7 +68,8 @@ impl InputCallbackPipeline {
 
         match selected_input_source {
             InputSourceKind::HardwareInput => {
-                deinterleave_input(data, self.input_channels, left, right);
+                let routing = self.hardware_input_routing_selection.load();
+                deinterleave_input(data, self.input_channels, left, right, routing);
             }
             InputSourceKind::TestTone => {
                 left.fill(0.0);
@@ -135,17 +140,30 @@ fn callback_sample_count(
     Some(num_samples.min(max_samples))
 }
 
-fn deinterleave_input(data: &[f32], input_channels: usize, left: &mut [f32], right: &mut [f32]) {
+fn deinterleave_input(
+    data: &[f32],
+    input_channels: usize,
+    left: &mut [f32],
+    right: &mut [f32],
+    routing: HardwareInputRouting,
+) {
     left.fill(0.0);
     right.fill(0.0);
 
+    if input_channels == 0 {
+        return;
+    }
+
+    let left_channel = routing.left_channel.min(input_channels - 1);
+    let right_channel = routing
+        .right_channel
+        .map(|channel| channel.min(input_channels - 1));
+
     for i in 0..left.len() {
-        left[i] = data[i * input_channels];
-        if input_channels > 1 {
-            right[i] = data[i * input_channels + 1];
-        } else {
-            right[i] = left[i];
-        }
+        left[i] = data[i * input_channels + left_channel];
+        right[i] = right_channel
+            .map(|channel| data[i * input_channels + channel])
+            .unwrap_or(left[i]);
     }
 }
 
