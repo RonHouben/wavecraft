@@ -45,8 +45,10 @@ pub(super) fn generate_plugin_code(
     // A type cannot implement both Processor and TapProcessor. Detect this at macro
     // expansion time (before code generation) for a clear, actionable error message.
     {
-        let proc_names: Vec<String> =
-            processors.iter().map(context::type_last_segment_name).collect();
+        let proc_names: Vec<String> = processors
+            .iter()
+            .map(context::type_last_segment_name)
+            .collect();
         for tap_ty in taps.iter() {
             let tap_name = context::type_last_segment_name(tap_ty);
             if proc_names.contains(&tap_name) {
