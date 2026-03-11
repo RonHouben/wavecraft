@@ -2,23 +2,13 @@
 name: cleaner
 description: AI slop cleaner and code quality refactorer. Investigates codebase for dead code, redundant comments, verbose patterns, and documentation noise — then cleans it up without breaking anything.
 model:
+  - GPT-5.4 (copilot)
   - GPT-5.3-Codex (copilot)
   - Gemini 3.1 Pro (Preview)
   - Claude Sonnet 4.6 (copilot)
-tools:
-  [
-    'read',
-    'search',
-    'edit',
-    'execute',
-    'agent',
-    'todo',
-    'web',
-    'memory',
-    'vscode'
-  ]
+tools: ['read', 'search', 'edit', 'execute', 'agent', 'todo', 'web', 'vscode']
 agents: [orchestrator, search, architect, tester, docwriter]
-user-invokable: true
+user-invocable: true
 handoffs:
   - label: Verify Changes
     agent: tester

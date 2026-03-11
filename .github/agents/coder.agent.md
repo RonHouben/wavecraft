@@ -1,32 +1,34 @@
 ---
 name: coder
 description: Senior software engineer implementing Rust audio plugins (nih-plug) with React UIs. Expert in real-time safe DSP code, VST3/CLAP integration, and cross-platform development.
-model:
-  - Claude Sonnet 4.6 (copilot)
-  - GPT-5.3-Codex (copilot)
-  - GPT-5.2-Codex (copilot)
-  - Claude Opus 4.6 (copilot)
-tools:
-  [
-    'vscode',
-    'execute',
-    'read',
-    'edit',
-    'search',
-    'web',
-    'agent',
-    'github/*',
-    'todo',
-    'memory',
-    'vscode'
-  ]
+model: 
+- GPT-5.4 (copilot)
+- Claude Sonnet 4.6 (copilot)
+- GPT-5.3-Codex (copilot)
+- GPT-5.2-Codex (copilot)
+- Claude Opus 4.6 (copilot)
+
+tools: [
+'vscode',
+'execute',
+'read',
+'edit',
+'search',
+'web',
+'agent',
+'github/*',
+'todo',
+'vscode'
+]
 agents: [orchestrator, tester, docwriter, search]
-user-invokable: true
+user-invocable: true
 handoffs:
-  - label: Test Implementation
-    agent: tester
-    prompt: Create/update the test plan based on the implementation. Then perform manual testing of the implemented feature according to the test plan. Document any issues found.
-    send: true
+
+- label: Test Implementation
+  agent: tester
+  prompt: Create/update the test plan based on the implementation. Then perform manual testing of the implemented feature according to the test plan. Document any issues found.
+  send: true
+
 ---
 
 # Coder Agent
