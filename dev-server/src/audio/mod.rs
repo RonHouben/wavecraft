@@ -16,7 +16,7 @@ pub mod status;
 
 // Public re-exports
 pub use atomic_params::AtomicParameterBridge;
-pub use ffi_processor::{DevAudioProcessor, FfiProcessor};
+pub use ffi_processor::{DevAudioProcessor, FfiProcessor, FfiRuntimeControl};
 pub use hardware_input::{
     HardwareInputRouting, SharedHardwareInputRoutingSelection, build_hardware_input_selection,
     resolve_selected_channel_id, resolve_selected_input_device, routing_from_channel_id,

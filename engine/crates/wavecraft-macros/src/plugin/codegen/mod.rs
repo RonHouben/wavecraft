@@ -90,7 +90,13 @@ pub(super) fn generate_plugin_code(
         &sc,
         &process_method_tokens,
     );
-    let ffi_tokens = ffi::build(krate, processor_param_mappings, processor_info_entries);
+    let ffi_tokens = ffi::build(
+        krate,
+        processor_param_mappings,
+        processor_info_entries,
+        &s,
+        &sc,
+    );
 
     let expanded = quote! {
         // Keep SignalChain type alias for dev-FFI vtable (uses static dispatch in registration order)
@@ -144,12 +150,10 @@ pub(super) fn generate_plugin_code(
             // Generated for each declared taps entry. Scratch buffers are pre-allocated in
             // initialize() and reused each block — zero RT allocation after init.
             #tap_struct_fields
-            // --- Metering ---
-            oscilloscope_tap: #krate::OscilloscopeTap,
+            // --- Metering / telemetry ---
             meter_producer: #krate::MeterProducer,
             #[cfg(any(target_os = "macos", target_os = "windows"))]
             meter_consumer: ::std::sync::Mutex<::std::option::Option<#krate::MeterConsumer>>,
-            #[cfg(any(target_os = "macos", target_os = "windows"))]
             oscilloscope_consumer:
                 ::std::sync::Mutex<::std::option::Option<#krate::OscilloscopeFrameConsumer>>,
         }

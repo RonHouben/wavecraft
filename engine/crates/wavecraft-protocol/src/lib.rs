@@ -13,7 +13,10 @@ pub use params::{
 };
 
 // Re-export dev audio FFI types for convenience
-pub use dev_audio_ffi::{DEV_PROCESSOR_SYMBOL, DEV_PROCESSOR_VTABLE_VERSION, DevProcessorVTable};
+pub use dev_audio_ffi::{
+    DEV_PROCESSOR_SYMBOL, DEV_PROCESSOR_VTABLE_VERSION, DEV_SIGNAL_CHAIN_SLOTS_SYMBOL,
+    DevProcessorVTable,
+};
 
 // Re-export key IPC types for convenience
 pub use ipc::{

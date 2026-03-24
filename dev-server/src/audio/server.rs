@@ -32,7 +32,6 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use cpal::{Device, Stream, StreamConfig};
-use wavecraft_processors::OscilloscopeFrameConsumer;
 use wavecraft_protocol::MeterUpdateNotification;
 
 use super::SharedHardwareInputRoutingSelection;
@@ -105,13 +104,7 @@ impl AudioServer {
     /// buffer (RT-safe: no allocations on the audio thread).
     ///
     /// Drop the handle to stop audio.
-    pub fn start(
-        mut self,
-    ) -> Result<(
-        AudioHandle,
-        rtrb::Consumer<MeterUpdateNotification>,
-        OscilloscopeFrameConsumer,
-    )> {
+    pub fn start(mut self) -> Result<(AudioHandle, rtrb::Consumer<MeterUpdateNotification>)> {
         // Set sample rate from the actual input device config
         let actual_sample_rate = self.input_config.sample_rate.0 as f32;
         self.processor.set_sample_rate(actual_sample_rate);
@@ -134,7 +127,6 @@ impl AudioServer {
             param_bridge,
             input_source_selection: self.input_source_selection,
             hardware_input_routing_selection: self.hardware_input_routing_selection,
-            actual_sample_rate,
         })
     }
 

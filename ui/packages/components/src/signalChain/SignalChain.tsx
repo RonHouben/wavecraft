@@ -8,21 +8,21 @@
  */
 
 import {
-    closestCenter,
-    DndContext,
-    DragOverlay,
-    KeyboardSensor,
-    PointerSensor,
-    useSensor,
-    useSensors,
-    type DragEndEvent,
-    type DragStartEvent,
+  closestCenter,
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
 } from '@dnd-kit/core';
 import {
-    arrayMove,
-    SortableContext,
-    sortableKeyboardCoordinates,
-    verticalListSortingStrategy,
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import type { SignalChainOrder, SlotType } from '@wavecraft/core';
 import { useSignalChainOrder } from '@wavecraft/core';
@@ -37,6 +37,36 @@ export interface SignalChainProps {
   /** Ordered list of signal chain entries; each entry has an `id`, `type`, and a `component` */
   entries: SignalChainEntry[];
   className?: string;
+}
+
+export function mergeVisibleReorderedSlots(
+  currentOrder: SignalChainOrder[],
+  reorderedVisibleIds: string[],
+  idToType: Map<string, SlotType>
+): SignalChainOrder[] {
+  const reorderedVisibleSlots: SignalChainOrder[] = reorderedVisibleIds
+    .map((id) => {
+      const type = idToType.get(id);
+      return type ? { id, type } : null;
+    })
+    .filter((slot): slot is SignalChainOrder => slot !== null);
+
+  if (currentOrder.length === 0) {
+    return reorderedVisibleSlots;
+  }
+
+  const visibleIds = new Set(reorderedVisibleIds);
+  let nextVisibleSlotIndex = 0;
+
+  return currentOrder.map((slot) => {
+    if (!visibleIds.has(slot.id)) {
+      return slot;
+    }
+
+    const nextVisibleSlot = reorderedVisibleSlots[nextVisibleSlotIndex];
+    nextVisibleSlotIndex += 1;
+    return nextVisibleSlot ?? slot;
+  });
 }
 
 export function SignalChain({ entries, className }: Readonly<SignalChainProps>): React.JSX.Element {
@@ -90,17 +120,11 @@ export function SignalChain({ entries, className }: Readonly<SignalChainProps>):
 
       const reorderedIds = arrayMove(items, oldIndex, newIndex);
 
-      // Translate entry IDs back to SignalChainOrder slot objects for the IPC call
-      const newSlots: SignalChainOrder[] = reorderedIds
-        .map((id) => {
-          const type = idToType.get(id);
-          return type ? { id, type } : null;
-        })
-        .filter((s): s is SignalChainOrder => s !== null);
+      const newSlots = mergeVisibleReorderedSlots(order, reorderedIds, idToType);
 
       void setOrder(newSlots);
     },
-    [items, idToType, setOrder]
+    [items, idToType, order, setOrder]
   );
 
   const handleDragCancel = useCallback(() => {
@@ -117,19 +141,18 @@ export function SignalChain({ entries, className }: Readonly<SignalChainProps>):
       onDragCancel={handleDragCancel}
     >
       <SortableContext items={items} strategy={verticalListSortingStrategy}>
-        <div
+        <ul
           className={mergeClassNames('flex flex-col gap-2', className)}
-          role="list"
           aria-label="Signal chain processor order"
         >
           {sortedEntries.map((entry) => (
-            <div key={entry.id} role="listitem">
+            <li key={entry.id}>
               <SignalChainItem id={entry.id} isDragging={activeId === entry.id}>
                 {entryMap.get(entry.id)}
               </SignalChainItem>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </SortableContext>
 
       {/* Drag overlay — renders a ghost of the dragged item */}

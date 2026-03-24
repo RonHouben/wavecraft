@@ -13,8 +13,9 @@ use crate::project::{
     ProjectMarkers,
 };
 use wavecraft_bridge::IpcHandler;
+use wavecraft_bridge::ParameterHost;
 use wavecraft_dev_server::{DevServerHost, DevSession, RebuildCallbacks, WsServer};
-use wavecraft_protocol::{ParameterInfo, ProcessorInfo};
+use wavecraft_protocol::{ParameterInfo, ProcessorInfo, SignalChainSlot};
 
 pub(super) fn parse_allow_no_audio_env(value: &str) -> bool {
     matches!(
@@ -50,6 +51,7 @@ pub(super) fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u
     ))?;
     let params = metadata.params;
     let processors = metadata.processors;
+    let signal_chain_slots = metadata.signal_chain_slots;
 
     write_parameter_types(&project.ui_dir, &params)
         .context("Failed to generate TypeScript parameter ID types")?;
@@ -83,6 +85,9 @@ pub(super) fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u
     let host = DevServerHost::with_param_bridge(params, std::sync::Arc::clone(&param_bridge));
     #[cfg(not(feature = "audio-dev"))]
     let host = DevServerHost::new(params);
+
+    seed_signal_chain_slots(&host, &signal_chain_slots)
+        .context("Failed to seed dev host signal-chain slots from plugin metadata")?;
 
     let host = std::sync::Arc::new(host);
     let handler = std::sync::Arc::new(IpcHandler::new(host.clone()));
@@ -202,6 +207,15 @@ pub(super) fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u
             Ok(())
         }
     }
+}
+
+fn seed_signal_chain_slots(host: &DevServerHost, signal_chain_slots: &[SignalChainSlot]) -> Result<()> {
+    if signal_chain_slots.is_empty() {
+        return Ok(());
+    }
+
+    host.set_signal_chain_order(signal_chain_slots.to_vec())
+        .map_err(anyhow::Error::from)
 }
 
 fn build_rebuild_callbacks(project: &ProjectMarkers) -> RebuildCallbacks {

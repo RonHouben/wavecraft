@@ -7,16 +7,18 @@ use std::time::SystemTime;
 use walkdir::WalkDir;
 
 use crate::project::{find_plugin_dylib, read_engine_package_name, resolve_debug_dir};
-use wavecraft_protocol::{ParameterInfo, ProcessorInfo};
+use wavecraft_protocol::{ParameterInfo, ProcessorInfo, SignalChainSlot};
 
 /// Path to the sidecar parameter cache file.
 const PARAM_SIDECAR_FILENAME: &str = "wavecraft-params.json";
 const PROCESSOR_SIDECAR_FILENAME: &str = "wavecraft-processors.json";
+const SIGNAL_CHAIN_SLOTS_SIDECAR_FILENAME: &str = "wavecraft-signal-chain-slots.json";
 
 #[derive(Debug, Clone)]
 pub(super) struct PluginMetadata {
     pub(super) params: Vec<ParameterInfo>,
     pub(super) processors: Vec<ProcessorInfo>,
+    pub(super) signal_chain_slots: Vec<SignalChainSlot>,
 }
 
 fn legacy_soft_clip_schema_reason(params: &[ParameterInfo]) -> Option<&'static str> {
@@ -53,6 +55,10 @@ fn params_sidecar_json_path(engine_dir: &Path) -> Result<PathBuf> {
 
 fn processors_sidecar_json_path(engine_dir: &Path) -> Result<PathBuf> {
     sidecar_json_path(engine_dir, PROCESSOR_SIDECAR_FILENAME)
+}
+
+fn signal_chain_slots_sidecar_json_path(engine_dir: &Path) -> Result<PathBuf> {
+    sidecar_json_path(engine_dir, SIGNAL_CHAIN_SLOTS_SIDECAR_FILENAME)
 }
 
 fn stale_sidecar_reason(
@@ -166,6 +172,16 @@ fn try_read_cached_processors(engine_dir: &Path) -> Option<Vec<ProcessorInfo>> {
     )
 }
 
+fn try_read_cached_signal_chain_slots(engine_dir: &Path) -> Option<Vec<SignalChainSlot>> {
+    let sidecar_path = signal_chain_slots_sidecar_json_path(engine_dir).ok()?;
+    try_read_cached_sidecar_json(
+        engine_dir,
+        &sidecar_path,
+        "Signal-chain sidecar cache",
+        |contents| serde_json::from_str(contents).ok(),
+    )
+}
+
 fn newest_file_mtime_under(root: &Path) -> Option<SystemTime> {
     if !root.is_dir() {
         return None;
@@ -220,24 +236,44 @@ fn write_processors_sidecar_cache(engine_dir: &Path, processors: &[ProcessorInfo
     )
 }
 
+fn write_signal_chain_slots_sidecar_cache(
+    engine_dir: &Path,
+    signal_chain_slots: &[SignalChainSlot],
+) -> Result<()> {
+    let json = serde_json::to_string_pretty(signal_chain_slots)
+        .context("Failed to serialize signal-chain slots")?;
+    write_sidecar_json(
+        engine_dir,
+        SIGNAL_CHAIN_SLOTS_SIDECAR_FILENAME,
+        &json,
+        "Failed to write signal-chain sidecar cache",
+    )
+}
+
 /// Load plugin metadata (parameters + processors) using cached sidecars or
 /// feature-gated discovery build.
 pub(super) async fn load_plugin_metadata(engine_dir: &Path) -> Result<PluginMetadata> {
     // 1. Try cached sidecars
-    if let (Some(params), Some(processors)) = (
+    if let (Some(params), Some(processors), Some(signal_chain_slots)) = (
         try_read_cached_params(engine_dir),
         try_read_cached_processors(engine_dir),
+        try_read_cached_signal_chain_slots(engine_dir),
     ) {
         if let Some(reason) = legacy_soft_clip_schema_reason(&params) {
             println!("  Sidecar cache stale ({reason}), rebuilding...");
         } else {
             println!(
-                "{} Loaded {} parameters and {} processors (cached)",
+                "{} Loaded {} parameters, {} processors, and {} signal-chain slots (cached)",
                 style("✓").green(),
                 params.len(),
-                processors.len()
+                processors.len(),
+                signal_chain_slots.len()
             );
-            return Ok(PluginMetadata { params, processors });
+            return Ok(PluginMetadata {
+                params,
+                processors,
+                signal_chain_slots,
+            });
         }
     }
 
@@ -271,13 +307,17 @@ pub(super) async fn load_plugin_metadata(engine_dir: &Path) -> Result<PluginMeta
 
     println!("{} Loading plugin metadata...", style("→").cyan());
     #[cfg(feature = "audio-dev")]
-    let (params, processors) = {
+    let (params, processors, signal_chain_slots) = {
         let loader = super::PluginLoader::load(&dylib_path)
             .context("Failed to load plugin for metadata discovery")?;
-        (loader.parameters().to_vec(), loader.processors().to_vec())
+        (
+            loader.parameters().to_vec(),
+            loader.processors().to_vec(),
+            loader.signal_chain_slots().to_vec(),
+        )
     };
     #[cfg(not(feature = "audio-dev"))]
-    let (params, processors) = {
+    let (params, processors, signal_chain_slots) = {
         let params = crate::project::param_extract::extract_params_subprocess(
             &dylib_path,
             crate::project::param_extract::DEFAULT_EXTRACT_TIMEOUT,
@@ -290,7 +330,7 @@ pub(super) async fn load_plugin_metadata(engine_dir: &Path) -> Result<PluginMeta
         )
         .await
         .context("Failed to extract processors from plugin")?;
-        (params, processors)
+        (params, processors, Vec::new())
     };
 
     if let Err(e) = write_sidecar_cache(engine_dir, &params) {
@@ -299,15 +339,23 @@ pub(super) async fn load_plugin_metadata(engine_dir: &Path) -> Result<PluginMeta
     if let Err(e) = write_processors_sidecar_cache(engine_dir, &processors) {
         println!("  Warning: failed to write processor cache: {}", e);
     }
+    if let Err(e) = write_signal_chain_slots_sidecar_cache(engine_dir, &signal_chain_slots) {
+        println!("  Warning: failed to write signal-chain slot cache: {}", e);
+    }
 
     println!(
-        "{} Loaded {} parameters and {} processors",
+        "{} Loaded {} parameters, {} processors, and {} signal-chain slots",
         style("✓").green(),
         params.len(),
-        processors.len()
+        processors.len(),
+        signal_chain_slots.len()
     );
 
-    Ok(PluginMetadata { params, processors })
+    Ok(PluginMetadata {
+        params,
+        processors,
+        signal_chain_slots,
+    })
 }
 
 #[cfg(test)]

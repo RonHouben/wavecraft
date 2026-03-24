@@ -63,6 +63,8 @@ impl Drop for AudioRuntimeController {
             return;
         }
 
+        self.inner.host.clear_runtime_control();
+
         let mut state = self
             .inner
             .state
@@ -113,6 +115,7 @@ impl AudioRuntimeController {
 
         let previous_selected_input_device_id = state.selected_input_device_id.clone();
 
+        self.inner.host.clear_runtime_control();
         stop_runtime_state(&mut state);
 
         match self.start_for_device(selected_input_device_id.clone()) {
@@ -312,6 +315,7 @@ fn try_start_audio_in_process(
             });
         }
     };
+    let runtime_control = processor.runtime_control();
 
     let config = AudioConfig {
         sample_rate: 44100.0,
@@ -357,8 +361,8 @@ fn try_start_audio_in_process(
 
     // Start audio server. Returns lock-free ring buffer consumers for
     // meter and oscilloscope data (RT-safe: audio thread writes without allocations).
-    let (handle, mut meter_consumer, mut oscilloscope_consumer) = match server.start() {
-        Ok((h, meter, oscilloscope)) => (h, meter, oscilloscope),
+    let (handle, mut meter_consumer) = match server.start() {
+        Ok((h, meter)) => (h, meter),
         Err(e) => {
             println!(
                 "{}",
@@ -376,6 +380,8 @@ fn try_start_audio_in_process(
             });
         }
     };
+
+    host.set_runtime_control(runtime_control.clone());
 
     // Spawn a task that drains the lock-free meter ring buffer and
     // forwards updates to WebSocket clients.
@@ -401,8 +407,8 @@ fn try_start_audio_in_process(
                 }
             }
 
-            if let Some(frame) = oscilloscope_consumer.read_latest() {
-                host.set_latest_oscilloscope_frame(frame.to_protocol_frame());
+            if let Some(frame) = runtime_control.take_latest_oscilloscope_frame() {
+                host.set_latest_oscilloscope_frame(frame);
             }
         }
     });

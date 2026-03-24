@@ -30,7 +30,7 @@ pub(super) fn build(
         impl ::std::default::Default for __WavecraftPlugin {
             fn default() -> Self {
                 let (meter_producer, _meter_consumer) = #krate::create_meter_channel(64);
-                let (oscilloscope_producer, _oscilloscope_consumer) =
+                let (__oscilloscope_producer, __oscilloscope_consumer) =
                     #krate::create_oscilloscope_channel(8);
 
                 // Compute cumulative param offsets at construction time (not audio-thread)
@@ -58,15 +58,13 @@ pub(super) fn build(
                     __param_scratch: ::std::vec::Vec::with_capacity(__param_offsets[#n_lit]),
                     // Tap processors (Step 15: constructed via Default, scratch buffers grown in initialize())
                     #tap_defaults
-                    oscilloscope_tap: #krate::OscilloscopeTap::with_output(oscilloscope_producer),
                     meter_producer,
                     #[cfg(any(target_os = "macos", target_os = "windows"))]
                     meter_consumer: ::std::sync::Mutex::new(
                         ::std::option::Option::Some(_meter_consumer),
                     ),
-                    #[cfg(any(target_os = "macos", target_os = "windows"))]
                     oscilloscope_consumer: ::std::sync::Mutex::new(
-                        ::std::option::Option::Some(_oscilloscope_consumer),
+                        ::std::option::Option::Some(__oscilloscope_consumer),
                     ),
                 }
             }
@@ -134,8 +132,6 @@ pub(super) fn build(
                 _context: &mut impl #krate::__nih::InitContext<Self>,
             ) -> bool {
                 #(#set_sample_rate_calls)*
-                self.oscilloscope_tap
-                    .set_sample_rate_hz(_buffer_config.sample_rate);
                 // Step 15: initialize tap processors + resize scratch buffers
                 #tap_initialize
                 true
@@ -143,8 +139,6 @@ pub(super) fn build(
 
             fn reset(&mut self) {
                 #(#reset_calls)*
-                // oscilloscope_tap is a TapProcessor (not Processor); call the correct reset.
-                #krate::TapProcessor::reset(&mut self.oscilloscope_tap);
                 // Step 15: reset tap processors
                 #tap_reset
             }

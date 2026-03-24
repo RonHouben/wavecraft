@@ -54,7 +54,7 @@ pub use ws::{WsHandle, WsServer};
 #[cfg(feature = "audio")]
 pub use audio::{
     atomic_params::AtomicParameterBridge,
-    ffi_processor::{DevAudioProcessor, FfiProcessor},
+    ffi_processor::{DevAudioProcessor, FfiProcessor, FfiRuntimeControl},
     server::{AudioConfig, AudioHandle, AudioServer},
     status::{status as audio_status, status_with_diagnostic as audio_status_with_diagnostic},
 };

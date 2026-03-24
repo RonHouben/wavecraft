@@ -184,8 +184,14 @@ pub(super) fn build(
             .zip(tap_scratch_l_names.iter())
             .zip(tap_scratch_r_names.iter())
             .map(|(((ty, fname), sl), sr)| {
+                let tap_name = super::context::type_last_segment_name(ty);
+                let tap_init = if tap_name == "OscilloscopeTap" {
+                    quote! { #ty::with_output(__oscilloscope_producer) }
+                } else {
+                    quote! { <#ty as ::std::default::Default>::default() }
+                };
                 quote! {
-                    #fname: <#ty as ::std::default::Default>::default(),
+                    #fname: #tap_init,
                     #sl: ::std::vec::Vec::new(),
                     #sr: ::std::vec::Vec::new(),
                 }

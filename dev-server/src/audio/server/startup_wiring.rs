@@ -3,9 +3,6 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use cpal::traits::StreamTrait;
 use cpal::{Device, StreamConfig};
-use wavecraft_processors::{
-    OscilloscopeFrameConsumer, OscilloscopeTap, create_oscilloscope_channel,
-};
 use wavecraft_protocol::MeterUpdateNotification;
 
 use super::super::SharedHardwareInputRoutingSelection;
@@ -26,16 +23,11 @@ pub(super) struct StartAudioIoContext<'a> {
     pub(super) param_bridge: Arc<AtomicParameterBridge>,
     pub(super) input_source_selection: SharedInputSourceSelection,
     pub(super) hardware_input_routing_selection: SharedHardwareInputRoutingSelection,
-    pub(super) actual_sample_rate: f32,
 }
 
 pub(super) fn start_audio_io(
     context: StartAudioIoContext<'_>,
-) -> Result<(
-    AudioHandle,
-    rtrb::Consumer<MeterUpdateNotification>,
-    OscilloscopeFrameConsumer,
-)> {
+) -> Result<(AudioHandle, rtrb::Consumer<MeterUpdateNotification>)> {
     // --- SPSC ring buffer for input→output audio transfer ---
     // Capacity: buffer_size * num_channels * 4 blocks of headroom.
     // Data format: interleaved f32 samples (matches cpal output).
@@ -47,9 +39,6 @@ pub(super) fn start_audio_io(
     // Uses rtrb (lock-free, zero-allocation) instead of tokio channels
     // to maintain real-time safety on the audio thread.
     let (meter_producer, meter_consumer) = rtrb::RingBuffer::<MeterUpdateNotification>::new(64);
-    let (oscilloscope_producer, oscilloscope_consumer) = create_oscilloscope_channel(8);
-    let mut oscilloscope_tap = OscilloscopeTap::with_output(oscilloscope_producer);
-    oscilloscope_tap.set_sample_rate_hz(context.actual_sample_rate);
 
     let input_stream = device_setup::build_input_stream(
         context.input_device,
@@ -58,13 +47,11 @@ pub(super) fn start_audio_io(
             processor: context.processor,
             buffer_size: context.buffer_size,
             input_channels: context.input_channels,
-            sample_rate_hz: context.actual_sample_rate,
             param_bridge: context.param_bridge,
             input_source_selection: context.input_source_selection,
             hardware_input_routing_selection: context.hardware_input_routing_selection,
             ring_producer,
             meter_producer,
-            oscilloscope_tap,
         },
     )?;
 
@@ -94,6 +81,5 @@ pub(super) fn start_audio_io(
             _output_stream: Some(output_stream),
         },
         meter_consumer,
-        oscilloscope_consumer,
     ))
 }

@@ -4,8 +4,9 @@
 //! cdylib) to a safe Rust trait that the audio server can drive.
 
 use std::ffi::c_void;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
-use wavecraft_protocol::DevProcessorVTable;
+use wavecraft_protocol::{DevProcessorVTable, OscilloscopeFrame, SignalChainSlot};
 
 /// Simplified audio processor trait for dev mode.
 ///
@@ -24,7 +25,110 @@ pub trait DevAudioProcessor: Send + 'static {
 
     /// Reset processor state.
     fn reset(&mut self);
+
+    /// Apply a signal-chain slot order on the control thread.
+    fn set_signal_chain_order(&mut self, slots: &[SignalChainSlot]) -> bool;
+
+    /// Drain the latest runtime-owned oscilloscope frame if one is available.
+    fn take_latest_oscilloscope_frame(&mut self) -> Option<OscilloscopeFrame>;
 }
+
+/// Thread-safe control handle for a live FFI processor instance.
+#[derive(Clone)]
+pub struct FfiRuntimeControl {
+    inner: Arc<SharedFfiProcessor>,
+}
+
+impl FfiRuntimeControl {
+    pub fn set_signal_chain_order(&self, slots: &[SignalChainSlot]) -> bool {
+        self.inner.set_signal_chain_order(slots)
+    }
+
+    pub fn take_latest_oscilloscope_frame(&self) -> Option<OscilloscopeFrame> {
+        self.inner.take_latest_oscilloscope_frame()
+    }
+}
+
+struct SharedFfiProcessor {
+    instance: *mut c_void,
+    vtable: DevProcessorVTable,
+    supports_plain_values: bool,
+    supports_runtime_parity_hooks: bool,
+}
+
+impl SharedFfiProcessor {
+    fn set_signal_chain_order(&self, slots: &[SignalChainSlot]) -> bool {
+        if !self.supports_runtime_parity_hooks {
+            return false;
+        }
+
+        let Ok(json) = serde_json::to_string(slots) else {
+            return false;
+        };
+        let Ok(c_string) = std::ffi::CString::new(json) else {
+            return false;
+        };
+
+        // SAFETY: `self.instance` originates from the dylib vtable `create` function.
+        // The v3 control hook is limited to thread-safe order application on the
+        // generated runtime's pending-order state.
+        unsafe { (self.vtable.set_signal_chain_order_json)(self.instance, c_string.as_ptr()) }
+    }
+
+    fn take_latest_oscilloscope_frame(&self) -> Option<OscilloscopeFrame> {
+        if !self.supports_runtime_parity_hooks {
+            return None;
+        }
+
+        let json_ptr = (self.vtable.take_latest_oscilloscope_frame_json)(self.instance);
+        if json_ptr.is_null() {
+            return None;
+        }
+
+        struct OwnedFfiJson {
+            ptr: *mut std::os::raw::c_char,
+        }
+
+        impl Drop for OwnedFfiJson {
+            fn drop(&mut self) {
+                if !self.ptr.is_null() {
+                    // SAFETY: pointer was allocated by CString::into_raw inside the dylib vtable
+                    // implementation and is freed exactly once here by reconstructing the CString.
+                    unsafe {
+                        let _ = std::ffi::CString::from_raw(self.ptr);
+                    }
+                }
+            }
+        }
+
+        let owned = OwnedFfiJson { ptr: json_ptr };
+        // SAFETY: `owned.ptr` is checked non-null above and must point to a valid
+        // NUL-terminated string returned by the dylib.
+        let c_str = unsafe { std::ffi::CStr::from_ptr(owned.ptr) };
+        let Ok(json) = c_str.to_str() else {
+            return None;
+        };
+        serde_json::from_str::<Option<OscilloscopeFrame>>(json)
+            .ok()
+            .flatten()
+    }
+}
+
+impl Drop for SharedFfiProcessor {
+    fn drop(&mut self) {
+        if !self.instance.is_null() {
+            (self.vtable.drop)(self.instance);
+            self.instance = std::ptr::null_mut();
+        }
+    }
+}
+
+// SAFETY: the shared processor instance is created on one thread, processed on the
+// audio callback thread, and accessed from the control thread only through the v3
+// runtime-parity hooks. Those hooks are narrowly scoped to thread-safe generated
+// state (pending-order atomics + oscilloscope consumer mutex/ring buffer).
+unsafe impl Send for SharedFfiProcessor {}
+unsafe impl Sync for SharedFfiProcessor {}
 
 /// Wraps a `DevProcessorVTable` into a safe `DevAudioProcessor`.
 ///
@@ -32,9 +136,7 @@ pub trait DevAudioProcessor: Send + 'static {
 /// function pointers. All allocation and deallocation happens inside
 /// the dylib via the vtable — no cross-allocator issues.
 pub struct FfiProcessor {
-    instance: *mut c_void,
-    vtable: DevProcessorVTable,
-    supports_plain_values: bool,
+    inner: Arc<SharedFfiProcessor>,
     unsupported_channel_count: AtomicU32,
     unsupported_channel_flag: AtomicBool,
 }
@@ -57,12 +159,21 @@ impl FfiProcessor {
             return None;
         }
         Some(Self {
-            instance,
-            vtable: *vtable,
-            supports_plain_values: vtable.version >= 2,
+            inner: Arc::new(SharedFfiProcessor {
+                instance,
+                vtable: *vtable,
+                supports_plain_values: vtable.version >= 2,
+                supports_runtime_parity_hooks: vtable.version >= 3,
+            }),
             unsupported_channel_count: AtomicU32::new(0),
             unsupported_channel_flag: AtomicBool::new(false),
         })
+    }
+
+    pub fn runtime_control(&self) -> FfiRuntimeControl {
+        FfiRuntimeControl {
+            inner: Arc::clone(&self.inner),
+        }
     }
 
     fn process_dimensions(channels: &[&mut [f32]]) -> Option<(u32, u32)> {
@@ -118,7 +229,7 @@ impl DevAudioProcessor for FfiProcessor {
         };
 
         debug_assert!(
-            !self.instance.is_null(),
+            !self.inner.instance.is_null(),
             "FFI processor instance should be valid"
         );
         debug_assert!(
@@ -132,11 +243,16 @@ impl DevAudioProcessor for FfiProcessor {
             return;
         };
 
-        (self.vtable.process)(self.instance, ptrs.as_mut_ptr(), num_channels, num_samples);
+        (self.inner.vtable.process)(
+            self.inner.instance,
+            ptrs.as_mut_ptr(),
+            num_channels,
+            num_samples,
+        );
     }
 
     fn apply_plain_values(&mut self, values: &[f32]) {
-        if !self.supports_plain_values {
+        if !self.inner.supports_plain_values {
             return;
         }
 
@@ -144,25 +260,28 @@ impl DevAudioProcessor for FfiProcessor {
         // `values.as_ptr()` is valid for `values.len()` elements for this call, and
         // the plugin owns interpretation of plain-value order.
         unsafe {
-            (self.vtable.apply_plain_values)(self.instance, values.as_ptr(), values.len());
+            (self.inner.vtable.apply_plain_values)(
+                self.inner.instance,
+                values.as_ptr(),
+                values.len(),
+            );
         }
     }
 
     fn set_sample_rate(&mut self, sample_rate: f32) {
-        (self.vtable.set_sample_rate)(self.instance, sample_rate);
+        (self.inner.vtable.set_sample_rate)(self.inner.instance, sample_rate);
     }
 
     fn reset(&mut self) {
-        (self.vtable.reset)(self.instance);
+        (self.inner.vtable.reset)(self.inner.instance);
     }
-}
 
-impl Drop for FfiProcessor {
-    fn drop(&mut self) {
-        if !self.instance.is_null() {
-            (self.vtable.drop)(self.instance);
-            self.instance = std::ptr::null_mut();
-        }
+    fn set_signal_chain_order(&mut self, slots: &[SignalChainSlot]) -> bool {
+        self.inner.set_signal_chain_order(slots)
+    }
+
+    fn take_latest_oscilloscope_frame(&mut self) -> Option<OscilloscopeFrame> {
+        self.inner.take_latest_oscilloscope_frame()
     }
 }
 
@@ -185,6 +304,8 @@ mod tests {
     static APPLY_PLAIN_VALUES_LEN: AtomicU32 = AtomicU32::new(0);
     static PROCESS_CHANNELS: AtomicU32 = AtomicU32::new(0);
     static PROCESS_SAMPLES: AtomicU32 = AtomicU32::new(0);
+    static SET_SIGNAL_CHAIN_ORDER_CALLED: AtomicBool = AtomicBool::new(false);
+    static TAKE_OSCILLOSCOPE_FRAME_CALLED: AtomicBool = AtomicBool::new(false);
 
     fn reset_flags() {
         CREATE_CALLED.store(false, Ordering::SeqCst);
@@ -196,6 +317,8 @@ mod tests {
         APPLY_PLAIN_VALUES_LEN.store(0, Ordering::SeqCst);
         PROCESS_CHANNELS.store(0, Ordering::SeqCst);
         PROCESS_SAMPLES.store(0, Ordering::SeqCst);
+        SET_SIGNAL_CHAIN_ORDER_CALLED.store(false, Ordering::SeqCst);
+        TAKE_OSCILLOSCOPE_FRAME_CALLED.store(false, Ordering::SeqCst);
     }
 
     extern "C" fn mock_create() -> *mut c_void {
@@ -241,12 +364,33 @@ mod tests {
         APPLY_PLAIN_VALUES_LEN.store(len as u32, Ordering::SeqCst);
     }
 
+    unsafe extern "C" fn mock_set_signal_chain_order_json(
+        _instance: *mut c_void,
+        _json_ptr: *const std::os::raw::c_char,
+    ) -> bool {
+        SET_SIGNAL_CHAIN_ORDER_CALLED.store(true, Ordering::SeqCst);
+        true
+    }
+
+    extern "C" fn mock_take_latest_oscilloscope_frame_json(
+        _instance: *mut c_void,
+    ) -> *mut std::os::raw::c_char {
+        TAKE_OSCILLOSCOPE_FRAME_CALLED.store(true, Ordering::SeqCst);
+        std::ffi::CString::new(
+            r#"{"points_l":[0.1],"points_r":[0.2],"sample_rate":48000.0,"timestamp":1,"no_signal":false,"trigger_mode":"risingZeroCrossing"}"#,
+        )
+        .unwrap()
+        .into_raw()
+    }
+
     fn mock_vtable() -> DevProcessorVTable {
         DevProcessorVTable {
             version: wavecraft_protocol::DEV_PROCESSOR_VTABLE_VERSION,
             create: mock_create,
             process: mock_process,
             apply_plain_values: mock_apply_plain_values,
+            set_signal_chain_order_json: mock_set_signal_chain_order_json,
+            take_latest_oscilloscope_frame_json: mock_take_latest_oscilloscope_frame_json,
             set_sample_rate: mock_set_sample_rate,
             reset: mock_reset,
             drop: mock_drop,
@@ -304,6 +448,26 @@ mod tests {
 
         assert!(APPLY_PLAIN_VALUES_CALLED.load(Ordering::SeqCst));
         assert_eq!(APPLY_PLAIN_VALUES_LEN.load(Ordering::SeqCst), 3);
+    }
+
+    #[test]
+    fn test_ffi_processor_runtime_parity_hooks() {
+        let _guard = TEST_LOCK.lock().unwrap();
+        reset_flags();
+        let vtable = mock_vtable();
+
+        let mut processor = FfiProcessor::new(&vtable).expect("create should succeed");
+        let applied = processor.set_signal_chain_order(&[SignalChainSlot {
+            id: "soft_clip".to_string(),
+            slot_type: wavecraft_protocol::SlotType::Processor,
+        }]);
+        assert!(applied);
+        assert!(SET_SIGNAL_CHAIN_ORDER_CALLED.load(Ordering::SeqCst));
+
+        let frame = processor.take_latest_oscilloscope_frame();
+        assert!(TAKE_OSCILLOSCOPE_FRAME_CALLED.load(Ordering::SeqCst));
+        assert!(frame.is_some());
+        assert_eq!(frame.unwrap().sample_rate, 48_000.0);
     }
 
     #[test]

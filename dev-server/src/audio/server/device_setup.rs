@@ -3,11 +3,10 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use cpal::traits::{DeviceTrait, HostTrait};
 use cpal::{Device, Stream, StreamConfig};
-use wavecraft_processors::OscilloscopeTap;
 use wavecraft_protocol::MeterUpdateNotification;
 
-use super::super::SharedInputSourceSelection;
 use super::super::SharedHardwareInputRoutingSelection;
+use super::super::SharedInputSourceSelection;
 use super::super::atomic_params::AtomicParameterBridge;
 use super::super::ffi_processor::DevAudioProcessor;
 use super::super::resolve_selected_input_device;
@@ -27,13 +26,11 @@ pub(super) struct InputStreamBuildContext {
     pub(super) processor: Box<dyn DevAudioProcessor>,
     pub(super) buffer_size: usize,
     pub(super) input_channels: usize,
-    pub(super) sample_rate_hz: f32,
     pub(super) param_bridge: Arc<AtomicParameterBridge>,
     pub(super) input_source_selection: SharedInputSourceSelection,
     pub(super) hardware_input_routing_selection: SharedHardwareInputRoutingSelection,
     pub(super) ring_producer: rtrb::Producer<f32>,
     pub(super) meter_producer: rtrb::Producer<MeterUpdateNotification>,
-    pub(super) oscilloscope_tap: OscilloscopeTap,
 }
 
 pub(super) fn negotiate_devices_and_configs(

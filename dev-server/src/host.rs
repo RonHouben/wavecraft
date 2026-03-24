@@ -11,18 +11,18 @@ use std::sync::RwLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 use wavecraft_bridge::{BridgeError, InMemoryParameterHost, ParameterHost};
 use wavecraft_protocol::{
-    AudioRuntimePhase, AudioRuntimeStatus, GetHardwareInputSelectionResult,
-    GetInputSourceResult, InputSourceKind, MeterFrame, MeterUpdateNotification,
-    OscilloscopeFrame, ParameterInfo, SetHardwareInputSelectionParams, SignalChainSlot,
+    AudioRuntimePhase, AudioRuntimeStatus, GetHardwareInputSelectionResult, GetInputSourceResult,
+    InputSourceKind, MeterFrame, MeterUpdateNotification, OscilloscopeFrame, ParameterInfo,
+    SetHardwareInputSelectionParams, SignalChainSlot,
 };
 
 #[cfg(feature = "audio")]
-use crate::audio::{
-    HardwareInputRouting, SharedHardwareInputRoutingSelection, SharedInputSourceSelection,
-    build_hardware_input_selection, routing_from_channel_id,
-};
-#[cfg(feature = "audio")]
 use crate::audio::atomic_params::AtomicParameterBridge;
+#[cfg(feature = "audio")]
+use crate::audio::{
+    FfiRuntimeControl, HardwareInputRouting, SharedHardwareInputRoutingSelection,
+    SharedInputSourceSelection, build_hardware_input_selection, routing_from_channel_id,
+};
 
 #[cfg(feature = "audio")]
 const INPUT_TRIM_LEVEL_PARAM_ID: &str = "input_trim_level";
@@ -53,8 +53,9 @@ pub struct DevServerHost {
     #[cfg(feature = "audio")]
     hardware_input_routing_selection: SharedHardwareInputRoutingSelection,
     #[cfg(feature = "audio")]
-    hardware_input_reconfigure_callback:
-        Arc<RwLock<Option<Arc<HardwareInputReconfigureCallback>>>>,
+    hardware_input_reconfigure_callback: Arc<RwLock<Option<Arc<HardwareInputReconfigureCallback>>>>,
+    #[cfg(feature = "audio")]
+    runtime_control: Arc<RwLock<Option<FfiRuntimeControl>>>,
 }
 
 #[cfg(feature = "audio")]
@@ -152,6 +153,8 @@ impl DevServerHost {
             ),
             #[cfg(feature = "audio")]
             hardware_input_reconfigure_callback: Arc::new(RwLock::new(None)),
+            #[cfg(feature = "audio")]
+            runtime_control: Arc::new(RwLock::new(None)),
         }
     }
 
@@ -187,7 +190,24 @@ impl DevServerHost {
                 initial_hardware_input_routing,
             ),
             hardware_input_reconfigure_callback: Arc::new(RwLock::new(None)),
+            runtime_control: Arc::new(RwLock::new(None)),
         }
+    }
+
+    #[cfg(feature = "audio")]
+    pub fn set_runtime_control(&self, runtime_control: FfiRuntimeControl) {
+        *self
+            .runtime_control
+            .write()
+            .expect("runtime_control lock poisoned") = Some(runtime_control);
+    }
+
+    #[cfg(feature = "audio")]
+    pub fn clear_runtime_control(&self) {
+        *self
+            .runtime_control
+            .write()
+            .expect("runtime_control lock poisoned") = None;
     }
 
     #[cfg(feature = "audio")]
@@ -430,12 +450,15 @@ impl ParameterHost for DevServerHost {
             *self
                 .hardware_input_selection
                 .write()
-                .expect("hardware_input_selection lock poisoned") = GetHardwareInputSelectionResult {
-                selected_device_id: selection.selected_device_id.or(current.selected_device_id),
-                available_devices: current.available_devices,
-                selected_channel_id: selection.selected_channel_id.or(current.selected_channel_id),
-                available_channels: current.available_channels,
-            };
+                .expect("hardware_input_selection lock poisoned") =
+                GetHardwareInputSelectionResult {
+                    selected_device_id: selection.selected_device_id.or(current.selected_device_id),
+                    available_devices: current.available_devices,
+                    selected_channel_id: selection
+                        .selected_channel_id
+                        .or(current.selected_channel_id),
+                    available_channels: current.available_channels,
+                };
             Ok(())
         }
     }
@@ -445,6 +468,23 @@ impl ParameterHost for DevServerHost {
     }
 
     fn set_signal_chain_order(&self, order: Vec<SignalChainSlot>) -> Result<(), BridgeError> {
+        #[cfg(feature = "audio")]
+        {
+            let runtime_control = self
+                .runtime_control
+                .read()
+                .expect("runtime_control lock poisoned")
+                .clone();
+
+            if let Some(runtime_control) = runtime_control
+                && !runtime_control.set_signal_chain_order(&order)
+            {
+                return Err(BridgeError::Internal(
+                    "Live browser-dev runtime rejected signal-chain order update".to_string(),
+                ));
+            }
+        }
+
         self.inner.set_signal_chain_order(order)
     }
 }
@@ -458,12 +498,14 @@ fn now_millis() -> u64 {
 fn initial_hardware_input_selection() -> GetHardwareInputSelectionResult {
     #[cfg(feature = "audio")]
     {
-        return build_hardware_input_selection(None, None).unwrap_or(GetHardwareInputSelectionResult {
-            selected_device_id: None,
-            available_devices: Vec::new(),
-            selected_channel_id: None,
-            available_channels: Vec::new(),
-        });
+        return build_hardware_input_selection(None, None).unwrap_or(
+            GetHardwareInputSelectionResult {
+                selected_device_id: None,
+                available_devices: Vec::new(),
+                selected_channel_id: None,
+                available_channels: Vec::new(),
+            },
+        );
     }
 
     #[cfg(not(feature = "audio"))]
@@ -480,7 +522,104 @@ fn initial_hardware_input_selection() -> GetHardwareInputSelectionResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "audio")]
+    use crate::audio::FfiProcessor;
+    #[cfg(feature = "audio")]
+    use std::ffi::c_void;
+    #[cfg(feature = "audio")]
+    use std::sync::atomic::{AtomicBool, Ordering};
     use wavecraft_protocol::ParameterType;
+
+    #[cfg(feature = "audio")]
+    static RUNTIME_SET_ORDER_CALLED: AtomicBool = AtomicBool::new(false);
+
+    #[cfg(feature = "audio")]
+    extern "C" fn runtime_control_mock_create() -> *mut c_void {
+        std::ptr::dangling_mut::<c_void>()
+    }
+
+    #[cfg(feature = "audio")]
+    extern "C" fn runtime_control_mock_process(
+        _instance: *mut c_void,
+        _channels: *mut *mut f32,
+        _num_channels: u32,
+        _num_samples: u32,
+    ) {
+    }
+
+    #[cfg(feature = "audio")]
+    unsafe extern "C" fn runtime_control_mock_apply_plain_values(
+        _instance: *mut c_void,
+        _values_ptr: *const f32,
+        _len: usize,
+    ) {
+    }
+
+    #[cfg(feature = "audio")]
+    unsafe extern "C" fn runtime_control_mock_set_order_accept(
+        _instance: *mut c_void,
+        _json_ptr: *const std::os::raw::c_char,
+    ) -> bool {
+        RUNTIME_SET_ORDER_CALLED.store(true, Ordering::SeqCst);
+        true
+    }
+
+    #[cfg(feature = "audio")]
+    unsafe extern "C" fn runtime_control_mock_set_order_reject(
+        _instance: *mut c_void,
+        _json_ptr: *const std::os::raw::c_char,
+    ) -> bool {
+        RUNTIME_SET_ORDER_CALLED.store(true, Ordering::SeqCst);
+        false
+    }
+
+    #[cfg(feature = "audio")]
+    extern "C" fn runtime_control_mock_take_latest_oscilloscope_frame_json(
+        _instance: *mut c_void,
+    ) -> *mut std::os::raw::c_char {
+        std::ffi::CString::new("null").unwrap().into_raw()
+    }
+
+    #[cfg(feature = "audio")]
+    extern "C" fn runtime_control_mock_set_sample_rate(_instance: *mut c_void, _sample_rate: f32) {}
+
+    #[cfg(feature = "audio")]
+    extern "C" fn runtime_control_mock_reset(_instance: *mut c_void) {}
+
+    #[cfg(feature = "audio")]
+    extern "C" fn runtime_control_mock_drop(_instance: *mut c_void) {}
+
+    #[cfg(feature = "audio")]
+    fn runtime_control_mock_vtable(
+        set_order: unsafe extern "C" fn(*mut c_void, *const std::os::raw::c_char) -> bool,
+    ) -> wavecraft_protocol::DevProcessorVTable {
+        wavecraft_protocol::DevProcessorVTable {
+            version: wavecraft_protocol::DEV_PROCESSOR_VTABLE_VERSION,
+            create: runtime_control_mock_create,
+            process: runtime_control_mock_process,
+            apply_plain_values: runtime_control_mock_apply_plain_values,
+            set_signal_chain_order_json: set_order,
+            take_latest_oscilloscope_frame_json:
+                runtime_control_mock_take_latest_oscilloscope_frame_json,
+            set_sample_rate: runtime_control_mock_set_sample_rate,
+            reset: runtime_control_mock_reset,
+            drop: runtime_control_mock_drop,
+        }
+    }
+
+    #[cfg(feature = "audio")]
+    fn runtime_test_order(primary_processor_id: &str) -> Vec<SignalChainSlot> {
+        vec![
+            SignalChainSlot {
+                id: primary_processor_id.to_string(),
+                slot_type: wavecraft_protocol::SlotType::Processor,
+            },
+            SignalChainSlot {
+                id: "oscilloscope_tap".to_string(),
+                slot_type: wavecraft_protocol::SlotType::Tap,
+            },
+        ]
+    }
 
     fn test_params() -> Vec<ParameterInfo> {
         vec![
@@ -639,6 +778,61 @@ mod tests {
         assert_eq!(frame.points_l.len(), 1024);
         assert_eq!(frame.points_r.len(), 1024);
         assert_eq!(frame.timestamp, 777);
+    }
+
+    #[cfg(feature = "audio")]
+    #[test]
+    fn test_set_signal_chain_order_applies_runtime_before_mirroring_host_state() {
+        let host = DevServerHost::new(test_params());
+        let processor = FfiProcessor::new(&runtime_control_mock_vtable(
+            runtime_control_mock_set_order_accept,
+        ))
+        .expect("mock runtime control should construct");
+        host.set_runtime_control(processor.runtime_control());
+        RUNTIME_SET_ORDER_CALLED.store(false, Ordering::SeqCst);
+
+        let order = runtime_test_order("input_trim");
+        host.set_signal_chain_order(order.clone())
+            .expect("runtime-accepted order should succeed");
+
+        assert!(
+            RUNTIME_SET_ORDER_CALLED.load(Ordering::SeqCst),
+            "live runtime should receive the order before the host mirrors it"
+        );
+        assert_eq!(host.get_signal_chain_order(), order);
+    }
+
+    #[cfg(feature = "audio")]
+    #[test]
+    fn test_set_signal_chain_order_rejection_does_not_mutate_host_state() {
+        let host = DevServerHost::new(test_params());
+        let baseline = runtime_test_order("test_tone");
+        host.set_signal_chain_order(baseline.clone())
+            .expect("baseline order should be accepted without runtime control");
+
+        let processor = FfiProcessor::new(&runtime_control_mock_vtable(
+            runtime_control_mock_set_order_reject,
+        ))
+        .expect("mock runtime control should construct");
+        host.set_runtime_control(processor.runtime_control());
+        RUNTIME_SET_ORDER_CALLED.store(false, Ordering::SeqCst);
+
+        let rejected = runtime_test_order("input_trim");
+        let error = host
+            .set_signal_chain_order(rejected)
+            .expect_err("runtime rejection should surface as an error");
+
+        assert!(
+            RUNTIME_SET_ORDER_CALLED.load(Ordering::SeqCst),
+            "runtime control should have been consulted"
+        );
+        assert!(
+            error
+                .to_string()
+                .contains("rejected signal-chain order update"),
+            "error should describe runtime rejection: {error}"
+        );
+        assert_eq!(host.get_signal_chain_order(), baseline);
     }
 
     #[tokio::test(flavor = "current_thread")]

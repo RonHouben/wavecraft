@@ -23,40 +23,6 @@ pub(super) fn build(
         ..
     } = sc;
 
-    let osc_block_capture = quote! {
-        let __osc_left_len = buffer
-            .as_slice()
-            .get(0)
-            .map(|c| c.len().min(__num_samples))
-            .unwrap_or(0usize);
-        let __osc_right_len = buffer
-            .as_slice()
-            .get(1)
-            .map(|c| c.len().min(__num_samples))
-            .unwrap_or(0usize);
-        let __osc_left_ptr = buffer
-            .as_slice()
-            .get(0)
-            .map(|c| c.as_ptr())
-            .unwrap_or(::std::ptr::null());
-        let __osc_right_ptr = buffer
-            .as_slice()
-            .get(1)
-            .map(|c| c.as_ptr())
-            .unwrap_or(::std::ptr::null());
-        let __osc_left: &[f32] = if __osc_left_ptr.is_null() {
-            &[]
-        } else {
-            unsafe { ::std::slice::from_raw_parts(__osc_left_ptr, __osc_left_len) }
-        };
-        let __osc_right: &[f32] = if __osc_right_ptr.is_null() {
-            &[]
-        } else {
-            unsafe { ::std::slice::from_raw_parts(__osc_right_ptr, __osc_right_len) }
-        };
-        self.oscilloscope_tap.capture_stereo(__osc_left, __osc_right);
-    };
-
     quote! {
         fn process(
             &mut self,
@@ -177,7 +143,6 @@ pub(super) fn build(
             }
 
                     #tap_observe_calls
-                    #osc_block_capture
 
             let _ = self.meter_producer.push(#krate::MeterFrame {
                 peak_l: __peak_l,

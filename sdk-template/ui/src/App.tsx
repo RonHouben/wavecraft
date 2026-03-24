@@ -49,38 +49,36 @@ export function App(): JSX.Element {
   const frame = useMeterFrame(50);
   const requestResize = useRequestResize();
 
-  // Unified signal chain entries — processors and taps in their declared DSL order.
-  // Each processor entry's id must match the snake_case name from `processors: [...]`.
-  // Each tap entry's id must match the snake_case name from `taps: [...]`.
+  // Unified signal chain entries — processors and taps in their declared runtime order.
+  // These IDs must match the backend/runtime `SignalChainSlot.id` values so the
+  // drag-and-drop presentation can reconcile UI cards with server-authoritative order.
   const slotEntries = useMemo<SignalChainEntry[]>(
     () => [
       // processors
-      { id: 'test_tone', type: 'processor', component: <TestToneProcessor /> },
+      { id: 'TestTone', type: 'processor', component: <TestToneProcessor /> },
       {
-        id: 'input_trim',
+        id: 'InputTrim',
         type: 'processor',
         component: (
           <GainProcessor processorId="input_trim" title="Input Trim" subtitle="My Input Trim" />
         ),
       },
       {
-        id: 'passthrough',
+        id: 'Passthrough',
         type: 'processor',
         component: <PassthroughProcessor processorId="passthrough" title="Passthrough" />,
       },
-      // slot — example_processor (replace null with your custom processor component)
-      // { id: 'example_processor', type: 'processor', component: null },
-      { id: 'tone_filter', type: 'processor', component: <ToneFilterProcessor /> },
-      { id: 'soft_clip', type: 'processor', component: <SaturatorProcessor /> },
+      { id: 'ToneFilter', type: 'processor', component: <ToneFilterProcessor /> },
+      { id: 'SoftClip', type: 'processor', component: <SaturatorProcessor /> },
       {
-        id: 'output_gain',
+        id: 'OutputGain',
         type: 'processor',
         component: (
           <GainProcessor processorId="output_gain" title="Output Gain" subtitle="My Output Gain" />
         ),
       },
       // taps
-      { id: 'oscilloscope_tap', type: 'tap', component: <OscilloscopeProcessor /> },
+      { id: 'OscilloscopeTap', type: 'tap', component: <OscilloscopeProcessor /> },
     ],
     []
   );
