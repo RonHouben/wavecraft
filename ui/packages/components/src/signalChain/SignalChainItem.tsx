@@ -30,6 +30,8 @@ export function SignalChainItem({
   return (
     <div
       ref={setNodeRef}
+      data-slot-id={id}
+      data-testid={`signal-chain-item-${id}`}
       style={style}
       className={mergeClassNames(
         'flex items-stretch gap-2 transition-opacity duration-150',
@@ -39,6 +41,7 @@ export function SignalChainItem({
       {/* Drag handle */}
       <button
         type="button"
+        data-testid={`signal-chain-handle-${id}`}
         className={mergeClassNames(
           'flex shrink-0 cursor-grab items-center justify-center rounded-lg px-1.5',
           'text-plugin-text-muted hover:text-plugin-text-secondary',

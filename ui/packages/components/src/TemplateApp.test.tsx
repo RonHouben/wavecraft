@@ -127,6 +127,7 @@ describe('sdk-template App layout', () => {
     expect(screen.getByTestId('processor-example')).toBeInTheDocument();
     expect(screen.getByTestId('processor-output_gain')).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Signal chain processor order' })).toBeInTheDocument();
+    expect(screen.getByText('Backend signal chain')).toBeInTheDocument();
     expect(screen.getByLabelText('Resize window')).toBeInTheDocument();
   });
 });

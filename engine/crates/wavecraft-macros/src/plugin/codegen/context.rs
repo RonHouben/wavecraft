@@ -70,23 +70,20 @@ impl SharedSymbols {
         // ── u8 / usize index literals ─────────────────────────────────────────
         let proc_idx_u8: Vec<TokenStream> = (0..n)
             .map(|i| {
-                let lit =
-                    syn::LitInt::new(&format!("{}u8", i), proc_macro2::Span::call_site());
+                let lit = syn::LitInt::new(&format!("{}u8", i), proc_macro2::Span::call_site());
                 quote! { #lit }
             })
             .collect();
 
         let proc_idx_usize: Vec<TokenStream> = (0..n)
             .map(|i| {
-                let lit =
-                    syn::LitInt::new(&format!("{}usize", i), proc_macro2::Span::call_site());
+                let lit = syn::LitInt::new(&format!("{}usize", i), proc_macro2::Span::call_site());
                 quote! { #lit }
             })
             .collect();
 
         // ── Processor type names (PascalCase strings for slot IDs) ───────────
-        let proc_type_names: Vec<String> =
-            processors.iter().map(type_last_segment_name).collect();
+        let proc_type_names: Vec<String> = processors.iter().map(type_last_segment_name).collect();
         let proc_name_str_lits: Vec<syn::LitStr> = proc_type_names
             .iter()
             .map(|s| syn::LitStr::new(s, proc_macro2::Span::call_site()))
@@ -114,8 +111,7 @@ impl SharedSymbols {
             .collect();
         let tap_idx_usize: Vec<TokenStream> = (0..t)
             .map(|i| {
-                let lit =
-                    syn::LitInt::new(&format!("{}usize", i), proc_macro2::Span::call_site());
+                let lit = syn::LitInt::new(&format!("{}usize", i), proc_macro2::Span::call_site());
                 quote! { #lit }
             })
             .collect();

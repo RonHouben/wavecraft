@@ -42,14 +42,14 @@ pub use methods::{
     METHOD_SET_HARDWARE_INPUT_SELECTION, METHOD_SET_INPUT_SOURCE, METHOD_SET_PARAMETER,
     METHOD_SET_SIGNAL_CHAIN_ORDER, MeterFrame, MeterUpdateNotification,
     NOTIFICATION_AUDIO_STATUS_CHANGED, NOTIFICATION_HARDWARE_INPUT_SELECTION_CHANGED,
-    NOTIFICATION_INPUT_SOURCE_CHANGED, NOTIFICATION_METER_UPDATE,
-    NOTIFICATION_PARAMETER_CHANGED, NOTIFICATION_SIGNAL_CHAIN_ORDER_CHANGED,
-    OscilloscopeChannelView, OscilloscopeFrame, OscilloscopeTriggerMode,
-    ParameterChangedNotification, ParameterInfo, ParameterType, ProcessorInfo,
-    RegisterAudioParams, RegisterAudioResult, RequestResizeParams, RequestResizeResult,
-    SetHardwareInputSelectionParams, SetHardwareInputSelectionResult, SetInputSourceParams,
-    SetInputSourceResult, SetParameterParams, SetParameterResult, SetSignalChainOrderParams,
-    SetSignalChainOrderResult, SignalChainOrderChangedNotification, SignalChainSlot, SlotType,
+    NOTIFICATION_INPUT_SOURCE_CHANGED, NOTIFICATION_METER_UPDATE, NOTIFICATION_PARAMETER_CHANGED,
+    NOTIFICATION_SIGNAL_CHAIN_ORDER_CHANGED, OscilloscopeChannelView, OscilloscopeFrame,
+    OscilloscopeTriggerMode, ParameterChangedNotification, ParameterInfo, ParameterType,
+    ProcessorInfo, RegisterAudioParams, RegisterAudioResult, RequestResizeParams,
+    RequestResizeResult, SetHardwareInputSelectionParams, SetHardwareInputSelectionResult,
+    SetInputSourceParams, SetInputSourceResult, SetParameterParams, SetParameterResult,
+    SetSignalChainOrderParams, SetSignalChainOrderResult, SignalChainOrderChangedNotification,
+    SignalChainSlot, SlotType,
 };
 
 #[cfg(test)]

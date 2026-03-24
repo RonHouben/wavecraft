@@ -9,6 +9,7 @@ import {
   SaturatorProcessor,
   Select,
   SignalChain,
+  SignalChainOrderDebugPanel,
   TestToneProcessor,
   ToneFilterProcessor,
   VersionBadge,
@@ -87,62 +88,75 @@ export function App(): JSX.Element {
   return (
     <WavecraftProvider>
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-100">My Plugin</h1>
-        <div className="flex items-center gap-2">
-          {selectedInputSource ? (
-            <Select
-              label="Input Source"
-              size="sm"
-              value={selectedInputSource}
-              options={availableInputSources.map((source) => ({
-                label: source.label,
-                value: source.id,
-              }))}
-              disabled={!connected || availableInputSources.length === 0}
-              state={isInputSourceLoading ? 'loading' : 'default'}
-              onChange={(nextValue) => {
-                void setSelectedInputSource(nextValue);
-              }}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-100">My Plugin</h1>
+          <div className="flex items-center gap-2">
+            {selectedInputSource ? (
+              <Select
+                label="Input Source"
+                size="sm"
+                value={selectedInputSource}
+                options={availableInputSources.map((source) => ({
+                  label: source.label,
+                  value: source.id,
+                }))}
+                disabled={!connected || availableInputSources.length === 0}
+                state={isInputSourceLoading ? 'loading' : 'default'}
+                onChange={(nextValue) => {
+                  void setSelectedInputSource(nextValue);
+                }}
+              />
+            ) : null}
+            {selectedDevice ? (
+              <div className="flex items-center gap-2 rounded-md border border-plugin-border bg-plugin-surface px-2.5 py-1.5 text-type-xs text-plugin-text-secondary shadow-control">
+                <span className="font-medium text-plugin-text-primary">Device</span>
+                <span>{selectedDevice.label}</span>
+              </div>
+            ) : null}
+            {selectedChannelId ? (
+              <Select
+                label="Input Channels"
+                size="sm"
+                value={selectedChannelId}
+                options={availableChannels.map((channel) => ({
+                  label: channel.label,
+                  value: channel.id,
+                }))}
+                disabled={
+                  !connected ||
+                  selectedInputSource !== 'hardwareInput' ||
+                  availableChannels.length === 0
+                }
+                state={isHardwareInputSelectionLoading ? 'loading' : 'default'}
+                onChange={(nextValue) => {
+                  void setSelectedChannel(nextValue);
+                }}
+              />
+            ) : null}
+            <ConnectionStatus
+              connected={connected}
+              transport={transport}
+              phase={phase}
+              isReady={isReady}
+              isDegraded={isDegraded}
+              diagnostic={diagnostic}
             />
-          ) : null}
-          {selectedDevice ? (
-            <div className="flex items-center gap-2 rounded-md border border-plugin-border bg-plugin-surface px-2.5 py-1.5 text-type-xs text-plugin-text-secondary shadow-control">
-              <span className="font-medium text-plugin-text-primary">Device</span>
-              <span>{selectedDevice.label}</span>
-            </div>
-          ) : null}
-          {selectedChannelId ? (
-            <Select
-              label="Input Channels"
-              size="sm"
-              value={selectedChannelId}
-              options={availableChannels.map((channel) => ({
-                label: channel.label,
-                value: channel.id,
-              }))}
-              disabled={
-                !connected ||
-                selectedInputSource !== 'hardwareInput' ||
-                availableChannels.length === 0
-              }
-              state={isHardwareInputSelectionLoading ? 'loading' : 'default'}
-              onChange={(nextValue) => {
-                void setSelectedChannel(nextValue);
-              }}
-            />
-          ) : null}
-          <ConnectionStatus
-            connected={connected}
-            transport={transport}
-            phase={phase}
-            isReady={isReady}
-            isDegraded={isDegraded}
-            diagnostic={diagnostic}
-          />
-          <VersionBadge />
+            <VersionBadge />
+          </div>
         </div>
+        {selectedInputSource === 'testTone' ? (
+          <p
+            data-testid="input-source-dev-note"
+            className="text-type-xs text-plugin-text-secondary"
+          >
+            Browser dev input feeds the full chain. Processor cards do not show stage-local signal
+            activity.
+          </p>
+        ) : null}
       </div>
+
+      <SignalChainOrderDebugPanel />
 
       {/* Signal chain — drag-and-drop reorderable */}
       <SignalChain entries={slotEntries} />

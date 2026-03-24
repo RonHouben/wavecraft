@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { IpcBridge } from '../ipc/IpcBridge';
 import { SignalChainOrderClient } from '../ipc/SignalChainOrderClient';
 import type { IpcError } from '../types/ipc';
 import type { SignalChainOrder } from '../types/signal-chain';
@@ -29,7 +30,7 @@ export interface UseSignalChainOrderResult {
 export function useSignalChainOrder(
   isDraggingRef?: React.RefObject<boolean>
 ): UseSignalChainOrderResult {
-  const [order, setOrderState] = useState<SignalChainOrder[]>([]);
+  const [order, setOrder] = useState<SignalChainOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<IpcError | null>(null);
 
@@ -38,35 +39,53 @@ export function useSignalChainOrder(
   orderRef.current = order;
 
   const client = SignalChainOrderClient.getInstance();
+  const bridge = IpcBridge.getInstance();
 
-  // Fetch initial order on mount
   useEffect(() => {
     let cancelled = false;
 
-    setIsLoading(true);
-    setError(null);
+    const fetchOrder = async (): Promise<void> => {
+      if (!bridge.isConnected()) {
+        return;
+      }
 
-    client
-      .getSignalChainOrder()
-      .then((fetchedSlots) => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const fetchedSlots = await client.getSignalChainOrder();
         if (!cancelled) {
-          setOrderState(fetchedSlots);
+          setOrder(fetchedSlots);
           setIsLoading(false);
         }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
+      } catch (err: unknown) {
+        if (!cancelled && bridge.isConnected()) {
           const ipcError: IpcError = toIpcError(err);
           setError(ipcError);
           setIsLoading(false);
         }
-      });
+      }
+    };
+
+    const unsubscribeConnection = bridge.onConnectionChange((connected) => {
+      if (!connected) {
+        if (!cancelled) {
+          setError(null);
+          setIsLoading(orderRef.current.length === 0);
+        }
+        return;
+      }
+
+      void fetchOrder();
+    });
+
+    void fetchOrder();
 
     return () => {
       cancelled = true;
+      unsubscribeConnection();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [bridge, client]);
 
   // Subscribe to signalChainOrderChanged notifications
   useEffect(() => {
@@ -75,8 +94,9 @@ export function useSignalChainOrder(
       if (isDraggingRef?.current) {
         return;
       }
-      setOrderState(newSlots);
+      setOrder(newSlots);
       setError(null);
+      setIsLoading(false);
     });
 
     return unsubscribe;
@@ -84,28 +104,29 @@ export function useSignalChainOrder(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const setOrder = useCallback(
+  const updateOrder = useCallback(
     async (newSlots: SignalChainOrder[]) => {
       const previousOrder = orderRef.current;
 
       // Optimistic update
-      setOrderState(newSlots);
+      setOrder(newSlots);
       setError(null);
+      setIsLoading(false);
 
       try {
         await client.setSignalChainOrder(newSlots);
       } catch (err: unknown) {
         // Rollback on error
-        setOrderState(previousOrder);
+        setOrder(previousOrder);
         setError(toIpcError(err));
+        setIsLoading(false);
         throw err;
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [client]
   );
 
-  return { order, setOrder, isLoading, error };
+  return { order, setOrder: updateOrder, isLoading, error };
 }
 
 function toIpcError(err: unknown): IpcError {

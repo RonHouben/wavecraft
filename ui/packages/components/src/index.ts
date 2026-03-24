@@ -173,17 +173,17 @@ export { ResizeHandle } from './ResizeHandle';
 export type { ResizeHandleProps } from './ResizeHandle';
 
 export type {
-    AudioDiagnostic,
-    AudioRuntimePhase,
-    ControlVisualState,
-    MeterFrame,
-    OscilloscopeChannelView,
-    OscilloscopeFrame,
-    OscilloscopeTriggerMode,
-    ParameterInfo,
-    ParameterType,
-    ParameterValue,
-    PluginVisualState
+  AudioDiagnostic,
+  AudioRuntimePhase,
+  ControlVisualState,
+  MeterFrame,
+  OscilloscopeChannelView,
+  OscilloscopeFrame,
+  OscilloscopeTriggerMode,
+  ParameterInfo,
+  ParameterType,
+  ParameterValue,
+  PluginVisualState,
 } from './types';
 
 // Audio Processors
@@ -236,5 +236,9 @@ export type { SaturatorProcessorProps } from './processors/SaturatorProcessor';
 // Signal Chain
 // Signal Chain
 // Signal Chain
-export { SignalChain } from './signalChain';
-export type { SignalChainEntry, SignalChainProps } from './signalChain';
+export { SignalChain, SignalChainOrderDebugPanel } from './signalChain';
+export type {
+  SignalChainEntry,
+  SignalChainOrderDebugPanelProps,
+  SignalChainProps,
+} from './signalChain';

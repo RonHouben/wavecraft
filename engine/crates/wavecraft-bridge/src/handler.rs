@@ -14,10 +14,10 @@ use wavecraft_protocol::{
     METHOD_REQUEST_RESIZE, METHOD_SET_HARDWARE_INPUT_SELECTION, METHOD_SET_INPUT_SOURCE,
     METHOD_SET_PARAMETER, METHOD_SET_SIGNAL_CHAIN_ORDER,
     NOTIFICATION_HARDWARE_INPUT_SELECTION_CHANGED, NOTIFICATION_INPUT_SOURCE_CHANGED,
-    NOTIFICATION_SIGNAL_CHAIN_ORDER_CHANGED, RequestId, RequestResizeParams,
-    RequestResizeResult, SetHardwareInputSelectionParams, SetHardwareInputSelectionResult,
-    SetInputSourceParams, SetInputSourceResult, SetParameterParams, SetParameterResult,
-    SetSignalChainOrderParams, SetSignalChainOrderResult, SignalChainOrderChangedNotification,
+    NOTIFICATION_SIGNAL_CHAIN_ORDER_CHANGED, RequestId, RequestResizeParams, RequestResizeResult,
+    SetHardwareInputSelectionParams, SetHardwareInputSelectionResult, SetInputSourceParams,
+    SetInputSourceResult, SetParameterParams, SetParameterResult, SetSignalChainOrderParams,
+    SetSignalChainOrderResult, SignalChainOrderChangedNotification,
 };
 
 /// IPC message handler that dispatches requests to a ParameterHost
@@ -45,8 +45,12 @@ impl<H: ParameterHost> IpcHandler<H> {
             METHOD_GET_AUDIO_STATUS => self.handle_get_audio_status(&request),
             METHOD_GET_INPUT_SOURCE => self.handle_get_input_source(&request),
             METHOD_SET_INPUT_SOURCE => self.handle_set_input_source(&request),
-            METHOD_GET_HARDWARE_INPUT_SELECTION => self.handle_get_hardware_input_selection(&request),
-            METHOD_SET_HARDWARE_INPUT_SELECTION => self.handle_set_hardware_input_selection(&request),
+            METHOD_GET_HARDWARE_INPUT_SELECTION => {
+                self.handle_get_hardware_input_selection(&request)
+            }
+            METHOD_SET_HARDWARE_INPUT_SELECTION => {
+                self.handle_set_hardware_input_selection(&request)
+            }
             METHOD_REQUEST_RESIZE => self.handle_request_resize(&request),
             METHOD_GET_SIGNAL_CHAIN_ORDER => self.handle_get_signal_chain_order(&request),
             METHOD_SET_SIGNAL_CHAIN_ORDER => self.handle_set_signal_chain_order(&request),
@@ -226,9 +230,7 @@ impl<H: ParameterHost> IpcHandler<H> {
         request: &IpcRequest,
     ) -> Result<IpcResponse, BridgeError> {
         let result = self.host.get_hardware_input_selection().ok_or_else(|| {
-            BridgeError::Internal(
-                "hardware input selection not supported by this host".to_string(),
-            )
+            BridgeError::Internal("hardware input selection not supported by this host".to_string())
         })?;
 
         Ok(IpcResponse::success(request.id.clone(), result))
