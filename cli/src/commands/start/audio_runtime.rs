@@ -5,6 +5,8 @@ use console::style;
 #[cfg(feature = "audio-dev")]
 use std::path::{Path, PathBuf};
 #[cfg(feature = "audio-dev")]
+use std::rc::Rc;
+#[cfg(feature = "audio-dev")]
 use std::sync::{Arc, Mutex};
 
 #[cfg(feature = "audio-dev")]
@@ -53,13 +55,13 @@ struct AudioRuntimeControllerInner {
 #[cfg(feature = "audio-dev")]
 #[derive(Clone)]
 pub(super) struct AudioRuntimeController {
-    inner: Arc<AudioRuntimeControllerInner>,
+    inner: Rc<AudioRuntimeControllerInner>,
 }
 
 #[cfg(feature = "audio-dev")]
 impl Drop for AudioRuntimeController {
     fn drop(&mut self) {
-        if Arc::strong_count(&self.inner) != 1 {
+        if Rc::strong_count(&self.inner) != 1 {
             return;
         }
 
@@ -85,7 +87,7 @@ impl AudioRuntimeController {
         state: AudioRuntimeState,
     ) -> Self {
         Self {
-            inner: Arc::new(AudioRuntimeControllerInner {
+            inner: Rc::new(AudioRuntimeControllerInner {
                 runtime_handle,
                 engine_dir,
                 host,

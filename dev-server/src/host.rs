@@ -437,7 +437,7 @@ impl ParameterHost for DevServerHost {
                 .write()
                 .expect("hardware_input_selection lock poisoned") = next;
 
-            return Ok(());
+            Ok(())
         }
 
         #[cfg(not(feature = "audio"))]
@@ -498,14 +498,12 @@ fn now_millis() -> u64 {
 fn initial_hardware_input_selection() -> GetHardwareInputSelectionResult {
     #[cfg(feature = "audio")]
     {
-        return build_hardware_input_selection(None, None).unwrap_or(
-            GetHardwareInputSelectionResult {
-                selected_device_id: None,
-                available_devices: Vec::new(),
-                selected_channel_id: None,
-                available_channels: Vec::new(),
-            },
-        );
+        build_hardware_input_selection(None, None).unwrap_or(GetHardwareInputSelectionResult {
+            selected_device_id: None,
+            available_devices: Vec::new(),
+            selected_channel_id: None,
+            available_channels: Vec::new(),
+        })
     }
 
     #[cfg(not(feature = "audio"))]

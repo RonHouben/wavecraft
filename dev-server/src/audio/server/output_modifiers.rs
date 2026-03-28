@@ -40,17 +40,17 @@ const OUTPUT_GAIN_PARAM_ID: &str = "output_gain_level";
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 enum ToneFilterMode {
     #[default]
-    LowPass,
-    HighPass,
-    BandPass,
+    Low,
+    High,
+    Band,
 }
 
 impl ToneFilterMode {
     fn from_index(index: i32) -> Self {
         match index {
-            1 => Self::HighPass,
-            2 => Self::BandPass,
-            _ => Self::LowPass,
+            1 => Self::High,
+            2 => Self::Band,
+            _ => Self::Low,
         }
     }
 }
@@ -362,7 +362,7 @@ fn compute_tone_filter_coefficients(
     let alpha = sin_omega / (2.0 * q);
 
     let (b0, b1, b2, a0, a1, a2) = match mode {
-        ToneFilterMode::LowPass => (
+        ToneFilterMode::Low => (
             (1.0 - cos_omega) * 0.5,
             1.0 - cos_omega,
             (1.0 - cos_omega) * 0.5,
@@ -370,7 +370,7 @@ fn compute_tone_filter_coefficients(
             -2.0 * cos_omega,
             1.0 - alpha,
         ),
-        ToneFilterMode::HighPass => (
+        ToneFilterMode::High => (
             (1.0 + cos_omega) * 0.5,
             -(1.0 + cos_omega),
             (1.0 + cos_omega) * 0.5,
@@ -378,7 +378,7 @@ fn compute_tone_filter_coefficients(
             -2.0 * cos_omega,
             1.0 - alpha,
         ),
-        ToneFilterMode::BandPass => (
+        ToneFilterMode::Band => (
             alpha,
             0.0,
             -alpha,
@@ -605,7 +605,12 @@ mod tests {
         let bright_bridge = soft_clip_bridge(14.0, 0.0, 1.0, 1.0, 0.0);
 
         apply_output_modifiers(&mut left_warm, &mut right_warm, &warm_bridge, 48_000.0);
-        apply_output_modifiers(&mut left_bright, &mut right_bright, &bright_bridge, 48_000.0);
+        apply_output_modifiers(
+            &mut left_bright,
+            &mut right_bright,
+            &bright_bridge,
+            48_000.0,
+        );
 
         assert_ne!(left_warm, left_bright);
         assert_ne!(right_warm, right_bright);

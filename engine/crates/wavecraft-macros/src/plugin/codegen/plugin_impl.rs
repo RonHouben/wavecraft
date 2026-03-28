@@ -1,30 +1,44 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 
+pub(super) struct PluginImplInput<'a> {
+    pub(super) krate: &'a syn::Path,
+    pub(super) name: &'a syn::LitStr,
+    pub(super) vendor: &'a str,
+    pub(super) url: &'a str,
+    pub(super) clap_id: &'a str,
+    pub(super) vst3_id: &'a TokenStream,
+    pub(super) shared_symbols: &'a super::context::SharedSymbols,
+    pub(super) signal_chain: &'a super::signal_chain::SignalChainTokens,
+    pub(super) process_method_tokens: &'a TokenStream,
+}
+
 /// Generate `impl Default`, `impl Plugin`, `impl ClapPlugin`, `impl Vst3Plugin`,
 /// and the `nih_export_*!` calls for `__WavecraftPlugin`.
-pub(super) fn build(
-    krate: &syn::Path,
-    name: &syn::LitStr,
-    vendor: &str,
-    url: &str,
-    clap_id: &str,
-    vst3_id: &TokenStream,
-    s: &super::context::SharedSymbols,
-    sc: &super::signal_chain::SignalChainTokens,
-    process_method_tokens: &TokenStream,
-) -> TokenStream {
-    let n_lit = &s.n_lit;
-    let np1_lit = &s.np1_lit;
-    let proc_idx_u8 = &s.proc_idx_u8;
+pub(super) fn build(input: PluginImplInput<'_>) -> TokenStream {
+    let PluginImplInput {
+        krate,
+        name,
+        vendor,
+        url,
+        clap_id,
+        vst3_id,
+        shared_symbols,
+        signal_chain,
+        process_method_tokens,
+    } = input;
 
-    let param_count_exprs = &sc.param_count_exprs;
-    let proc_defaults = &sc.proc_defaults;
-    let tap_defaults = &sc.tap_defaults;
-    let tap_initialize = &sc.tap_initialize;
-    let set_sample_rate_calls = &sc.set_sample_rate_calls;
-    let tap_reset = &sc.tap_reset;
-    let reset_calls = &sc.reset_calls;
+    let n_lit = &shared_symbols.n_lit;
+    let np1_lit = &shared_symbols.np1_lit;
+    let proc_idx_u8 = &shared_symbols.proc_idx_u8;
+
+    let param_count_exprs = &signal_chain.param_count_exprs;
+    let proc_defaults = &signal_chain.proc_defaults;
+    let tap_defaults = &signal_chain.tap_defaults;
+    let tap_initialize = &signal_chain.tap_initialize;
+    let set_sample_rate_calls = &signal_chain.set_sample_rate_calls;
+    let tap_reset = &signal_chain.tap_reset;
+    let reset_calls = &signal_chain.reset_calls;
 
     quote! {
         impl ::std::default::Default for __WavecraftPlugin {

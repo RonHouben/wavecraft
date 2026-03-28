@@ -79,17 +79,17 @@ pub(super) fn generate_plugin_code(
 
     let params_tokens = params::build(krate, runtime_param_blocks, &s, initial_order_state_slots);
     let process_method_tokens = process_method::build(krate, &s, &sc);
-    let plugin_impl_tokens = plugin_impl::build(
+    let plugin_impl_tokens = plugin_impl::build(plugin_impl::PluginImplInput {
         krate,
         name,
         vendor,
         url,
         clap_id,
         vst3_id,
-        &s,
-        &sc,
-        &process_method_tokens,
-    );
+        shared_symbols: &s,
+        signal_chain: &sc,
+        process_method_tokens: &process_method_tokens,
+    });
     let ffi_tokens = ffi::build(
         krate,
         processor_param_mappings,
