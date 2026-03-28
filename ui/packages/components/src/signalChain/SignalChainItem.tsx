@@ -43,9 +43,9 @@ export function SignalChainItem({
         type="button"
         data-testid={`signal-chain-handle-${id}`}
         className={mergeClassNames(
-          'flex shrink-0 cursor-grab items-center justify-center rounded-lg px-1.5',
-          'text-plugin-text-muted hover:text-plugin-text-secondary',
-          'hover:bg-plugin-surface-2 focus-visible:outline-none focus-visible:ring-2',
+          'flex w-8 shrink-0 cursor-grab items-center justify-center self-stretch rounded-md',
+          'text-plugin-text-muted/80 hover:text-plugin-text-secondary',
+          'hover:bg-plugin-surface/60 focus-visible:outline-none focus-visible:ring-2',
           'focus-visible:ring-plugin-focus focus-visible:ring-offset-1',
           'focus-visible:ring-offset-plugin-canvas active:cursor-grabbing',
           isDragging ? 'cursor-grabbing' : 'cursor-grab'
@@ -58,8 +58,8 @@ export function SignalChainItem({
         <svg
           aria-hidden="true"
           focusable="false"
-          width="10"
-          height="16"
+          width="8"
+          height="14"
           viewBox="0 0 10 16"
           fill="currentColor"
           xmlns="http://www.w3.org/2000/svg"

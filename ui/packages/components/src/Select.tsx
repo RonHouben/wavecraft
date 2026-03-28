@@ -21,7 +21,7 @@ type NativeSelectProps = Omit<
 >;
 
 export interface SelectProps<T extends SelectValue = string> extends NativeSelectProps {
-  readonly value: T;
+  readonly value?: T | null;
   readonly options: readonly SelectOption<T>[];
   readonly onChange: (value: T) => void;
   readonly className?: string;
@@ -41,7 +41,7 @@ const selectSizeClassMap: Record<NonNullable<SelectProps['size']>, string> = {
 
 function getSelectedOptionIndex<T extends SelectValue>(
   options: readonly SelectOption<T>[],
-  value: T
+  value?: T | null
 ): number {
   return options.findIndex((option) => option.value === value);
 }
