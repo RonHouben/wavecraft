@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useSettingsModal } from '@wavecraft/core';
+
 import { Modal } from '../Modal';
 import { Settings } from './Settings';
 
-export interface SettingsModalProps {}
+export type SettingsModalProps = Record<string, never>;
 
-export function SettingsModal(props: Readonly<SettingsModalProps>) {
+export function SettingsModal(_props: Readonly<SettingsModalProps>) {
   const { closeSettingsModal, isSettingsModalOpen } = useSettingsModal();
 
   return (
@@ -16,14 +17,4 @@ export function SettingsModal(props: Readonly<SettingsModalProps>) {
       </Modal.Content>
     </Modal>
   );
-}
-
-export function useSettingsModal() {
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-
-  return {
-    isSettingsModalOpen,
-    openSettingsModal: () => setIsSettingsModalOpen(true),
-    closeSettingsModal: () => setIsSettingsModalOpen(false),
-  };
 }

@@ -6,13 +6,14 @@ import { ParameterClient } from '../ipc/ParameterClient';
 import { logger } from '../logger/Logger';
 import type { ParameterId, ParameterInfo, ParameterValue } from '../types/parameters';
 import { ParameterStateContext, type ParameterStateContextValue } from './ParameterStateContext';
+import { SettingsModalContext, type SettingsModalContextValue } from './SettingsModalContext';
 import { attemptFetch, handleStopResult, handleSuccessResult } from './_fetchController';
 import {
   wireParameterChangedSubscription,
   wireParametersChangedReload,
 } from './_subscriptionWiring';
-import { createSetParameterHandler } from './_writeReconciler';
 import { updateParameterValue } from './_valueHelpers';
+import { createSetParameterHandler } from './_writeReconciler';
 
 /** Maximum time (ms) to wait for connection before giving up */
 const CONNECTION_TIMEOUT_MS = 15_000;
@@ -31,6 +32,7 @@ export function WavecraftProvider({ children }: Readonly<WavecraftProviderProps>
   const [params, setParams] = useState<ParameterInfo<ParameterValue>[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   const { connected } = useConnectionStatus();
 
@@ -105,6 +107,14 @@ export function WavecraftProvider({ children }: Readonly<WavecraftProviderProps>
     []
   );
 
+  const openSettingsModal = useCallback((): void => {
+    setIsSettingsModalOpen(true);
+  }, []);
+
+  const closeSettingsModal = useCallback((): void => {
+    setIsSettingsModalOpen(false);
+  }, []);
+
   useEffect(() => {
     const wasConnected = prevConnectedRef.current;
     prevConnectedRef.current = connected;
@@ -164,5 +174,20 @@ export function WavecraftProvider({ children }: Readonly<WavecraftProviderProps>
     [error, isLoading, params, reload, setParameter]
   );
 
-  return <ParameterStateContext.Provider value={value}>{children}</ParameterStateContext.Provider>;
+  const settingsModalValue = useMemo<SettingsModalContextValue>(
+    () => ({
+      isSettingsModalOpen,
+      openSettingsModal,
+      closeSettingsModal,
+    }),
+    [closeSettingsModal, isSettingsModalOpen, openSettingsModal]
+  );
+
+  return (
+    <ParameterStateContext.Provider value={value}>
+      <SettingsModalContext.Provider value={settingsModalValue}>
+        {children}
+      </SettingsModalContext.Provider>
+    </ParameterStateContext.Provider>
+  );
 }

@@ -8,6 +8,7 @@ import {
   ModalHeader,
   ModalTitle,
 } from './Modal';
+import { Sidebar } from './Sidebar';
 
 describe('Modal', () => {
   it('does not render when closed', () => {
@@ -81,6 +82,36 @@ describe('Modal', () => {
     fireEvent.keyDown(globalThis.window, { key: 'Escape' });
 
     expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it('captures Escape before an underlying sidebar closes', () => {
+    const onModalClose = vi.fn();
+    const onSidebarClose = vi.fn();
+
+    render(
+      <>
+        <Sidebar
+          open
+          onClose={onSidebarClose}
+          title="Menu"
+          description="Quick actions"
+          defaultActions={['show-settings']}
+        >
+          <button type="button">Settings</button>
+        </Sidebar>
+        <Modal open onClose={onModalClose}>
+          <Modal.Header>
+            <Modal.Title>Plugin settings</Modal.Title>
+          </Modal.Header>
+          <Modal.Content>Body</Modal.Content>
+        </Modal>
+      </>
+    );
+
+    fireEvent.keyDown(globalThis.window, { key: 'Escape' });
+
+    expect(onModalClose).toHaveBeenCalledTimes(1);
+    expect(onSidebarClose).not.toHaveBeenCalled();
   });
 
   it('cycles focus within the modal when tabbing', () => {

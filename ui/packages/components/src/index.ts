@@ -55,7 +55,7 @@ export { Select } from './Select';
 export type { SelectOption, SelectProps } from './Select';
 export { Settings } from './settings/Settings';
 export type { SettingsProps } from './settings/Settings';
-export { SettingsModal, useSettingsModal } from './settings/SettingsModal';
+export { SettingsModal } from './settings/SettingsModal';
 export type { SettingsModalProps } from './settings/SettingsModal';
 export { Sidebar } from './Sidebar';
 export type { SidebarProps } from './Sidebar';
@@ -81,3 +81,4 @@ export type {
   PluginVisualState,
 } from './types';
 export { VersionBadge } from './VersionBadge';
+export { useSettingsModal } from '@wavecraft/core';

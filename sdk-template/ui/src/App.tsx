@@ -1,32 +1,40 @@
 import {
-  GainProcessor,
-  Header,
-  IconButton,
-  LatencyMonitor,
-  Meter,
-  OscilloscopeProcessor,
-  PassthroughProcessor,
-  ResizeHandle,
-  SaturatorProcessor,
-  SettingsModal,
-  Sidebar,
-  SignalChain,
-  ToneFilterProcessor,
-  useSettingsModal,
+    GainProcessor,
+    Header,
+    IconButton,
+    LatencyMonitor,
+    Meter,
+    OscilloscopeProcessor,
+    PassthroughProcessor,
+    ResizeHandle,
+    SaturatorProcessor,
+    SettingsModal,
+    Sidebar,
+    SignalChain,
+    ToneFilterProcessor,
 } from '@wavecraft/components';
 import { Button } from '@wavecraft/components/Button';
 import { TestToneProcessor } from '@wavecraft/components/processors/TestToneProcessor';
 import {
-  useConnectionStatus,
-  useLatencyMonitor,
-  useMeterFrame,
-  useRequestResize,
-  useWindowResizeSync,
-  WavecraftProvider,
+    useConnectionStatus,
+    useLatencyMonitor,
+    useMeterFrame,
+    useRequestResize,
+    useSettingsModal,
+    useWindowResizeSync,
+    WavecraftProvider,
 } from '@wavecraft/core';
 import { type JSX, useCallback, useState } from 'react';
 
 export function App(): JSX.Element {
+  return (
+    <WavecraftProvider>
+      <AppContent />
+    </WavecraftProvider>
+  );
+}
+
+function AppContent(): JSX.Element {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { openSettingsModal } = useSettingsModal();
 
@@ -46,7 +54,7 @@ export function App(): JSX.Element {
   const requestResize = useRequestResize();
 
   return (
-    <WavecraftProvider>
+    <>
       <div className="flex flex-col gap-3 px-3 pb-16 pr-16 pt-3">
         <Header title="My Cool Plugin">
           {!isSidebarOpen && (
@@ -133,6 +141,6 @@ export function App(): JSX.Element {
 
       <SettingsModal />
       <ResizeHandle onRequestResize={requestResize} />
-    </WavecraftProvider>
+    </>
   );
 }

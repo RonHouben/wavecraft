@@ -234,6 +234,8 @@ export type {
 // =============================================================================
 // React hooks (primary API)
 // =============================================================================
+export type { SettingsModalContextValue } from './context/SettingsModalContext';
+export { useSettingsModal } from './context/useSettingsModal';
 export { WavecraftProvider } from './context/WavecraftProvider';
 export type { WavecraftProviderProps } from './context/WavecraftProvider';
 

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -14,6 +14,7 @@ const mockUseParameter = vi.hoisted(() => vi.fn());
 const mockUseHasProcessorInSignalChain = vi.hoisted(() => vi.fn());
 const mockUseOscilloscopeFrame = vi.hoisted(() => vi.fn());
 const mockUseSignalChainOrder = vi.hoisted(() => vi.fn());
+const mockUseSettingsModal = vi.hoisted(() => vi.fn());
 
 vi.mock('@wavecraft/core', () => ({
   WavecraftProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -29,6 +30,7 @@ vi.mock('@wavecraft/core', () => ({
   useHasProcessorInSignalChain: mockUseHasProcessorInSignalChain,
   useOscilloscopeFrame: mockUseOscilloscopeFrame,
   useSignalChainOrder: mockUseSignalChainOrder,
+  useSettingsModal: mockUseSettingsModal,
 }));
 
 vi.mock('@wavecraft/components', async () => {
@@ -48,75 +50,97 @@ vi.mock('@wavecraft/components', async () => {
     // Mock SignalChain to avoid @dnd-kit dual-React instance issues in tests.
     // DnD functionality is tested separately in SignalChain.test.tsx.
     SignalChain: ({ entries }: { entries: Array<{ id: string; component: ReactNode }> }) => (
-      <ul aria-label="Signal chain processor order">
-        {entries.map((e) => (e.component == null ? null : <li key={e.id}>{e.component}</li>))}
-      </ul>
+      <>
+        <div>Backend signal chain</div>
+        <ul aria-label="Signal chain processor order">
+          {entries.map((entry) =>
+            entry.component == null ? null : <li key={entry.id}>{entry.component}</li>
+          )}
+        </ul>
+      </>
     ),
   };
 });
 
+vi.mock('@wavecraft/components/processors/TestToneProcessor', () => ({
+  TestToneProcessor: () => <div data-testid="processor-test-tone" />,
+}));
+
 import { App } from '../../../../sdk-template/ui/src/App';
+
+function configureDefaultCoreMocks(openSettingsModal = vi.fn()): {
+  openSettingsModal: ReturnType<typeof vi.fn>;
+} {
+  mockUseSettingsModal.mockReturnValue({
+    isSettingsModalOpen: false,
+    openSettingsModal,
+    closeSettingsModal: vi.fn(),
+  });
+  mockUseHasProcessorInSignalChain.mockReturnValue(true);
+  mockUseSignalChainOrder.mockReturnValue({
+    order: [],
+    setOrder: vi.fn(),
+    isLoading: false,
+    error: null,
+  });
+  mockUseParameter.mockReturnValue({
+    param: {
+      id: 'test_parameter',
+      name: 'Test Parameter',
+      type: 'float',
+      value: 0,
+      default: 0,
+      min: 0,
+      max: 1,
+      unit: '',
+    },
+    setValue: vi.fn(),
+  });
+  mockUseOscilloscopeFrame.mockReturnValue({
+    points_l: new Array(128).fill(0),
+    points_r: new Array(128).fill(0),
+    sample_rate: 44100,
+    timestamp: 0,
+    no_signal: true,
+    trigger_mode: 'risingZeroCrossing',
+  });
+  mockUseConnectionStatus.mockReturnValue({ connected: true, transport: 'websocket' });
+  mockUseAudioStatus.mockReturnValue({
+    phase: 'runningFullDuplex',
+    isReady: true,
+    isDegraded: false,
+    diagnostic: undefined,
+  });
+  mockUseInputSource.mockReturnValue({
+    selected: 'hardwareInput',
+    available: [
+      { id: 'hardwareInput', label: 'Soundcard input' },
+      { id: 'testTone', label: 'Test tone' },
+    ],
+    setSelected: vi.fn(),
+    isLoading: false,
+    error: null,
+  });
+  mockUseHardwareInputSelection.mockReturnValue({
+    selectedDeviceId: 'input-device:0',
+    selectedDevice: { id: 'input-device:0', label: 'Built-in Input', channel_count: 2 },
+    availableDevices: [{ id: 'input-device:0', label: 'Built-in Input', channel_count: 2 }],
+    selectedChannelId: 'stereo:0:1',
+    availableChannels: [{ id: 'stereo:0:1', label: 'Inputs 1 + 2 (stereo)' }],
+    setSelectedChannel: vi.fn(),
+    isLoading: false,
+    error: null,
+  });
+  mockUseLatencyMonitor.mockReturnValue({ latency: 2, avg: 2, max: 4, count: 8 });
+  mockUseMeterFrame.mockReturnValue({ peak_l: 0, peak_r: 0, rms_l: 0, rms_r: 0, timestamp: 0 });
+  mockUseRequestResize.mockReturnValue(vi.fn());
+
+  return { openSettingsModal };
+}
 
 describe('sdk-template App layout', () => {
   it('renders test tone panel and resize handle', () => {
-    mockUseHasProcessorInSignalChain.mockReturnValue(true);
-    mockUseSignalChainOrder.mockReturnValue({
-      order: [],
-      setOrder: vi.fn(),
-      isLoading: false,
-      error: null,
-    });
-    mockUseParameter.mockReturnValue({
-      param: {
-        id: 'test_parameter',
-        name: 'Test Parameter',
-        type: 'float',
-        value: 0,
-        default: 0,
-        min: 0,
-        max: 1,
-        unit: '',
-      },
-      setValue: vi.fn(),
-    });
-    mockUseOscilloscopeFrame.mockReturnValue({
-      points_l: new Array(128).fill(0),
-      points_r: new Array(128).fill(0),
-      sample_rate: 44100,
-      timestamp: 0,
-      no_signal: true,
-      trigger_mode: 'risingZeroCrossing',
-    });
-    mockUseConnectionStatus.mockReturnValue({ connected: true, transport: 'websocket' });
-    mockUseAudioStatus.mockReturnValue({
-      phase: 'runningFullDuplex',
-      isReady: true,
-      isDegraded: false,
-      diagnostic: undefined,
-    });
-    mockUseInputSource.mockReturnValue({
-      selected: 'hardwareInput',
-      available: [
-        { id: 'hardwareInput', label: 'Soundcard input' },
-        { id: 'testTone', label: 'Test tone' },
-      ],
-      setSelected: vi.fn(),
-      isLoading: false,
-      error: null,
-    });
-    mockUseHardwareInputSelection.mockReturnValue({
-      selectedDeviceId: 'input-device:0',
-      selectedDevice: { id: 'input-device:0', label: 'Built-in Input', channel_count: 2 },
-      availableDevices: [{ id: 'input-device:0', label: 'Built-in Input', channel_count: 2 }],
-      selectedChannelId: 'stereo:0:1',
-      availableChannels: [{ id: 'stereo:0:1', label: 'Inputs 1 + 2 (stereo)' }],
-      setSelectedChannel: vi.fn(),
-      isLoading: false,
-      error: null,
-    });
-    mockUseLatencyMonitor.mockReturnValue({ latency: 2, avg: 2, max: 4, count: 8 });
-    mockUseMeterFrame.mockReturnValue({ peak_l: 0, peak_r: 0, rms_l: 0, rms_r: 0, timestamp: 0 });
-    mockUseRequestResize.mockReturnValue(vi.fn());
+    configureDefaultCoreMocks();
 
     render(<App />);
 
@@ -129,5 +153,16 @@ describe('sdk-template App layout', () => {
     expect(screen.getByRole('list', { name: 'Signal chain processor order' })).toBeInTheDocument();
     expect(screen.getByText('Backend signal chain')).toBeInTheDocument();
     expect(screen.getByLabelText('Resize window')).toBeInTheDocument();
+  });
+
+  it('opens the settings flow from the sidebar button', () => {
+    const { openSettingsModal } = configureDefaultCoreMocks(vi.fn());
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+
+    expect(openSettingsModal).toHaveBeenCalledTimes(1);
   });
 });

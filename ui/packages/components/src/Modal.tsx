@@ -234,6 +234,8 @@ function ModalRoot({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopImmediatePropagation();
         onClose();
         return;
       }
@@ -245,10 +247,10 @@ function ModalRoot({
       trapFocus(event, panelRef.current);
     };
 
-    globalThis.addEventListener('keydown', handleKeyDown);
+    globalThis.addEventListener('keydown', handleKeyDown, true);
 
     return () => {
-      globalThis.removeEventListener('keydown', handleKeyDown);
+      globalThis.removeEventListener('keydown', handleKeyDown, true);
     };
   }, [onClose, open]);
 
