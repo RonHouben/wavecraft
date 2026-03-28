@@ -3,7 +3,7 @@
  */
 
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { Meter } from './Meter';
 
 const frame = {
@@ -26,6 +26,15 @@ describe('Meter', () => {
   it('renders meter component', () => {
     render(<Meter connected frame={frame} />);
     expect(screen.getByText('Levels')).toBeInTheDocument();
+  });
+
+  it('uses the elevated processor-style card shell', () => {
+    render(<Meter connected frame={frame} />);
+
+    const meter = screen.getByTestId('meter');
+    expect(meter).toHaveClass('rounded-xl');
+    expect(meter).toHaveClass('bg-plugin-surface-1');
+    expect(meter).toHaveClass('shadow-panel');
   });
 
   it('displays channel labels', () => {

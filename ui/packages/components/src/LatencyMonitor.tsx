@@ -3,7 +3,13 @@
  */
 
 import React from 'react';
-import { mergeClassNames } from './utils/classNames';
+import { Card } from './Card';
+import {
+  elevatedCardClass,
+  insetSurfaceClass,
+  mergeClassNames,
+  statusChipClass,
+} from './utils/classNames';
 
 export interface LatencyMonitorProps {
   readonly latency: number | null;
@@ -20,53 +26,86 @@ export function LatencyMonitor({
   count,
   className,
 }: Readonly<LatencyMonitorProps>): React.JSX.Element {
-  const getStatusColor = (): string => {
-    if (avg < 5) return 'text-green-400';
-    if (avg < 10) return 'text-yellow-400';
-    return 'text-red-400';
-  };
-
-  const getStatusText = (): string => {
-    if (avg < 5) return '✓ Excellent';
-    if (avg < 10) return '⚠ Fair';
-    return '✗ Poor';
-  };
+  const metrics = [
+    {
+      label: 'Current',
+      value: latency === null ? '—' : `${latency.toFixed(2)} ms`,
+    },
+    {
+      label: 'Average',
+      value: avg > 0 ? `${avg.toFixed(2)} ms` : '—',
+    },
+    {
+      label: 'Max',
+      value: max > 0 ? `${max.toFixed(2)} ms` : '—',
+    },
+    {
+      label: 'Samples',
+      value: count.toString(),
+    },
+  ];
 
   return (
-    <div
-      className={mergeClassNames(
-        'mb-4 rounded-lg border border-plugin-border bg-plugin-surface p-4',
-        className
-      )}
-    >
-      <h3 className="m-0 mb-3 text-base font-semibold text-gray-200">IPC Latency</h3>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="flex justify-between rounded bg-plugin-dark p-2">
-          <span className="text-sm text-gray-500">Current:</span>
-          <span className="font-mono text-sm font-semibold text-accent">
-            {latency === null ? '—' : `${latency.toFixed(2)} ms`}
-          </span>
-        </div>
-        <div className="flex justify-between rounded bg-plugin-dark p-2">
-          <span className="text-sm text-gray-500">Average:</span>
-          <span className="font-mono text-sm font-semibold text-accent">
-            {avg > 0 ? `${avg.toFixed(2)} ms` : '—'}
-          </span>
-        </div>
-        <div className="flex justify-between rounded bg-plugin-dark p-2">
-          <span className="text-sm text-gray-500">Max:</span>
-          <span className="font-mono text-sm font-semibold text-accent">
-            {max > 0 ? `${max.toFixed(2)} ms` : '—'}
-          </span>
-        </div>
-        <div className="flex justify-between rounded bg-plugin-dark p-2">
-          <span className="text-sm text-gray-500">Samples:</span>
-          <span className="font-mono text-sm font-semibold text-accent">{count}</span>
-        </div>
-      </div>
-      <div className="mt-3 text-center text-sm font-semibold">
-        {avg > 0 && <span className={getStatusColor()}>{getStatusText()}</span>}
-      </div>
-    </div>
+    <Card data-testid="latency-monitor" className={mergeClassNames(elevatedCardClass, className)}>
+      <Card.Header>
+        <Card.Title>IPC Latency</Card.Title>
+        <span
+          data-testid="latency-monitor-status"
+          className={mergeClassNames(statusChipClass, getLatencyStatusClass(avg, count))}
+        >
+          {getLatencyStatusLabel(avg, count)}
+        </span>
+      </Card.Header>
+
+      <Card.Content>
+        <dl className="grid grid-cols-2 gap-3">
+          {metrics.map((metric) => (
+            <div
+              key={metric.label}
+              className={mergeClassNames(insetSurfaceClass, 'flex flex-col gap-1 px-3 py-2')}
+            >
+              <dt className="text-type-2xs uppercase tracking-wide text-plugin-text-secondary">
+                {metric.label}
+              </dt>
+              <dd className="m-0 font-mono text-type-sm text-plugin-text-primary">
+                {metric.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </Card.Content>
+    </Card>
   );
+}
+
+function getLatencyStatusClass(avg: number, count: number): string {
+  if (count === 0 || avg <= 0) {
+    return 'border-plugin-border text-plugin-text-secondary';
+  }
+
+  if (avg < 5) {
+    return 'border-state-success/60 text-state-success';
+  }
+
+  if (avg < 10) {
+    return 'border-state-warning/60 text-state-warning';
+  }
+
+  return 'border-state-danger/60 text-state-danger';
+}
+
+function getLatencyStatusLabel(avg: number, count: number): string {
+  if (count === 0 || avg <= 0) {
+    return 'Idle';
+  }
+
+  if (avg < 5) {
+    return 'Excellent';
+  }
+
+  if (avg < 10) {
+    return 'Fair';
+  }
+
+  return 'Poor';
 }

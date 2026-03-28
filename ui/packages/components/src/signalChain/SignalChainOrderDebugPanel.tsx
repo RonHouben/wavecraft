@@ -3,7 +3,12 @@ import React from 'react';
 
 import { Card } from '../Card';
 import { ErrorMessage } from '../ErrorMessage';
-import { mergeClassNames } from '../utils/classNames';
+import {
+  elevatedCardClass,
+  insetSurfaceClass,
+  mergeClassNames,
+  statusChipClass,
+} from '../utils/classNames';
 
 export interface SignalChainOrderDebugPanelProps {
   readonly className?: string;
@@ -17,7 +22,7 @@ export function SignalChainOrderDebugPanel({
   return (
     <Card
       data-testid="signal-chain-order-debug-panel"
-      className={mergeClassNames('w-full', className)}
+      className={mergeClassNames('w-full', elevatedCardClass, className)}
     >
       <Card.Header>
         <div>
@@ -26,12 +31,17 @@ export function SignalChainOrderDebugPanel({
             Live backend-reported slot order from JSON-RPC notifications.
           </Card.Description>
         </div>
-        <div className="rounded-md border border-plugin-border bg-plugin-dark px-2 py-1 text-type-2xs font-medium uppercase tracking-wide text-plugin-text-secondary">
+        <div
+          className={mergeClassNames(
+            statusChipClass,
+            'border-plugin-border text-plugin-text-secondary'
+          )}
+        >
           {order.length} slots
         </div>
       </Card.Header>
 
-      <Card.Content className="pt-3">
+      <Card.Content className="flex flex-col gap-3 pt-3">
         {error ? (
           <ErrorMessage
             data-testid="signal-chain-order-debug-error"
@@ -40,31 +50,42 @@ export function SignalChainOrderDebugPanel({
         ) : null}
 
         {!error && isLoading ? (
-          <p
+          <div
             data-testid="signal-chain-order-debug-loading"
-            className="text-type-sm text-plugin-text-secondary"
+            className={mergeClassNames(
+              insetSurfaceClass,
+              'px-3 py-3 text-type-sm text-plugin-text-secondary'
+            )}
           >
             Waiting for backend order…
-          </p>
+          </div>
         ) : null}
 
         {!error && !isLoading && order.length === 0 ? (
-          <p
+          <div
             data-testid="signal-chain-order-debug-empty"
-            className="text-type-sm text-plugin-text-secondary"
+            className={mergeClassNames(
+              insetSurfaceClass,
+              'px-3 py-3 text-type-sm text-plugin-text-secondary'
+            )}
           >
             Backend has not reported any slots yet.
-          </p>
+          </div>
         ) : null}
 
         {!error && !isLoading && order.length > 0 ? (
           <ol
             data-testid="signal-chain-order-debug-list"
-            className="flex list-decimal flex-col gap-2 pl-5"
+            className="flex list-decimal flex-col gap-3 pl-5 marker:text-plugin-text-muted"
           >
             {order.map((slot, index) => (
               <li key={`${slot.type}:${slot.id}`} className="pl-1">
-                <div className="flex items-center justify-between gap-3 rounded-md border border-plugin-border bg-plugin-dark px-3 py-2">
+                <div
+                  className={mergeClassNames(
+                    insetSurfaceClass,
+                    'flex items-center justify-between gap-3 px-3 py-2'
+                  )}
+                >
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <span className="text-type-2xs uppercase tracking-wide text-plugin-text-secondary">
                       Slot {index + 1}
@@ -73,7 +94,12 @@ export function SignalChainOrderDebugPanel({
                       {slot.id}
                     </code>
                   </div>
-                  <span className="rounded-md border border-plugin-border bg-plugin-surface px-2 py-1 text-type-2xs font-medium uppercase tracking-wide text-plugin-text-secondary">
+                  <span
+                    className={mergeClassNames(
+                      statusChipClass,
+                      'border-plugin-border text-plugin-text-secondary'
+                    )}
+                  >
                     {slot.type}
                   </span>
                 </div>

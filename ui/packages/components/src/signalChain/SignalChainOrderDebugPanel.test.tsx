@@ -23,7 +23,11 @@ describe('SignalChainOrderDebugPanel', () => {
 
     render(<SignalChainOrderDebugPanel />);
 
-    expect(screen.getByTestId('signal-chain-order-debug-panel')).toBeInTheDocument();
+    const panel = screen.getByTestId('signal-chain-order-debug-panel');
+    expect(panel).toBeInTheDocument();
+    expect(panel).toHaveClass('rounded-xl');
+    expect(panel).toHaveClass('bg-plugin-surface-1');
+    expect(panel).toHaveClass('shadow-panel');
     expect(screen.getByText('Backend signal chain')).toBeInTheDocument();
     expect(screen.getByText('input_trim')).toBeInTheDocument();
     expect(screen.getByText('oscilloscope_tap')).toBeInTheDocument();

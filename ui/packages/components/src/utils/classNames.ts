@@ -33,6 +33,14 @@ export const interactionStateClass =
 
 export const surfaceCardClass = 'rounded-lg border border-plugin-border bg-plugin-surface p-4';
 
+export const elevatedCardClass =
+  'rounded-xl border border-plugin-border bg-plugin-surface-1 p-3 shadow-panel';
+
+export const insetSurfaceClass = 'rounded-lg border border-plugin-border bg-plugin-dark';
+
+export const statusChipClass =
+  'rounded-md border bg-plugin-surface px-2 py-1 text-type-2xs font-medium uppercase tracking-wide';
+
 export const sectionHeadingClass = 'text-sm font-semibold uppercase tracking-wider text-gray-400';
 
 export const parameterListClass = 'space-y-3';

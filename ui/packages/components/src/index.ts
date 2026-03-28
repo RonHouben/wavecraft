@@ -53,6 +53,8 @@ export { Select } from './Select';
 export type { SelectOption, SelectProps } from './Select';
 export { Settings } from './settings/Settings';
 export type { SettingsProps } from './settings/Settings';
+export { Sidebar } from './Sidebar';
+export type { SidebarProps } from './Sidebar';
 export { SignalChain, SignalChainOrderDebugPanel } from './signalChain';
 export type {
   SignalChainEntry,

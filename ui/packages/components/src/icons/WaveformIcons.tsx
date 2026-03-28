@@ -3,6 +3,7 @@ import { mergeClassNames } from '../utils/classNames';
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const IconComponentMap = {
+  menu: MenuIcon,
   'waveform-sine': SineWaveIcon,
   'waveform-square': SquareWaveIcon,
   'waveform-saw': SawWaveIcon,
@@ -15,6 +16,26 @@ export interface WaveformIconProps extends SVGProps<SVGSVGElement> {
 }
 
 const baseWaveformIconClassName = 'h-3.5 w-3.5 shrink-0';
+
+export function MenuIcon({ className, ...rest }: Readonly<WaveformIconProps>): React.JSX.Element {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+      data-waveform-icon="menu"
+      className={mergeClassNames(baseWaveformIconClassName, className)}
+      {...rest}
+    >
+      <path d="M2 4.5h12M2 8h12M2 11.5h12" />
+    </svg>
+  );
+}
 
 export function SineWaveIcon({
   className,

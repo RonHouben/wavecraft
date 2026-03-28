@@ -4,7 +4,7 @@ import {
   useParameter,
 } from '@wavecraft/core';
 import { Card, Switch } from '..';
-import { mergeClassNames } from '../utils/classNames';
+import { elevatedCardClass, mergeClassNames } from '../utils/classNames';
 
 export interface ProcessorCardProps {
   readonly hideWhenNotInSignalChain?: boolean;
@@ -30,7 +30,8 @@ export function ProcessorCard(props: Readonly<ProcessorCardProps>): React.JSX.El
     <Card
       data-bypassed={bypassParam?.value}
       className={mergeClassNames(
-        'h-full w-full rounded-xl border border-plugin-border bg-plugin-surface-1 p-3 shadow-panel transition-[opacity,filter] duration-150',
+        'h-full w-full transition-[opacity,filter] duration-150',
+        elevatedCardClass,
         bypassParam?.value ? 'opacity-70 brightness-90 saturate-50' : 'opacity-100 saturate-100',
         props.className
       )}
