@@ -420,11 +420,11 @@ mod tests {
     fn test_vtable_version_mismatch_error_display() {
         let err = PluginLoaderError::VtableVersionMismatch {
             found: 1,
-            expected: 3,
+            expected: 4,
         };
         assert!(err.to_string().contains("version mismatch"));
         assert!(err.to_string().contains("found 1"));
-        assert!(err.to_string().contains("expected 3"));
+        assert!(err.to_string().contains("expected 4"));
     }
 
     #[test]

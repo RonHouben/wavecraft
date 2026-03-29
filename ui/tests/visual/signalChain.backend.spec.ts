@@ -11,61 +11,41 @@ interface GetSignalChainOrderResult {
   slots: SignalChainSlot[];
 }
 
-const DEFAULT_SIGNAL_CHAIN_ORDER: SignalChainSlot[] = [
-  { id: 'TestTone', type: 'processor' },
-  { id: 'InputTrim', type: 'processor' },
-  { id: 'Passthrough', type: 'processor' },
-  { id: 'ExampleProcessor', type: 'processor' },
-  { id: 'ToneFilter', type: 'processor' },
-  { id: 'SoftClip', type: 'processor' },
-  { id: 'OutputGain', type: 'processor' },
-  { id: 'OscilloscopeTap', type: 'tap' },
-];
-
-const REORDERED_SIGNAL_CHAIN_ORDER: SignalChainSlot[] = [
-  { id: 'InputTrim', type: 'processor' },
-  { id: 'TestTone', type: 'processor' },
-  { id: 'Passthrough', type: 'processor' },
-  { id: 'ExampleProcessor', type: 'processor' },
-  { id: 'ToneFilter', type: 'processor' },
-  { id: 'SoftClip', type: 'processor' },
-  { id: 'OutputGain', type: 'processor' },
-  { id: 'OscilloscopeTap', type: 'tap' },
-];
-
-const DEFAULT_SIGNAL_CHAIN_IDS = DEFAULT_SIGNAL_CHAIN_ORDER.map((slot) => slot.id);
-const REORDERED_SIGNAL_CHAIN_IDS = REORDERED_SIGNAL_CHAIN_ORDER.map((slot) => slot.id);
-const RENDERED_DEFAULT_SIGNAL_CHAIN_IDS = DEFAULT_SIGNAL_CHAIN_IDS.filter(
-  (id) => id !== 'ExampleProcessor'
-);
-const RENDERED_REORDERED_SIGNAL_CHAIN_IDS = REORDERED_SIGNAL_CHAIN_IDS.filter(
-  (id) => id !== 'ExampleProcessor'
-);
-
 test('reordering a processor from the UI updates the backend signal chain order', async ({
   page,
 }) => {
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { name: 'My Plugin' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'My Cool Plugin' })).toBeVisible();
   await expect(page.getByRole('list', { name: 'Signal chain processor order' })).toBeVisible();
 
+  const defaultSignalChainOrder = await getBackendSignalChainOrderSlots(page);
+  const reorderedSignalChainOrder = moveSlotAfter(
+    defaultSignalChainOrder,
+    'InputTrim',
+    'Passthrough'
+  );
+  const defaultSignalChainIds = defaultSignalChainOrder.map((slot) => slot.id);
+  const reorderedSignalChainIds = reorderedSignalChainOrder.map((slot) => slot.id);
+  const renderedDefaultSignalChainIds = toRenderedSignalChainIds(defaultSignalChainIds);
+  const renderedReorderedSignalChainIds = toRenderedSignalChainIds(reorderedSignalChainIds);
+
   try {
-    await setBackendSignalChainOrder(page, DEFAULT_SIGNAL_CHAIN_ORDER);
+    await setBackendSignalChainOrder(page, defaultSignalChainOrder);
 
-    await expect.poll(() => getBackendSignalChainOrder(page)).toEqual(DEFAULT_SIGNAL_CHAIN_IDS);
+    await expect.poll(() => getBackendSignalChainOrder(page)).toEqual(defaultSignalChainIds);
     await expect
       .poll(() => getRenderedSignalChainOrder(page))
-      .toEqual(RENDERED_DEFAULT_SIGNAL_CHAIN_IDS);
+      .toEqual(renderedDefaultSignalChainIds);
 
-    await dragSignalChainItem(page, 'TestTone', 'InputTrim');
+    await dragSignalChainItem(page, 'InputTrim', 'Passthrough');
 
-    await expect.poll(() => getBackendSignalChainOrder(page)).toEqual(REORDERED_SIGNAL_CHAIN_IDS);
+    await expect.poll(() => getBackendSignalChainOrder(page)).toEqual(reorderedSignalChainIds);
     await expect
       .poll(() => getRenderedSignalChainOrder(page))
-      .toEqual(RENDERED_REORDERED_SIGNAL_CHAIN_IDS);
+      .toEqual(renderedReorderedSignalChainIds);
   } finally {
-    await setBackendSignalChainOrder(page, DEFAULT_SIGNAL_CHAIN_ORDER);
+    await setBackendSignalChainOrder(page, defaultSignalChainOrder);
   }
 });
 
@@ -76,6 +56,15 @@ async function getBackendSignalChainOrder(page: Page): Promise<string[]> {
     {}
   );
   return result.slots.map((slot) => slot.id);
+}
+
+async function getBackendSignalChainOrderSlots(page: Page): Promise<SignalChainSlot[]> {
+  const result = await invokeBackendJsonRpc<GetSignalChainOrderResult>(
+    page,
+    'getSignalChainOrder',
+    {}
+  );
+  return result.slots;
 }
 
 async function setBackendSignalChainOrder(page: Page, slots: SignalChainSlot[]): Promise<void> {
@@ -104,6 +93,52 @@ async function dragSignalChainItem(page: Page, sourceId: string, targetId: strin
   await sourceHandle.dragTo(targetItem, {
     targetPosition: { x: 48, y: 24 },
   });
+}
+
+function moveSlotBefore(
+  slots: SignalChainSlot[],
+  slotId: string,
+  targetId: string
+): SignalChainSlot[] {
+  const sourceIndex = slots.findIndex((slot) => slot.id === slotId);
+  const targetIndex = slots.findIndex((slot) => slot.id === targetId);
+
+  expect(sourceIndex).toBeGreaterThanOrEqual(0);
+  expect(targetIndex).toBeGreaterThanOrEqual(0);
+
+  const reordered = [...slots];
+  const [slot] = reordered.splice(sourceIndex, 1);
+  if (!slot) {
+    throw new Error(`Unable to move missing slot ${slotId}`);
+  }
+  const insertionIndex = reordered.findIndex((candidate) => candidate.id === targetId);
+  reordered.splice(insertionIndex, 0, slot);
+  return reordered;
+}
+
+function moveSlotAfter(
+  slots: SignalChainSlot[],
+  slotId: string,
+  targetId: string
+): SignalChainSlot[] {
+  const sourceIndex = slots.findIndex((slot) => slot.id === slotId);
+  const targetIndex = slots.findIndex((slot) => slot.id === targetId);
+
+  expect(sourceIndex).toBeGreaterThanOrEqual(0);
+  expect(targetIndex).toBeGreaterThanOrEqual(0);
+
+  const reordered = [...slots];
+  const [slot] = reordered.splice(sourceIndex, 1);
+  if (!slot) {
+    throw new Error(`Unable to move missing slot ${slotId}`);
+  }
+  const insertionIndex = reordered.findIndex((candidate) => candidate.id === targetId);
+  reordered.splice(insertionIndex + 1, 0, slot);
+  return reordered;
+}
+
+function toRenderedSignalChainIds(ids: string[]): string[] {
+  return ids.filter((id) => id !== 'ExampleProcessor');
 }
 
 async function invokeBackendJsonRpc<TResult>(

@@ -58,6 +58,8 @@ pub struct WebViewConfig<P: Params + SignalChainOrderAccess> {
     pub height: u32,
     /// Optional meter consumer for audio metering
     pub meter_consumer: Option<MeterConsumer>,
+    /// Optional meter consumer for Passthrough-local signal metering
+    pub passthrough_meter_consumer: Option<MeterConsumer>,
     /// Optional oscilloscope consumer for waveform snapshots
     pub oscilloscope_consumer: Option<OscilloscopeFrameConsumer>,
     /// Shared editor size - updated on resize requests
@@ -101,6 +103,7 @@ pub fn create_ipc_handler<P: Params + SignalChainOrderAccess>(
     params: Arc<P>,
     context: Arc<dyn GuiContext>,
     meter_consumer: Option<MeterConsumer>,
+    passthrough_meter_consumer: Option<MeterConsumer>,
     oscilloscope_consumer: Option<OscilloscopeFrameConsumer>,
     editor_size: Arc<Mutex<(u32, u32)>>,
 ) -> IpcHandler<PluginEditorBridge<P>> {
@@ -108,6 +111,7 @@ pub fn create_ipc_handler<P: Params + SignalChainOrderAccess>(
         params,
         context,
         meter_consumer,
+        passthrough_meter_consumer,
         oscilloscope_consumer,
         editor_size,
     );

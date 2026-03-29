@@ -144,13 +144,22 @@ mod tests {
             "generated code should apply live plain values when building processor params"
         );
         assert!(
-            normalized.contains("struct__DevProcessorInstance{processor:__P,params:__Params,}"),
-            "generated dev FFI wrapper should keep a per-instance processor+params cache"
+            normalized.contains(
+                "struct__DevProcessorInstance{params:::std::sync::Arc<__WavecraftParams>,"
+            ) && normalized
+                .contains("oscilloscope_consumer:::std::sync::Mutex<::std::option::Option<")
+                && normalized.contains(
+                    "passthrough_meter_consumer:::std::sync::Mutex<::std::option::Option<"
+                )
+                && normalized.contains("state:__DevProcessorState,}"),
+            "generated dev FFI wrapper should keep per-instance params/state and runtime parity consumers"
         );
         assert!(
             normalized.contains("DevProcessorVTable{version:")
-                && normalized.contains("process,apply_plain_values,set_sample_rate"),
-            "generated dev FFI vtable should register apply_plain_values in v2 layout"
+                && normalized.contains(
+                    "process,apply_plain_values,set_signal_chain_order_json,take_latest_oscilloscope_frame_json,take_latest_passthrough_meter_frame_json,set_sample_rate"
+                ),
+            "generated dev FFI vtable should register runtime parity hooks including passthrough metering"
         );
         assert!(
             normalized.contains("__WavecraftRuntimeParam::Int(")

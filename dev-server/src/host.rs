@@ -43,6 +43,7 @@ const LEGACY_INPUT_GAIN_LEVEL_PARAM_ID: &str = "input_gain_level";
 pub struct DevServerHost {
     inner: InMemoryParameterHost,
     latest_meter_frame: Arc<RwLock<Option<MeterFrame>>>,
+    latest_passthrough_meter_frame: Arc<RwLock<Option<MeterFrame>>>,
     latest_oscilloscope_frame: Arc<RwLock<Option<OscilloscopeFrame>>>,
     audio_status: Arc<RwLock<AudioRuntimeStatus>>,
     hardware_input_selection: Arc<RwLock<GetHardwareInputSelectionResult>>,
@@ -63,6 +64,7 @@ type HardwareInputReconfigureCallback = dyn Fn(Option<String>) -> Result<(), Str
 
 struct SharedState {
     latest_meter_frame: Arc<RwLock<Option<MeterFrame>>>,
+    latest_passthrough_meter_frame: Arc<RwLock<Option<MeterFrame>>>,
     latest_oscilloscope_frame: Arc<RwLock<Option<OscilloscopeFrame>>>,
     audio_status: Arc<RwLock<AudioRuntimeStatus>>,
     hardware_input_selection: Arc<RwLock<GetHardwareInputSelectionResult>>,
@@ -71,6 +73,7 @@ struct SharedState {
 impl DevServerHost {
     fn initialize_shared_state() -> SharedState {
         let latest_meter_frame = Arc::new(RwLock::new(None));
+        let latest_passthrough_meter_frame = Arc::new(RwLock::new(None));
         let latest_oscilloscope_frame = Arc::new(RwLock::new(None));
         let audio_status = Arc::new(RwLock::new(AudioRuntimeStatus {
             phase: AudioRuntimePhase::Disabled,
@@ -83,6 +86,7 @@ impl DevServerHost {
 
         SharedState {
             latest_meter_frame,
+            latest_passthrough_meter_frame,
             latest_oscilloscope_frame,
             audio_status,
             hardware_input_selection,
@@ -140,6 +144,7 @@ impl DevServerHost {
         Self {
             inner,
             latest_meter_frame: shared_state.latest_meter_frame,
+            latest_passthrough_meter_frame: shared_state.latest_passthrough_meter_frame,
             latest_oscilloscope_frame: shared_state.latest_oscilloscope_frame,
             audio_status: shared_state.audio_status,
             hardware_input_selection: shared_state.hardware_input_selection,
@@ -181,6 +186,7 @@ impl DevServerHost {
         Self {
             inner,
             latest_meter_frame: shared_state.latest_meter_frame,
+            latest_passthrough_meter_frame: shared_state.latest_passthrough_meter_frame,
             latest_oscilloscope_frame: shared_state.latest_oscilloscope_frame,
             audio_status: shared_state.audio_status,
             hardware_input_selection: shared_state.hardware_input_selection,
@@ -288,6 +294,15 @@ impl DevServerHost {
         });
     }
 
+    /// Store the latest Passthrough-local meter frame for polling-based consumers.
+    pub fn set_latest_passthrough_meter_frame(&self, frame: MeterFrame) {
+        let mut passthrough_meter = self
+            .latest_passthrough_meter_frame
+            .write()
+            .expect("latest_passthrough_meter_frame lock poisoned");
+        *passthrough_meter = Some(frame);
+    }
+
     /// Store the latest oscilloscope frame for polling-based consumers.
     pub fn set_latest_oscilloscope_frame(&self, frame: OscilloscopeFrame) {
         let mut oscilloscope = self
@@ -345,6 +360,13 @@ impl ParameterHost for DevServerHost {
             .latest_meter_frame
             .read()
             .expect("latest_meter_frame lock poisoned")
+    }
+
+    fn get_passthrough_meter_frame(&self) -> Option<MeterFrame> {
+        *self
+            .latest_passthrough_meter_frame
+            .read()
+            .expect("latest_passthrough_meter_frame lock poisoned")
     }
 
     fn get_oscilloscope_frame(&self) -> Option<OscilloscopeFrame> {
@@ -579,6 +601,13 @@ mod tests {
     }
 
     #[cfg(feature = "audio")]
+    extern "C" fn runtime_control_mock_take_latest_passthrough_meter_frame_json(
+        _instance: *mut c_void,
+    ) -> *mut std::os::raw::c_char {
+        std::ffi::CString::new("null").unwrap().into_raw()
+    }
+
+    #[cfg(feature = "audio")]
     extern "C" fn runtime_control_mock_set_sample_rate(_instance: *mut c_void, _sample_rate: f32) {}
 
     #[cfg(feature = "audio")]
@@ -599,6 +628,8 @@ mod tests {
             set_signal_chain_order_json: set_order,
             take_latest_oscilloscope_frame_json:
                 runtime_control_mock_take_latest_oscilloscope_frame_json,
+            take_latest_passthrough_meter_frame_json:
+                runtime_control_mock_take_latest_passthrough_meter_frame_json,
             set_sample_rate: runtime_control_mock_set_sample_rate,
             reset: runtime_control_mock_reset,
             drop: runtime_control_mock_drop,
@@ -722,6 +753,27 @@ mod tests {
         assert!((frame.peak_l - 0.9).abs() < f32::EPSILON);
         assert!((frame.rms_r - 0.3).abs() < f32::EPSILON);
         assert_eq!(frame.timestamp, 42);
+    }
+
+    #[test]
+    fn test_get_passthrough_meter_frame() {
+        let host = DevServerHost::new(test_params());
+        assert!(host.get_passthrough_meter_frame().is_none());
+
+        host.set_latest_passthrough_meter_frame(MeterFrame {
+            peak_l: 0.4,
+            peak_r: 0.5,
+            rms_l: 0.28,
+            rms_r: 0.35,
+            timestamp: 77,
+        });
+
+        let frame = host
+            .get_passthrough_meter_frame()
+            .expect("passthrough meter frame should be populated after update");
+        assert!((frame.peak_l - 0.4).abs() < f32::EPSILON);
+        assert!((frame.rms_r - 0.35).abs() < f32::EPSILON);
+        assert_eq!(frame.timestamp, 77);
     }
 
     #[test]

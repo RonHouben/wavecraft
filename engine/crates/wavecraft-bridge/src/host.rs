@@ -131,6 +131,14 @@ pub trait ParameterHost: Send + Sync {
     /// The latest meter data, or `None` if metering is not available.
     fn get_meter_frame(&self) -> Option<MeterFrame>;
 
+    /// Get the latest Passthrough-local meter frame for UI visualization.
+    ///
+    /// Returns metering data captured at the Passthrough processor's current
+    /// runtime location in the signal chain.
+    fn get_passthrough_meter_frame(&self) -> Option<MeterFrame> {
+        None
+    }
+
     /// Get the latest oscilloscope frame for UI visualization.
     ///
     /// Returns waveform snapshot data for display in the oscilloscope UI.
@@ -225,6 +233,10 @@ impl<T: ParameterHost> ParameterHost for std::sync::Arc<T> {
 
     fn get_meter_frame(&self) -> Option<MeterFrame> {
         forward_host(self).get_meter_frame()
+    }
+
+    fn get_passthrough_meter_frame(&self) -> Option<MeterFrame> {
+        forward_host(self).get_passthrough_meter_frame()
     }
 
     fn get_oscilloscope_frame(&self) -> Option<OscilloscopeFrame> {

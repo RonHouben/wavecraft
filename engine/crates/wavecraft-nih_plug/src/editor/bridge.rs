@@ -31,6 +31,8 @@ pub struct PluginEditorBridge<P: Params + SignalChainOrderAccess> {
     context: Arc<dyn GuiContext>,
     /// Optional meter consumer - may be None if metering is disabled
     meter_consumer: Option<Arc<Mutex<MeterConsumer>>>,
+    /// Optional passthrough-local meter consumer - may be None if unavailable
+    passthrough_meter_consumer: Option<Arc<Mutex<MeterConsumer>>>,
     /// Optional oscilloscope consumer - may be None if oscilloscope is disabled
     oscilloscope_consumer: Option<Arc<Mutex<OscilloscopeFrameConsumer>>>,
     /// Shared editor size - updated when resize is requested
@@ -44,6 +46,7 @@ impl<P: Params + SignalChainOrderAccess> PluginEditorBridge<P> {
         params: Arc<P>,
         context: Arc<dyn GuiContext>,
         meter_consumer: Option<MeterConsumer>,
+        passthrough_meter_consumer: Option<MeterConsumer>,
         oscilloscope_consumer: Option<OscilloscopeFrameConsumer>,
         editor_size: Arc<Mutex<(u32, u32)>>,
     ) -> Self {
@@ -51,6 +54,7 @@ impl<P: Params + SignalChainOrderAccess> PluginEditorBridge<P> {
             params,
             context,
             meter_consumer: meter_consumer.map(|c| Arc::new(Mutex::new(c))),
+            passthrough_meter_consumer: passthrough_meter_consumer.map(|c| Arc::new(Mutex::new(c))),
             oscilloscope_consumer: oscilloscope_consumer.map(|c| Arc::new(Mutex::new(c))),
             editor_size,
         }
@@ -167,6 +171,12 @@ impl<P: Params + SignalChainOrderAccess> ParameterHost for PluginEditorBridge<P>
     fn get_meter_frame(&self) -> Option<wavecraft_protocol::MeterFrame> {
         // Read latest meter frame from the shared consumer if available
         let consumer = self.meter_consumer.as_ref()?;
+        let mut consumer = consumer.lock().unwrap();
+        consumer.read_latest()
+    }
+
+    fn get_passthrough_meter_frame(&self) -> Option<wavecraft_protocol::MeterFrame> {
+        let consumer = self.passthrough_meter_consumer.as_ref()?;
         let mut consumer = consumer.lock().unwrap();
         consumer.read_latest()
     }
@@ -324,6 +334,7 @@ mod tests {
             context,
             None,
             None,
+            None,
             Arc::new(Mutex::new((800, 600))),
         );
 
@@ -359,6 +370,7 @@ mod tests {
             context.clone(),
             None,
             None,
+            None,
             Arc::new(Mutex::new((800, 600))),
         );
 
@@ -378,6 +390,7 @@ mod tests {
         let bridge = PluginEditorBridge::new(
             params,
             context,
+            None,
             None,
             None,
             Arc::new(Mutex::new((800, 600))),

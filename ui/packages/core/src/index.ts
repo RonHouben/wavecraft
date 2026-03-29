@@ -174,6 +174,7 @@ export {
   ERROR_PARSE,
   METHOD_GET_AUDIO_STATUS,
   METHOD_GET_OSCILLOSCOPE_FRAME,
+  METHOD_GET_PASSTHROUGH_METER_FRAME,
   NOTIFICATION_AUDIO_STATUS_CHANGED,
   isAudioRuntimeStatus,
   isIpcError,
@@ -266,6 +267,7 @@ export {
   getMeterSignalIntensity,
   getMeterSignalLevel,
   useMeterSignalActivity,
+  usePassthroughMeterSignalActivity,
 } from './hooks/useMeterSignalActivity';
 export type {
   MeterClipWarningRange,
@@ -275,6 +277,7 @@ export type {
   UseMeterSignalActivityOptions,
 } from './hooks/useMeterSignalActivity';
 export { useOscilloscopeFrame } from './hooks/useOscilloscopeFrame';
+export { usePassthroughMeterFrame } from './hooks/usePassthroughMeterFrame';
 
 export { useAvailableProcessors } from './hooks/useAvailableProcessors';
 export { useHasProcessorInSignalChain } from './hooks/useHasProcessor';
@@ -312,7 +315,7 @@ export { registerAvailableProcessors } from './processors/registry';
 // =============================================================================
 // Metering API
 // =============================================================================
-export { getMeterFrame } from './meter-ipc';
+export { getMeterFrame, getPassthroughMeterFrame } from './meter-ipc';
 export { getOscilloscopeFrame } from './oscilloscope-ipc';
 export { dbToLinear, linearToDb } from './utils/audio-math';
 

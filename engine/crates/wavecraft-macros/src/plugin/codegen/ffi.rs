@@ -22,6 +22,11 @@ pub(super) fn build(
         reset_calls,
         dispatch_arms,
         param_count_exprs,
+        passthrough_meter_fields,
+        passthrough_meter_defaults,
+        passthrough_meter_initialize,
+        passthrough_meter_reset,
+        passthrough_meter_push,
         tap_struct_fields,
         tap_defaults,
         tap_initialize,
@@ -33,6 +38,33 @@ pub(super) fn build(
         tap_observe_calls,
         ..
     } = sc;
+    let passthrough_meter_producer_field = if sc.has_passthrough_processor {
+        quote! {
+            passthrough_meter_producer: #krate::MeterProducer,
+        }
+    } else {
+        quote! {}
+    };
+    let passthrough_meter_channel_setup = if sc.has_passthrough_processor {
+        quote! {
+            let (__passthrough_meter_producer, __passthrough_meter_consumer_inner) =
+                #krate::create_meter_channel(64);
+            let __passthrough_meter_consumer =
+                ::std::option::Option::Some(__passthrough_meter_consumer_inner);
+        }
+    } else {
+        quote! {
+            let __passthrough_meter_consumer = ::std::option::Option::None;
+        }
+    };
+    let passthrough_meter_field_init = if sc.has_passthrough_processor {
+        quote! {
+            #passthrough_meter_defaults
+            passthrough_meter_producer: __passthrough_meter_producer,
+        }
+    } else {
+        quote! {}
+    };
 
     let tap_boundary_handoff_from_params = if tap_idx_usize.is_empty() {
         quote! {}
@@ -138,13 +170,20 @@ pub(super) fn build(
                 __cf_pos: usize,
                 __cf_dir: i8,
                 __param_scratch: ::std::vec::Vec<f32>,
+                #passthrough_meter_fields
+                #passthrough_meter_producer_field
                 #tap_struct_fields
             }
 
             impl __DevProcessorState {
-                fn default_state() -> (Self, #krate::OscilloscopeFrameConsumer) {
+                fn default_state() -> (
+                    Self,
+                    #krate::OscilloscopeFrameConsumer,
+                    ::std::option::Option<#krate::MeterConsumer>,
+                ) {
                     let (__oscilloscope_producer, __oscilloscope_consumer) =
                         #krate::create_oscilloscope_channel(8);
+                    #passthrough_meter_channel_setup
 
                     let __param_offsets: [usize; { #n_lit + 1 }] = {
                         let __counts: [usize; #n_lit] = [#(#param_count_exprs),*];
@@ -166,10 +205,15 @@ pub(super) fn build(
                         __cf_pos: 0,
                         __cf_dir: 0i8,
                         __param_scratch: vec![0.0_f32; __param_offsets[#n_lit]],
+                        #passthrough_meter_field_init
                         #tap_defaults
                     };
                     __state.initialize_for_dev_runtime(44_100.0);
-                    (__state, __oscilloscope_consumer)
+                    (
+                        __state,
+                        __oscilloscope_consumer,
+                        __passthrough_meter_consumer,
+                    )
                 }
 
                 fn initialize_for_dev_runtime(&mut self, __sample_rate: f32) {
@@ -182,11 +226,13 @@ pub(super) fn build(
 
                     #(#set_sample_rate_calls)*
                     #tap_initialize
+                    #passthrough_meter_initialize
                 }
 
                 fn reset_for_dev_runtime(&mut self) {
                     #(#reset_calls)*
                     #tap_reset
+                    #passthrough_meter_reset
                 }
 
                 fn process_block(
@@ -309,22 +355,26 @@ pub(super) fn build(
                     }
 
                     #tap_observe_calls
+                    #passthrough_meter_push
                 }
             }
 
             struct __DevProcessorInstance {
                 params: ::std::sync::Arc<__WavecraftParams>,
                 oscilloscope_consumer: ::std::sync::Mutex<::std::option::Option<#krate::OscilloscopeFrameConsumer>>,
+                passthrough_meter_consumer: ::std::sync::Mutex<::std::option::Option<#krate::MeterConsumer>>,
                 state: __DevProcessorState,
             }
 
             extern "C" fn create() -> *mut c_void {
                 let result = ::std::panic::catch_unwind(::std::panic::AssertUnwindSafe(|| {
                     let params = ::std::sync::Arc::new(__WavecraftParams::default());
-                    let (state, oscilloscope_consumer) = __DevProcessorState::default_state();
+                    let (state, oscilloscope_consumer, passthrough_meter_consumer) =
+                        __DevProcessorState::default_state();
                     let instance = ::std::boxed::Box::new(__DevProcessorInstance {
                         params,
                         oscilloscope_consumer: ::std::sync::Mutex::new(Some(oscilloscope_consumer)),
+                        passthrough_meter_consumer: ::std::sync::Mutex::new(passthrough_meter_consumer),
                         state,
                     });
                     ::std::boxed::Box::into_raw(instance) as *mut c_void
@@ -462,6 +512,37 @@ pub(super) fn build(
                     .unwrap_or(::std::ptr::null_mut())
             }
 
+            extern "C" fn take_latest_passthrough_meter_frame_json(
+                instance: *mut c_void,
+            ) -> *mut ::std::ffi::c_char {
+                let result = ::std::panic::catch_unwind(::std::panic::AssertUnwindSafe(|| {
+                    if instance.is_null() {
+                        return None;
+                    }
+
+                    // SAFETY: `instance` is non-null (checked above), was created by
+                    // `Box::into_raw` in `create`, and remains valid for this call.
+                    let instance = unsafe { &*(instance as *const __DevProcessorInstance) };
+                    let mut passthrough_meter_consumer = instance
+                        .passthrough_meter_consumer
+                        .lock()
+                        .expect("passthrough_meter_consumer mutex poisoned");
+                    passthrough_meter_consumer
+                        .as_mut()
+                        .and_then(|consumer| consumer.read_latest())
+                }));
+
+                let json = match result {
+                    Ok(frame) => #krate::__internal::serde_json::to_string(&frame)
+                        .unwrap_or_else(|_| "null".to_string()),
+                    Err(_) => "null".to_string(),
+                };
+
+                ::std::ffi::CString::new(json)
+                    .map(|s| s.into_raw())
+                    .unwrap_or(::std::ptr::null_mut())
+            }
+
             extern "C" fn set_sample_rate(instance: *mut c_void, sample_rate: f32) {
                 let _ = ::std::panic::catch_unwind(::std::panic::AssertUnwindSafe(|| {
                     if instance.is_null() {
@@ -510,6 +591,7 @@ pub(super) fn build(
                 apply_plain_values,
                 set_signal_chain_order_json,
                 take_latest_oscilloscope_frame_json,
+                take_latest_passthrough_meter_frame_json,
                 set_sample_rate,
                 reset,
                 drop: drop_fn,

@@ -34,11 +34,34 @@ pub(super) fn build(input: PluginImplInput<'_>) -> TokenStream {
 
     let param_count_exprs = &signal_chain.param_count_exprs;
     let proc_defaults = &signal_chain.proc_defaults;
+    let passthrough_meter_defaults = &signal_chain.passthrough_meter_defaults;
+    let passthrough_meter_initialize = &signal_chain.passthrough_meter_initialize;
+    let passthrough_meter_reset = &signal_chain.passthrough_meter_reset;
     let tap_defaults = &signal_chain.tap_defaults;
     let tap_initialize = &signal_chain.tap_initialize;
     let set_sample_rate_calls = &signal_chain.set_sample_rate_calls;
     let tap_reset = &signal_chain.tap_reset;
     let reset_calls = &signal_chain.reset_calls;
+    let passthrough_meter_channel_setup = if signal_chain.has_passthrough_processor {
+        quote! {
+            let (__passthrough_meter_producer, __passthrough_meter_consumer_inner) =
+                #krate::create_meter_channel(64);
+            let __passthrough_meter_consumer =
+                ::std::option::Option::Some(__passthrough_meter_consumer_inner);
+        }
+    } else {
+        quote! {
+            let __passthrough_meter_consumer = ::std::option::Option::None;
+        }
+    };
+    let passthrough_meter_field_init = if signal_chain.has_passthrough_processor {
+        quote! {
+            #passthrough_meter_defaults
+            passthrough_meter_producer: __passthrough_meter_producer,
+        }
+    } else {
+        quote! {}
+    };
 
     quote! {
         impl ::std::default::Default for __WavecraftPlugin {
@@ -46,6 +69,7 @@ pub(super) fn build(input: PluginImplInput<'_>) -> TokenStream {
                 let (meter_producer, _meter_consumer) = #krate::create_meter_channel(64);
                 let (__oscilloscope_producer, __oscilloscope_consumer) =
                     #krate::create_oscilloscope_channel(8);
+                #passthrough_meter_channel_setup
 
                 // Compute cumulative param offsets at construction time (not audio-thread)
                 let __param_offsets: [usize; #np1_lit] = {
@@ -70,12 +94,17 @@ pub(super) fn build(input: PluginImplInput<'_>) -> TokenStream {
                     __cf_dir: 0i8,
                     // Pre-grow to total param count so process() never reallocates.
                     __param_scratch: ::std::vec::Vec::with_capacity(__param_offsets[#n_lit]),
+                    #passthrough_meter_field_init
                     // Tap processors (Step 15: constructed via Default, scratch buffers grown in initialize())
                     #tap_defaults
                     meter_producer,
                     #[cfg(any(target_os = "macos", target_os = "windows"))]
                     meter_consumer: ::std::sync::Mutex::new(
                         ::std::option::Option::Some(_meter_consumer),
+                    ),
+                    #[cfg(any(target_os = "macos", target_os = "windows"))]
+                    passthrough_meter_consumer: ::std::sync::Mutex::new(
+                        __passthrough_meter_consumer,
                     ),
                     oscilloscope_consumer: ::std::sync::Mutex::new(
                         ::std::option::Option::Some(__oscilloscope_consumer),
@@ -125,9 +154,15 @@ pub(super) fn build(input: PluginImplInput<'_>) -> TokenStream {
                         .lock()
                         .expect("oscilloscope_consumer mutex poisoned")
                         .take();
+                    let passthrough_meter_consumer = self
+                        .passthrough_meter_consumer
+                        .lock()
+                        .expect("passthrough_meter_consumer mutex poisoned")
+                        .take();
                     #krate::editor::create_webview_editor(
                         self.params.clone(),
                         meter_consumer,
+                        passthrough_meter_consumer,
                         oscilloscope_consumer,
                         800,
                         600,
@@ -148,6 +183,7 @@ pub(super) fn build(input: PluginImplInput<'_>) -> TokenStream {
                 #(#set_sample_rate_calls)*
                 // Step 15: initialize tap processors + resize scratch buffers
                 #tap_initialize
+                #passthrough_meter_initialize
                 true
             }
 
@@ -155,6 +191,7 @@ pub(super) fn build(input: PluginImplInput<'_>) -> TokenStream {
                 #(#reset_calls)*
                 // Step 15: reset tap processors
                 #tap_reset
+                #passthrough_meter_reset
             }
 
             #process_method_tokens

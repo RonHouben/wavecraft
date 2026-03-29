@@ -412,6 +412,10 @@ fn try_start_audio_in_process(
             if let Some(frame) = runtime_control.take_latest_oscilloscope_frame() {
                 host.set_latest_oscilloscope_frame(frame);
             }
+
+            if let Some(frame) = runtime_control.take_latest_passthrough_meter_frame() {
+                host.set_latest_passthrough_meter_frame(frame);
+            }
         }
     });
 

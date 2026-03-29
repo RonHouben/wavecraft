@@ -31,20 +31,60 @@ interface GetSignalChainOrderResult {
 
 const SOFT_CLIP_DRIVE_PARAM_ID = 'soft_clip_drive_db';
 
+test('moving Passthrough across TestTone updates the Passthrough eye based on chain position', async ({
+  page,
+}) => {
+  await page.goto('/');
+
+  await expect(page.getByRole('heading', { name: 'My Cool Plugin' })).toBeVisible();
+
+  const defaultOrder = await getSignalChainOrderSlots(page);
+  const passthroughBeforeTestToneOrder = moveSlotBefore(defaultOrder, 'Passthrough', 'TestTone');
+  const testToneBeforePassthroughOrder = moveSlotBefore(defaultOrder, 'TestTone', 'Passthrough');
+  const passthroughBeforeTestToneIds = passthroughBeforeTestToneOrder.map((slot) => slot.id);
+  const testToneBeforePassthroughIds = testToneBeforePassthroughOrder.map((slot) => slot.id);
+
+  try {
+    await setInputSource(page, 'testTone');
+    await setParameter(page, 'test_tone_bypass', 0);
+    await setParameter(page, 'test_tone_enabled', 1);
+    await setParameter(page, 'test_tone_level', 0.5);
+
+    await setSignalChainOrder(page, passthroughBeforeTestToneOrder);
+    await expect.poll(() => getSignalChainOrder(page)).toEqual(passthroughBeforeTestToneIds);
+    await expect.poll(() => getPassthroughEyeSignalActive(page)).toBe(false);
+
+    await setSignalChainOrder(page, testToneBeforePassthroughOrder);
+    await expect.poll(() => getSignalChainOrder(page)).toEqual(testToneBeforePassthroughIds);
+    await expect.poll(() => getPassthroughEyeSignalActive(page)).toBe(true);
+  } finally {
+    await setInputSource(page, 'hardwareInput');
+    await setParameter(page, 'test_tone_enabled', 0);
+    await setParameter(page, 'test_tone_bypass', 0);
+    await setParameter(page, 'test_tone_level', 0.5);
+    await setSignalChainOrder(page, defaultOrder);
+  }
+});
+
 test('moving oscilloscope before soft clip removes soft clip influence from runtime oscilloscope frames', async ({
   page,
 }) => {
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { name: 'My Plugin' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'My Cool Plugin' })).toBeVisible();
 
   const defaultOrder = await getSignalChainOrderSlots(page);
-  const defaultIds = defaultOrder.map((slot) => slot.id);
+  const oscilloscopeAfterSoftClipOrder = moveSlotBefore(
+    defaultOrder,
+    'SoftClip',
+    'OscilloscopeTap'
+  );
   const oscilloscopeBeforeSoftClipOrder = moveSlotBefore(
     defaultOrder,
     'OscilloscopeTap',
     'SoftClip'
   );
+  const oscilloscopeAfterSoftClipIds = oscilloscopeAfterSoftClipOrder.map((slot) => slot.id);
   const oscilloscopeBeforeSoftClipIds = oscilloscopeBeforeSoftClipOrder.map((slot) => slot.id);
 
   try {
@@ -54,8 +94,8 @@ test('moving oscilloscope before soft clip removes soft clip influence from runt
     await setParameter(page, 'soft_clip_output_db', 0);
     await setParameter(page, SOFT_CLIP_DRIVE_PARAM_ID, 0);
 
-    await setSignalChainOrder(page, defaultOrder);
-    await expect.poll(() => getSignalChainOrder(page)).toEqual(defaultIds);
+    await setSignalChainOrder(page, oscilloscopeAfterSoftClipOrder);
+    await expect.poll(() => getSignalChainOrder(page)).toEqual(oscilloscopeAfterSoftClipIds);
     await sleep(250);
 
     const downstreamClean = await waitForFreshOscilloscopeFrame(page);
@@ -153,6 +193,11 @@ async function waitForFreshOscilloscopeFrame(
   }
 
   return settled;
+}
+
+async function getPassthroughEyeSignalActive(page: Page): Promise<boolean> {
+  const state = await page.getByTestId('passthrough-eye').getAttribute('data-signal-active');
+  return state === 'true';
 }
 
 function frameDifference(a: OscilloscopeFrame, b: OscilloscopeFrame): number {

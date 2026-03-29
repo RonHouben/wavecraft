@@ -3,6 +3,14 @@ import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockProcessorCardRender = vi.hoisted(() => vi.fn());
+const mockUsePassthroughMeterSignalActivity = vi.hoisted(() =>
+  vi.fn(() => ({
+    isSignalActive: false,
+    signalIntensity: 0,
+    signalLevel: 0,
+  }))
+);
+const mockGetMeterClipWarningIntensity = vi.hoisted(() => vi.fn(() => 0));
 
 interface MockProcessorCardProps {
   readonly hideWhenNotInSignalChain?: boolean;
@@ -19,6 +27,15 @@ vi.mock('./ProcessorCard', () => ({
     return <div data-testid="passthrough-processor-card">{props.children}</div>;
   },
 }));
+
+vi.mock('@wavecraft/core', async () => {
+  const actual = await vi.importActual<typeof import('@wavecraft/core')>('@wavecraft/core');
+  return {
+    ...actual,
+    getMeterClipWarningIntensity: mockGetMeterClipWarningIntensity,
+    usePassthroughMeterSignalActivity: mockUsePassthroughMeterSignalActivity,
+  };
+});
 
 import { PassthroughProcessor } from './PassthroughProcessor';
 
@@ -58,17 +75,17 @@ describe('PassthroughProcessor', () => {
     expect(cardProps.subtitle).toBe('Utility');
   });
 
-  it('renders a static passthrough glyph with truthful stage copy', () => {
+  it('renders a Passthrough eye driven by the local signal meter state', () => {
     render(<PassthroughProcessor processorId={PROCESSOR_ID} />);
 
-    expect(screen.getByTestId('passthrough-glyph')).toBeInTheDocument();
-    expect(screen.getByTestId('passthrough-glyph-ring')).toHaveClass('border-plugin-border');
-    expect(screen.getByTestId('passthrough-glyph-line')).toHaveClass('bg-accent');
-    expect(screen.getByTestId('passthrough-glyph-input')).toHaveClass('border-accent-light');
-    expect(screen.getByTestId('passthrough-glyph-output')).toHaveClass('bg-accent');
-    expect(screen.getByText('Passes audio unchanged')).toBeInTheDocument();
-    expect(screen.getByTestId('passthrough-stage-note')).toHaveTextContent(
-      'Signal activity is shown at the plugin output, not at this stage.'
+    expect(screen.getByTestId('passthrough-eye')).toHaveAttribute('data-signal-active', 'false');
+    expect(screen.getByTestId('passthrough-eye')).toHaveAttribute(
+      'data-clip-warning-active',
+      'false'
     );
+    expect(screen.getByTestId('passthrough-eye-outer-glow')).toHaveClass('bg-plugin-border-strong');
+    expect(screen.getByTestId('passthrough-eye-inner-glow')).toHaveClass('bg-accent');
+    expect(screen.getByTestId('passthrough-eye-pupil')).toBeInTheDocument();
+    expect(mockUsePassthroughMeterSignalActivity).toHaveBeenCalledOnce();
   });
 });

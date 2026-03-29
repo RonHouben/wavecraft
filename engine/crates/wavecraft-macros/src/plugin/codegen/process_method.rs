@@ -19,6 +19,7 @@ pub(super) fn build(
         dispatch_arms,
         tap_capture_after_dispatch,
         tap_capture_flush,
+        passthrough_meter_push,
         tap_observe_calls,
         ..
     } = sc;
@@ -143,6 +144,7 @@ pub(super) fn build(
             }
 
                     #tap_observe_calls
+                    #passthrough_meter_push
 
             let _ = self.meter_producer.push(#krate::MeterFrame {
                 peak_l: __peak_l,

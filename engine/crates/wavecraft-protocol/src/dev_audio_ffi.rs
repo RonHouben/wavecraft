@@ -101,6 +101,14 @@ pub struct DevProcessorVTable {
     /// The caller must release the returned string with `wavecraft_free_string`.
     pub take_latest_oscilloscope_frame_json: extern "C" fn(instance: *mut c_void) -> *mut c_char,
 
+    /// Retrieve the latest Passthrough-local meter frame as JSON.
+    ///
+    /// Returns a heap-allocated C string containing either a serialized
+    /// `MeterFrame` or the JSON literal `null` when no frame is available.
+    /// The caller must release the returned string with `wavecraft_free_string`.
+    pub take_latest_passthrough_meter_frame_json:
+        extern "C" fn(instance: *mut c_void) -> *mut c_char,
+
     /// Update the processor's sample rate.
     pub set_sample_rate: extern "C" fn(instance: *mut c_void, sample_rate: f32),
 
@@ -124,7 +132,9 @@ pub struct DevProcessorVTable {
 /// v3 adds control-thread hooks for slot-aware browser-dev runtime parity:
 /// - runtime signal-chain order application
 /// - runtime-owned oscilloscope frame retrieval
-pub const DEV_PROCESSOR_VTABLE_VERSION: u32 = 3;
+///
+/// v4 adds runtime-owned Passthrough-local meter frame retrieval.
+pub const DEV_PROCESSOR_VTABLE_VERSION: u32 = 4;
 
 /// FFI symbol name exported by `wavecraft_plugin!` macro.
 pub const DEV_PROCESSOR_SYMBOL: &[u8] = b"wavecraft_dev_create_processor\0";

@@ -3,6 +3,7 @@ use quote::quote;
 use syn::Type;
 
 pub(super) struct SignalChainTokens {
+    pub(super) has_passthrough_processor: bool,
     pub(super) proc_struct_fields: Vec<TokenStream>,
     pub(super) proc_defaults: Vec<TokenStream>,
     pub(super) proc_validations: Vec<TokenStream>,
@@ -11,6 +12,11 @@ pub(super) struct SignalChainTokens {
     pub(super) reset_calls: Vec<TokenStream>,
     pub(super) dispatch_arms: Vec<TokenStream>,
     pub(super) param_count_exprs: Vec<TokenStream>,
+    pub(super) passthrough_meter_fields: TokenStream,
+    pub(super) passthrough_meter_defaults: TokenStream,
+    pub(super) passthrough_meter_initialize: TokenStream,
+    pub(super) passthrough_meter_reset: TokenStream,
+    pub(super) passthrough_meter_push: TokenStream,
     pub(super) tap_struct_fields: TokenStream,
     pub(super) tap_defaults: TokenStream,
     pub(super) tap_initialize: TokenStream,
@@ -43,6 +49,9 @@ pub(super) fn build(
     let tap_boundary_slot_idx = &s.tap_boundary_slot_idx;
     let t_lit = &s.t_lit;
     let total_slots = s.total_slots;
+    let has_passthrough_processor = processors
+        .iter()
+        .any(|ty| super::context::type_last_segment_name(ty) == "Passthrough");
 
     // ── Per-processor struct fields ───────────────────────────────────────────
     let proc_struct_fields: Vec<TokenStream> = processors
@@ -110,6 +119,23 @@ pub(super) fn build(
         .map(|(i, (ty, fname))| {
             let i_lit = syn::LitInt::new(&i.to_string(), proc_macro2::Span::call_site());
             let i_lit_usize = syn::LitInt::new(&format!("{}", i), proc_macro2::Span::call_site());
+            let processor_name = super::context::type_last_segment_name(ty);
+            let passthrough_meter_capture = if processor_name == "Passthrough" {
+                quote! {
+                    // SAFETY: `__self_ptr` comes from the exclusive `&mut self` receiver.
+                    // The scratch buffers do not alias the currently processed channel slices.
+                    unsafe {
+                        let __ptr = (*__self_ptr).__passthrough_meter_scratch_l.as_mut_ptr();
+                        *__ptr.add(__sample_idx) = __channel_slices[0][0];
+                    }
+                    unsafe {
+                        let __ptr = (*__self_ptr).__passthrough_meter_scratch_r.as_mut_ptr();
+                        *__ptr.add(__sample_idx) = __channel_slices[1][0];
+                    }
+                }
+            } else {
+                quote! {}
+            };
             quote! {
                 #i_lit => {
                     let __start = self.__param_offsets[#i_lit_usize];
@@ -130,6 +156,7 @@ pub(super) fn build(
                             &__pp,
                         );
                     }
+                    #passthrough_meter_capture
                 }
             }
         })
@@ -145,6 +172,75 @@ pub(super) fn build(
             }
         })
         .collect();
+
+    let passthrough_meter_fields: TokenStream = if has_passthrough_processor {
+        quote! {
+            __passthrough_meter_scratch_l: ::std::vec::Vec<f32>,
+            __passthrough_meter_scratch_r: ::std::vec::Vec<f32>,
+            __passthrough_meter_timestamp: u64,
+        }
+    } else {
+        quote! {}
+    };
+
+    let passthrough_meter_defaults: TokenStream = if has_passthrough_processor {
+        quote! {
+            __passthrough_meter_scratch_l: ::std::vec::Vec::new(),
+            __passthrough_meter_scratch_r: ::std::vec::Vec::new(),
+            __passthrough_meter_timestamp: 0,
+        }
+    } else {
+        quote! {}
+    };
+
+    let passthrough_meter_initialize: TokenStream = if has_passthrough_processor {
+        quote! {
+            let __max_buf = _buffer_config.max_buffer_size as usize;
+            self.__passthrough_meter_scratch_l.resize(__max_buf, 0.0_f32);
+            self.__passthrough_meter_scratch_r.resize(__max_buf, 0.0_f32);
+        }
+    } else {
+        quote! {}
+    };
+
+    let passthrough_meter_reset: TokenStream = if has_passthrough_processor {
+        quote! {
+            self.__passthrough_meter_scratch_l.fill(0.0_f32);
+            self.__passthrough_meter_scratch_r.fill(0.0_f32);
+            self.__passthrough_meter_timestamp = 0;
+        }
+    } else {
+        quote! {}
+    };
+
+    let passthrough_meter_push: TokenStream = if has_passthrough_processor {
+        quote! {
+            if __num_samples > 0 {
+                let mut __passthrough_peak_l = 0.0_f32;
+                let mut __passthrough_peak_r = 0.0_f32;
+
+                for &__sample in self.__passthrough_meter_scratch_l[..__num_samples].iter() {
+                    __passthrough_peak_l = __passthrough_peak_l.max(__sample.abs());
+                }
+                for &__sample in self.__passthrough_meter_scratch_r[..__num_samples].iter() {
+                    __passthrough_peak_r = __passthrough_peak_r.max(__sample.abs());
+                }
+
+                let _ = self.passthrough_meter_producer.push(#krate::MeterFrame {
+                    peak_l: __passthrough_peak_l,
+                    peak_r: __passthrough_peak_r,
+                    rms_l: __passthrough_peak_l * 0.707,
+                    rms_r: __passthrough_peak_r * 0.707,
+                    timestamp: self.__passthrough_meter_timestamp,
+                });
+
+                self.__passthrough_meter_timestamp =
+                    self.__passthrough_meter_timestamp.wrapping_add(1);
+            }
+        }
+    } else {
+        quote! {}
+    };
 
     // ── Step 15: Tap struct fields + scratch buffers ──────────────────────────
     let tap_struct_fields: TokenStream = if taps.is_empty() {
@@ -420,6 +516,7 @@ pub(super) fn build(
     };
 
     SignalChainTokens {
+        has_passthrough_processor,
         proc_struct_fields,
         proc_defaults,
         proc_validations,
@@ -428,6 +525,11 @@ pub(super) fn build(
         reset_calls,
         dispatch_arms,
         param_count_exprs,
+        passthrough_meter_fields,
+        passthrough_meter_defaults,
+        passthrough_meter_initialize,
+        passthrough_meter_reset,
+        passthrough_meter_push,
         tap_struct_fields,
         tap_defaults,
         tap_initialize,

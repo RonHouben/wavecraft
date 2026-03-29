@@ -6,7 +6,7 @@
 use std::ffi::c_void;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
-use wavecraft_protocol::{DevProcessorVTable, OscilloscopeFrame, SignalChainSlot};
+use wavecraft_protocol::{DevProcessorVTable, MeterFrame, OscilloscopeFrame, SignalChainSlot};
 
 /// Simplified audio processor trait for dev mode.
 ///
@@ -31,6 +31,9 @@ pub trait DevAudioProcessor: Send + 'static {
 
     /// Drain the latest runtime-owned oscilloscope frame if one is available.
     fn take_latest_oscilloscope_frame(&mut self) -> Option<OscilloscopeFrame>;
+
+    /// Drain the latest runtime-owned Passthrough-local meter frame if available.
+    fn take_latest_passthrough_meter_frame(&mut self) -> Option<MeterFrame>;
 }
 
 /// Thread-safe control handle for a live FFI processor instance.
@@ -46,6 +49,10 @@ impl FfiRuntimeControl {
 
     pub fn take_latest_oscilloscope_frame(&self) -> Option<OscilloscopeFrame> {
         self.inner.take_latest_oscilloscope_frame()
+    }
+
+    pub fn take_latest_passthrough_meter_frame(&self) -> Option<MeterFrame> {
+        self.inner.take_latest_passthrough_meter_frame()
     }
 }
 
@@ -112,6 +119,42 @@ impl SharedFfiProcessor {
             .ok()
             .flatten()
     }
+
+    fn take_latest_passthrough_meter_frame(&self) -> Option<MeterFrame> {
+        if !self.supports_runtime_parity_hooks {
+            return None;
+        }
+
+        let json_ptr = (self.vtable.take_latest_passthrough_meter_frame_json)(self.instance);
+        if json_ptr.is_null() {
+            return None;
+        }
+
+        struct OwnedFfiJson {
+            ptr: *mut std::os::raw::c_char,
+        }
+
+        impl Drop for OwnedFfiJson {
+            fn drop(&mut self) {
+                if !self.ptr.is_null() {
+                    // SAFETY: pointer was allocated by CString::into_raw inside the dylib vtable
+                    // implementation and is freed exactly once here by reconstructing the CString.
+                    unsafe {
+                        let _ = std::ffi::CString::from_raw(self.ptr);
+                    }
+                }
+            }
+        }
+
+        let owned = OwnedFfiJson { ptr: json_ptr };
+        // SAFETY: `owned.ptr` is checked non-null above and must point to a valid
+        // NUL-terminated string returned by the dylib.
+        let c_str = unsafe { std::ffi::CStr::from_ptr(owned.ptr) };
+        let Ok(json) = c_str.to_str() else {
+            return None;
+        };
+        serde_json::from_str::<Option<MeterFrame>>(json).ok().flatten()
+    }
 }
 
 impl Drop for SharedFfiProcessor {
@@ -126,7 +169,7 @@ impl Drop for SharedFfiProcessor {
 // SAFETY: the shared processor instance is created on one thread, processed on the
 // audio callback thread, and accessed from the control thread only through the v3
 // runtime-parity hooks. Those hooks are narrowly scoped to thread-safe generated
-// state (pending-order atomics + oscilloscope consumer mutex/ring buffer).
+// state (pending-order atomics + oscilloscope/passthrough consumer mutex+rings).
 unsafe impl Send for SharedFfiProcessor {}
 unsafe impl Sync for SharedFfiProcessor {}
 
@@ -163,7 +206,7 @@ impl FfiProcessor {
                 instance,
                 vtable: *vtable,
                 supports_plain_values: vtable.version >= 2,
-                supports_runtime_parity_hooks: vtable.version >= 3,
+                supports_runtime_parity_hooks: vtable.version >= 4,
             }),
             unsupported_channel_count: AtomicU32::new(0),
             unsupported_channel_flag: AtomicBool::new(false),
@@ -283,6 +326,10 @@ impl DevAudioProcessor for FfiProcessor {
     fn take_latest_oscilloscope_frame(&mut self) -> Option<OscilloscopeFrame> {
         self.inner.take_latest_oscilloscope_frame()
     }
+
+    fn take_latest_passthrough_meter_frame(&mut self) -> Option<MeterFrame> {
+        self.inner.take_latest_passthrough_meter_frame()
+    }
 }
 
 #[cfg(test)]
@@ -306,6 +353,7 @@ mod tests {
     static PROCESS_SAMPLES: AtomicU32 = AtomicU32::new(0);
     static SET_SIGNAL_CHAIN_ORDER_CALLED: AtomicBool = AtomicBool::new(false);
     static TAKE_OSCILLOSCOPE_FRAME_CALLED: AtomicBool = AtomicBool::new(false);
+    static TAKE_PASSTHROUGH_METER_FRAME_CALLED: AtomicBool = AtomicBool::new(false);
 
     fn reset_flags() {
         CREATE_CALLED.store(false, Ordering::SeqCst);
@@ -319,6 +367,7 @@ mod tests {
         PROCESS_SAMPLES.store(0, Ordering::SeqCst);
         SET_SIGNAL_CHAIN_ORDER_CALLED.store(false, Ordering::SeqCst);
         TAKE_OSCILLOSCOPE_FRAME_CALLED.store(false, Ordering::SeqCst);
+        TAKE_PASSTHROUGH_METER_FRAME_CALLED.store(false, Ordering::SeqCst);
     }
 
     extern "C" fn mock_create() -> *mut c_void {
@@ -383,6 +432,17 @@ mod tests {
         .into_raw()
     }
 
+    extern "C" fn mock_take_latest_passthrough_meter_frame_json(
+        _instance: *mut c_void,
+    ) -> *mut std::os::raw::c_char {
+        TAKE_PASSTHROUGH_METER_FRAME_CALLED.store(true, Ordering::SeqCst);
+        std::ffi::CString::new(
+            r#"{"peak_l":0.3,"peak_r":0.4,"rms_l":0.21,"rms_r":0.28,"timestamp":9}"#,
+        )
+        .unwrap()
+        .into_raw()
+    }
+
     fn mock_vtable() -> DevProcessorVTable {
         DevProcessorVTable {
             version: wavecraft_protocol::DEV_PROCESSOR_VTABLE_VERSION,
@@ -391,6 +451,8 @@ mod tests {
             apply_plain_values: mock_apply_plain_values,
             set_signal_chain_order_json: mock_set_signal_chain_order_json,
             take_latest_oscilloscope_frame_json: mock_take_latest_oscilloscope_frame_json,
+            take_latest_passthrough_meter_frame_json:
+                mock_take_latest_passthrough_meter_frame_json,
             set_sample_rate: mock_set_sample_rate,
             reset: mock_reset,
             drop: mock_drop,
@@ -468,6 +530,12 @@ mod tests {
         assert!(TAKE_OSCILLOSCOPE_FRAME_CALLED.load(Ordering::SeqCst));
         assert!(frame.is_some());
         assert_eq!(frame.unwrap().sample_rate, 48_000.0);
+
+        let passthrough_meter = processor.take_latest_passthrough_meter_frame();
+        assert!(TAKE_PASSTHROUGH_METER_FRAME_CALLED.load(Ordering::SeqCst));
+        let passthrough_meter = passthrough_meter.expect("passthrough meter frame should exist");
+        assert!((passthrough_meter.peak_l - 0.3).abs() < f32::EPSILON);
+        assert_eq!(passthrough_meter.timestamp, 9);
     }
 
     #[test]

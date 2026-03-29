@@ -4,9 +4,9 @@
  * Provides mock responses for testing without real IPC connection.
  */
 
-import type { Transport, NotificationCallback } from './Transport';
 import { IpcMethods } from '../ipc/constants';
 import type { IpcResponse } from '../types/ipc';
+import type { NotificationCallback, Transport } from './Transport';
 
 export class MockTransport implements Transport {
   private connected = true;
@@ -96,6 +96,7 @@ export class MockTransport implements Transport {
         };
 
       case IpcMethods.GET_METER_FRAME:
+      case IpcMethods.GET_PASSTHROUGH_METER_FRAME:
         return {
           frame: {
             peak_l: 0,

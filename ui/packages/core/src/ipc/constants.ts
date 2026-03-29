@@ -3,6 +3,7 @@ export const IpcMethods = {
   SET_PARAMETER: 'setParameter',
   GET_ALL_PARAMETERS: 'getAllParameters',
   GET_METER_FRAME: 'getMeterFrame',
+  GET_PASSTHROUGH_METER_FRAME: 'getPassthroughMeterFrame',
   GET_AUDIO_STATUS: 'getAudioStatus',
   GET_HARDWARE_INPUT_SELECTION: 'getHardwareInputSelection',
   GET_INPUT_SOURCE: 'getInputSource',

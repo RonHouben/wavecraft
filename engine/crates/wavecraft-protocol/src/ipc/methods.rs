@@ -241,6 +241,8 @@ pub const METHOD_SET_PARAMETER: &str = "setParameter";
 pub const METHOD_GET_ALL_PARAMETERS: &str = "getAllParameters";
 /// Method: Get current meter frame (peak/RMS levels)
 pub const METHOD_GET_METER_FRAME: &str = "getMeterFrame";
+/// Method: Get current passthrough-local meter frame (peak/RMS levels)
+pub const METHOD_GET_PASSTHROUGH_METER_FRAME: &str = "getPassthroughMeterFrame";
 /// Method: Get current oscilloscope frame (1024-point waveform)
 pub const METHOD_GET_OSCILLOSCOPE_FRAME: &str = "getOscilloscopeFrame";
 /// Method: Get current audio runtime status

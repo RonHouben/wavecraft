@@ -10,9 +10,9 @@ use wavecraft_protocol::{
     HardwareInputSelectionChangedNotification, InputSourceChangedNotification, IpcNotification,
     IpcRequest, IpcResponse, METHOD_GET_ALL_PARAMETERS, METHOD_GET_AUDIO_STATUS,
     METHOD_GET_HARDWARE_INPUT_SELECTION, METHOD_GET_INPUT_SOURCE, METHOD_GET_METER_FRAME,
-    METHOD_GET_OSCILLOSCOPE_FRAME, METHOD_GET_PARAMETER, METHOD_GET_SIGNAL_CHAIN_ORDER,
-    METHOD_REQUEST_RESIZE, METHOD_SET_HARDWARE_INPUT_SELECTION, METHOD_SET_INPUT_SOURCE,
-    METHOD_SET_PARAMETER, METHOD_SET_SIGNAL_CHAIN_ORDER,
+    METHOD_GET_OSCILLOSCOPE_FRAME, METHOD_GET_PARAMETER, METHOD_GET_PASSTHROUGH_METER_FRAME,
+    METHOD_GET_SIGNAL_CHAIN_ORDER, METHOD_REQUEST_RESIZE, METHOD_SET_HARDWARE_INPUT_SELECTION,
+    METHOD_SET_INPUT_SOURCE, METHOD_SET_PARAMETER, METHOD_SET_SIGNAL_CHAIN_ORDER,
     NOTIFICATION_HARDWARE_INPUT_SELECTION_CHANGED, NOTIFICATION_INPUT_SOURCE_CHANGED,
     NOTIFICATION_SIGNAL_CHAIN_ORDER_CHANGED, RequestId, RequestResizeParams, RequestResizeResult,
     SetHardwareInputSelectionParams, SetHardwareInputSelectionResult, SetInputSourceParams,
@@ -41,6 +41,7 @@ impl<H: ParameterHost> IpcHandler<H> {
             METHOD_SET_PARAMETER => self.handle_set_parameter(&request),
             METHOD_GET_ALL_PARAMETERS => self.handle_get_all_parameters(&request),
             METHOD_GET_METER_FRAME => self.handle_get_meter_frame(&request),
+            METHOD_GET_PASSTHROUGH_METER_FRAME => self.handle_get_passthrough_meter_frame(&request),
             METHOD_GET_OSCILLOSCOPE_FRAME => self.handle_get_oscilloscope_frame(&request),
             METHOD_GET_AUDIO_STATUS => self.handle_get_audio_status(&request),
             METHOD_GET_INPUT_SOURCE => self.handle_get_input_source(&request),
@@ -156,6 +157,17 @@ impl<H: ParameterHost> IpcHandler<H> {
     fn handle_get_meter_frame(&self, request: &IpcRequest) -> Result<IpcResponse, BridgeError> {
         // Get meter frame from host
         let frame = self.host.get_meter_frame();
+
+        let result = GetMeterFrameResult { frame };
+
+        Ok(IpcResponse::success(request.id.clone(), result))
+    }
+
+    fn handle_get_passthrough_meter_frame(
+        &self,
+        request: &IpcRequest,
+    ) -> Result<IpcResponse, BridgeError> {
+        let frame = self.host.get_passthrough_meter_frame();
 
         let result = GetMeterFrameResult { frame };
 

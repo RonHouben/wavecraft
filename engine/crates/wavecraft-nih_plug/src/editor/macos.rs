@@ -120,6 +120,7 @@ pub fn create_macos_webview<P: Params + SignalChainOrderAccess + 'static>(
         config.params,
         config.context,
         config.meter_consumer,
+        config.passthrough_meter_consumer,
         config.oscilloscope_consumer,
         config.editor_size,
     )));

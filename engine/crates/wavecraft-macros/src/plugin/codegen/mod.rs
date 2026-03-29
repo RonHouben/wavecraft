@@ -71,11 +71,20 @@ pub(super) fn generate_plugin_code(
     let np1_lit = &s.np1_lit;
 
     let sc = signal_chain::build(processors, taps, krate, &s);
+    let has_passthrough_processor = sc.has_passthrough_processor;
     let proc_struct_fields = &sc.proc_struct_fields;
+    let passthrough_meter_fields = &sc.passthrough_meter_fields;
     let tap_struct_fields = &sc.tap_struct_fields;
     let proc_validations = &sc.proc_validations;
     let tap_validations = &sc.tap_validations;
     let initial_order_state_slots = &sc.initial_order_state_slots;
+    let passthrough_meter_producer_field = if has_passthrough_processor {
+        quote! {
+            passthrough_meter_producer: #krate::MeterProducer,
+        }
+    } else {
+        quote! {}
+    };
 
     let params_tokens = params::build(krate, runtime_param_blocks, &s, initial_order_state_slots);
     let process_method_tokens = process_method::build(krate, &s, &sc);
@@ -150,10 +159,16 @@ pub(super) fn generate_plugin_code(
             // Generated for each declared taps entry. Scratch buffers are pre-allocated in
             // initialize() and reused each block — zero RT allocation after init.
             #tap_struct_fields
+            // --- Passthrough-local metering scratch/state ---
+            #passthrough_meter_fields
+            #passthrough_meter_producer_field
             // --- Metering / telemetry ---
             meter_producer: #krate::MeterProducer,
             #[cfg(any(target_os = "macos", target_os = "windows"))]
             meter_consumer: ::std::sync::Mutex<::std::option::Option<#krate::MeterConsumer>>,
+            #[cfg(any(target_os = "macos", target_os = "windows"))]
+            passthrough_meter_consumer:
+                ::std::sync::Mutex<::std::option::Option<#krate::MeterConsumer>>,
             oscilloscope_consumer:
                 ::std::sync::Mutex<::std::option::Option<#krate::OscilloscopeFrameConsumer>>,
         }
