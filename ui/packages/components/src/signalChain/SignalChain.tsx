@@ -24,12 +24,13 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import type { SignalChainOrder, SlotType } from '@wavecraft/core';
+import type { SlotType } from '@wavecraft/core';
 import { useSignalChainOrder } from '@wavecraft/core';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 
 import { mergeClassNames } from '../utils/classNames';
 import { SignalChainItem } from './SignalChainItem';
+import { mergeVisibleReorderedSlots } from './mergeVisibleReorderedSlots';
 import type { SignalChainEntry } from './types';
 import { useSortedEntries } from './useSignalChainPresentation';
 
@@ -37,36 +38,6 @@ export interface SignalChainProps {
   /** Ordered list of signal chain entries; each entry has an `id`, `type`, and a `component` */
   entries: SignalChainEntry[];
   className?: string;
-}
-
-export function mergeVisibleReorderedSlots(
-  currentOrder: SignalChainOrder[],
-  reorderedVisibleIds: string[],
-  idToType: Map<string, SlotType>
-): SignalChainOrder[] {
-  const reorderedVisibleSlots: SignalChainOrder[] = reorderedVisibleIds
-    .map((id) => {
-      const type = idToType.get(id);
-      return type ? { id, type } : null;
-    })
-    .filter((slot): slot is SignalChainOrder => slot !== null);
-
-  if (currentOrder.length === 0) {
-    return reorderedVisibleSlots;
-  }
-
-  const visibleIds = new Set(reorderedVisibleIds);
-  let nextVisibleSlotIndex = 0;
-
-  return currentOrder.map((slot) => {
-    if (!visibleIds.has(slot.id)) {
-      return slot;
-    }
-
-    const nextVisibleSlot = reorderedVisibleSlots[nextVisibleSlotIndex];
-    nextVisibleSlotIndex += 1;
-    return nextVisibleSlot ?? slot;
-  });
 }
 
 export function SignalChain({ entries, className }: Readonly<SignalChainProps>): React.JSX.Element {

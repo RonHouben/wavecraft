@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { SignalChainOrder, SlotType } from '@wavecraft/core';
 
-import { mergeVisibleReorderedSlots } from './SignalChain';
+import { mergeVisibleReorderedSlots } from './mergeVisibleReorderedSlots';
 
 function createIdToTypeMap(order: SignalChainOrder[]): Map<string, SlotType> {
   return new Map(order.map((slot) => [slot.id, slot.type]));
