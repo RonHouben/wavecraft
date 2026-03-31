@@ -14,11 +14,7 @@ const MIN_HEIGHT = 300;
 const KEYBOARD_RESIZE_STEP = 24;
 const KEYBOARD_RESIZE_STEP_LARGE = 64;
 
-export interface ResizeHandleProps {
-  // readonly onRequestResize: (width: number, height: number) => Promise<boolean>;
-}
-
-export function ResizeHandle(_: Readonly<ResizeHandleProps>): React.JSX.Element {
+export function ResizeHandle(): React.JSX.Element {
   const requestResize = useRequestResize();
 
   const [isDragging, setIsDragging] = useState(false);

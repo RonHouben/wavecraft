@@ -48,7 +48,6 @@ export type { RadioGroupOption, RadioGroupOwnProps as RadioGroupProps } from './
 export { ResizeControls } from './ResizeControls';
 export type { ResizeControlsProps } from './ResizeControls';
 export { ResizeHandle } from './ResizeHandle';
-export type { ResizeHandleProps } from './ResizeHandle';
 export { Row } from './Row';
 export type { RowProps } from './Row';
 export { Select } from './Select';
