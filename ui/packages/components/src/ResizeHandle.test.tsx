@@ -1,20 +1,29 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mockUseRequestResize = vi.hoisted(() => vi.fn());
+
+vi.mock('@wavecraft/core', () => ({
+  useRequestResize: mockUseRequestResize,
+}));
+
 import { ResizeHandle } from './ResizeHandle';
 
 const mockRequestResize = vi.hoisted(() => vi.fn());
 
 describe('ResizeHandle', () => {
   beforeEach(() => {
+    mockUseRequestResize.mockReset();
     mockRequestResize.mockReset();
     mockRequestResize.mockResolvedValue(undefined);
+    mockUseRequestResize.mockReturnValue(mockRequestResize);
 
-    Object.defineProperty(window, 'innerWidth', {
+    Object.defineProperty(globalThis, 'innerWidth', {
       configurable: true,
       writable: true,
       value: 1000,
     });
-    Object.defineProperty(window, 'innerHeight', {
+    Object.defineProperty(globalThis, 'innerHeight', {
       configurable: true,
       writable: true,
       value: 700,
@@ -22,7 +31,7 @@ describe('ResizeHandle', () => {
   });
 
   it('renders with a visible viewport-anchored handle class', () => {
-    render(<ResizeHandle onRequestResize={mockRequestResize} />);
+    render(<ResizeHandle />);
 
     const handle = screen.getByTestId('resize-handle');
     expect(handle).toHaveClass('fixed');
@@ -35,7 +44,7 @@ describe('ResizeHandle', () => {
   });
 
   it('requests resize while dragging', () => {
-    render(<ResizeHandle onRequestResize={mockRequestResize} />);
+    render(<ResizeHandle />);
     const handle = screen.getByTestId('resize-handle');
 
     fireEvent.mouseDown(handle, { clientX: 100, clientY: 100 });
@@ -50,7 +59,7 @@ describe('ResizeHandle', () => {
   });
 
   it('supports keyboard resize with arrow keys', () => {
-    render(<ResizeHandle onRequestResize={mockRequestResize} />);
+    render(<ResizeHandle />);
     const handle = screen.getByTestId('resize-handle');
 
     fireEvent.keyDown(handle, { key: 'ArrowRight' });
