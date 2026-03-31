@@ -4,9 +4,10 @@
  * Displays peak and RMS levels for stereo audio with dB scaling
  */
 
+import { useConnectionStatus, useMeterFrame } from '@wavecraft/core';
 import React, { useEffect, useRef, useState } from 'react';
 import { Card } from './Card';
-import type { ControlVisualState, MeterFrame, PluginVisualState } from './types';
+import type { ControlVisualState, PluginVisualState } from './types';
 import {
   elevatedCardClass,
   focusRingClass,
@@ -34,8 +35,6 @@ function linearToDb(linear: number, floorDb = METER_FLOOR_DB): number {
 
 export interface MeterProps {
   readonly className?: string;
-  readonly connected: boolean;
-  readonly frame: MeterFrame | null;
   readonly state?: ControlVisualState;
   readonly pluginState?: PluginVisualState;
 }
@@ -145,11 +144,12 @@ function MeterChannel({
 
 export function Meter({
   className,
-  connected,
-  frame,
   pluginState,
   state = 'default',
 }: Readonly<MeterProps>): React.JSX.Element {
+  const frame = useMeterFrame(50);
+  const { connected } = useConnectionStatus();
+
   const [channelClippedState, setChannelClippedState] = useState<Record<'L' | 'R', boolean>>({
     L: false,
     R: false,

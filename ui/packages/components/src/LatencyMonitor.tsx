@@ -2,6 +2,7 @@
  * LatencyMonitor - Displays IPC roundtrip latency metrics
  */
 
+import { useLatencyMonitor } from '@wavecraft/core';
 import React from 'react';
 import { Card } from './Card';
 import {
@@ -12,20 +13,12 @@ import {
 } from './utils/classNames';
 
 export interface LatencyMonitorProps {
-  readonly latency: number | null;
-  readonly avg: number;
-  readonly max: number;
-  readonly count: number;
   readonly className?: string;
 }
 
-export function LatencyMonitor({
-  latency,
-  avg,
-  max,
-  count,
-  className,
-}: Readonly<LatencyMonitorProps>): React.JSX.Element {
+export function LatencyMonitor({ className }: Readonly<LatencyMonitorProps>): React.JSX.Element {
+  const { avg, count, latency, max } = useLatencyMonitor(1000);
+
   const metrics = [
     {
       label: 'Current',

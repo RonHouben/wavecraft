@@ -15,16 +15,8 @@ import {
 } from '@wavecraft/components';
 import { Button } from '@wavecraft/components/Button';
 import { TestToneProcessor } from '@wavecraft/components/processors/TestToneProcessor';
-import {
-  useConnectionStatus,
-  useLatencyMonitor,
-  useMeterFrame,
-  useRequestResize,
-  useSettingsModal,
-  useWindowResizeSync,
-  WavecraftProvider,
-} from '@wavecraft/core';
-import { type JSX, useCallback, useState } from 'react';
+import { useSettingsModal, useWindowResizeSync, WavecraftProvider } from '@wavecraft/core';
+import { type JSX, useState } from 'react';
 
 export function App(): JSX.Element {
   return (
@@ -38,20 +30,7 @@ function AppContent(): JSX.Element {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { openSettingsModal } = useSettingsModal();
 
-  const handleToggleSidebar = useCallback(() => {
-    setIsSidebarOpen((isOpen) => !isOpen);
-  }, []);
-
-  const handleCloseSidebar = useCallback(() => {
-    setIsSidebarOpen(false);
-  }, []);
-
   useWindowResizeSync();
-  const { connected } = useConnectionStatus();
-
-  const latency = useLatencyMonitor(1000);
-  const frame = useMeterFrame(50);
-  const requestResize = useRequestResize();
 
   return (
     <>
@@ -62,10 +41,7 @@ function AppContent(): JSX.Element {
               icon="menu"
               size="sm"
               className="bg-plugin-surface-1/80"
-              aria-label="Open sidebar"
-              aria-controls="app-sidebar"
-              aria-expanded={false}
-              onClick={handleToggleSidebar}
+              onClick={() => setIsSidebarOpen(true)}
             />
           )}
         </Header>
@@ -73,7 +49,7 @@ function AppContent(): JSX.Element {
         <Sidebar
           id="app-sidebar"
           open={isSidebarOpen}
-          onClose={handleCloseSidebar}
+          onClose={() => setIsSidebarOpen(false)}
           title="Menu"
           description="Quick actions and future plugin settings live here."
           defaultActions={['show-settings']}
@@ -128,19 +104,13 @@ function AppContent(): JSX.Element {
         />
 
         <div className="flex flex-col gap-3">
-          <Meter className="justify-center" connected={connected} frame={frame} />
-          <LatencyMonitor
-            className="justify-center"
-            latency={latency.latency}
-            avg={latency.avg}
-            max={latency.max}
-            count={latency.count}
-          />
+          <Meter className="justify-center" />
+          <LatencyMonitor className="justify-center" />
         </div>
       </div>
 
       <SettingsModal />
-      <ResizeHandle onRequestResize={requestResize} />
+      <ResizeHandle />
     </>
   );
 }
