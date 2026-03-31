@@ -312,8 +312,9 @@ async fn handle_connection<H: ParameterHost>(
                     }
                 }
 
-                // Route through existing IpcHandler
-                let response = handler.handle_json(&json);
+                // Route through existing IpcHandler (returns response + any push notifications)
+                let messages = handler.handle_json_multi(&json);
+                let response = messages.first().cloned().unwrap_or_default();
 
                 // Mirror native editor behavior in dev mode: after successful
                 // setParameter, emit parameterChanged so hooks relying on
@@ -327,6 +328,18 @@ async fn handle_connection<H: ParameterHost>(
                         &notification_json,
                         None,
                         "send parameterChanged notification",
+                    )
+                    .await;
+                }
+
+                // Broadcast any additional push notifications (e.g., signalChainOrderChanged)
+                for notification_json in messages.iter().skip(1) {
+                    debug!("Broadcasting push notification: {}", notification_json);
+                    broadcast_to_browser_clients(
+                        &state,
+                        notification_json,
+                        None,
+                        "send push notification",
                     )
                     .await;
                 }

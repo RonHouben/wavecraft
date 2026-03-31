@@ -6,7 +6,7 @@ export default defineConfig({
   forbidOnly: true,
   retries: 0,
   workers: 1,
-  reporter: 'html',
+  reporter: [['html', { open: 'never' }]],
 
   use: {
     baseURL: 'http://localhost:5173',

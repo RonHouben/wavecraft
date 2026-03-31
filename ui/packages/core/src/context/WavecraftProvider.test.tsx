@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -10,6 +10,7 @@ import * as transportsModule from '../transports';
 import { MockTransport } from '../transports/MockTransport';
 import type { ParameterId, ParameterInfo, ParameterValue } from '../types/parameters';
 import * as environmentModule from '../utils/environment';
+import { useSettingsModal } from './useSettingsModal';
 import { WavecraftProvider } from './WavecraftProvider';
 
 const initialParams: ParameterInfo[] = [
@@ -27,6 +28,29 @@ const initialParams: ParameterInfo[] = [
 
 function wrapper({ children }: Readonly<{ children: ReactNode }>) {
   return <WavecraftProvider>{children}</WavecraftProvider>;
+}
+
+function SettingsModalOpenButton(): React.JSX.Element {
+  const { openSettingsModal } = useSettingsModal();
+
+  return (
+    <button type="button" onClick={openSettingsModal}>
+      Open settings
+    </button>
+  );
+}
+
+function SettingsModalStateProbe(): React.JSX.Element {
+  const { closeSettingsModal, isSettingsModalOpen } = useSettingsModal();
+
+  return (
+    <>
+      <div data-testid="settings-modal-state">{String(isSettingsModalOpen)}</div>
+      <button type="button" onClick={closeSettingsModal}>
+        Close settings
+      </button>
+    </>
+  );
 }
 
 describe('WavecraftProvider', () => {
@@ -77,6 +101,34 @@ describe('WavecraftProvider', () => {
     });
 
     expect(result.current.params[0]?.value).toBe(0.9);
+  });
+
+  it('shares settings modal state across consumers under one provider', async () => {
+    const client = ParameterClient.getInstance();
+    vi.spyOn(client, 'getAllParameters').mockResolvedValue(initialParams);
+
+    render(
+      <WavecraftProvider>
+        <SettingsModalOpenButton />
+        <SettingsModalStateProbe />
+      </WavecraftProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('settings-modal-state')).toHaveTextContent('false');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open settings' }));
+    expect(screen.getByTestId('settings-modal-state')).toHaveTextContent('true');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close settings' }));
+    expect(screen.getByTestId('settings-modal-state')).toHaveTextContent('false');
+  });
+
+  it('requires WavecraftProvider for settings modal state', () => {
+    expect(() => renderHook(() => useSettingsModal())).toThrow(
+      /WavecraftProvider is required. Wrap your app with <WavecraftProvider>./
+    );
   });
 
   it('reloads on PARAMETERS_CHANGED notification', async () => {

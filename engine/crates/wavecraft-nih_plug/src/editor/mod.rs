@@ -23,6 +23,11 @@ use nih_plug::prelude::*;
     any(target_os = "macos", target_os = "windows"),
     not(feature = "_param-discovery")
 ))]
+use wavecraft_bridge::SignalChainOrderAccess;
+#[cfg(all(
+    any(target_os = "macos", target_os = "windows"),
+    not(feature = "_param-discovery")
+))]
 use wavecraft_metering::MeterConsumer;
 #[cfg(all(
     any(target_os = "macos", target_os = "windows"),
@@ -71,10 +76,12 @@ pub use webview::{WebViewConfig, WebViewHandle, create_webview};
     any(target_os = "macos", target_os = "windows"),
     not(feature = "_param-discovery")
 ))]
-pub struct WavecraftEditor<P: Params> {
+pub struct WavecraftEditor<P: Params + SignalChainOrderAccess> {
     params: Arc<P>,
     /// Meter consumer for audio metering - taken on first editor spawn
     meter_consumer: Mutex<Option<MeterConsumer>>,
+    /// Passthrough-local meter consumer - taken on first editor spawn
+    passthrough_meter_consumer: Mutex<Option<MeterConsumer>>,
     /// Oscilloscope consumer for waveform snapshots - taken on first editor spawn
     oscilloscope_consumer: Mutex<Option<OscilloscopeFrameConsumer>>,
     size: Arc<Mutex<(u32, u32)>>,
@@ -86,7 +93,7 @@ pub struct WavecraftEditor<P: Params> {
     any(target_os = "macos", target_os = "windows"),
     not(feature = "_param-discovery")
 ))]
-impl<P: Params> WavecraftEditor<P> {
+impl<P: Params + SignalChainOrderAccess> WavecraftEditor<P> {
     /// Create a new WebView editor with specified dimensions.
     ///
     /// # Arguments
@@ -98,6 +105,7 @@ impl<P: Params> WavecraftEditor<P> {
     pub fn new(
         params: Arc<P>,
         meter_consumer: Option<MeterConsumer>,
+        passthrough_meter_consumer: Option<MeterConsumer>,
         oscilloscope_consumer: Option<OscilloscopeFrameConsumer>,
         width: u32,
         height: u32,
@@ -105,6 +113,7 @@ impl<P: Params> WavecraftEditor<P> {
         Self {
             params,
             meter_consumer: Mutex::new(meter_consumer),
+            passthrough_meter_consumer: Mutex::new(passthrough_meter_consumer),
             oscilloscope_consumer: Mutex::new(oscilloscope_consumer),
             size: Arc::new(Mutex::new((width, height))),
             webview_handle: Arc::new(Mutex::new(None)),
@@ -116,7 +125,7 @@ impl<P: Params> WavecraftEditor<P> {
     any(target_os = "macos", target_os = "windows"),
     not(feature = "_param-discovery")
 ))]
-impl<P: Params> Editor for WavecraftEditor<P> {
+impl<P: Params + SignalChainOrderAccess> Editor for WavecraftEditor<P> {
     fn spawn(
         &self,
         parent: ParentWindowHandle,
@@ -124,6 +133,7 @@ impl<P: Params> Editor for WavecraftEditor<P> {
     ) -> Box<dyn Any + Send> {
         // Take the meter consumer (only works for first editor instance)
         let meter_consumer = self.meter_consumer.lock().unwrap().take();
+        let passthrough_meter_consumer = self.passthrough_meter_consumer.lock().unwrap().take();
         let oscilloscope_consumer = self.oscilloscope_consumer.lock().unwrap().take();
 
         let size = *self.size.lock().unwrap();
@@ -135,6 +145,7 @@ impl<P: Params> Editor for WavecraftEditor<P> {
             width: size.0,
             height: size.1,
             meter_consumer,
+            passthrough_meter_consumer,
             oscilloscope_consumer,
             editor_size: self.size.clone(),
         };
@@ -246,9 +257,10 @@ impl<P: Params> Editor for WavecraftEditor<P> {
     any(target_os = "macos", target_os = "windows"),
     not(feature = "_param-discovery")
 ))]
-pub fn create_webview_editor<P: Params + 'static>(
+pub fn create_webview_editor<P: Params + SignalChainOrderAccess + 'static>(
     params: Arc<P>,
     meter_consumer: Option<MeterConsumer>,
+    passthrough_meter_consumer: Option<MeterConsumer>,
     oscilloscope_consumer: Option<OscilloscopeFrameConsumer>,
     width: u32,
     height: u32,
@@ -256,6 +268,7 @@ pub fn create_webview_editor<P: Params + 'static>(
     Some(Box::new(WavecraftEditor::new(
         params,
         meter_consumer,
+        passthrough_meter_consumer,
         oscilloscope_consumer,
         width,
         height,
@@ -273,6 +286,7 @@ pub fn create_webview_editor<P: Params + 'static>(
 pub fn create_webview_editor<P>(
     _params: std::sync::Arc<P>,
     _meter_consumer: Option<wavecraft_metering::MeterConsumer>,
+    _passthrough_meter_consumer: Option<wavecraft_metering::MeterConsumer>,
     _oscilloscope_consumer: Option<wavecraft_processors::OscilloscopeFrameConsumer>,
     _width: u32,
     _height: u32,

@@ -11,7 +11,7 @@
 //! - **Version field** for forward-compatible ABI evolution
 //! - All memory alloc/dealloc stays inside the dylib (no cross-allocator issues)
 
-use std::ffi::c_void;
+use std::ffi::{c_char, c_void};
 
 /// C-ABI stable vtable for dev-mode audio processing.
 ///
@@ -83,6 +83,32 @@ pub struct DevProcessorVTable {
     pub apply_plain_values:
         unsafe extern "C" fn(instance: *mut c_void, values_ptr: *const f32, len: usize),
 
+    /// Apply a JSON-encoded signal-chain slot order to the runtime instance.
+    ///
+    /// The payload must deserialize to `Vec<SignalChainSlot>` using the canonical
+    /// protocol JSON shape. Returns `true` when the runtime accepted the order.
+    ///
+    /// # Safety
+    /// - `instance` must be a valid pointer from `create`
+    /// - `json_ptr` must point to a valid NUL-terminated UTF-8 string for this call
+    pub set_signal_chain_order_json:
+        unsafe extern "C" fn(instance: *mut c_void, json_ptr: *const c_char) -> bool,
+
+    /// Retrieve the latest oscilloscope frame as JSON.
+    ///
+    /// Returns a heap-allocated C string containing either a serialized
+    /// `OscilloscopeFrame` or the JSON literal `null` when no frame is available.
+    /// The caller must release the returned string with `wavecraft_free_string`.
+    pub take_latest_oscilloscope_frame_json: extern "C" fn(instance: *mut c_void) -> *mut c_char,
+
+    /// Retrieve the latest Passthrough-local meter frame as JSON.
+    ///
+    /// Returns a heap-allocated C string containing either a serialized
+    /// `MeterFrame` or the JSON literal `null` when no frame is available.
+    /// The caller must release the returned string with `wavecraft_free_string`.
+    pub take_latest_passthrough_meter_frame_json:
+        extern "C" fn(instance: *mut c_void) -> *mut c_char,
+
     /// Update the processor's sample rate.
     pub set_sample_rate: extern "C" fn(instance: *mut c_void, sample_rate: f32),
 
@@ -102,7 +128,16 @@ pub struct DevProcessorVTable {
 ///
 /// v2 adds `apply_plain_values` to support block-boundary parameter injection
 /// in dev FFI mode.
-pub const DEV_PROCESSOR_VTABLE_VERSION: u32 = 2;
+///
+/// v3 adds control-thread hooks for slot-aware browser-dev runtime parity:
+/// - runtime signal-chain order application
+/// - runtime-owned oscilloscope frame retrieval
+///
+/// v4 adds runtime-owned Passthrough-local meter frame retrieval.
+pub const DEV_PROCESSOR_VTABLE_VERSION: u32 = 4;
 
 /// FFI symbol name exported by `wavecraft_plugin!` macro.
 pub const DEV_PROCESSOR_SYMBOL: &[u8] = b"wavecraft_dev_create_processor\0";
+
+/// FFI symbol name exporting declared/default signal-chain slots as JSON.
+pub const DEV_SIGNAL_CHAIN_SLOTS_SYMBOL: &[u8] = b"wavecraft_get_signal_chain_slots_json\0";

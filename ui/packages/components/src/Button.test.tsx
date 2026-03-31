@@ -85,4 +85,22 @@ describe('Button', () => {
     expect(button).not.toHaveClass('border-accent');
     expect(screen.queryByText('✓')).not.toBeInTheDocument();
   });
+
+  it('renders the requested leading icon', () => {
+    render(<Button iconLeft="settings">Settings</Button>);
+
+    const button = screen.getByRole('button', { name: 'Settings' });
+    const icon = button.querySelector('[data-waveform-icon="settings"]');
+
+    expect(icon).not.toBeNull();
+  });
+
+  it('renders the requested trailing icon', () => {
+    render(<Button iconRight="chevron-right">Settings</Button>);
+
+    const button = screen.getByRole('button', { name: 'Settings' });
+    const icon = button.querySelector('[data-waveform-icon="chevron-right"]');
+
+    expect(icon).not.toBeNull();
+  });
 });

@@ -32,6 +32,10 @@ pub const ERROR_INTERNAL: i32 = -32603;
 pub const ERROR_PARAM_NOT_FOUND: i32 = -32000;
 /// Parameter value out of valid range
 pub const ERROR_PARAM_OUT_OF_RANGE: i32 = -32001;
+/// Signal chain order is invalid (wrong IDs, duplicate entries, or type mismatch)
+pub const ERROR_INVALID_SIGNAL_CHAIN_ORDER: i32 = -32002;
+/// Signal chain order state restore failed (loaded from invalid saved state)
+pub const ERROR_SIGNAL_CHAIN_ORDER_RESTORE_FAILED: i32 = -32003;
 
 impl IpcError {
     /// Create a new error

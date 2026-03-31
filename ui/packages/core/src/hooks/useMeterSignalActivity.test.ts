@@ -1,19 +1,25 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { dbToLinear } from '../utils/audio-math';
 import {
   getMeterClipWarningIntensity,
   getMeterSignalIntensity,
   getMeterSignalLevel,
   useMeterSignalActivity,
+  usePassthroughMeterSignalActivity,
 } from './useMeterSignalActivity';
-import { dbToLinear } from '../utils/audio-math';
 
 const mockUseMeterFrame = vi.hoisted(() => vi.fn());
+const mockUsePassthroughMeterFrame = vi.hoisted(() => vi.fn());
 const DEFAULT_HOLD_MS = 220;
 
 vi.mock('./useMeterFrame', () => ({
   useMeterFrame: mockUseMeterFrame,
+}));
+
+vi.mock('./usePassthroughMeterFrame', () => ({
+  usePassthroughMeterFrame: mockUsePassthroughMeterFrame,
 }));
 
 describe('useMeterSignalActivity', () => {
@@ -125,6 +131,24 @@ describe('useMeterSignalActivity', () => {
     );
 
     expect(result.current.signalIntensity).toBeCloseTo(0.0, 3);
+  });
+
+  it('can derive signal activity from the Passthrough-local meter frame source', () => {
+    const frame = {
+      peak_l: 0.01,
+      peak_r: 0,
+      rms_l: 0,
+      rms_r: 0,
+      timestamp: 1,
+    };
+
+    mockUsePassthroughMeterFrame.mockReturnValue(frame);
+
+    const { result } = renderHook(() => usePassthroughMeterSignalActivity({ intervalMs: 80 }));
+
+    expect(result.current.isSignalActive).toBe(true);
+    expect(result.current.signalLevel).toBe(0.01);
+    expect(mockUsePassthroughMeterFrame).toHaveBeenCalledWith(80);
   });
 });
 

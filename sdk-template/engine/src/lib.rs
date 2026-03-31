@@ -1,7 +1,6 @@
 use wavecraft::prelude::wavecraft_plugin;
 use wavecraft::prelude::wavecraft_processor;
 use wavecraft::prelude::PassthroughDsp;
-use wavecraft::prelude::SignalChain;
 use wavecraft::OscilloscopeTap;
 use wavecraft::TestToneProcessor;
 
@@ -26,10 +25,11 @@ wavecraft_processor!(OutputGain => Gain);
 // ---------------------------------------------------------------------------
 // Plugin definition
 // ---------------------------------------------------------------------------
-// `SignalChain![]` processes audio through each processor in order.
+// `processors: [...]` defines the signal chain — processors run in order.
+// `taps: [...]` declares observer taps that can be placed anywhere in the chain.
 wavecraft_plugin! {
     name: "My First Plugin",
-    signal: SignalChain![
+    processors: [
         TestTone,
         InputTrim,
         Passthrough,
@@ -37,6 +37,6 @@ wavecraft_plugin! {
         ToneFilter,
         SoftClip,
         OutputGain,
-        OscilloscopeTap,
     ],
+    taps: [OscilloscopeTap],
 }

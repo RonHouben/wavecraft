@@ -8,14 +8,14 @@ This document tracks implementation progress against the milestones defined in t
 
 ```
 ┌──────────────────────────────────────────────┐
-│  WAVECRAFT ROADMAP          v0.13.0 |   93% │
+│  WAVECRAFT ROADMAP          v0.13.0 |   96% │
 ├──────────────────────────────────────────────┤
 │  ✅ M1-M18.11 Foundation → Passthrough Fix  │
 │  ✅ M19       Codebase Refactor Sweep       │
-│  ⏳ M20       Runtime-Reorderable SignalChain│
+│  ✅ M20       Runtime-Reorderable SignalChain│
 │  ⭐ V1        Golden Star Outlook           │
 ├──────────────────────────────────────────────┤
-│  [██████████████████████░░] 26/28          │
+│  [███████████████████████░] 27/28          │
 └──────────────────────────────────────────────┘
 ```
 
@@ -1700,49 +1700,49 @@ In newly created Wavecraft projects, enabling `Oscillator` in the signal chain c
 
 ---
 
-## Milestone 20: Runtime-Reorderable SignalChain ⏳
+## Milestone 20: Runtime-Reorderable SignalChain ✅
 
 > **Goal:** Enable end-users to reorder processor execution at runtime from the plugin UI via an accessible drag-and-drop SignalChain component, with artifact-safe engine application and per-preset persistence.
 
-**Status:** ⏳ Not Started
+**Status:** ✅ Complete
 
 **Feature Slug:** `ui-signal-chain-reorder`  
 **Target Version:** `0.14.0` (minor — runtime behavior + DSL field change)  
-**User Stories:** [docs/feature-specs/ui-signal-chain-reorder/user-stories.md](feature-specs/ui-signal-chain-reorder/user-stories.md)  
-**Low-Level Design:** [docs/feature-specs/ui-signal-chain-reorder/low-level-design-ui-signal-chain-reorder.md](feature-specs/ui-signal-chain-reorder/low-level-design-ui-signal-chain-reorder.md)  
-**UI Design:** [docs/feature-specs/ui-signal-chain-reorder/ui-design-signal-chain.md](feature-specs/ui-signal-chain-reorder/ui-design-signal-chain.md)
+**User Stories:** [docs/feature-specs/\_archive/ui-signal-chain-reorder/user-stories.md](feature-specs/_archive/ui-signal-chain-reorder/user-stories.md)  
+**Low-Level Design:** [docs/feature-specs/\_archive/ui-signal-chain-reorder/low-level-design-ui-signal-chain-reorder.md](feature-specs/_archive/ui-signal-chain-reorder/low-level-design-ui-signal-chain-reorder.md)  
+**UI Design:** [docs/feature-specs/\_archive/ui-signal-chain-reorder/ui-design-signal-chain.md](feature-specs/_archive/ui-signal-chain-reorder/ui-design-signal-chain.md)
 
 | Task                                                                  | Status | Notes                                                      |
 | --------------------------------------------------------------------- | ------ | ---------------------------------------------------------- |
 | **Planning & Contract**                                               |        |                                                            |
 | User stories                                                          | ✅     | Created for SDK developer + end-user workflows             |
 | Low-level design                                                      | ✅     | Recommends generated static dispatch + runtime order table |
-| Implementation plan                                                   | ⏳     | Planner handoff required before coding                     |
+| Implementation plan                                                   | ✅     | Completed and archived                                     |
 | **Engine Runtime Reorder**                                            |        |                                                            |
-| Replace macro `signal:` field with `processors:` registration list    | ⏳     | Runtime order owned by UI intent                           |
-| Add runtime order permutation validation                              | ⏳     | Reject unknown, duplicate, or missing IDs                  |
-| Apply order at audio block boundary with short crossfade              | ⏳     | Prevent clicks/pops while preserving responsiveness        |
-| Persist processor order in plugin state per preset                    | ⏳     | Survives save/load and preset recall                       |
+| Replace macro `signal:` field with `processors:` registration list    | ✅     | DSL migrated to runtime-order ownership                    |
+| Add runtime order permutation validation                              | ✅     | Rejects unknown, duplicate, or missing IDs                 |
+| Apply order at audio block boundary with short crossfade              | ✅     | 256-sample crossfade on reorder                            |
+| Persist processor order in plugin state per preset                    | ✅     | Survives save/load and preset recall                       |
 | **IPC & UI Core**                                                     |        |                                                            |
-| Add `getProcessorOrder` method                                        | ⏳     | Bootstrap UI order from engine state                       |
-| Add `setProcessorOrder` method                                        | ⏳     | Full-permutation payload only                              |
-| Add `processorOrderChanged` notification                              | ⏳     | Sync UI after apply/state restore                          |
-| Add `ProcessorOrderClient` + `useProcessorOrder` in `@wavecraft/core` | ⏳     | Follow existing singleton/hook patterns                    |
+| Add `getProcessorOrder` method                                        | ✅     | Bootstrap UI order from engine state                       |
+| Add `setProcessorOrder` method                                        | ✅     | Full-permutation payload only                              |
+| Add `processorOrderChanged` notification                              | ✅     | Syncs UI after apply/state restore                         |
+| Add `ProcessorOrderClient` + `useProcessorOrder` in `@wavecraft/core` | ✅     | Delivered and exported                                     |
 | **SignalChain Component UX**                                          |        |                                                            |
-| Add SignalChain drag-and-drop UI with expanded processor cards        | ⏳     | Vertical ordering with visible bypass controls             |
-| Keyboard reorder support (Space/Enter, arrows, Escape)                | ⏳     | Required accessibility path                                |
-| Loading/error/connection state handling                               | ⏳     | Reuse existing status and error patterns                   |
+| Add SignalChain drag-and-drop UI with expanded processor cards        | ✅     | Vertical ordering with visible bypass controls             |
+| Keyboard reorder support (Space/Enter, arrows, Escape)                | ✅     | Accessibility path implemented                             |
+| Loading/error/connection state handling                               | ✅     | Uses established status and error patterns                 |
 | **Validation**                                                        |        |                                                            |
-| Unit/integration tests (engine + UI)                                  | ⏳     | Include validation and persistence edge cases              |
-| Manual DAW validation (Ableton macOS)                                 | ⏳     | Reorder under playback + save/load roundtrip               |
+| Unit/integration tests (engine + UI)                                  | ✅     | Validation and persistence edge cases covered              |
+| Manual DAW validation (Ableton macOS)                                 | ✅     | Reorder under playback + save/load roundtrip verified      |
 
 **Success Criteria:**
 
-- [ ] End-user can reorder processors at runtime from plugin UI (pointer and keyboard)
-- [ ] Engine applies new order artifact-free at block boundaries
-- [ ] Processor order persists per preset and restores correctly
-- [ ] UI is the single source of truth for processor order (no static compile-time order path)
-- [ ] Existing parameter and bypass contracts remain stable after reordering
+- [x] End-user can reorder processors at runtime from plugin UI (pointer and keyboard)
+- [x] Engine applies new order artifact-free at block boundaries
+- [x] Processor order persists per preset and restores correctly
+- [x] UI is the single source of truth for processor order (no static compile-time order path)
+- [x] Existing parameter and bypass contracts remain stable after reordering
 
 ---
 
@@ -1814,6 +1814,7 @@ In newly created Wavecraft projects, enabling `Oscillator` in the signal chain c
 
 | Date       | Update                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-02-28 | **Feature closeout complete: `ui-signal-chain-reorder`** — pre-merge archival and roadmap finalization completed. Milestone 20 marked ✅ complete. Delivered breaking DSL migration `signal: SignalChain![...]` → `processors: [...]`, runtime processor drag-and-drop reordering via `SignalChain` UI component, artifact-safe 256-sample crossfade on reorder, per-preset processor-order persistence, IPC contracts (`getProcessorOrder`, `setProcessorOrder`, `processorOrderChanged`), and SDK surface additions: `@wavecraft/components` `SignalChain`, `@wavecraft/core` `ProcessorOrderClient` + `useProcessorOrder`. Feature-spec docs moved to `docs/feature-specs/_archive/ui-signal-chain-reorder/` with no content changes. Progress updated to **27/28 (96%)**.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | 2026-02-28 | **Added ⭐ Milestone V1: Golden Star Outlook (first stable public release).** Added an aspirational long-term milestone at the end of the roadmap to define what “done” means for Wavecraft v1 (stable SDK/API contracts, public distribution, plugin format readiness, polished UX, release pipeline maturity, and complete documentation). Updated progress overview to **26/28 (93%)** to reflect the newly added outlook milestone.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | 2026-02-28 | **Milestone 20 added: `ui-signal-chain-reorder` (Runtime-Reorderable SignalChain).** Added a new milestone for runtime processor reordering via drag-and-drop `SignalChain` UI with keyboard support, block-boundary engine apply + short crossfade, and per-preset order persistence. Linked design artifacts: user stories, low-level design, and UI design spec. Progress updated to **26/27 (96%)** to reflect newly planned work.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | 2026-02-22 | **Feature closeout complete: `ui-ux-refactor`** — workflow closure recorded after UX implementation completion, Tester signoff after fix cycle, QA PASS (no critical/high blockers), and Architect post-QA gate confirmation of no required architecture doc updates. Archive flow coordinated to canonical target `docs/feature-specs/_archive/ui-ux-refactor/` with archive policy reminder: no archived file content edits after move.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
@@ -1967,16 +1968,17 @@ In newly created Wavecraft projects, enabling `Oscillator` in the signal chain c
 24. ✅ **Milestone 18.10**: TypeScript Parameter ID Autocompletion — Build-time generated typed parameter IDs (v0.13.0)
 25. ✅ **Milestone 18.11**: Oscillator Must Not Block DAW Passthrough — Fix generated project signal-chain behavior
 26. ✅ **Milestone 19**: Codebase Refactor Sweep — Tiered refactor and quality sweep complete
+27. ✅ **Milestone 20**: Runtime-Reorderable SignalChain — Runtime processor reorder, IPC contracts, persistence, and SignalChain UI complete
 
 ### Up Next
 
-1. 🚧 **Start Milestone 20 (`ui-signal-chain-reorder`)**: Create implementation plan and begin runtime reorder delivery
+1. ⭐ **V1 readiness alignment**: Translate Golden Star outlook themes into the next concrete, shippable milestone slice
 2. 📝 **Backlog promotion**: Prioritize and promote the next highest-value item from `docs/backlog.md`
 
 ### Immediate Tasks
 
-1. 📝 **Planner handoff (`ui-signal-chain-reorder`)**: produce implementation plan from existing LLD + UI design
-2. 📝 **Coder kickoff scope (`ui-signal-chain-reorder`)**: engine runtime order + IPC contract + macro `processors:` migration
-3. 📝 **UX/accessibility implementation scope (`ui-signal-chain-reorder`)**: SignalChain drag-and-drop + keyboard reorder behavior
+1. 📝 **Backlog grooming pass**: remove shipped items and ensure remaining items are still unmet and high-value
+2. 📝 **V1 delivery planning**: define the next milestone candidate with clear acceptance criteria and dependencies
+3. 📝 **Release readiness tracking**: identify remaining gaps across SDK stability, distribution, and documentation
 
 **Future ideas:** See [backlog.md](backlog.md) for unprioritized items (crates.io publication, additional example plugins, etc.)

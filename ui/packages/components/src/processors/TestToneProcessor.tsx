@@ -1,7 +1,7 @@
 import type { TestToneParameterIds, TestToneProcessorId } from '@wavecraft/core';
 import { useParameter } from '@wavecraft/core';
 import { type JSX } from 'react';
-import { Knob, Row, Switch } from '..';
+import { Knob, Row } from '..';
 import { mergeClassNames } from '../utils/classNames';
 import { ProcessorCard } from './ProcessorCard';
 
@@ -23,9 +23,6 @@ export function TestToneProcessor({
   hideWhenNotInSignalChain,
   className,
 }: Readonly<TestToneProcessorProps>): JSX.Element | null {
-  const { param: enabledParameter, setValue: setEnabledValue } = useParameter<boolean>(
-    testToneParameterIds.enabled
-  );
   const { param: frequencyParameter, setValue: setFrequencyValue } = useParameter<number>(
     testToneParameterIds.frequency
   );
@@ -41,17 +38,6 @@ export function TestToneProcessor({
       title="Test Tone"
       className={mergeClassNames('h-full w-full', className)}
     >
-      <Row className="flex flex-row gap-2">
-        <span className="text-type-xs text-plugin-text-secondary">
-          {enabledParameter?.name ?? 'Enabled'}
-        </span>
-        <Switch
-          id={`param-${enabledParameter?.id}-switch`}
-          checked={Boolean(enabledParameter?.value)}
-          size="sm"
-          onChange={setEnabledValue}
-        />
-      </Row>
       <Row className="flex flex-wrap gap-2">
         <Knob
           id={`param-${frequencyParameter?.id}`}

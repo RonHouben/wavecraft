@@ -2,23 +2,14 @@
 name: tester
 description: Manual testing specialist for guiding users through test execution and tracking test results. Creates test plans and documents findings without modifying code.
 model:
+  - GPT-5.4 (copilot)
   - GPT-5.3-Codex (copilot)
   - Claude Opus 4.6 (copilot)
   - GPT-5.2 (copilot)
 tools:
-  [
-    'read',
-    'search',
-    'execute',
-    'agent',
-    'github/*',
-    'web',
-    'todo',
-    'memory',
-    'vscode'
-  ]
+  ['read', 'search', 'execute', 'agent', 'github/*', 'web', 'todo', 'vscode']
 agents: [orchestrator, coder, qa, docwriter, search]
-user-invokable: true
+user-invocable: true
 handoffs:
   - label: Fix Issues
     agent: coder

@@ -1,13 +1,13 @@
 ---
 name: orchestrator
 model:
+  - GPT-5.4 (copilot)
   - Claude Sonnet 4.6 (copilot)
   - GPT-5.3-Codex (copilot)
   - Claude Opus 4.6 (copilot)
-tools:
-  ['read', 'search', 'agent', 'web', 'todo', 'memory', 'excalidraw/*', 'vscode']
+tools: ['read', 'search', 'agent', 'web', 'todo', 'excalidraw/*', 'vscode']
 agents: ['*']
-user-invokable: true
+user-invocable: true
 ---
 
 # Orchestrator Agent

@@ -3,7 +3,16 @@
  */
 
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mockUseConnectionStatus = vi.hoisted(() => vi.fn());
+const mockUseMeterFrame = vi.hoisted(() => vi.fn());
+
+vi.mock('@wavecraft/core', () => ({
+  useConnectionStatus: mockUseConnectionStatus,
+  useMeterFrame: mockUseMeterFrame,
+}));
+
 import { Meter } from './Meter';
 
 const frame = {
@@ -16,20 +25,35 @@ const frame = {
 
 describe('Meter', () => {
   beforeEach(() => {
+    mockUseConnectionStatus.mockReset();
+    mockUseMeterFrame.mockReset();
+
     frame.peak_l = 0;
     frame.peak_r = 0;
     frame.rms_l = 0;
     frame.rms_r = 0;
     frame.timestamp = 0;
+
+    mockUseConnectionStatus.mockReturnValue({ connected: true, transport: 'websocket' });
+    mockUseMeterFrame.mockImplementation(() => frame);
   });
 
   it('renders meter component', () => {
-    render(<Meter connected frame={frame} />);
+    render(<Meter />);
     expect(screen.getByText('Levels')).toBeInTheDocument();
   });
 
+  it('uses the elevated processor-style card shell', () => {
+    render(<Meter />);
+
+    const meter = screen.getByTestId('meter');
+    expect(meter).toHaveClass('rounded-xl');
+    expect(meter).toHaveClass('bg-plugin-surface-1');
+    expect(meter).toHaveClass('shadow-panel');
+  });
+
   it('displays channel labels', () => {
-    render(<Meter connected frame={frame} />);
+    render(<Meter />);
     expect(screen.getByText('L')).toBeInTheDocument();
     expect(screen.getByText('R')).toBeInTheDocument();
   });
@@ -43,7 +67,9 @@ describe('Meter', () => {
       timestamp: Date.now(),
     };
 
-    render(<Meter connected frame={loudFrame} />);
+    mockUseMeterFrame.mockReturnValue(loudFrame);
+
+    render(<Meter />);
 
     // Component should render meter bars
     expect(screen.getByText('Levels')).toBeInTheDocument();
@@ -60,13 +86,15 @@ describe('Meter', () => {
       timestamp: Date.now(),
     };
 
-    render(<Meter connected frame={maxFrame} />);
+    mockUseMeterFrame.mockReturnValue(maxFrame);
+
+    render(<Meter />);
 
     // Component renders successfully
     expect(screen.getByText('Levels')).toBeInTheDocument();
   });
 
-  it('applies shared focus-visible classes to clip reset button', () => {
+  it('applies shared focus-visible classes to clip reset button', async () => {
     const clippedFrame = {
       peak_l: 1.1,
       peak_r: 0.2,
@@ -75,21 +103,23 @@ describe('Meter', () => {
       timestamp: Date.now(),
     };
 
-    render(<Meter connected frame={clippedFrame} />);
+    mockUseMeterFrame.mockReturnValue(clippedFrame);
 
-    const clipButton = screen.getByTestId('meter-clip-button');
+    render(<Meter />);
+
+    const clipButton = await screen.findByTestId('meter-clip-button');
     expect(clipButton).toHaveClass('focus-visible:ring-2');
     expect(clipButton).toHaveClass('focus-visible:ring-accent-light');
   });
 
   it('renders plugin state badge when provided', () => {
-    render(<Meter connected frame={frame} pluginState="mapped" />);
+    render(<Meter pluginState="mapped" />);
 
     expect(screen.getByText('MAP')).toBeInTheDocument();
   });
 
   it('applies disabled state cue when state is disabled', () => {
-    render(<Meter connected frame={frame} state="disabled" />);
+    render(<Meter state="disabled" />);
 
     const meter = screen.getByTestId('meter');
     expect(meter).toHaveAttribute('data-state', 'disabled');

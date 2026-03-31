@@ -10,7 +10,6 @@ declare global {
     __wavecraft_internal_processors_augmented__: true;
     example_processor: true;
     input_trim: true;
-    oscilloscope_tap: true;
     output_gain: true;
     passthrough: true;
     soft_clip: true;

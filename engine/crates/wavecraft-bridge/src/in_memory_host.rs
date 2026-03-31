@@ -4,7 +4,11 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use crate::{BridgeError, ParameterHost};
-use wavecraft_protocol::{AudioRuntimeStatus, MeterFrame, OscilloscopeFrame, ParameterInfo};
+use wavecraft_protocol::{
+    AudioRuntimeStatus, GetHardwareInputSelectionResult, GetInputSourceResult,
+    HardwareInputChannelOption, HardwareInputDeviceOption, InputSourceKind, InputSourceOption,
+    MeterFrame, OscilloscopeFrame, ParameterInfo, SetHardwareInputSelectionParams, SignalChainSlot,
+};
 
 /// Provides metering data for an in-memory host.
 pub trait MeterProvider: Send + Sync {
@@ -26,6 +30,11 @@ pub struct InMemoryParameterHost {
     values: RwLock<HashMap<String, f32>>,
     meter_provider: Option<Arc<dyn MeterProvider>>,
     oscilloscope_provider: Option<Arc<dyn OscilloscopeProvider>>,
+    /// Active signal chain order as a list of slots.
+    signal_chain_order: RwLock<Vec<SignalChainSlot>>,
+    input_source: RwLock<InputSourceKind>,
+    selected_hardware_input_device_id: RwLock<Option<String>>,
+    selected_hardware_input_channel_id: RwLock<Option<String>>,
 }
 
 impl InMemoryParameterHost {
@@ -41,6 +50,14 @@ impl InMemoryParameterHost {
             values: RwLock::new(values),
             meter_provider: None,
             oscilloscope_provider: None,
+            signal_chain_order: RwLock::new(Vec::new()),
+            input_source: RwLock::new(InputSourceKind::HardwareInput),
+            selected_hardware_input_device_id: RwLock::new(Some(
+                DEFAULT_HARDWARE_INPUT_DEVICE_ID.to_string(),
+            )),
+            selected_hardware_input_channel_id: RwLock::new(Some(
+                DEFAULT_HARDWARE_INPUT_CHANNEL_ID.to_string(),
+            )),
         }
     }
 
@@ -220,12 +237,177 @@ impl ParameterHost for InMemoryParameterHost {
     fn get_audio_status(&self) -> Option<AudioRuntimeStatus> {
         None
     }
+
+    fn get_input_source(&self) -> Option<GetInputSourceResult> {
+        let selected = self
+            .input_source
+            .read()
+            .map(|guard| *guard)
+            .unwrap_or(InputSourceKind::HardwareInput);
+
+        Some(GetInputSourceResult {
+            selected,
+            available: default_input_source_options(),
+        })
+    }
+
+    fn set_input_source(&self, source: InputSourceKind) -> Result<(), BridgeError> {
+        *self.input_source.write().unwrap() = source;
+        Ok(())
+    }
+
+    fn get_hardware_input_selection(&self) -> Option<GetHardwareInputSelectionResult> {
+        let available_devices = default_hardware_input_device_options();
+        let available_channels = default_hardware_input_channel_options();
+        let selected_device_id = self
+            .selected_hardware_input_device_id
+            .read()
+            .ok()
+            .and_then(|guard| guard.clone())
+            .filter(|selected| {
+                available_devices
+                    .iter()
+                    .any(|device| &device.id == selected)
+            })
+            .or_else(|| Some(DEFAULT_HARDWARE_INPUT_DEVICE_ID.to_string()));
+        let selected_channel_id = self
+            .selected_hardware_input_channel_id
+            .read()
+            .ok()
+            .and_then(|guard| guard.clone())
+            .filter(|selected| {
+                available_channels
+                    .iter()
+                    .any(|channel| &channel.id == selected)
+            })
+            .or_else(|| Some(DEFAULT_HARDWARE_INPUT_CHANNEL_ID.to_string()));
+
+        Some(GetHardwareInputSelectionResult {
+            selected_device_id,
+            available_devices,
+            selected_channel_id,
+            available_channels,
+        })
+    }
+
+    fn set_hardware_input_selection(
+        &self,
+        selection: SetHardwareInputSelectionParams,
+    ) -> Result<(), BridgeError> {
+        let available_devices = default_hardware_input_device_options();
+        let available_channels = default_hardware_input_channel_options();
+
+        if let Some(selected_device_id) = selection.selected_device_id {
+            if !available_devices
+                .iter()
+                .any(|device| device.id == selected_device_id)
+            {
+                return Err(BridgeError::InvalidParams {
+                    method: "setHardwareInputSelection".to_string(),
+                    reason: format!("Unknown hardware input device: {}", selected_device_id),
+                });
+            }
+
+            *self.selected_hardware_input_device_id.write().unwrap() = Some(selected_device_id);
+        }
+
+        if let Some(selected_channel_id) = selection.selected_channel_id {
+            if !available_channels
+                .iter()
+                .any(|channel| channel.id == selected_channel_id)
+            {
+                return Err(BridgeError::InvalidParams {
+                    method: "setHardwareInputSelection".to_string(),
+                    reason: format!("Unknown hardware input routing: {}", selected_channel_id),
+                });
+            }
+
+            *self.selected_hardware_input_channel_id.write().unwrap() = Some(selected_channel_id);
+        }
+
+        Ok(())
+    }
+
+    fn get_signal_chain_order(&self) -> Vec<SignalChainSlot> {
+        self.signal_chain_order
+            .read()
+            .map(|guard| guard.clone())
+            .unwrap_or_default()
+    }
+
+    fn set_signal_chain_order(&self, order: Vec<SignalChainSlot>) -> Result<(), BridgeError> {
+        // Validate: no empty IDs, no duplicate IDs.
+        let mut seen = std::collections::HashSet::new();
+        for slot in &order {
+            if slot.id.is_empty() {
+                return Err(BridgeError::InvalidSignalChainOrder {
+                    reason: "slot ID must not be empty".to_string(),
+                });
+            }
+            if !seen.insert(slot.id.as_str()) {
+                return Err(BridgeError::InvalidSignalChainOrder {
+                    reason: format!("duplicate slot ID: {}", slot.id),
+                });
+            }
+        }
+        *self.signal_chain_order.write().unwrap() = order;
+        Ok(())
+    }
+}
+
+fn default_input_source_options() -> Vec<InputSourceOption> {
+    vec![
+        InputSourceOption {
+            id: InputSourceKind::HardwareInput,
+            label: "Soundcard input".to_string(),
+            description: Some(
+                "Use the active hardware input routed into the dev server".to_string(),
+            ),
+        },
+        InputSourceOption {
+            id: InputSourceKind::TestTone,
+            label: "Test tone".to_string(),
+            description: Some("Use the TestTone processor signal as the chain input".to_string()),
+        },
+    ]
+}
+
+const DEFAULT_HARDWARE_INPUT_DEVICE_ID: &str = "default-hardware-input";
+const DEFAULT_HARDWARE_INPUT_CHANNEL_ID: &str = "stereo:0:1";
+
+fn default_hardware_input_device_options() -> Vec<HardwareInputDeviceOption> {
+    vec![HardwareInputDeviceOption {
+        id: DEFAULT_HARDWARE_INPUT_DEVICE_ID.to_string(),
+        label: "Default soundcard input".to_string(),
+        channel_count: 2,
+        description: Some("Fallback device used by bridge tests and non-audio hosts".to_string()),
+    }]
+}
+
+fn default_hardware_input_channel_options() -> Vec<HardwareInputChannelOption> {
+    vec![
+        HardwareInputChannelOption {
+            id: DEFAULT_HARDWARE_INPUT_CHANNEL_ID.to_string(),
+            label: "Inputs 1 + 2 (stereo)".to_string(),
+            description: Some("Route the first stereo pair into the signal chain".to_string()),
+        },
+        HardwareInputChannelOption {
+            id: "mono:0".to_string(),
+            label: "Input 1 (mono → dual mono)".to_string(),
+            description: None,
+        },
+        HardwareInputChannelOption {
+            id: "mono:1".to_string(),
+            label: "Input 2 (mono → dual mono)".to_string(),
+            description: None,
+        },
+    ]
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use wavecraft_protocol::ParameterType;
+    use wavecraft_protocol::{ParameterType, SlotType};
 
     struct StaticMeterProvider {
         frame: MeterFrame,
@@ -474,5 +656,111 @@ mod tests {
 
         let too_high = host.set_parameter("test_tone_frequency", 30_000.0);
         assert!(too_high.is_err(), "value above max should be rejected");
+    }
+
+    // ── set_signal_chain_order validation ────────────────────────────────────────
+
+    #[test]
+    fn test_set_signal_chain_order_empty_vec_is_accepted() {
+        let host = InMemoryParameterHost::new(vec![]);
+        assert!(
+            host.set_signal_chain_order(vec![]).is_ok(),
+            "empty order should be accepted"
+        );
+        assert!(host.get_signal_chain_order().is_empty());
+    }
+
+    #[test]
+    fn test_set_signal_chain_order_valid_slots() {
+        let host = InMemoryParameterHost::new(vec![]);
+        let order = vec![
+            SignalChainSlot {
+                id: "proc_0".to_string(),
+                slot_type: SlotType::Processor,
+            },
+            SignalChainSlot {
+                id: "tap_0".to_string(),
+                slot_type: SlotType::Tap,
+            },
+        ];
+        assert!(
+            host.set_signal_chain_order(order.clone()).is_ok(),
+            "valid slots should succeed"
+        );
+        assert_eq!(host.get_signal_chain_order(), order);
+    }
+
+    #[test]
+    fn test_set_signal_chain_order_empty_id_rejected() {
+        let host = InMemoryParameterHost::new(vec![]);
+        let order = vec![SignalChainSlot {
+            id: "".to_string(),
+            slot_type: SlotType::Processor,
+        }];
+        let result = host.set_signal_chain_order(order);
+        assert!(result.is_err(), "empty ID should be rejected");
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("empty"), "error should mention empty: {msg}");
+    }
+
+    #[test]
+    fn test_set_signal_chain_order_duplicate_id_rejected() {
+        let host = InMemoryParameterHost::new(vec![]);
+        let order = vec![
+            SignalChainSlot {
+                id: "slot_a".to_string(),
+                slot_type: SlotType::Processor,
+            },
+            SignalChainSlot {
+                id: "slot_a".to_string(),
+                slot_type: SlotType::Tap,
+            },
+        ];
+        let result = host.set_signal_chain_order(order);
+        assert!(result.is_err(), "duplicate ID should be rejected");
+        let msg = result.unwrap_err().to_string();
+        assert!(
+            msg.contains("duplicate") || msg.contains("Duplicate"),
+            "error should describe duplicate: {msg}"
+        );
+    }
+
+    #[test]
+    fn test_set_signal_chain_order_mixed_slot_types() {
+        let host = InMemoryParameterHost::new(vec![]);
+        let order = vec![
+            SignalChainSlot {
+                id: "p0".to_string(),
+                slot_type: SlotType::Processor,
+            },
+            SignalChainSlot {
+                id: "t0".to_string(),
+                slot_type: SlotType::Tap,
+            },
+            SignalChainSlot {
+                id: "p1".to_string(),
+                slot_type: SlotType::Processor,
+            },
+        ];
+        assert!(host.set_signal_chain_order(order.clone()).is_ok());
+        assert_eq!(host.get_signal_chain_order(), order);
+    }
+
+    #[test]
+    fn test_input_source_defaults_to_hardware_input() {
+        let host = InMemoryParameterHost::new(vec![]);
+        let input_source = host.get_input_source().expect("input source should exist");
+        assert_eq!(input_source.selected, InputSourceKind::HardwareInput);
+        assert_eq!(input_source.available.len(), 2);
+    }
+
+    #[test]
+    fn test_set_input_source_updates_selection() {
+        let host = InMemoryParameterHost::new(vec![]);
+        host.set_input_source(InputSourceKind::TestTone)
+            .expect("should set input source");
+
+        let input_source = host.get_input_source().expect("input source should exist");
+        assert_eq!(input_source.selected, InputSourceKind::TestTone);
     }
 }

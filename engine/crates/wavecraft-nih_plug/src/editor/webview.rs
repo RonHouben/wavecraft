@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use nih_plug::prelude::*;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-use wavecraft_bridge::IpcHandler;
+use wavecraft_bridge::{IpcHandler, SignalChainOrderAccess};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use wavecraft_metering::MeterConsumer;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -50,7 +50,7 @@ pub trait WebViewHandle: Any + Send {
 ///
 /// Only used on macOS/Windows where WebView is available.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub struct WebViewConfig<P: Params> {
+pub struct WebViewConfig<P: Params + SignalChainOrderAccess> {
     pub params: Arc<P>,
     pub context: Arc<dyn GuiContext>,
     pub parent: ParentWindowHandle,
@@ -58,6 +58,8 @@ pub struct WebViewConfig<P: Params> {
     pub height: u32,
     /// Optional meter consumer for audio metering
     pub meter_consumer: Option<MeterConsumer>,
+    /// Optional meter consumer for Passthrough-local signal metering
+    pub passthrough_meter_consumer: Option<MeterConsumer>,
     /// Optional oscilloscope consumer for waveform snapshots
     pub oscilloscope_consumer: Option<OscilloscopeFrameConsumer>,
     /// Shared editor size - updated on resize requests
@@ -69,7 +71,7 @@ pub struct WebViewConfig<P: Params> {
 /// This function dispatches to the appropriate platform implementation
 /// based on compile-time target OS.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub fn create_webview<P: Params>(
+pub fn create_webview<P: Params + SignalChainOrderAccess>(
     _config: WebViewConfig<P>,
 ) -> Result<Box<dyn WebViewHandle>, String> {
     #[cfg(target_os = "macos")]
@@ -97,10 +99,11 @@ pub fn create_webview<P: Params>(
 ///
 /// Only used on macOS/Windows where WebView is available.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub fn create_ipc_handler<P: Params>(
+pub fn create_ipc_handler<P: Params + SignalChainOrderAccess>(
     params: Arc<P>,
     context: Arc<dyn GuiContext>,
     meter_consumer: Option<MeterConsumer>,
+    passthrough_meter_consumer: Option<MeterConsumer>,
     oscilloscope_consumer: Option<OscilloscopeFrameConsumer>,
     editor_size: Arc<Mutex<(u32, u32)>>,
 ) -> IpcHandler<PluginEditorBridge<P>> {
@@ -108,6 +111,7 @@ pub fn create_ipc_handler<P: Params>(
         params,
         context,
         meter_consumer,
+        passthrough_meter_consumer,
         oscilloscope_consumer,
         editor_size,
     );

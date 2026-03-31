@@ -3,16 +3,19 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use cpal::traits::{DeviceTrait, HostTrait};
 use cpal::{Device, Stream, StreamConfig};
-use wavecraft_processors::OscilloscopeTap;
 use wavecraft_protocol::MeterUpdateNotification;
 
+use super::super::SharedHardwareInputRoutingSelection;
+use super::super::SharedInputSourceSelection;
 use super::super::atomic_params::AtomicParameterBridge;
 use super::super::ffi_processor::DevAudioProcessor;
+use super::super::resolve_selected_input_device;
 
 const INPUT_STREAM_LABEL: &str = "input";
 const OUTPUT_STREAM_LABEL: &str = "output";
 
 pub(super) struct NegotiatedAudioDeviceConfig {
+    pub(super) selected_input_device_id: String,
     pub(super) input_device: Device,
     pub(super) output_device: Device,
     pub(super) input_config: StreamConfig,
@@ -23,28 +26,26 @@ pub(super) struct InputStreamBuildContext {
     pub(super) processor: Box<dyn DevAudioProcessor>,
     pub(super) buffer_size: usize,
     pub(super) input_channels: usize,
-    pub(super) sample_rate_hz: f32,
     pub(super) param_bridge: Arc<AtomicParameterBridge>,
+    pub(super) input_source_selection: SharedInputSourceSelection,
+    pub(super) hardware_input_routing_selection: SharedHardwareInputRoutingSelection,
     pub(super) ring_producer: rtrb::Producer<f32>,
     pub(super) meter_producer: rtrb::Producer<MeterUpdateNotification>,
-    pub(super) oscilloscope_tap: OscilloscopeTap,
 }
 
-pub(super) fn negotiate_default_devices_and_configs() -> Result<NegotiatedAudioDeviceConfig> {
+pub(super) fn negotiate_devices_and_configs(
+    selected_input_device_id: Option<&str>,
+) -> Result<NegotiatedAudioDeviceConfig> {
     let host = cpal::default_host();
 
     // Input device (required)
-    let input_device = host
-        .default_input_device()
-        .context("No input device available")?;
+    let resolved_input = resolve_selected_input_device(selected_input_device_id)?;
+    let input_device = resolved_input.device;
     log_required_device_name(INPUT_STREAM_LABEL, &input_device)?;
 
-    let input_supported_config = input_device
-        .default_input_config()
-        .context("Failed to get default input config")?;
-    let input_sample_rate = input_supported_config.sample_rate().0;
+    let input_sample_rate = resolved_input.config.sample_rate.0;
     log_sample_rate(INPUT_STREAM_LABEL, input_sample_rate);
-    let input_config: StreamConfig = input_supported_config.into();
+    let input_config = resolved_input.config;
 
     // Output device (required): dev mode expects audible output by default.
     let output_device = host
@@ -69,6 +70,7 @@ pub(super) fn negotiate_default_devices_and_configs() -> Result<NegotiatedAudioD
     let output_config: StreamConfig = output_supported_config.into();
 
     Ok(NegotiatedAudioDeviceConfig {
+        selected_input_device_id: resolved_input.selected_device_id,
         input_device,
         output_device,
         input_config,

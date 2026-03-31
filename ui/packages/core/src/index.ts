@@ -7,8 +7,43 @@
 // =============================================================================
 // Environment Detection
 // =============================================================================
-export { isWebViewEnvironment, isBrowserEnvironment } from './utils/environment';
 
+/**
+ * @wavecraft/core - Core SDK for Wavecraft WebView ↔ Rust communication
+ *
+ * Public exports for application code.
+ */
+// =============================================================================
+// Environment Detection
+// =============================================================================
+/**
+ * @wavecraft/core - Core SDK for Wavecraft WebView ↔ Rust communication
+ *
+ * Public exports for application code.
+ */
+// =============================================================================
+// Environment Detection
+// =============================================================================
+/**
+ * @wavecraft/core - Core SDK for Wavecraft WebView ↔ Rust communication
+ *
+ * Public exports for application code.
+ */
+// =============================================================================
+// Environment Detection
+// =============================================================================
+export { isBrowserEnvironment, isWebViewEnvironment } from './utils/environment';
+
+// =============================================================================
+// Types
+// =============================================================================
+
+// =============================================================================
+// Types
+// =============================================================================
+// =============================================================================
+// Types
+// =============================================================================
 // =============================================================================
 // Types
 // =============================================================================
@@ -19,27 +54,27 @@ export type {
   AudioRuntimePhase,
   AudioRuntimeStatus,
   GetAudioStatusResult,
+  IpcError,
+  IpcNotification,
   IpcRequest,
   IpcResponse,
-  IpcNotification,
-  IpcError,
   RequestId,
 } from './types/ipc';
 
 export type {
-  // Parameter types
-  ParameterInfo,
-  ParameterValue,
-  ParameterId,
-  ParameterIdMap,
-  ParameterType,
-  ParameterVariant,
+  GetAllParametersResult,
   GetParameterParams,
   GetParameterResult,
+  ParameterChangedNotification,
+  ParameterId,
+  ParameterIdMap,
+  // Parameter types
+  ParameterInfo,
+  ParameterType,
+  ParameterValue,
+  ParameterVariant,
   SetParameterParams,
   SetParameterResult,
-  GetAllParametersResult,
-  ParameterChangedNotification,
 } from './types/parameters';
 
 export type {
@@ -51,84 +86,157 @@ export type {
 export type {
   BypassProcessorId,
   LevelProcessorId,
-  ProcessorIdForParameterSuffix,
   ParameterIdForProcessorSuffix,
-  ToneFilterProcessorId,
-  ToneFilterBypassParameterId,
-  ToneFilterModeParameterId,
-  ToneFilterCutoffHzParameterId,
-  ToneFilterResonanceQParameterId,
-  ToneFilterParameterIds,
-  SoftClipProcessorId,
-  SoftClipBypassParameterId,
-  SoftClipDriveDbParameterId,
-  SoftClipOutputDbParameterId,
-  SoftClipMixParameterId,
-  SoftClipToneParameterId,
-  SoftClipParameterIds,
-  PassthroughProcessorId,
   PassthroughBypassParameterId,
   PassthroughParameterIds,
-  TestToneProcessorId,
+  PassthroughProcessorId,
+  ProcessorIdForParameterSuffix,
+  SoftClipBypassParameterId,
+  SoftClipDriveDbParameterId,
+  SoftClipMixParameterId,
+  SoftClipOutputDbParameterId,
+  SoftClipParameterIds,
+  SoftClipProcessorId,
+  SoftClipToneParameterId,
   TestToneBypassParameterId,
   TestToneEnabledParameterId,
   TestToneFrequencyParameterId,
   TestToneLevelParameterId,
   TestToneParameterIds,
+  TestToneProcessorId,
+  ToneFilterBypassParameterId,
+  ToneFilterCutoffHzParameterId,
+  ToneFilterModeParameterId,
+  ToneFilterParameterIds,
+  ToneFilterProcessorId,
+  ToneFilterResonanceQParameterId,
 } from './types/processor-parameter-ids';
 
 export type {
+  GetMeterFrameResult,
   // Metering types
   MeterFrame,
-  GetMeterFrameResult,
 } from './types/metering';
 
 export type {
-  // Oscilloscope types
-  OscilloscopeTriggerMode,
+  GetOscilloscopeFrameResult,
   OscilloscopeChannelView,
   OscilloscopeFrame,
-  GetOscilloscopeFrameResult,
+  // Oscilloscope types
+  OscilloscopeTriggerMode,
 } from './types/oscilloscope';
 
-// IPC error codes
+export type {
+  AudioSignalTapId,
+  // Signal chain order types
+  SignalChainOrder,
+  SlotType,
+} from './types/signal-chain';
+
+export type {
+  GetInputSourceResult,
+  InputSourceChangedNotification,
+  InputSourceKind,
+  InputSourceOption,
+  SetInputSourceParams,
+  SetInputSourceResult,
+} from './types/input-source';
+
+export type {
+  GetHardwareInputSelectionResult,
+  HardwareInputChannelOption,
+  HardwareInputDeviceOption,
+  HardwareInputSelectionChangedNotification,
+  SetHardwareInputSelectionParams,
+  SetHardwareInputSelectionResult,
+} from './types/hardware-input';
+
+// =============================================================================
+// Constants and type guards
+// =============================================================================
+
+// =============================================================================
+// Constants and type guards
+// =============================================================================
+// =============================================================================
+// Constants and type guards
+// =============================================================================
+// =============================================================================
+// Constants and type guards
+// =============================================================================
 export {
-  ERROR_PARSE,
+  ERROR_INTERNAL,
+  ERROR_INVALID_PARAMS,
   ERROR_INVALID_REQUEST,
   ERROR_METHOD_NOT_FOUND,
-  ERROR_INVALID_PARAMS,
-  ERROR_INTERNAL,
   ERROR_PARAM_NOT_FOUND,
   ERROR_PARAM_OUT_OF_RANGE,
+  ERROR_PARSE,
   METHOD_GET_AUDIO_STATUS,
   METHOD_GET_OSCILLOSCOPE_FRAME,
+  METHOD_GET_PASSTHROUGH_METER_FRAME,
   NOTIFICATION_AUDIO_STATUS_CHANGED,
   isAudioRuntimeStatus,
-  isIpcResponse,
-  isIpcNotification,
   isIpcError,
+  isIpcNotification,
+  isIpcResponse,
 } from './types/ipc';
 
-// IPC method names
 export {
+  METHOD_GET_ALL_PARAMETERS,
   METHOD_GET_PARAMETER,
   METHOD_SET_PARAMETER,
-  METHOD_GET_ALL_PARAMETERS,
   NOTIFICATION_PARAMETER_CHANGED,
 } from './types/parameters';
 
-export { IpcMethods, IpcEvents } from './ipc/constants';
-export type { IpcMethod, IpcEvent } from './ipc/constants';
+export {
+  METHOD_GET_INPUT_SOURCE,
+  METHOD_SET_INPUT_SOURCE,
+  NOTIFICATION_INPUT_SOURCE_CHANGED,
+} from './types/input-source';
+
+export { IpcEvents, IpcMethods } from './ipc/constants';
+export type { IpcEvent, IpcMethod } from './ipc/constants';
 
 // =============================================================================
-// Core Classes (advanced use)
+// Core classes (advanced use)
 // =============================================================================
+
+// =============================================================================
+// Core classes (advanced use)
+// =============================================================================
+export { HardwareInputClient } from './ipc/HardwareInputClient';
+// =============================================================================
+// Core classes (advanced use)
+// =============================================================================
+// =============================================================================
+// Core classes (advanced use)
+// =============================================================================
+export { InputSourceClient } from './ipc/InputSourceClient';
 export { IpcBridge } from './ipc/IpcBridge';
 export { ParameterClient } from './ipc/ParameterClient';
+export { SignalChainOrderClient } from './ipc/SignalChainOrderClient';
+export type {
+  GetSignalChainOrderResult,
+  SetSignalChainOrderParams,
+  SignalChainOrderChangedNotification,
+} from './ipc/SignalChainOrderClient';
 
 // =============================================================================
-// React Hooks (primary API)
+// React hooks (primary API)
 // =============================================================================
+
+// =============================================================================
+// React hooks (primary API)
+// =============================================================================
+// =============================================================================
+// React hooks (primary API)
+// =============================================================================
+// =============================================================================
+// React hooks (primary API)
+// =============================================================================
+export type { SettingsModalContextValue } from './context/SettingsModalContext';
+export { useSettingsModal } from './context/useSettingsModal';
 export { WavecraftProvider } from './context/WavecraftProvider';
 export type { WavecraftProviderProps } from './context/WavecraftProvider';
 
@@ -147,56 +255,98 @@ export type { ConnectionStatus, TransportType } from './hooks/useConnectionStatu
 export { useLatencyMonitor } from './hooks/useLatencyMonitor';
 export type { UseLatencyMonitorResult } from './hooks/useLatencyMonitor';
 
+export { useAudioStatus } from './hooks/useAudioStatus';
+export type { UseAudioStatusResult } from './hooks/useAudioStatus';
+export { useHardwareInputSelection } from './hooks/useHardwareInputSelection';
+export type { UseHardwareInputSelectionResult } from './hooks/useHardwareInputSelection';
+export { useInputSource } from './hooks/useInputSource';
+export type { UseInputSourceResult } from './hooks/useInputSource';
 export { useMeterFrame } from './hooks/useMeterFrame';
 export {
-  useMeterSignalActivity,
-  getMeterSignalLevel,
-  getMeterSignalIntensity,
   getMeterClipWarningIntensity,
+  getMeterSignalIntensity,
+  getMeterSignalLevel,
+  useMeterSignalActivity,
+  usePassthroughMeterSignalActivity,
 } from './hooks/useMeterSignalActivity';
 export type {
-  MeterSignalActivityState,
-  MeterSignalIntensityRange,
   MeterClipWarningRange,
   MeterSignalActivitySmoothing,
+  MeterSignalActivityState,
+  MeterSignalIntensityRange,
   UseMeterSignalActivityOptions,
 } from './hooks/useMeterSignalActivity';
 export { useOscilloscopeFrame } from './hooks/useOscilloscopeFrame';
-export { useAudioStatus } from './hooks/useAudioStatus';
-export type { UseAudioStatusResult } from './hooks/useAudioStatus';
+export { usePassthroughMeterFrame } from './hooks/usePassthroughMeterFrame';
 
-export { useRequestResize } from './hooks/useRequestResize';
-export { useHasProcessorInSignalChain } from './hooks/useHasProcessor';
 export { useAvailableProcessors } from './hooks/useAvailableProcessors';
+export { useHasProcessorInSignalChain } from './hooks/useHasProcessor';
 export { useProcessorBypass } from './hooks/useProcessorBypass';
 export type { UseProcessorBypassResult } from './hooks/useProcessorBypass';
+export { useRequestResize } from './hooks/useRequestResize';
+
+export { useSignalChainOrder } from './hooks/useSignalChainOrder';
+export type { UseSignalChainOrderResult } from './hooks/useSignalChainOrder';
 
 export { requestResize, useWindowResizeSync } from './hooks/useWindowResizeSync';
 export type { RequestResizeParams, RequestResizeResult } from './hooks/useWindowResizeSync';
 
 // Runtime processor registry (used by generated processors module)
-export { registerAvailableProcessors } from './processors/registry';
+// Runtime processor registry (used by generated processors module)
+// Runtime processor registry (used by generated processors module)
+// Runtime processor registry (used by generated processors module)
 export {
+  PROCESSOR_BYPASS_SUFFIX,
   getProcessorBypassParamId,
   isBypassParameterId,
-  PROCESSOR_BYPASS_SUFFIX,
 } from './processors/bypass';
+export { registerAvailableProcessors } from './processors/registry';
 
 // =============================================================================
 // Metering API
 // =============================================================================
-export { getMeterFrame } from './meter-ipc';
+
+// =============================================================================
+// Metering API
+// =============================================================================
+// =============================================================================
+// Metering API
+// =============================================================================
+// =============================================================================
+// Metering API
+// =============================================================================
+export { getMeterFrame, getPassthroughMeterFrame } from './meter-ipc';
 export { getOscilloscopeFrame } from './oscilloscope-ipc';
-export { linearToDb, dbToLinear } from './utils/audio-math';
+export { dbToLinear, linearToDb } from './utils/audio-math';
 
 // =============================================================================
 // Logger
 // =============================================================================
-export { logger, Logger, LogLevel } from './logger/Logger';
+
+// =============================================================================
+// Logger
+// =============================================================================
+// =============================================================================
+// Logger
+// =============================================================================
+// =============================================================================
+// Logger
+// =============================================================================
+export { LogLevel, Logger, logger } from './logger/Logger';
 export type { LogContext } from './logger/Logger';
 
 // =============================================================================
 // Transports (advanced use)
 // =============================================================================
-export type { Transport, NotificationCallback } from './transports';
-export { WebSocketTransport, NativeTransport } from './transports';
+
+// =============================================================================
+// Transports (advanced use)
+// =============================================================================
+// =============================================================================
+// Transports (advanced use)
+// =============================================================================
+// =============================================================================
+// Transports (advanced use)
+// =============================================================================
+export { NativeTransport, WebSocketTransport } from './transports';
+export type { NotificationCallback, Transport } from './transports';

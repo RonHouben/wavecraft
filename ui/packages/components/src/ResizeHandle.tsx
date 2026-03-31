@@ -5,6 +5,7 @@
  * Captures mouse drag events and communicates size changes to the host.
  */
 
+import { useRequestResize } from '@wavecraft/core';
 import React, { useCallback, useRef, useState } from 'react';
 import { focusRingClass, interactionStateClass } from './utils/classNames';
 
@@ -13,11 +14,9 @@ const MIN_HEIGHT = 300;
 const KEYBOARD_RESIZE_STEP = 24;
 const KEYBOARD_RESIZE_STEP_LARGE = 64;
 
-export interface ResizeHandleProps {
-  readonly onRequestResize: (width: number, height: number) => Promise<boolean>;
-}
+export function ResizeHandle(): React.JSX.Element {
+  const requestResize = useRequestResize();
 
-export function ResizeHandle({ onRequestResize }: Readonly<ResizeHandleProps>): React.JSX.Element {
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
 
@@ -25,9 +24,9 @@ export function ResizeHandle({ onRequestResize }: Readonly<ResizeHandleProps>): 
     (deltaWidth: number, deltaHeight: number): void => {
       const newWidth = Math.max(MIN_WIDTH, window.innerWidth + deltaWidth);
       const newHeight = Math.max(MIN_HEIGHT, window.innerHeight + deltaHeight);
-      void onRequestResize(newWidth, newHeight);
+      requestResize(newWidth, newHeight);
     },
-    [onRequestResize]
+    [requestResize]
   );
 
   const handleMouseDown = useCallback(
@@ -51,7 +50,7 @@ export function ResizeHandle({ onRequestResize }: Readonly<ResizeHandleProps>): 
         const newHeight = Math.max(MIN_HEIGHT, dragStartRef.current.height + deltaY);
 
         // Request resize from host
-        void onRequestResize(newWidth, newHeight);
+        requestResize(newWidth, newHeight);
       };
 
       const handleMouseUp = (): void => {
@@ -63,7 +62,7 @@ export function ResizeHandle({ onRequestResize }: Readonly<ResizeHandleProps>): 
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
     },
-    [onRequestResize]
+    [requestResize]
   );
 
   const handleKeyDown = useCallback(

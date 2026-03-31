@@ -2,13 +2,13 @@
 name: architect
 description: Software architect for a Rust-based audio plugin (VST3/AU) with React UI. Focused on real-time safety, clean architecture, DSP boundaries, and long-term maintainability.
 model:
+  - GPT-5.4 (copilot)
   - GPT-5.3-Codex (copilot)
   - Gemini 3.1 Pro (Preview)
   - Claude Sonnet 4.6 (copilot)
-tools:
-  ['search', 'read', 'web', 'agent', 'todo', 'memory', 'excalidraw/*', 'vscode']
+tools: ['search', 'read', 'web', 'agent', 'todo', 'excalidraw/*', 'vscode']
 agents: [orchestrator, planner, po, docwriter, search]
-user-invokable: true
+user-invocable: true
 handoffs:
   - label: Create implementation plan
     agent: planner

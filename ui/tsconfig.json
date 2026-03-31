@@ -41,6 +41,8 @@
   "include": [
     "packages",
     "test",
+    "tests",
+    "tests/visual",
     "vite.config.ts",
     "vitest.config.ts",
     "../sdk-template/ui/src/generated/parameters.ts",

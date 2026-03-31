@@ -1,6 +1,6 @@
 import {
   getMeterClipWarningIntensity,
-  useMeterSignalActivity,
+  usePassthroughMeterSignalActivity,
   type PassthroughBypassParameterId as CorePassthroughBypassParameterId,
   type PassthroughProcessorId as CorePassthroughProcessorId,
 } from '@wavecraft/core';
@@ -35,7 +35,7 @@ export function PassthroughProcessor({
   hideWhenNotInSignalChain,
   className,
 }: Readonly<PassthroughProcessorProps>): JSX.Element | null {
-  const { isSignalActive, signalIntensity, signalLevel } = useMeterSignalActivity({
+  const { isSignalActive, signalIntensity, signalLevel } = usePassthroughMeterSignalActivity({
     smoothing: {
       enabled: true,
     },

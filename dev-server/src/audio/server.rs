@@ -24,6 +24,7 @@
 mod device_setup;
 mod input_pipeline;
 mod metering;
+#[cfg(test)]
 mod output_modifiers;
 mod output_routing;
 mod startup_wiring;
@@ -32,9 +33,10 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use cpal::{Device, Stream, StreamConfig};
-use wavecraft_processors::OscilloscopeFrameConsumer;
 use wavecraft_protocol::MeterUpdateNotification;
 
+use super::SharedHardwareInputRoutingSelection;
+use super::SharedInputSourceSelection;
 use super::atomic_params::AtomicParameterBridge;
 use super::ffi_processor::DevAudioProcessor;
 
@@ -59,11 +61,14 @@ pub struct AudioHandle {
 pub struct AudioServer {
     processor: Box<dyn DevAudioProcessor>,
     config: AudioConfig,
+    selected_input_device_id: String,
     input_device: Device,
     output_device: Device,
     input_config: StreamConfig,
     output_config: StreamConfig,
     param_bridge: Arc<AtomicParameterBridge>,
+    input_source_selection: SharedInputSourceSelection,
+    hardware_input_routing_selection: SharedHardwareInputRoutingSelection,
 }
 
 impl AudioServer {
@@ -73,17 +78,23 @@ impl AudioServer {
         processor: Box<dyn DevAudioProcessor>,
         config: AudioConfig,
         param_bridge: Arc<AtomicParameterBridge>,
+        input_source_selection: SharedInputSourceSelection,
+        hardware_input_routing_selection: SharedHardwareInputRoutingSelection,
+        selected_input_device_id: Option<&str>,
     ) -> Result<Self> {
-        let negotiated = device_setup::negotiate_default_devices_and_configs()?;
+        let negotiated = device_setup::negotiate_devices_and_configs(selected_input_device_id)?;
 
         Ok(Self {
             processor,
             config,
+            selected_input_device_id: negotiated.selected_input_device_id,
             input_device: negotiated.input_device,
             output_device: negotiated.output_device,
             input_config: negotiated.input_config,
             output_config: negotiated.output_config,
             param_bridge,
+            input_source_selection,
+            hardware_input_routing_selection,
         })
     }
 
@@ -94,13 +105,7 @@ impl AudioServer {
     /// buffer (RT-safe: no allocations on the audio thread).
     ///
     /// Drop the handle to stop audio.
-    pub fn start(
-        mut self,
-    ) -> Result<(
-        AudioHandle,
-        rtrb::Consumer<MeterUpdateNotification>,
-        OscilloscopeFrameConsumer,
-    )> {
+    pub fn start(mut self) -> Result<(AudioHandle, rtrb::Consumer<MeterUpdateNotification>)> {
         // Set sample rate from the actual input device config
         let actual_sample_rate = self.input_config.sample_rate.0 as f32;
         self.processor.set_sample_rate(actual_sample_rate);
@@ -121,12 +126,17 @@ impl AudioServer {
             input_channels,
             output_channels,
             param_bridge,
-            actual_sample_rate,
+            input_source_selection: self.input_source_selection,
+            hardware_input_routing_selection: self.hardware_input_routing_selection,
         })
     }
 
     /// Returns true if an output device is available for audio playback.
     pub fn has_output(&self) -> bool {
         true
+    }
+
+    pub fn selected_input_device_id(&self) -> &str {
+        &self.selected_input_device_id
     }
 }

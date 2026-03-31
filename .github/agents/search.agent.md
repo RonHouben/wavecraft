@@ -2,12 +2,13 @@
 name: search
 description: Deep codebase search specialist for finding and explaining code patterns, architecture, and implementation details across files. Read-only research tool.
 model:
+  - GPT-5.4 (copilot)
   - GPT-5.3-Codex (copilot)
   - GPT-5.2-Codex (copilot)
   - Claude Opus 4.6 (copilot)
-tools: ['read', 'search', 'web', 'todo', 'memory', 'vscode']
+tools: ['read', 'search', 'web', 'todo', 'vscode']
 agents: []
-user-invokable: false
+user-invocable: false
 ---
 
 # Search Agent

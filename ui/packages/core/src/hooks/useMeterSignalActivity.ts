@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MeterFrame } from '../types/metering';
 import { linearToDb } from '../utils/audio-math';
 import { useMeterFrame } from './useMeterFrame';
+import { usePassthroughMeterFrame } from './usePassthroughMeterFrame';
 
 const DEFAULT_INTERVAL_MS = 50;
 const DEFAULT_THRESHOLD = 0.002;
@@ -43,13 +44,28 @@ export function useMeterSignalActivity(
   options: Readonly<UseMeterSignalActivityOptions> = {}
 ): MeterSignalActivityState {
   const intervalMs = options.intervalMs ?? DEFAULT_INTERVAL_MS;
+  const frame = useMeterFrame(intervalMs);
+  return useSignalActivityForFrame(frame, options);
+}
+
+export function usePassthroughMeterSignalActivity(
+  options: Readonly<UseMeterSignalActivityOptions> = {}
+): MeterSignalActivityState {
+  const intervalMs = options.intervalMs ?? DEFAULT_INTERVAL_MS;
+  const frame = usePassthroughMeterFrame(intervalMs);
+  return useSignalActivityForFrame(frame, options);
+}
+
+function useSignalActivityForFrame(
+  frame: MeterFrame | null,
+  options: Readonly<UseMeterSignalActivityOptions>
+): MeterSignalActivityState {
   const threshold = options.threshold ?? DEFAULT_THRESHOLD;
   const smoothingEnabled = options.smoothing?.enabled ?? false;
   const holdMs = options.smoothing?.holdMs ?? DEFAULT_HOLD_MS;
   const intensityFloorDb = options.intensityRange?.floorDb ?? DEFAULT_INTENSITY_FLOOR_DB;
   const intensityCeilingDb = options.intensityRange?.ceilingDb ?? DEFAULT_INTENSITY_CEILING_DB;
 
-  const frame = useMeterFrame(intervalMs);
   const signalLevel = useMemo(() => getMeterSignalLevel(frame), [frame]);
   const signalIntensity = useMemo(
     () =>

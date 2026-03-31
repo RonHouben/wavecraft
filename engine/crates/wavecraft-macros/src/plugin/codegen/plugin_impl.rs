@@ -1,0 +1,225 @@
+use proc_macro2::TokenStream;
+use quote::quote;
+
+pub(super) struct PluginImplInput<'a> {
+    pub(super) krate: &'a syn::Path,
+    pub(super) name: &'a syn::LitStr,
+    pub(super) vendor: &'a str,
+    pub(super) url: &'a str,
+    pub(super) clap_id: &'a str,
+    pub(super) vst3_id: &'a TokenStream,
+    pub(super) shared_symbols: &'a super::context::SharedSymbols,
+    pub(super) signal_chain: &'a super::signal_chain::SignalChainTokens,
+    pub(super) process_method_tokens: &'a TokenStream,
+}
+
+/// Generate `impl Default`, `impl Plugin`, `impl ClapPlugin`, `impl Vst3Plugin`,
+/// and the `nih_export_*!` calls for `__WavecraftPlugin`.
+pub(super) fn build(input: PluginImplInput<'_>) -> TokenStream {
+    let PluginImplInput {
+        krate,
+        name,
+        vendor,
+        url,
+        clap_id,
+        vst3_id,
+        shared_symbols,
+        signal_chain,
+        process_method_tokens,
+    } = input;
+
+    let n_lit = &shared_symbols.n_lit;
+    let np1_lit = &shared_symbols.np1_lit;
+    let proc_idx_u8 = &shared_symbols.proc_idx_u8;
+
+    let param_count_exprs = &signal_chain.param_count_exprs;
+    let proc_defaults = &signal_chain.proc_defaults;
+    let passthrough_meter_defaults = &signal_chain.passthrough_meter_defaults;
+    let passthrough_meter_initialize = &signal_chain.passthrough_meter_initialize;
+    let passthrough_meter_reset = &signal_chain.passthrough_meter_reset;
+    let tap_defaults = &signal_chain.tap_defaults;
+    let tap_initialize = &signal_chain.tap_initialize;
+    let set_sample_rate_calls = &signal_chain.set_sample_rate_calls;
+    let tap_reset = &signal_chain.tap_reset;
+    let reset_calls = &signal_chain.reset_calls;
+    let passthrough_meter_channel_setup = if signal_chain.has_passthrough_processor {
+        quote! {
+            let (__passthrough_meter_producer, __passthrough_meter_consumer_inner) =
+                #krate::create_meter_channel(64);
+            let __passthrough_meter_consumer =
+                ::std::option::Option::Some(__passthrough_meter_consumer_inner);
+        }
+    } else {
+        quote! {
+            let __passthrough_meter_consumer = ::std::option::Option::None;
+        }
+    };
+    let passthrough_meter_field_init = if signal_chain.has_passthrough_processor {
+        quote! {
+            #passthrough_meter_defaults
+            passthrough_meter_producer: __passthrough_meter_producer,
+        }
+    } else {
+        quote! {}
+    };
+
+    quote! {
+        impl ::std::default::Default for __WavecraftPlugin {
+            fn default() -> Self {
+                let (meter_producer, _meter_consumer) = #krate::create_meter_channel(64);
+                let (__oscilloscope_producer, __oscilloscope_consumer) =
+                    #krate::create_oscilloscope_channel(8);
+                #passthrough_meter_channel_setup
+
+                // Compute cumulative param offsets at construction time (not audio-thread)
+                let __param_offsets: [usize; #np1_lit] = {
+                    let __counts: [usize; #n_lit] = [#(#param_count_exprs),*];
+                    let mut __offs = [0usize; #np1_lit];
+                    let mut __acc = 0usize;
+                    let mut __i = 0usize;
+                    while __i < #n_lit {
+                        __acc += __counts[__i];
+                        __offs[__i + 1] = __acc;
+                        __i += 1;
+                    }
+                    __offs
+                };
+
+                Self {
+                    params: ::std::sync::Arc::new(__WavecraftParams::default()),
+                    #(#proc_defaults)*
+                    __current_order: [#(#proc_idx_u8),*],
+                    __param_offsets,
+                    __cf_pos: 0,
+                    __cf_dir: 0i8,
+                    // Pre-grow to total param count so process() never reallocates.
+                    __param_scratch: ::std::vec::Vec::with_capacity(__param_offsets[#n_lit]),
+                    #passthrough_meter_field_init
+                    // Tap processors (Step 15: constructed via Default, scratch buffers grown in initialize())
+                    #tap_defaults
+                    meter_producer,
+                    #[cfg(any(target_os = "macos", target_os = "windows"))]
+                    meter_consumer: ::std::sync::Mutex::new(
+                        ::std::option::Option::Some(_meter_consumer),
+                    ),
+                    #[cfg(any(target_os = "macos", target_os = "windows"))]
+                    passthrough_meter_consumer: ::std::sync::Mutex::new(
+                        __passthrough_meter_consumer,
+                    ),
+                    oscilloscope_consumer: ::std::sync::Mutex::new(
+                        ::std::option::Option::Some(__oscilloscope_consumer),
+                    ),
+                }
+            }
+        }
+
+        impl #krate::__nih::Plugin for __WavecraftPlugin {
+            const NAME: &'static str = #name;
+            const VENDOR: &'static str = #vendor;
+            const URL: &'static str = #url;
+            const EMAIL: &'static str = "";
+            const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+
+            const AUDIO_IO_LAYOUTS: &'static [#krate::__nih::AudioIOLayout] = &[
+                #krate::__nih::AudioIOLayout {
+                    main_input_channels: ::std::num::NonZeroU32::new(2),
+                    main_output_channels: ::std::num::NonZeroU32::new(2),
+                    ..#krate::__nih::AudioIOLayout::const_default()
+                },
+            ];
+
+            const MIDI_INPUT: #krate::__nih::MidiConfig = #krate::__nih::MidiConfig::None;
+            const MIDI_OUTPUT: #krate::__nih::MidiConfig = #krate::__nih::MidiConfig::None;
+
+            type SysExMessage = ();
+            type BackgroundTask = ();
+
+            fn params(&self) -> ::std::sync::Arc<dyn #krate::__nih::Params> {
+                self.params.clone()
+            }
+
+            fn editor(
+                &mut self,
+                _async_executor: #krate::__nih::AsyncExecutor<Self>,
+            ) -> ::std::option::Option<::std::boxed::Box<dyn #krate::__nih::Editor>> {
+                #[cfg(any(target_os = "macos", target_os = "windows"))]
+                {
+                    let meter_consumer = self
+                        .meter_consumer
+                        .lock()
+                        .expect("meter_consumer mutex poisoned")
+                        .take();
+                    let oscilloscope_consumer = self
+                        .oscilloscope_consumer
+                        .lock()
+                        .expect("oscilloscope_consumer mutex poisoned")
+                        .take();
+                    let passthrough_meter_consumer = self
+                        .passthrough_meter_consumer
+                        .lock()
+                        .expect("passthrough_meter_consumer mutex poisoned")
+                        .take();
+                    #krate::editor::create_webview_editor(
+                        self.params.clone(),
+                        meter_consumer,
+                        passthrough_meter_consumer,
+                        oscilloscope_consumer,
+                        800,
+                        600,
+                    )
+                }
+                #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+                {
+                    None
+                }
+            }
+
+            fn initialize(
+                &mut self,
+                _audio_io_layout: &#krate::__nih::AudioIOLayout,
+                _buffer_config: &#krate::__nih::BufferConfig,
+                _context: &mut impl #krate::__nih::InitContext<Self>,
+            ) -> bool {
+                #(#set_sample_rate_calls)*
+                // Step 15: initialize tap processors + resize scratch buffers
+                #tap_initialize
+                #passthrough_meter_initialize
+                true
+            }
+
+            fn reset(&mut self) {
+                #(#reset_calls)*
+                // Step 15: reset tap processors
+                #tap_reset
+                #passthrough_meter_reset
+            }
+
+            #process_method_tokens
+        }
+
+        impl #krate::__nih::ClapPlugin for __WavecraftPlugin {
+            const CLAP_ID: &'static str = #clap_id;
+            const CLAP_DESCRIPTION: Option<&'static str> = None;
+            const CLAP_MANUAL_URL: Option<&'static str> = None;
+            const CLAP_SUPPORT_URL: Option<&'static str> = None;
+            const CLAP_FEATURES: &'static [#krate::__nih::ClapFeature] = &[
+                #krate::__nih::ClapFeature::AudioEffect,
+                #krate::__nih::ClapFeature::Stereo,
+            ];
+        }
+
+        impl #krate::__nih::Vst3Plugin for __WavecraftPlugin {
+            const VST3_CLASS_ID: [u8; 16] = #vst3_id;
+            const VST3_SUBCATEGORIES: &'static [#krate::__nih::Vst3SubCategory] =
+                &[#krate::__nih::Vst3SubCategory::Fx];
+        }
+
+        // When building with `_param-discovery` feature, skip nih-plug's
+        // static initializers (VST3/CLAP factory registration) to prevent
+        // dlopen from hanging on macOS audio subsystem services.
+        #[cfg(not(feature = "_param-discovery"))]
+        #krate::__nih::nih_export_clap!(__WavecraftPlugin);
+        #[cfg(not(feature = "_param-discovery"))]
+        #krate::__nih::nih_export_vst3!(__WavecraftPlugin);
+    }
+}

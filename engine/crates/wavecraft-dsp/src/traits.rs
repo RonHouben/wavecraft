@@ -200,3 +200,34 @@ pub trait Processor: Send + 'static {
     /// No-op by default. Override if your processor maintains state.
     fn reset(&mut self) {}
 }
+
+/// Trait for observation-only tap processors in the signal chain.
+///
+/// Tap processors observe audio at a designated insertion point without
+/// modifying it. They are declared at compile time via `taps: [...]` in
+/// `wavecraft_plugin!` and excluded from the processor catalog.
+///
+/// # Real-Time Safety
+///
+/// All methods must be real-time safe (no allocations, locks, or syscalls).
+pub trait TapProcessor: Default + Send + 'static {
+    /// Called when the sample rate changes.
+    ///
+    /// Use this to update internal state that depends on sample rate.
+    fn set_sample_rate(&mut self, sample_rate: f32);
+
+    /// Reset internal tap state.
+    ///
+    /// Called when the host stops playback or when the user resets the plugin.
+    fn reset(&mut self);
+
+    /// Observe a stereo audio buffer at the tap's insertion point (read-only).
+    ///
+    /// Called after the tap's insertion point in the signal chain.
+    /// The tap MUST NOT modify the buffer data.
+    ///
+    /// # Real-Time Safety
+    ///
+    /// This method is called on the audio thread. It MUST be real-time safe.
+    fn observe_stereo(&mut self, left: &[f32], right: &[f32]);
+}

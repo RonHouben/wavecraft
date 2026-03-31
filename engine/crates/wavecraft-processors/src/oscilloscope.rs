@@ -2,7 +2,7 @@
 //!
 //! The oscilloscope tap is observation-only: it never modifies audio samples.
 
-use wavecraft_dsp::{Processor, Transport};
+use wavecraft_dsp::TapProcessor;
 use wavecraft_protocol::{OscilloscopeFrame, OscilloscopeTriggerMode};
 
 /// Number of points per oscilloscope frame.
@@ -260,26 +260,23 @@ impl OscilloscopeTap {
     }
 }
 
-impl Processor for OscilloscopeTap {
-    type Params = ();
-
+impl TapProcessor for OscilloscopeTap {
     fn set_sample_rate(&mut self, sample_rate: f32) {
         self.set_sample_rate_hz(sample_rate);
     }
 
-    fn process(
-        &mut self,
-        buffer: &mut [&mut [f32]],
-        _transport: &Transport,
-        _params: &Self::Params,
-    ) {
-        if buffer.is_empty() {
-            return;
-        }
+    fn reset(&mut self) {
+        self.frame_l.fill(0.0);
+        self.frame_r.fill(0.0);
+        self.history_l.fill(0.0);
+        self.history_r.fill(0.0);
+        self.aligned_l.fill(0.0);
+        self.aligned_r.fill(0.0);
+        self.history_frames_filled = 0;
+        self.timestamp = 0;
+    }
 
-        let left = &*buffer[0];
-        let right = if buffer.len() > 1 { &*buffer[1] } else { left };
-
+    fn observe_stereo(&mut self, left: &[f32], right: &[f32]) {
         // Observation-only capture. Audio data is never modified.
         self.capture_stereo(left, right);
     }
@@ -293,13 +290,13 @@ mod tests {
     fn passthrough_invariance() {
         let mut tap = OscilloscopeTap::new();
 
-        let mut left = [0.25_f32, -0.1, 0.4, -0.3];
-        let mut right = [-0.2_f32, 0.5, -0.4, 0.1];
+        let left = [0.25_f32, -0.1, 0.4, -0.3];
+        let right = [-0.2_f32, 0.5, -0.4, 0.1];
         let expected_left = left;
         let expected_right = right;
-        let mut buffer = [&mut left[..], &mut right[..]];
 
-        tap.process(&mut buffer, &Transport::default(), &());
+        // observe_stereo takes immutable slices — audio data must not be modified.
+        tap.observe_stereo(&left, &right);
 
         assert_eq!(left, expected_left);
         assert_eq!(right, expected_right);

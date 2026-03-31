@@ -24,6 +24,7 @@ const PARAM_ORDERING: Ordering = Ordering::SeqCst;
 /// values change. This makes reads fully lock-free and real-time safe.
 pub struct AtomicParameterBridge {
     params: HashMap<String, Arc<AtomicF32>>,
+    param_indices: HashMap<String, usize>,
     ordered_params: Vec<Arc<AtomicF32>>,
 }
 
@@ -33,16 +34,19 @@ impl AtomicParameterBridge {
     /// Each parameter gets an `AtomicF32` initialized to its default value.
     pub fn new(parameters: &[ParameterInfo]) -> Self {
         let mut params = HashMap::with_capacity(parameters.len());
+        let mut param_indices = HashMap::with_capacity(parameters.len());
         let mut ordered_params = Vec::with_capacity(parameters.len());
 
-        for parameter in parameters {
+        for (index, parameter) in parameters.iter().enumerate() {
             let atomic = Arc::new(AtomicF32::new(parameter.default));
             params.insert(parameter.id.clone(), Arc::clone(&atomic));
+            param_indices.insert(parameter.id.clone(), index);
             ordered_params.push(atomic);
         }
 
         Self {
             params,
+            param_indices,
             ordered_params,
         }
     }
@@ -83,6 +87,11 @@ impl AtomicParameterBridge {
             output[idx] = atomic.load(PARAM_ORDERING);
         }
         count
+    }
+
+    /// Return the stable plain-value index for the parameter ID.
+    pub fn parameter_index(&self, id: &str) -> Option<usize> {
+        self.param_indices.get(id).copied()
     }
 
     fn lookup_param(&self, id: &str) -> Option<&Arc<AtomicF32>> {
@@ -234,5 +243,13 @@ mod tests {
         let params = test_params();
         let bridge = AtomicParameterBridge::new(&params);
         assert_eq!(bridge.parameter_count(), params.len());
+    }
+
+    #[test]
+    fn test_parameter_index_matches_generation_order() {
+        let bridge = AtomicParameterBridge::new(&test_params());
+        assert_eq!(bridge.parameter_index("gain"), Some(0));
+        assert_eq!(bridge.parameter_index("mix"), Some(1));
+        assert_eq!(bridge.parameter_index("missing"), None);
     }
 }

@@ -37,31 +37,20 @@ const INPUT_TRIM_PARAM_ID: &str = "input_trim_level";
 const INPUT_TRIM_BYPASS_PARAM_ID: &str = "input_trim_bypass";
 const LEGACY_INPUT_GAIN_PARAM_ID: &str = "input_gain_level";
 const OUTPUT_GAIN_PARAM_ID: &str = "output_gain_level";
-const TEST_TONE_ENABLED_PARAM_ID: &str = "test_tone_enabled";
-const TEST_TONE_BYPASS_PARAM_ID: &str = "test_tone_bypass";
-const TEST_TONE_FREQUENCY_PARAM_ID: &str = "test_tone_frequency";
-const TEST_TONE_LEVEL_PARAM_ID: &str = "test_tone_level";
-const TEST_TONE_FREQUENCY_MIN_HZ: f32 = 20.0;
-const TEST_TONE_FREQUENCY_MAX_HZ: f32 = 20_000.0;
-const TEST_TONE_FREQUENCY_FALLBACK_HZ: f32 = 440.0;
-const TEST_TONE_LEVEL_MIN: f32 = 0.0;
-const TEST_TONE_LEVEL_MAX: f32 = 1.0;
-const TEST_TONE_LEVEL_FALLBACK: f32 = 0.0;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 enum ToneFilterMode {
     #[default]
-    LowPass,
-    HighPass,
-    BandPass,
+    Low,
+    High,
+    Band,
 }
 
 impl ToneFilterMode {
     fn from_index(index: i32) -> Self {
         match index {
-            1 => Self::HighPass,
-            2 => Self::BandPass,
-            _ => Self::LowPass,
+            1 => Self::High,
+            2 => Self::Band,
+            _ => Self::Low,
         }
     }
 }
@@ -110,7 +99,6 @@ pub(super) fn apply_output_modifiers(
     left: &mut [f32],
     right: &mut [f32],
     param_bridge: &AtomicParameterBridge,
-    test_tone_phase: &mut f32,
     sample_rate: f32,
 ) {
     let mut tone_filter_state = StereoToneFilterState::default();
@@ -118,7 +106,6 @@ pub(super) fn apply_output_modifiers(
         left,
         right,
         param_bridge,
-        test_tone_phase,
         sample_rate,
         &mut tone_filter_state,
     );
@@ -128,7 +115,6 @@ pub(super) fn apply_output_modifiers_with_state(
     left: &mut [f32],
     right: &mut [f32],
     param_bridge: &AtomicParameterBridge,
-    test_tone_phase: &mut f32,
     sample_rate: f32,
     tone_filter_state: &mut StereoToneFilterState,
 ) {
@@ -144,43 +130,6 @@ pub(super) fn apply_output_modifiers_with_state(
     };
     let output_gain = read_gain_multiplier(param_bridge, OUTPUT_GAIN_PARAM_ID);
     let combined_gain = input_gain * output_gain;
-
-    // Focused dev-mode bridge for sdk-template test tone parameters while
-    // full generic FFI parameter injection is still being implemented.
-    let test_tone_enabled = param_bridge
-        .read(TEST_TONE_ENABLED_PARAM_ID)
-        .is_some_and(normalize_bool_param);
-    let test_tone_bypassed = param_bridge
-        .read(TEST_TONE_BYPASS_PARAM_ID)
-        .is_some_and(normalize_bool_param);
-    let test_tone_frequency = param_bridge.read(TEST_TONE_FREQUENCY_PARAM_ID);
-    let test_tone_level = param_bridge.read(TEST_TONE_LEVEL_PARAM_ID);
-
-    if test_tone_enabled
-        && !test_tone_bypassed
-        && let (Some(frequency), Some(level)) = (test_tone_frequency, test_tone_level)
-    {
-        if !sample_rate.is_finite() || sample_rate <= 0.0 {
-            apply_gain(left, right, combined_gain);
-            return;
-        }
-
-        let clamped_frequency = normalize_test_tone_frequency(frequency);
-        let clamped_level = normalize_test_tone_level(level);
-
-        let phase_delta = clamped_frequency / sample_rate;
-        let mut phase = normalize_phase(*test_tone_phase);
-
-        for (left_sample, right_sample) in left.iter_mut().zip(right.iter_mut()) {
-            let sample = (phase * std::f32::consts::TAU).sin() * clamped_level;
-            *left_sample = sample;
-            *right_sample = sample;
-
-            advance_phase(&mut phase, phase_delta);
-        }
-
-        *test_tone_phase = phase;
-    }
 
     apply_tone_filter(left, right, param_bridge, sample_rate, tone_filter_state);
     apply_soft_clip(left, right, param_bridge);
@@ -413,7 +362,7 @@ fn compute_tone_filter_coefficients(
     let alpha = sin_omega / (2.0 * q);
 
     let (b0, b1, b2, a0, a1, a2) = match mode {
-        ToneFilterMode::LowPass => (
+        ToneFilterMode::Low => (
             (1.0 - cos_omega) * 0.5,
             1.0 - cos_omega,
             (1.0 - cos_omega) * 0.5,
@@ -421,7 +370,7 @@ fn compute_tone_filter_coefficients(
             -2.0 * cos_omega,
             1.0 - alpha,
         ),
-        ToneFilterMode::HighPass => (
+        ToneFilterMode::High => (
             (1.0 + cos_omega) * 0.5,
             -(1.0 + cos_omega),
             (1.0 + cos_omega) * 0.5,
@@ -429,7 +378,7 @@ fn compute_tone_filter_coefficients(
             -2.0 * cos_omega,
             1.0 - alpha,
         ),
-        ToneFilterMode::BandPass => (
+        ToneFilterMode::Band => (
             alpha,
             0.0,
             -alpha,
@@ -445,37 +394,6 @@ fn compute_tone_filter_coefficients(
         b2: b2 / a0,
         a1: a1 / a0,
         a2: a2 / a0,
-    }
-}
-
-fn normalize_test_tone_frequency(value: f32) -> f32 {
-    if value.is_finite() {
-        value.clamp(TEST_TONE_FREQUENCY_MIN_HZ, TEST_TONE_FREQUENCY_MAX_HZ)
-    } else {
-        TEST_TONE_FREQUENCY_FALLBACK_HZ
-    }
-}
-
-fn normalize_test_tone_level(value: f32) -> f32 {
-    if value.is_finite() {
-        value.clamp(TEST_TONE_LEVEL_MIN, TEST_TONE_LEVEL_MAX)
-    } else {
-        TEST_TONE_LEVEL_FALLBACK
-    }
-}
-
-fn normalize_bool_param(value: f32) -> bool {
-    value.is_finite() && value >= 0.5
-}
-
-fn normalize_phase(phase: f32) -> f32 {
-    if phase.is_finite() { phase } else { 0.0 }
-}
-
-fn advance_phase(phase: &mut f32, phase_delta: f32) {
-    *phase += phase_delta;
-    if *phase >= 1.0 {
-        *phase -= phase.floor();
     }
 }
 
@@ -556,168 +474,6 @@ mod tests {
         ])
     }
 
-    fn test_tone_bridge(
-        enabled: f32,
-        frequency: f32,
-        level: f32,
-        bypass: f32,
-        input_trim_level: f32,
-        input_trim_bypass: f32,
-        output_gain_level: f32,
-    ) -> AtomicParameterBridge {
-        AtomicParameterBridge::new(&[
-            ParameterInfo {
-                id: "test_tone_enabled".to_string(),
-                name: "Enabled".to_string(),
-                param_type: ParameterType::Bool,
-                value: enabled,
-                default: enabled,
-                min: 0.0,
-                max: 1.0,
-                unit: None,
-                group: Some("Test Tone".to_string()),
-                variants: None,
-            },
-            ParameterInfo {
-                id: "test_tone_frequency".to_string(),
-                name: "Frequency".to_string(),
-                param_type: ParameterType::Float,
-                value: frequency,
-                default: frequency,
-                min: 20.0,
-                max: 20_000.0,
-                unit: Some("Hz".to_string()),
-                group: Some("Test Tone".to_string()),
-                variants: None,
-            },
-            ParameterInfo {
-                id: "test_tone_level".to_string(),
-                name: "Level".to_string(),
-                param_type: ParameterType::Float,
-                value: level,
-                default: level,
-                unit: Some("%".to_string()),
-                min: 0.0,
-                max: 1.0,
-                group: Some("Test Tone".to_string()),
-                variants: None,
-            },
-            ParameterInfo {
-                id: "test_tone_bypass".to_string(),
-                name: "Test Tone Bypass".to_string(),
-                param_type: ParameterType::Bool,
-                value: bypass,
-                default: bypass,
-                unit: None,
-                min: 0.0,
-                max: 1.0,
-                group: Some("Test Tone".to_string()),
-                variants: None,
-            },
-            ParameterInfo {
-                id: "input_trim_level".to_string(),
-                name: "Level".to_string(),
-                param_type: ParameterType::Float,
-                value: input_trim_level,
-                default: input_trim_level,
-                unit: Some("x".to_string()),
-                min: 0.0,
-                max: 2.0,
-                group: Some("InputTrim".to_string()),
-                variants: None,
-            },
-            ParameterInfo {
-                id: "input_trim_bypass".to_string(),
-                name: "Input Trim Bypass".to_string(),
-                param_type: ParameterType::Bool,
-                value: input_trim_bypass,
-                default: input_trim_bypass,
-                unit: None,
-                min: 0.0,
-                max: 1.0,
-                group: Some("InputTrim".to_string()),
-                variants: None,
-            },
-            ParameterInfo {
-                id: "output_gain_level".to_string(),
-                name: "Level".to_string(),
-                param_type: ParameterType::Float,
-                value: output_gain_level,
-                default: output_gain_level,
-                unit: Some("x".to_string()),
-                min: 0.0,
-                max: 2.0,
-                group: Some("OutputGain".to_string()),
-                variants: None,
-            },
-        ])
-    }
-
-    #[test]
-    fn output_modifiers_silent_when_test_tone_level_is_zero() {
-        let bridge = test_tone_bridge(1.0, 880.0, 0.0, 0.0, 1.0, 0.0, 1.0);
-
-        let mut left = [0.25_f32, -0.5, 0.75];
-        let mut right = [0.2_f32, -0.4, 0.6];
-        let mut phase = 0.0;
-        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
-
-        assert!(left.iter().all(|s| s.abs() <= f32::EPSILON));
-        assert!(right.iter().all(|s| s.abs() <= f32::EPSILON));
-    }
-
-    #[test]
-    fn output_modifiers_generate_runtime_test_tone_from_frequency_and_level() {
-        let bridge = test_tone_bridge(1.0, 880.0, 0.75, 0.0, 1.0, 0.0, 1.0);
-        let mut left = [0.0_f32; 128];
-        let mut right = [0.0_f32; 128];
-        let mut phase = 0.0;
-
-        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
-
-        let peak_left = left
-            .iter()
-            .fold(0.0_f32, |acc, sample| acc.max(sample.abs()));
-        let peak_right = right
-            .iter()
-            .fold(0.0_f32, |acc, sample| acc.max(sample.abs()));
-
-        assert!(peak_left > 0.2, "expected audible generated test tone");
-        assert!(peak_right > 0.2, "expected audible generated test tone");
-        assert_eq!(left, right, "expected in-phase stereo test tone output");
-        assert!(phase > 0.0, "phase should advance after generation");
-    }
-
-    #[test]
-    fn output_modifiers_do_not_generate_test_tone_when_disabled() {
-        let bridge = test_tone_bridge(0.0, 880.0, 0.75, 0.0, 1.0, 0.0, 1.0);
-        let mut left = [0.15_f32; 128];
-        let mut right = [-0.15_f32; 128];
-        let expected_left = left;
-        let expected_right = right;
-        let mut phase = 0.0;
-
-        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
-
-        assert_eq!(left, expected_left);
-        assert_eq!(right, expected_right);
-        assert!(phase.abs() <= f32::EPSILON);
-    }
-
-    #[test]
-    fn output_modifiers_do_not_generate_test_tone_when_bypassed() {
-        let bridge = test_tone_bridge(1.0, 880.0, 0.75, 1.0, 1.0, 0.0, 1.0);
-        let mut left = [0.0_f32; 128];
-        let mut right = [0.0_f32; 128];
-        let mut phase = 0.0;
-
-        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
-
-        assert!(left.iter().all(|sample| sample.abs() <= f32::EPSILON));
-        assert!(right.iter().all(|sample| sample.abs() <= f32::EPSILON));
-        assert!(phase.abs() <= f32::EPSILON);
-    }
-
     #[test]
     fn output_modifiers_apply_gain_without_test_tone_params() {
         let bridge = AtomicParameterBridge::new(&[
@@ -749,9 +505,8 @@ mod tests {
 
         let mut left = [0.25_f32, -0.5, 0.75];
         let mut right = [0.2_f32, -0.4, 0.6];
-        let mut phase = 0.0;
 
-        apply_output_modifiers(&mut left, &mut right, &bridge, &mut phase, 48_000.0);
+        apply_output_modifiers(&mut left, &mut right, &bridge, 48_000.0);
 
         let expected_gain = 1.5 * 1.2;
         assert_eq!(
@@ -778,24 +533,15 @@ mod tests {
         let mut right_unity = left_unity;
         let mut left_reduced = left_unity;
         let mut right_reduced = right_unity;
-        let mut phase = 0.0;
 
         let unity_bridge = soft_clip_bridge(12.0, 0.0, 1.0, 0.55, 0.0);
         let reduced_bridge = soft_clip_bridge(12.0, -12.0, 1.0, 0.55, 0.0);
 
-        apply_output_modifiers(
-            &mut left_unity,
-            &mut right_unity,
-            &unity_bridge,
-            &mut phase,
-            48_000.0,
-        );
-        phase = 0.0;
+        apply_output_modifiers(&mut left_unity, &mut right_unity, &unity_bridge, 48_000.0);
         apply_output_modifiers(
             &mut left_reduced,
             &mut right_reduced,
             &reduced_bridge,
-            &mut phase,
             48_000.0,
         );
 
@@ -823,33 +569,17 @@ mod tests {
         let mut right_wet = input;
         let mut left_blended = input;
         let mut right_blended = input;
-        let mut phase = 0.0;
 
         let dry_bridge = soft_clip_bridge(18.0, 0.0, 0.0, 0.55, 0.0);
         let wet_bridge = soft_clip_bridge(18.0, 0.0, 1.0, 0.55, 0.0);
         let blend_bridge = soft_clip_bridge(18.0, 0.0, 0.5, 0.55, 0.0);
 
-        apply_output_modifiers(
-            &mut left_dry,
-            &mut right_dry,
-            &dry_bridge,
-            &mut phase,
-            48_000.0,
-        );
-        phase = 0.0;
-        apply_output_modifiers(
-            &mut left_wet,
-            &mut right_wet,
-            &wet_bridge,
-            &mut phase,
-            48_000.0,
-        );
-        phase = 0.0;
+        apply_output_modifiers(&mut left_dry, &mut right_dry, &dry_bridge, 48_000.0);
+        apply_output_modifiers(&mut left_wet, &mut right_wet, &wet_bridge, 48_000.0);
         apply_output_modifiers(
             &mut left_blended,
             &mut right_blended,
             &blend_bridge,
-            &mut phase,
             48_000.0,
         );
 
@@ -870,24 +600,15 @@ mod tests {
         let mut right_warm = input;
         let mut left_bright = input;
         let mut right_bright = input;
-        let mut phase = 0.0;
 
         let warm_bridge = soft_clip_bridge(14.0, 0.0, 1.0, 0.0, 0.0);
         let bright_bridge = soft_clip_bridge(14.0, 0.0, 1.0, 1.0, 0.0);
 
-        apply_output_modifiers(
-            &mut left_warm,
-            &mut right_warm,
-            &warm_bridge,
-            &mut phase,
-            48_000.0,
-        );
-        phase = 0.0;
+        apply_output_modifiers(&mut left_warm, &mut right_warm, &warm_bridge, 48_000.0);
         apply_output_modifiers(
             &mut left_bright,
             &mut right_bright,
             &bright_bridge,
-            &mut phase,
             48_000.0,
         );
 

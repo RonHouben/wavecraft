@@ -2,13 +2,14 @@
 name: docwriter
 description: Technical documentation specialist for creating and updating all project documentation. Enforces documentation standards and maintains consistency.
 model:
+  - GPT-5.4 (copilot)
   - GPT-5.3-Codex (copilot)
   - Claude Sonnet 4.6 (copilot)
   - GPT-5.2 (copilot)
   - Claude Opus 4.6 (copilot)
-tools: ['read', 'search', 'edit', 'web', 'agent', 'todo', 'memory']
+tools: ['read', 'search', 'edit', 'web', 'agent', 'todo', 'vscode']
 agents: ['*']
-user-invokable: false
+user-invocable: false
 ---
 
 # Documentation Writer Agent

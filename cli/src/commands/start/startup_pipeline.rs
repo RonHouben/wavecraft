@@ -13,8 +13,9 @@ use crate::project::{
     ProjectMarkers,
 };
 use wavecraft_bridge::IpcHandler;
+use wavecraft_bridge::ParameterHost;
 use wavecraft_dev_server::{DevServerHost, DevSession, RebuildCallbacks, WsServer};
-use wavecraft_protocol::{ParameterInfo, ProcessorInfo};
+use wavecraft_protocol::{ParameterInfo, ProcessorInfo, SignalChainSlot};
 
 pub(super) fn parse_allow_no_audio_env(value: &str) -> bool {
     matches!(
@@ -50,6 +51,7 @@ pub(super) fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u
     ))?;
     let params = metadata.params;
     let processors = metadata.processors;
+    let signal_chain_slots = metadata.signal_chain_slots;
 
     write_parameter_types(&project.ui_dir, &params)
         .context("Failed to generate TypeScript parameter ID types")?;
@@ -83,6 +85,9 @@ pub(super) fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u
     let host = DevServerHost::with_param_bridge(params, std::sync::Arc::clone(&param_bridge));
     #[cfg(not(feature = "audio-dev"))]
     let host = DevServerHost::new(params);
+
+    seed_signal_chain_slots(&host, &signal_chain_slots)
+        .context("Failed to seed dev host signal-chain slots from plugin metadata")?;
 
     let host = std::sync::Arc::new(host);
     let handler = std::sync::Arc::new(IpcHandler::new(host.clone()));
@@ -142,7 +147,7 @@ pub(super) fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u
     // the FfiProcessor inside the closure is dropped while the Library in
     // `runtime_loader` is still loaded — preserving vtable pointer validity.
     #[cfg(feature = "audio-dev")]
-    let (audio_handle, _runtime_loader) = super::audio_runtime::start_audio_runtime(
+    let audio_runtime = super::audio_runtime::start_audio_runtime(
         &runtime,
         &project.engine_dir,
         host.clone(),
@@ -151,7 +156,7 @@ pub(super) fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u
         allow_no_audio_runtime_fallback(),
     )?;
     #[cfg(feature = "audio-dev")]
-    let has_audio = audio_handle.is_some();
+    let has_audio = audio_runtime.has_audio();
     #[cfg(not(feature = "audio-dev"))]
     let has_audio = false;
 
@@ -186,7 +191,7 @@ pub(super) fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u
     let shutdown_reason = super::shutdown::wait_for_shutdown(ui_server, shutdown_tx)?;
 
     #[cfg(feature = "audio-dev")]
-    drop(audio_handle);
+    drop(audio_runtime);
     drop(dev_session);
     drop(runtime);
 
@@ -202,6 +207,15 @@ pub(super) fn run_dev_servers(project: &ProjectMarkers, ws_port: u16, ui_port: u
             Ok(())
         }
     }
+}
+
+fn seed_signal_chain_slots(host: &DevServerHost, signal_chain_slots: &[SignalChainSlot]) -> Result<()> {
+    if signal_chain_slots.is_empty() {
+        return Ok(());
+    }
+
+    host.set_signal_chain_order(signal_chain_slots.to_vec())
+        .map_err(anyhow::Error::from)
 }
 
 fn build_rebuild_callbacks(project: &ProjectMarkers) -> RebuildCallbacks {

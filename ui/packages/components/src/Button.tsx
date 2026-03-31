@@ -16,6 +16,7 @@ export interface ButtonProps extends NativeButtonProps {
   readonly state?: ControlVisualState;
   readonly pluginState?: PluginVisualState;
   readonly iconLeft?: IconProps['icon'];
+  readonly iconRight?: IconProps['icon'];
   readonly active?: boolean;
   readonly isActive?: boolean;
   readonly pressed?: boolean;
@@ -33,6 +34,7 @@ export function Button({
   className,
   disabled = false,
   iconLeft,
+  iconRight,
   isActive,
   onClick,
   pluginState,
@@ -84,6 +86,8 @@ export function Button({
       {iconLeft && <Icon icon={iconLeft} />}
 
       <span>{children}</span>
+
+      {iconRight && <Icon icon={iconRight} />}
 
       {badgeLabel ? (
         <span

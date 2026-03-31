@@ -13,20 +13,35 @@ pub use params::{
 };
 
 // Re-export dev audio FFI types for convenience
-pub use dev_audio_ffi::{DEV_PROCESSOR_SYMBOL, DEV_PROCESSOR_VTABLE_VERSION, DevProcessorVTable};
+pub use dev_audio_ffi::{
+    DEV_PROCESSOR_SYMBOL, DEV_PROCESSOR_VTABLE_VERSION, DEV_SIGNAL_CHAIN_SLOTS_SYMBOL,
+    DevProcessorVTable,
+};
 
 // Re-export key IPC types for convenience
 pub use ipc::{
     AudioDiagnostic, AudioDiagnosticCode, AudioRuntimePhase, AudioRuntimeStatus, ERROR_INTERNAL,
-    ERROR_INVALID_PARAMS, ERROR_INVALID_REQUEST, ERROR_METHOD_NOT_FOUND, ERROR_PARAM_NOT_FOUND,
-    ERROR_PARAM_OUT_OF_RANGE, ERROR_PARSE, GetAllParametersResult, GetAudioStatusResult,
-    GetMeterFrameResult, GetOscilloscopeFrameResult, GetParameterParams, GetParameterResult,
-    IpcError, IpcNotification, IpcRequest, IpcResponse, METHOD_GET_ALL_PARAMETERS,
-    METHOD_GET_AUDIO_STATUS, METHOD_GET_METER_FRAME, METHOD_GET_OSCILLOSCOPE_FRAME,
-    METHOD_GET_PARAMETER, METHOD_REGISTER_AUDIO, METHOD_REQUEST_RESIZE, METHOD_SET_PARAMETER,
-    MeterFrame, MeterUpdateNotification, NOTIFICATION_AUDIO_STATUS_CHANGED,
-    NOTIFICATION_METER_UPDATE, NOTIFICATION_PARAMETER_CHANGED, OscilloscopeChannelView,
-    OscilloscopeFrame, OscilloscopeTriggerMode, ParameterChangedNotification, ParameterInfo,
-    ParameterType, ProcessorInfo, RegisterAudioParams, RegisterAudioResult, RequestId,
-    RequestResizeParams, RequestResizeResult, SetParameterParams, SetParameterResult,
+    ERROR_INVALID_PARAMS, ERROR_INVALID_REQUEST, ERROR_INVALID_SIGNAL_CHAIN_ORDER,
+    ERROR_METHOD_NOT_FOUND, ERROR_PARAM_NOT_FOUND, ERROR_PARAM_OUT_OF_RANGE, ERROR_PARSE,
+    ERROR_SIGNAL_CHAIN_ORDER_RESTORE_FAILED, GetAllParametersResult, GetAudioStatusResult,
+    GetHardwareInputSelectionResult, GetInputSourceResult, GetMeterFrameResult,
+    GetOscilloscopeFrameResult, GetParameterParams, GetParameterResult, GetSignalChainOrderResult,
+    HardwareInputChannelOption, HardwareInputDeviceOption,
+    HardwareInputSelectionChangedNotification, InputSourceChangedNotification, InputSourceKind,
+    InputSourceOption, IpcError, IpcNotification, IpcRequest, IpcResponse,
+    METHOD_GET_ALL_PARAMETERS, METHOD_GET_AUDIO_STATUS, METHOD_GET_HARDWARE_INPUT_SELECTION,
+    METHOD_GET_INPUT_SOURCE, METHOD_GET_METER_FRAME, METHOD_GET_OSCILLOSCOPE_FRAME,
+    METHOD_GET_PARAMETER, METHOD_GET_PASSTHROUGH_METER_FRAME, METHOD_GET_SIGNAL_CHAIN_ORDER,
+    METHOD_REGISTER_AUDIO, METHOD_REQUEST_RESIZE, METHOD_SET_HARDWARE_INPUT_SELECTION,
+    METHOD_SET_INPUT_SOURCE, METHOD_SET_PARAMETER, METHOD_SET_SIGNAL_CHAIN_ORDER, MeterFrame,
+    MeterUpdateNotification, NOTIFICATION_AUDIO_STATUS_CHANGED,
+    NOTIFICATION_HARDWARE_INPUT_SELECTION_CHANGED, NOTIFICATION_INPUT_SOURCE_CHANGED,
+    NOTIFICATION_METER_UPDATE, NOTIFICATION_PARAMETER_CHANGED,
+    NOTIFICATION_SIGNAL_CHAIN_ORDER_CHANGED, OscilloscopeChannelView, OscilloscopeFrame,
+    OscilloscopeTriggerMode, ParameterChangedNotification, ParameterInfo, ParameterType,
+    ProcessorInfo, RegisterAudioParams, RegisterAudioResult, RequestId, RequestResizeParams,
+    RequestResizeResult, SetHardwareInputSelectionParams, SetHardwareInputSelectionResult,
+    SetInputSourceParams, SetInputSourceResult, SetParameterParams, SetParameterResult,
+    SetSignalChainOrderParams, SetSignalChainOrderResult, SignalChainOrderChangedNotification,
+    SignalChainSlot, SlotType,
 };

@@ -9,13 +9,13 @@ use std::sync::{Arc, Mutex};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use nih_plug::prelude::*;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-use wavecraft_bridge::{BridgeError, ParameterHost};
+use wavecraft_bridge::{BridgeError, ParameterHost, SignalChainOrderAccess};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use wavecraft_metering::MeterConsumer;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use wavecraft_processors::OscilloscopeFrameConsumer;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-use wavecraft_protocol::{AudioRuntimeStatus, ParameterInfo, ParameterType};
+use wavecraft_protocol::{AudioRuntimeStatus, ParameterInfo, ParameterType, SignalChainSlot};
 
 /// Bridge between nih-plug and the IPC handler.
 ///
@@ -26,11 +26,13 @@ use wavecraft_protocol::{AudioRuntimeStatus, ParameterInfo, ParameterType};
 ///
 /// Only used on macOS/Windows where WebView is available.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub struct PluginEditorBridge<P: Params> {
+pub struct PluginEditorBridge<P: Params + SignalChainOrderAccess> {
     params: Arc<P>,
     context: Arc<dyn GuiContext>,
     /// Optional meter consumer - may be None if metering is disabled
     meter_consumer: Option<Arc<Mutex<MeterConsumer>>>,
+    /// Optional passthrough-local meter consumer - may be None if unavailable
+    passthrough_meter_consumer: Option<Arc<Mutex<MeterConsumer>>>,
     /// Optional oscilloscope consumer - may be None if oscilloscope is disabled
     oscilloscope_consumer: Option<Arc<Mutex<OscilloscopeFrameConsumer>>>,
     /// Shared editor size - updated when resize is requested
@@ -38,12 +40,13 @@ pub struct PluginEditorBridge<P: Params> {
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-impl<P: Params> PluginEditorBridge<P> {
+impl<P: Params + SignalChainOrderAccess> PluginEditorBridge<P> {
     /// Create a new bridge with the given parameters and context.
     pub fn new(
         params: Arc<P>,
         context: Arc<dyn GuiContext>,
         meter_consumer: Option<MeterConsumer>,
+        passthrough_meter_consumer: Option<MeterConsumer>,
         oscilloscope_consumer: Option<OscilloscopeFrameConsumer>,
         editor_size: Arc<Mutex<(u32, u32)>>,
     ) -> Self {
@@ -51,6 +54,7 @@ impl<P: Params> PluginEditorBridge<P> {
             params,
             context,
             meter_consumer: meter_consumer.map(|c| Arc::new(Mutex::new(c))),
+            passthrough_meter_consumer: passthrough_meter_consumer.map(|c| Arc::new(Mutex::new(c))),
             oscilloscope_consumer: oscilloscope_consumer.map(|c| Arc::new(Mutex::new(c))),
             editor_size,
         }
@@ -120,7 +124,7 @@ impl<P: Params> PluginEditorBridge<P> {
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-impl<P: Params> ParameterHost for PluginEditorBridge<P> {
+impl<P: Params + SignalChainOrderAccess> ParameterHost for PluginEditorBridge<P> {
     fn get_parameter(&self, id: &str) -> Option<ParameterInfo> {
         // Use nih-plug's param_map to find the parameter
         let param_map = self.params.param_map();
@@ -171,6 +175,12 @@ impl<P: Params> ParameterHost for PluginEditorBridge<P> {
         consumer.read_latest()
     }
 
+    fn get_passthrough_meter_frame(&self) -> Option<wavecraft_protocol::MeterFrame> {
+        let consumer = self.passthrough_meter_consumer.as_ref()?;
+        let mut consumer = consumer.lock().unwrap();
+        consumer.read_latest()
+    }
+
     fn get_oscilloscope_frame(&self) -> Option<wavecraft_protocol::OscilloscopeFrame> {
         let consumer = self.oscilloscope_consumer.as_ref()?;
         let mut consumer = consumer.lock().unwrap();
@@ -202,6 +212,14 @@ impl<P: Params> ParameterHost for PluginEditorBridge<P> {
 
     fn get_audio_status(&self) -> Option<AudioRuntimeStatus> {
         None
+    }
+
+    fn get_signal_chain_order(&self) -> Vec<SignalChainSlot> {
+        self.params.get_order()
+    }
+
+    fn set_signal_chain_order(&self, order: Vec<SignalChainSlot>) -> Result<(), BridgeError> {
+        self.params.set_order(order)
     }
 }
 
@@ -249,6 +267,16 @@ mod tests {
                         _ => "Unknown".to_string(),
                     })),
             }
+        }
+    }
+
+    impl SignalChainOrderAccess for TestParams {
+        fn get_order(&self) -> Vec<SignalChainSlot> {
+            vec![]
+        }
+
+        fn set_order(&self, _order: Vec<SignalChainSlot>) -> Result<(), BridgeError> {
+            Ok(())
         }
     }
 
@@ -306,6 +334,7 @@ mod tests {
             context,
             None,
             None,
+            None,
             Arc::new(Mutex::new((800, 600))),
         );
 
@@ -341,6 +370,7 @@ mod tests {
             context.clone(),
             None,
             None,
+            None,
             Arc::new(Mutex::new((800, 600))),
         );
 
@@ -360,6 +390,7 @@ mod tests {
         let bridge = PluginEditorBridge::new(
             params,
             context,
+            None,
             None,
             None,
             Arc::new(Mutex::new((800, 600))),

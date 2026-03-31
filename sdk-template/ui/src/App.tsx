@@ -1,109 +1,111 @@
 import {
-  useAudioStatus,
-  useConnectionStatus,
-  useLatencyMonitor,
-  useMeterFrame,
-  useRequestResize,
-  WavecraftProvider,
-  useWindowResizeSync,
-} from '@wavecraft/core';
-import { type JSX } from 'react';
-import {
-  Meter,
-  VersionBadge,
-  ConnectionStatus,
-  LatencyMonitor,
-  ResizeHandle,
-  TestToneProcessor,
-  OscilloscopeProcessor,
-  Row,
-  Col,
   GainProcessor,
+  Header,
+  IconButton,
+  LatencyMonitor,
+  Meter,
+  OscilloscopeProcessor,
   PassthroughProcessor,
+  ResizeHandle,
   SaturatorProcessor,
+  SettingsModal,
+  Sidebar,
+  SignalChain,
   ToneFilterProcessor,
 } from '@wavecraft/components';
+import { Button } from '@wavecraft/components/Button';
+import { TestToneProcessor } from '@wavecraft/components/processors/TestToneProcessor';
+import { useWindowResizeSync, WavecraftProvider } from '@wavecraft/core';
+import { type JSX, useState } from 'react';
 
 export function App(): JSX.Element {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   useWindowResizeSync();
-  const { connected, transport } = useConnectionStatus();
-  const { phase, isReady, isDegraded, diagnostic } = useAudioStatus();
-  const latency = useLatencyMonitor(1000);
-  const frame = useMeterFrame(50);
-  const requestResize = useRequestResize();
 
   return (
     <WavecraftProvider>
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-100">My Plugin</h1>
-        <div className="flex items-center gap-2">
-          <ConnectionStatus
-            connected={connected}
-            transport={transport}
-            phase={phase}
-            isReady={isReady}
-            isDegraded={isDegraded}
-            diagnostic={diagnostic}
-          />
-          <VersionBadge />
-        </div>
-      </div>
+      {({ openSettingsModal }) => (
+        <>
+          <div className="flex flex-col gap-3 px-3 pb-16 pr-16 pt-3">
+            <Header title="My Cool Plugin">
+              {!isSidebarOpen && (
+                <IconButton
+                  icon="menu"
+                  size="sm"
+                  className="bg-plugin-surface-1/80"
+                  onClick={() => setIsSidebarOpen(true)}
+                />
+              )}
+            </Header>
 
-      {/* Main Content */}
-      <Col className="gap-2 bg-purple-500 px-4 sm:bg-red-500 md:bg-amber-500 lg:bg-green-500">
-        <Row className="gap-2">
-          <TestToneProcessor
-            className="col-span-full sm:col-span-8 md:col-span-4"
-            hideWhenNotInSignalChain
-          />
-          <Col className="col-span-8 gap-2 sm:col-span-4 md:col-span-4">
-            <GainProcessor
-              className="col-span-full"
-              processorId="input_trim"
-              title="Input Trim"
-              subtitle="My Input Trim"
-              hideWhenNotInSignalChain
-            />
-            <GainProcessor
-              className="col-span-full"
-              processorId="output_gain"
-              title="Output Gain"
-              subtitle="My Output Gain"
-              hideWhenNotInSignalChain
-            />
-          </Col>
-          <PassthroughProcessor
-            processorId="passthrough"
-            className="col-span-4 sm:col-span-12 md:col-span-4"
-            hideWhenNotInSignalChain
-            title="Passthrough"
-          />
-          <SaturatorProcessor
-            className="col-span-full sm:col-span-full md:col-span-6"
-            hideWhenNotInSignalChain
-          />
-          <ToneFilterProcessor
-            className="col-span-full sm:col-span-full md:col-span-6"
-            hideWhenNotInSignalChain
-          />
-        </Row>
-        <Row className="col-span-full gap-2">
-          <OscilloscopeProcessor className="col-span-full md:col-span-6" hideWhenNotInSignalChain />
-          <Col className="col-span-full gap-2 md:col-span-6">
-            <Meter className="col-span-full justify-center" connected={connected} frame={frame} />
-            <LatencyMonitor
-              className="col-span-full justify-center"
-              latency={latency.latency}
-              avg={latency.avg}
-              max={latency.max}
-              count={latency.count}
-            />
-          </Col>
-        </Row>
-      </Col>
+            <Sidebar
+              id="app-sidebar"
+              open={isSidebarOpen}
+              onClose={() => setIsSidebarOpen(false)}
+              title="Menu"
+              description="Quick actions and future plugin settings live here."
+              defaultActions={['show-settings']}
+            >
+              <Button
+                className="w-full justify-between bg-plugin-surface-1 text-plugin-text-primary hover:bg-plugin-surface-2"
+                size="md"
+                iconLeft="settings"
+                iconRight="chevron-right"
+                onClick={openSettingsModal}
+              >
+                Settings
+              </Button>
+            </Sidebar>
 
-      <ResizeHandle onRequestResize={requestResize} />
+            <SignalChain
+              entries={[
+                // processors
+                { id: 'TestTone', type: 'processor', component: <TestToneProcessor /> },
+                {
+                  id: 'InputTrim',
+                  type: 'processor',
+                  component: (
+                    <GainProcessor
+                      processorId="input_trim"
+                      title="Input Trim"
+                      subtitle="My Input Trim"
+                    />
+                  ),
+                },
+                {
+                  id: 'Passthrough',
+                  type: 'processor',
+                  component: <PassthroughProcessor processorId="passthrough" title="Passthrough" />,
+                },
+                { id: 'ToneFilter', type: 'processor', component: <ToneFilterProcessor /> },
+                { id: 'SoftClip', type: 'processor', component: <SaturatorProcessor /> },
+                {
+                  id: 'OutputGain',
+                  type: 'processor',
+                  component: (
+                    <GainProcessor
+                      processorId="output_gain"
+                      title="Output Gain"
+                      subtitle="My Output Gain"
+                    />
+                  ),
+                },
+                // taps
+                { id: 'OscilloscopeTap', type: 'tap', component: <OscilloscopeProcessor /> },
+              ]}
+            />
+
+            <div className="flex flex-col gap-3">
+              <Meter className="justify-center" />
+              <LatencyMonitor className="justify-center" />
+            </div>
+          </div>
+
+          <SettingsModal />
+          <ResizeHandle />
+        </>
+      )}
     </WavecraftProvider>
   );
 }

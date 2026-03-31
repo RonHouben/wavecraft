@@ -2,12 +2,13 @@
 name: qa
 description: Quality Assurance agent focused on code quality and static code analysis.
 model:
+  - GPT-5.4 (copilot)
   - GPT-5.3-Codex (copilot)
   - Claude Opus 4.6 (copilot)
   - Gemini 3.1 Pro (Preview)
-tools: ['agent', 'search', 'read', 'web', 'todo', 'memory', 'vscode']
+tools: ['agent', 'search', 'read', 'web', 'todo', 'vscode']
 agents: [orchestrator, coder, architect, docwriter, search]
-user-invokable: true
+user-invocable: true
 handoffs:
   - label: Fix findings
     agent: coder

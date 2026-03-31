@@ -4,9 +4,17 @@
  * Displays peak and RMS levels for stereo audio with dB scaling
  */
 
-import React, { useEffect, useState, useRef } from 'react';
-import type { ControlVisualState, MeterFrame, PluginVisualState } from './types';
-import { focusRingClass, mergeClassNames, surfaceCardClass } from './utils/classNames';
+import { useConnectionStatus, useMeterFrame } from '@wavecraft/core';
+import React, { useEffect, useRef, useState } from 'react';
+import { Card } from './Card';
+import type { ControlVisualState, PluginVisualState } from './types';
+import {
+  elevatedCardClass,
+  focusRingClass,
+  insetSurfaceClass,
+  mergeClassNames,
+  statusChipClass,
+} from './utils/classNames';
 import {
   getControlStateClass,
   getStateBadgeClass,
@@ -27,8 +35,6 @@ function linearToDb(linear: number, floorDb = METER_FLOOR_DB): number {
 
 export interface MeterProps {
   readonly className?: string;
-  readonly connected: boolean;
-  readonly frame: MeterFrame | null;
   readonly state?: ControlVisualState;
   readonly pluginState?: PluginVisualState;
 }
@@ -101,10 +107,12 @@ function MeterChannel({
   return (
     <div
       data-testid={`meter-${side}`}
-      className="flex items-center gap-2 rounded bg-plugin-dark p-2"
+      className={mergeClassNames(insetSurfaceClass, 'flex items-center gap-3 px-3 py-2')}
     >
-      <div className="w-4 text-center text-type-xs font-semibold text-gray-300">{side}</div>
-      <div className="relative h-6 flex-1">
+      <div className="w-5 text-center text-type-2xs uppercase tracking-wide text-plugin-text-secondary">
+        {side}
+      </div>
+      <div className="relative h-7 flex-1">
         <div
           className={`relative h-full w-full overflow-hidden rounded bg-plugin-surface motion-safe:transition-shadow motion-safe:duration-100 ${
             clipped ? 'shadow-[inset_0_0_8px_rgba(255,23,68,0.8)]' : ''
@@ -124,7 +132,7 @@ function MeterChannel({
       </div>
       <div
         data-testid={`meter-${side}-db`}
-        className={`w-[60px] text-right font-mono text-type-xs text-gray-300 motion-safe:transition-colors motion-safe:duration-100 ${
+        className={`w-16 text-right font-mono text-type-sm text-plugin-text-primary motion-safe:transition-colors motion-safe:duration-100 ${
           clipped ? 'font-semibold text-meter-clip' : ''
         }`}
       >
@@ -136,11 +144,12 @@ function MeterChannel({
 
 export function Meter({
   className,
-  connected,
-  frame,
   pluginState,
   state = 'default',
 }: Readonly<MeterProps>): React.JSX.Element {
+  const frame = useMeterFrame(50);
+  const { connected } = useConnectionStatus();
+
   const [channelClippedState, setChannelClippedState] = useState<Record<'L' | 'R', boolean>>({
     L: false,
     R: false,
@@ -173,6 +182,14 @@ export function Meter({
   const isLoading = state === 'loading' || !connected;
   const isError = state === 'error';
   const isBypassed = pluginState === 'bypassed';
+  const meterClassName = mergeClassNames(
+    'font-sans transition-[opacity,filter] duration-150',
+    elevatedCardClass,
+    getControlStateClass({ pluginState, state }),
+    isError ? 'border-meter-clip' : '',
+    isBypassed ? 'opacity-70 brightness-90 saturate-50' : 'opacity-100 saturate-100',
+    className
+  );
 
   const handleResetClip = (): void => {
     resetHandlersRef.current.L();
@@ -182,25 +199,19 @@ export function Meter({
   // Show connecting/loading state
   if (isLoading) {
     return (
-      <div
+      <Card
         data-testid="meter"
         data-state={state}
         data-plugin-state={pluginState}
-        className={mergeClassNames(
-          'flex flex-col gap-2 font-sans',
-          surfaceCardClass,
-          getControlStateClass({ state, pluginState }),
-          isError ? 'border-meter-clip' : ''
-        )}
+        className={meterClassName}
       >
-        <div className="flex items-center justify-between gap-2">
-          <div className="text-type-xs font-semibold uppercase tracking-wide text-gray-500">
-            Levels
-          </div>
+        <Card.Header>
+          <Card.Title>Levels</Card.Title>
           {badgeLabel ? (
             <span
               className={mergeClassNames(
-                'rounded-sm border px-1 py-0.5 font-mono text-type-2xs leading-none',
+                statusChipClass,
+                'font-mono leading-none',
                 getStateBadgeClass(pluginState)
               )}
               aria-hidden="true"
@@ -208,70 +219,76 @@ export function Meter({
               {badgeLabel}
             </span>
           ) : null}
-        </div>
-        <div className="flex items-center justify-center py-8 text-type-sm text-gray-400">
-          ⏳ {isError ? 'Meter unavailable' : 'Connecting...'}
-        </div>
-      </div>
+        </Card.Header>
+        <Card.Content>
+          <div
+            className={mergeClassNames(
+              insetSurfaceClass,
+              'flex items-center justify-center py-8 text-type-sm text-plugin-text-secondary'
+            )}
+          >
+            ⏳ {isError ? 'Meter unavailable' : 'Connecting...'}
+          </div>
+        </Card.Content>
+      </Card>
     );
   }
 
   return (
-    <div
+    <Card
       data-testid="meter"
       data-state={state}
       data-plugin-state={pluginState}
-      className={mergeClassNames(
-        'flex flex-col gap-2 font-sans',
-        surfaceCardClass,
-        getControlStateClass({ pluginState, state }),
-        isError ? 'border-meter-clip' : '',
-        isBypassed ? 'opacity-70' : '',
-        className
-      )}
+      className={meterClassName}
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="text-type-xs font-semibold uppercase tracking-wide text-gray-500">
-          Levels
+      <Card.Header>
+        <Card.Title>Levels</Card.Title>
+        <div className="flex items-center gap-2">
+          {badgeLabel ? (
+            <span
+              className={mergeClassNames(
+                statusChipClass,
+                'font-mono leading-none',
+                getStateBadgeClass(pluginState)
+              )}
+              aria-hidden="true"
+            >
+              {badgeLabel}
+            </span>
+          ) : null}
+          {(clippedL || clippedR) && (
+            <button
+              data-testid="meter-clip-button"
+              className={mergeClassNames(
+                'animate-clip-pulse cursor-pointer select-none rounded-md border border-meter-clip-dark bg-meter-clip px-2 py-1 text-type-2xs font-semibold uppercase tracking-wide text-white hover:bg-meter-clip-dark active:scale-95',
+                focusRingClass
+              )}
+              onClick={handleResetClip}
+              title="Click to reset"
+              type="button"
+            >
+              Clip
+            </button>
+          )}
         </div>
-        {badgeLabel ? (
-          <span
-            className={mergeClassNames(
-              'rounded-sm border px-1 py-0.5 font-mono text-type-2xs leading-none',
-              getStateBadgeClass(pluginState)
-            )}
-            aria-hidden="true"
-          >
-            {badgeLabel}
-          </span>
-        ) : null}
-        {(clippedL || clippedR) && (
-          <button
-            data-testid="meter-clip-button"
-            className={`animate-clip-pulse cursor-pointer select-none rounded border-none bg-meter-clip px-2 py-0.5 text-type-2xs font-bold leading-none text-white hover:bg-meter-clip-dark active:scale-95 ${focusRingClass}`}
-            onClick={handleResetClip}
-            title="Click to reset"
-            type="button"
-          >
-            CLIP
-          </button>
-        )}
-      </div>
+      </Card.Header>
 
-      <MeterChannel
-        side="L"
-        peakLinear={frame?.peak_l ?? 0}
-        rmsLinear={frame?.rms_l ?? 0}
-        onClippedChange={handleClippedChange}
-        onRegisterReset={handleRegisterReset}
-      />
-      <MeterChannel
-        side="R"
-        peakLinear={frame?.peak_r ?? 0}
-        rmsLinear={frame?.rms_r ?? 0}
-        onClippedChange={handleClippedChange}
-        onRegisterReset={handleRegisterReset}
-      />
-    </div>
+      <Card.Content className="flex flex-col gap-3">
+        <MeterChannel
+          side="L"
+          peakLinear={frame?.peak_l ?? 0}
+          rmsLinear={frame?.rms_l ?? 0}
+          onClippedChange={handleClippedChange}
+          onRegisterReset={handleRegisterReset}
+        />
+        <MeterChannel
+          side="R"
+          peakLinear={frame?.peak_r ?? 0}
+          rmsLinear={frame?.rms_r ?? 0}
+          onClippedChange={handleClippedChange}
+          onRegisterReset={handleRegisterReset}
+        />
+      </Card.Content>
+    </Card>
   );
 }
