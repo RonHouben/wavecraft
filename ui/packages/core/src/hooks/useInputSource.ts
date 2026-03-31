@@ -71,7 +71,7 @@ export function useInputSource(): UseInputSourceResult {
       unsubscribeChanged();
       unsubscribeConnection();
     };
-  }, [client]);
+  }, [bridge, client]);
 
   const setSelected = useCallback(
     async (next: InputSourceKind) => {

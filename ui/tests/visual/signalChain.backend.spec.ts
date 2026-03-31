@@ -95,27 +95,6 @@ async function dragSignalChainItem(page: Page, sourceId: string, targetId: strin
   });
 }
 
-function moveSlotBefore(
-  slots: SignalChainSlot[],
-  slotId: string,
-  targetId: string
-): SignalChainSlot[] {
-  const sourceIndex = slots.findIndex((slot) => slot.id === slotId);
-  const targetIndex = slots.findIndex((slot) => slot.id === targetId);
-
-  expect(sourceIndex).toBeGreaterThanOrEqual(0);
-  expect(targetIndex).toBeGreaterThanOrEqual(0);
-
-  const reordered = [...slots];
-  const [slot] = reordered.splice(sourceIndex, 1);
-  if (!slot) {
-    throw new Error(`Unable to move missing slot ${slotId}`);
-  }
-  const insertionIndex = reordered.findIndex((candidate) => candidate.id === targetId);
-  reordered.splice(insertionIndex, 0, slot);
-  return reordered;
-}
-
 function moveSlotAfter(
   slots: SignalChainSlot[],
   slotId: string,

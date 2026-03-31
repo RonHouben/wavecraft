@@ -58,7 +58,7 @@ interface ModalFooterProps extends NativeDivProps {
   readonly children: ReactNode;
 }
 
-interface ModalButtonProps extends ButtonProps {}
+type ModalButtonProps = ButtonProps;
 
 export function ModalButton({ title, ...rest }: Readonly<ModalButtonProps>) {
   const modalContext = useModalContext();

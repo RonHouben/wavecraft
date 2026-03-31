@@ -20,7 +20,7 @@ export interface SidebarProps extends NativeDivProps {
 export function Sidebar({
   children,
   className,
-  defaultActions,
+  defaultActions: _defaultActions,
   description,
   onClose,
   open,

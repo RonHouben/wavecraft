@@ -7,7 +7,7 @@ import {
 import { ConnectionStatus } from '../ConnectionStatus';
 import { Select } from '../Select';
 
-export interface SettingsProps {}
+export type SettingsProps = Record<string, never>;
 
 export function Settings(_props: Readonly<SettingsProps>) {
   const { connected, transport } = useConnectionStatus();
