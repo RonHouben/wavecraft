@@ -1,28 +1,28 @@
 import {
-    GainProcessor,
-    Header,
-    IconButton,
-    LatencyMonitor,
-    Meter,
-    OscilloscopeProcessor,
-    PassthroughProcessor,
-    ResizeHandle,
-    SaturatorProcessor,
-    SettingsModal,
-    Sidebar,
-    SignalChain,
-    ToneFilterProcessor,
+  GainProcessor,
+  Header,
+  IconButton,
+  LatencyMonitor,
+  Meter,
+  OscilloscopeProcessor,
+  PassthroughProcessor,
+  ResizeHandle,
+  SaturatorProcessor,
+  SettingsModal,
+  Sidebar,
+  SignalChain,
+  ToneFilterProcessor,
 } from '@wavecraft/components';
 import { Button } from '@wavecraft/components/Button';
 import { TestToneProcessor } from '@wavecraft/components/processors/TestToneProcessor';
 import {
-    useConnectionStatus,
-    useLatencyMonitor,
-    useMeterFrame,
-    useRequestResize,
-    useSettingsModal,
-    useWindowResizeSync,
-    WavecraftProvider,
+  useConnectionStatus,
+  useLatencyMonitor,
+  useMeterFrame,
+  useRequestResize,
+  useSettingsModal,
+  useWindowResizeSync,
+  WavecraftProvider,
 } from '@wavecraft/core';
 import { type JSX, useCallback, useState } from 'react';
 
