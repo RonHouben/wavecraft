@@ -24,11 +24,14 @@ const MAX_FETCH_RETRIES = 3;
 /** Base delay (ms) for fetch retry backoff */
 const FETCH_RETRY_BASE_MS = 500;
 
+type WavecraftProviderRenderProps = {
+  openSettingsModal: SettingsModalContextValue['openSettingsModal'];
+};
 export interface WavecraftProviderProps {
-  children: ReactNode;
+  children: ReactNode | ((ctx: WavecraftProviderRenderProps) => ReactNode);
 }
 
-export function WavecraftProvider({ children }: Readonly<WavecraftProviderProps>) {
+export function WavecraftProvider(props: Readonly<WavecraftProviderProps>) {
   const [params, setParams] = useState<ParameterInfo<ParameterValue>[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -186,8 +189,19 @@ export function WavecraftProvider({ children }: Readonly<WavecraftProviderProps>
   return (
     <ParameterStateContext.Provider value={value}>
       <SettingsModalContext.Provider value={settingsModalValue}>
-        {children}
+        {renderChildren(props.children, { openSettingsModal })}
       </SettingsModalContext.Provider>
     </ParameterStateContext.Provider>
   );
+}
+
+function renderChildren(
+  children: WavecraftProviderProps['children'],
+  renderProps: WavecraftProviderRenderProps
+) {
+  if (typeof children === 'function') {
+    return children(renderProps);
+  }
+
+  return children;
 }
